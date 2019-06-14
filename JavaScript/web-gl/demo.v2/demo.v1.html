@@ -26,10 +26,25 @@
 
         /* Components > Canvas */
         #canvas {
-            height: 100%;
+            border: 1.5px solid rgba(0, 0, 0, .1);
+            bottom: 12.5%;
+            box-shadow: 0 5px 5px 0 rgba(0, 0, 0, .3),
+                0 0 10000px 10000px rgba(0, 0, 0, .4875);
+            height: 75%;
+            left: 12.5%;
+            margin: auto;
             outline: 1px solid #CCCCCC;
-            width: 100%
+            position: relative;
+            right: 12.5%;
+            top: 12.5%;
+            transition: .1s ease-out;
+            width: 75%
         }
+            /* States > Hover */
+            #canvas:hover {
+                box-shadow: 0 3px 3px 0 rgba(0, 0, 0, .5),
+                    0 0 10000px 10000px rgba(0, 0, 0, .675)
+            }
     </style>
 
     <!-- Document Title -->
@@ -49,174 +64,239 @@
 
         <!-- Document Script -->
         <script defer language=javascript type=text/javascript>
-            /* Global > Canvas, GL Matrix, Global, Renderer, Strict */
+            /* Global > Canvas, Global, Renderer, Strict */
             const CANVAS = document.getElementById("canvas"),
-                GLMatrix = glMatrix,
                 GLOBAL = this, RENDERER = CANVAS.getContext("webgl");
             var STRICT = false;
 
+            /* Polyfill > ... */
+            Math.perc = function perc(base, exponent) { return arguments.length == 1 ? base / 100 : base * (exponent / 100) };
+
+            Object.iterate = function iterate(object, handler, INQUIRE_PROPERTY_VALUES_INSTEAD) { for (var propertyIdentifier in object) handler.call(object, INQUIRE_PROPERTY_VALUES_INSTEAD ? object[propertyIdentifier] : propertyIdentifier); return object };
+            Object.port = function port(destination, source, OVERRIDE_PROPERTIES) { Array.prototype.concat.call([], Object.getOwnPropertyNames(source), Object.getOwnPropertySymbols(source)).forEach(propertyIdentifier => { (!Object.hasOwnProperty(destination, propertyIdentifier) || OVERRIDE_PROPERTIES) && Object.defineProperty(destination, propertyIdentifier, Object.getOwnPropertyDescriptor(source, propertyIdentifier)) }); return destination };
+
+            String.prototype.remove = function remove(match) { return String.prototype.replace.call(this, match, "") + "" };
+
             /* Main */
             (function Main() {
-                // Logic
-                if (RENDERER === null)
-                    // Error
-                    throw new Error("WebGL must be supported");
+                /* Class */
+                    // Web GL Buffer
+                    function WebGLBuffer(context) { return context.createBuffer() }
 
-                else {
-                    /* Class */
-                        // Web GL Buffer
-                        function WebGLBuffer(context) { return context.createBuffer() }
+                    // Web GL Program
+                    function WebGLProgram(context) { return context.createProgram() }
 
-                        // Web GL Program
-                        function WebGLProgram(context) { return context.createProgram() }
+                    // Web GL Shader
+                    function WebGLShader(context, type, source, PROGRAM_TO_ATTACH_SHADER) {
+                        // Constant > Shader
+                        const shader = context.createShader(context[type]);
 
-                        // Web GL Shader
-                        function WebGLShader(context, type, source) {
-                            // Constant > Shader
-                            const shader = context.createShader(context[type]);
+                        // Context > (Shader Source, Compile Shader, Attach Shader)
+                        context.shaderSource(shader, source);
+                        context.compileShader(shader);
+                        (typeof PROGRAM_TO_ATTACH_SHADER == "undefined") || context.attachShader(PROGRAM_TO_ATTACH_SHADER, shader);
 
-                            // Context > (Shader Source, Compile Shader)
-                            context.shaderSource(shader, source);
-                            context.compileShader(shader);
+                        // Return
+                        return shader
+                    }
 
-                            // Return
-                            return shader
-                        }
+                    // Web GL Vertex Array
+                    function WebGLVertexArray(vertices) {
+                        // Constant > Array
+                        const array = [];
 
-                        // Web GL Vertex Array
-                        function WebGLVertexArray(vertices) {
-                            // Constant > Array
-                            const array = [];
+                        // Loop > Update > Array
+                        vertices.forEach(vertex => array.push(vertex[0], vertex[1], vertex[2]));
 
-                            // Loop > Update > Array
-                            vertices.forEach(vertex => array.push(vertex[0], vertex[1], vertex[2]));
+                        // Return
+                        return new Float32Array(array)
+                    }
 
-                            // Return
-                            return new Float32Array(array)
-                        }
+                /* Function */
+                    // Restyle Canvas
+                    function restyleCanvas() {
+                        // Constant
+                            // Canvas Parent Element (Height, Width)
+                            const CANVAS_PARENT_ELEMENT_HEIGHT = +(getComputedStyle(CANVAS.parentElement).getPropertyValue("height").remove(/cm|em|ft|in|px|rem|vh|vw|%/)),
+                                CANVAS_PARENT_ELEMENT_WIDTH = +(getComputedStyle(CANVAS.parentElement).getPropertyValue("width").remove(/cm|em|ft|in|px|rem|vh|vw|%/));
 
-                    /* Constant --- NOTE (Lapys) -> Define the necessary components of our current session. */
-                        // Buffers --- REDACT (Lapys)
-                        const BUFFERS = {
-                            COLOR: new WebGLBuffer(RENDERER),
-                            POSITION: new WebGLBuffer(RENDERER)
-                        },
+                            // Canvas (Height, Width)
+                            const CANVAS_HEIGHT = Math.perc(CANVAS_PARENT_ELEMENT_HEIGHT, 75),
+                                CANVAS_WIDTH = Math.perc(CANVAS_PARENT_ELEMENT_WIDTH, 75);
 
-                        // Program
-                        PROGRAM = new WebGLProgram(RENDERER),
+                            // Canvas Size --- NOTE (Lapys) -> Make the canvas a square instead.
+                            const CANVAS_SIZE = Math.min(CANVAS_HEIGHT, CANVAS_WIDTH);
 
-                        // Vertex Data --- REDACT (Lapys)
-                        VERTEX_DATA = {
-                            COLOR: new WebGLVertexArray([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
-                            POSITION: new WebGLVertexArray([[0, 1, 0], [1, -1, 0], [-1, -1, 0]])
-                        },
+                        // Modification
+                            // Canvas > (Height, Width)
+                            CANVAS.height = CANVAS_SIZE;
+                            CANVAS.width = CANVAS_SIZE;
 
-                        // Vertex Shader
-                        VERTEX_SHADER = new WebGLShader(RENDERER, "VERTEX_SHADER",
-                            // ...
-                            "precision mediump float;" + // NOTE (Lapys) -> Precision for floating-point numbers.
-
-                            // Initialization > ((Varying) Color, Position)
-                            "attribute vec3 color;" +
-                            "attribute vec3 position;" +
-
-                            "varying vec3 varyingColor;" +
-
-                            // Main
-                            "void main() {" +
-                                // Update > (Varying Color, GL Position)
-                                "varyingColor = color;" +
-                                "gl_Position = vec4(position, 1);" +
-                            '}'
-                        ),
-
-                        // Fragment Shader
-                        FRAGMENT_SHADER = new WebGLShader(RENDERER, "FRAGMENT_SHADER",
-                            // ...
-                            "precision mediump float;" +
-
-                            // Initialization > Varying Color
-                            "varying vec3 varyingColor;" +
-
-                            // Main
-                            "void main() { gl_FragColor = vec4(varyingColor, 1) /* NOTE (Lapys) -> RGBA */; }"
-                        );
-
-                    /* Function */
-                        // Resize Canvas
-                        function resizeCanvas() {
-                            /* Modification > (Canvas, Renderer) > ... */
-                            CANVAS.height = +(getComputedStyle(CANVAS).getPropertyValue("height").replace("px", ""));
-                            CANVAS.width = +(getComputedStyle(CANVAS).getPropertyValue("width").replace("px", ""));
-
+                            // Renderer > Drawing Buffer (Height, Width)
                             RENDERER.drawingBufferHeight = CANVAS.height;
                             RENDERER.drawingBufferWidth = CANVAS.width;
-                        }; resizeCanvas();
 
-                        // Setup WebGL Buffer
-                        function setupWebGLBuffer(context, buffer, type, vertexArray, DRAW_INTENT) {
-                            // Constant > Buffer Type
-                            const BUFFER_TYPE = context[type];
-
-                            // Context > (Bind Buffer, Buffer Data)
-                            context.bindBuffer(BUFFER_TYPE, buffer);
-                            context.bufferData(BUFFER_TYPE, vertexArray, STRICT = context[DRAW_INTENT ? DRAW_INTENT : "STATIC_DRAW"]);
-                        }
-
-                        // Setup WebGL Vertex Attribute Location
-                        function setupWebGLVertexAttributeLocation(context, vertexAttributeLocation, buffer, bufferType, NORMALIZE, STRIDE, OFFSET) {
-                            // Context > (Enable Vertex Attribute Array, Bind Buffer, Vertex Attribute Pointer)
-                            context.enableVertexAttribArray(vertexAttributeLocation);
-                            context.bindBuffer(context[bufferType], buffer);
-                            context.vertexAttribPointer(vertexAttributeLocation, 3, context["FLOAT"], STRICT = !!NORMALIZE, STRICT = +(STRIDE || 0), STRICT = +(OFFSET || 0))
-                        }
-
-                    /* Event > Document > Resize */
-                    document.addEventListener("resize", function() { resizeCanvas() });
+                        // Style > Canvas > ... --- REDACT (Lapys)
+                        Object.port(CANVAS.style, {
+                            boxShadow: CANVAS_HEIGHT > CANVAS_SIZE || CANVAS_WIDTH > CANVAS_SIZE ? (function(source) { /* WARN (Lapys) -> Warning, complex logic to shade out which areas the Canvas would've filled if it was not a square.  */
+                                return source.trimLeft()
+                            })(getComputedStyle(CANVAS).getPropertyValue("box-shadow")) : "",
+                            bottom: ((innerHeight - CANVAS_SIZE) / 2) + "px",
+                            left: ((innerWidth - CANVAS_SIZE) / 2) + "px",
+                            height: CANVAS.height + "px",
+                            right: ((innerWidth - CANVAS_SIZE) / 2) + "px",
+                            top: ((innerHeight - CANVAS_SIZE) / 2) + "px",
+                            width: CANVAS.width + "px"
+                        })
+                    }; restyleCanvas();
 
                     // Setup WebGL Buffer
-                    setupWebGLBuffer(RENDERER, BUFFERS["COLOR"], "ARRAY_BUFFER", VERTEX_DATA["COLOR"], STRICT = "STATIC_DRAW");
-                    setupWebGLBuffer(RENDERER, BUFFERS["POSITION"], "ARRAY_BUFFER", VERTEX_DATA["POSITION"], STRICT = "STATIC_DRAW");
+                    function setupWebGLBuffer(context, buffer, type, vertexArray, DRAW_INTENT) {
+                        // Constant > Buffer Type
+                        const BUFFER_TYPE = context[type];
 
-                    // Renderer > (Attach Shader, Link Program)
-                    RENDERER.attachShader(PROGRAM, FRAGMENT_SHADER);
-                    RENDERER.attachShader(PROGRAM, VERTEX_SHADER);
+                        // Context > (Bind Buffer, Buffer Data)
+                        context.bindBuffer(BUFFER_TYPE, buffer);
+                        context.bufferData(BUFFER_TYPE, vertexArray, STRICT = context[DRAW_INTENT ? DRAW_INTENT : "STATIC_DRAW"]);
+                    }
 
-                    RENDERER.linkProgram(PROGRAM);
+                    // Setup WebGL Vertex Attribute Location
+                    function setupWebGLVertexAttributeLocation(context, vertexAttributeLocation, buffer, bufferType, NORMALIZE, STRIDE, OFFSET) {
+                        // Context > (Enable Vertex Attribute Array, Bind Buffer, Vertex Attribute Pointer)
+                        context.enableVertexAttribArray(vertexAttributeLocation);
+                        context.bindBuffer(context[bufferType], buffer);
+                        context.vertexAttribPointer(vertexAttributeLocation, 3, context["FLOAT"], STRICT = !!NORMALIZE, STRICT = +(STRIDE || 0), STRICT = +(OFFSET || 0))
+                    }
 
-                    /* Phase */
-                        /* Initiate */
-                        function Initiate() {
-                            // Constant > Attribute Locations --- REDACT (Lapys)
-                            const ATTRIBUTE_LOCATIONS = {
-                                COLOR: RENDERER.getAttribLocation(PROGRAM, "color"),
-                                POSITION: RENDERER.getAttribLocation(PROGRAM, "position")
-                            };
+                /* Event */
+                    // Document > (Ready State Change, Resize)
+                    document.onreadystatechange = function() { (document.readyState == "complete") && Update(); document.onreadystatechange = null };
+                    document.onresize = restyleCanvas;
 
-                            // Setup WebGL Vertex Attribute Location
-                            setupWebGLVertexAttributeLocation(RENDERER, ATTRIBUTE_LOCATIONS["COLOR"], BUFFERS["COLOR"], "ARRAY_BUFFER", STRICT = false, STRICT = 0, STRICT = 0);
-                            setupWebGLVertexAttributeLocation(RENDERER, ATTRIBUTE_LOCATIONS["POSITION"], BUFFERS["POSITION"], "ARRAY_BUFFER", STRICT = false, STRICT = 0, STRICT = 0);
+                    // Global > On Resize
+                    GLOBAL.onresize = restyleCanvas;
 
-                            // Renderer > (Use Program, Draw Arrays)
-                            RENDERER.useProgram(PROGRAM);
-                            RENDERER.drawArrays(RENDERER["TRIANGLES"], 0, 3);
+                /* Phase */
+                    /* Initiate --- NOTE (Lapys) -> Load up all the boilerplate code and let all third-party code install. */
+                    function Initiate() {
+                        /* Global */
+                            // Buffers, Shaders, Vertex Data
+                            const BUFFERS = {}, SHADERS = {}, VERTEX_DATA = {};
 
-                            // Return
-                            return 0
-                        }
+                            // Program
+                            const PROGRAM = new WebGLProgram(RENDERER);
 
-                        /* Update */
-                        function Update() { return 0 }
+                        /* Function */
+                            /* Initial Draw --- WARN (Lapys) -> Called by `IntegrateGLMatrix` module. */
+                            function InitialDraw() {
+                                // Renderer > Use Program
+                                RENDERER.useProgram(PROGRAM);
 
-                        /* Reset */
-                        function Reset() { return 0 }
+                                // Constant
+                                    // Attribute Locations --- REDACT (Lapys)
+                                    const ATTRIBUTE_LOCATIONS = {
+                                        COLOR: RENDERER.getAttribLocation(PROGRAM, "color"),
+                                        POSITION: RENDERER.getAttribLocation(PROGRAM, "position")
+                                    },
 
-                        /* Terminate */
-                        function Terminate() { return 0 }
+                                    // Matrix --- NOTE (Lapys) -> Usually used for transformation data.
+                                    MATRIX = GLMatrix.mat4.create(),
 
-                    // Initiate
-                    Initiate()
-                }
+                                    // Uniform Locations
+                                    UNIFORM_LOCATIONS = {
+                                        MATRIX: RENDERER.getUniformLocation(PROGRAM, "matrix")
+                                    };
+
+                                // Translate --- NOTE (Lapys) -> Add some non-default transformation data.
+                                GLMatrix.mat4.translate(MATRIX, MATRIX, [.2, .5, 0]); // NOTE (Lapys) -> Translate
+                                GLMatrix.mat4.scale(MATRIX, MATRIX, [.25, .25, .25]); // NOTE (Lapys) -> Scale.
+                                GLMatrix.mat4.rotateZ(MATRIX, MATRIX, Math.PI / 2); // NOTE (Lapys) -> Rotate (on the Z-axis).
+
+                                // Renderer > Uniform 4x4 Float Vector Matrix --- NOTE (Lapys) -> Link the transformation data to the WebGL Rendering Context (Renderer).
+                                RENDERER.uniformMatrix4fv(UNIFORM_LOCATIONS["MATRIX"], false /* NOTE (Lapys) -> Transpose? */, MATRIX);
+
+                                // Loop > Setup WebGL Vertex Attribute Location
+                                Object.iterate(ATTRIBUTE_LOCATIONS, attributeLocationName => setupWebGLVertexAttributeLocation(RENDERER, ATTRIBUTE_LOCATIONS[attributeLocationName], BUFFERS[attributeLocationName], "ARRAY_BUFFER", STRICT = false, STRICT = 0, STRICT = 0));
+
+                                // Renderer > Draw Arrays
+                                RENDERER.drawArrays(RENDERER["TRIANGLES"], 0, 3)
+                            }
+
+                            /* Integrate GL Matrix --- NOTE (Lapys) -> Unfortunately, GL Matrix seems to be asynchronously integrated. */
+                            function IntegrateGLMatrix() {
+                                // Logic
+                                if (typeof glMatrix == "undefined")
+                                    // Initialization > Animation Frame ID
+                                    var animationFrameID = requestAnimationFrame(
+                                        /* NOTE (Lapys) -> Re-assert if the GL Matrix framework is ready. */
+                                        function() { IntegrateGLMatrix(); cancelAnimationFrame(animationFrameID) }
+                                    );
+
+                                else {
+                                    /* Global > GL Matrix */
+                                    Object.defineProperty(GLOBAL, "GLMatrix", {configurable: false, enumerable: true, value: glMatrix, writable: false});
+
+                                    // Initial Draw
+                                    InitialDraw()
+                                }
+                            }
+
+                        /* Modification */
+                            // Buffers > ...
+                            BUFFERS["COLOR"] = new WebGLBuffer(RENDERER);
+                            BUFFERS["POSITION"] = new WebGLBuffer(RENDERER);
+
+                            // Shaders > ...
+                            SHADERS["FRAGMENT"] = new WebGLShader(RENDERER, "FRAGMENT_SHADER", `
+                                // ...
+                                precision mediump float;
+
+                                // Initialization > Varying Color
+                                varying vec3 varyingColor;
+
+                                /* Main */
+                                void main() { gl_FragColor = vec4(varyingColor, 1); }
+                            `.slice(1, -1).remove(/                            /g), STRICT = PROGRAM);
+                            SHADERS["VERTEX"] = new WebGLShader(RENDERER, "VERTEX_SHADER", `
+                                // ...
+                                precision mediump float;
+
+                                // Initialization > (Color, Position, Matrix, Varying Color)
+                                attribute vec3 color, position;
+                                uniform mat4 matrix;
+                                varying vec3 varyingColor;
+
+                                /* Main */
+                                void main() { gl_Position = matrix * vec4(position, 1); varyingColor = color; }
+                            `.slice(1, -1).remove(/                            /g), STRICT = PROGRAM);
+
+                            // Vertex Data > ...
+                            VERTEX_DATA["COLOR"] = new WebGLVertexArray([[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
+                            VERTEX_DATA["POSITION"] = new WebGLVertexArray([[0, 1, 0], [1, -1, 0], [-1, -1, 0]]);
+
+                        // Loop > Setup WebGL Buffer; Renderer > Link Program
+                        Object.iterate(BUFFERS, bufferName => setupWebGLBuffer(RENDERER, BUFFERS[bufferName], "ARRAY_BUFFER", VERTEX_DATA[bufferName], STRICT = "STATIC_DRAW"));
+                        RENDERER.linkProgram(PROGRAM);
+
+                        // ...
+                        IntegrateGLMatrix();
+
+                        // Return
+                        return 0
+                    }
+
+                    /* Update --- WARN (Lapys) -> Called by the Initiate phase. */
+                    function Update() { return 0 }
+
+                    /* Reset */
+                    function Reset() { return 0 }
+
+                    /* Terminate */
+                    function Terminate() { return 0 }
+
+                // Logic > (Error | Initiate)
+                if (RENDERER === null) throw new Error("WebGL must be supported");
+                else Initiate();
 
                 // Return
                 return 0
