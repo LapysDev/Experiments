@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="internet-explorer-5 internet-explorer-6"> <![endif]-->
+<!--[if IE 7]> <html class=internet-explorer-7> <![endif]-->
+<!--[if IE 8]> <html class=internet-explorer-8> <![endif]-->
+<!--[if IE 9]> <html class=internet-explorer-9> <![endif]-->
+<html>
+<head>
+    <!-- Document Metadata -->
+        <!-- Character Encoding Set -->
+        <meta charset=utf-8>
+
+    <!-- Document Stylesheet -->
+    <style media=all type=text/css>
+        /* DOM Elements */
+            /* All */
+            * { box-sizing: inherit }
+
+            /* <body> */
+            body { margin: 0 }
+
+            /* <body>, <html>, <main>) */
+            body, html, main { height: 100%; width: 100% }
+
+            /* <html> */
+            html { box-sizing: border-box }
+
+        /* Components > Canvas */
+        #canvas {
+            height: 100%;
+            outline: 1px solid #CCCCCC;
+            width: 100%
+        }
+    </style>
+
+    <!-- Document Title -->
+    <title> WebGL | 2 - Multi-Color Triangle </title>
+</head>
+
+<body>
+    <!-- Main -->
+    <main>
+        <!-- Canvas -->
+        <canvas id=canvas> </canvas>
+    </main>
+
+    <!-- Document Script -->
+    <script defer language=javascript type=text/javascript>
+        /* Global > Canvas, Global, Renderer, Strict */
+        const CANVAS = document.getElementById("canvas"),
+            GLOBAL = this, RENDERER = CANVAS.getContext("webgl");
+        var STRICT = false;
+
+        /* Main */
+        (function Main() {
+            // Logic
+            if (RENDERER === null)
+                // Error
+                throw new Error("WebGL must be supported");
+
+            else {
+                /* Class */
+                    // Web GL Buffer
+                    function WebGLBuffer(context) { return context.createBuffer() }
+
+                    // Web GL Program
+                    function WebGLProgram(context) { return context.createProgram() }
+
+                    // Web GL Shader
+                    function WebGLShader(context, type, source) {
+                        // Constant > Shader
+                        const shader = context.createShader(context[type]);
+
+                        // Context > (Shader Source, Compile Shader)
+                        context.shaderSource(shader, source);
+                        context.compileShader(shader);
+
+                        // Return
+                        return shader
+                    }
+
+                    // Web GL Vertex Array
+                    function WebGLVertexArray(vertices) {
+                        // Constant > Array
+                        const array = [];
+
+                        // Loop > Update > Array
+                        vertices.forEach(vertex => array.push(vertex[0], vertex[1], vertex[2]));
+
+                        // Return
+                        return new Float32Array(array)
+                    }
+
+                /* Constant --- NOTE (Lapys) -> Define the necessary components of our current session. */
+                    // Buffers --- REDACT (Lapys)
+                    const BUFFERS = {
+                        COLOR: new WebGLBuffer(RENDERER),
+                        POSITION: new WebGLBuffer(RENDERER)
+                    },
+
+                    // Program
+                    PROGRAM = new WebGLProgram(RENDERER),
+
+                    // Vertex Data --- REDACT (Lapys)
+                    VERTEX_DATA = {
+                        COLOR: new WebGLVertexArray([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                        POSITION: new WebGLVertexArray([[0, 1, 0], [1, -1, 0], [-1, -1, 0]])
+                    },
+
+                    // Vertex Shader
+                    VERTEX_SHADER = new WebGLShader(RENDERER, "VERTEX_SHADER",
+                        // ...
+                        "precision mediump float;" + // NOTE (Lapys) -> Precision for floating-point numbers.
+
+                        // Initialization > ((Varying) Color, Position)
+                        "attribute vec3 color;" +
+                        "attribute vec3 position;" +
+
+                        "varying vec3 varyingColor;" +
+
+                        // Main
+                        "void main() {" +
+                            // Update > (Varying Color, GL Position)
+                            "varyingColor = color;" +
+                            "gl_Position = vec4(position, 1);" +
+                        '}'
+                    ),
+
+                    // Fragment Shader
+                    FRAGMENT_SHADER = new WebGLShader(RENDERER, "FRAGMENT_SHADER",
+                        // ...
+                        "precision mediump float;" +
+
+                        // Initialization > Varying Color
+                        "varying vec3 varyingColor;" +
+
+                        // Main
+                        "void main() { gl_FragColor = vec4(varyingColor, 1) /* NOTE (Lapys) -> RGBA */; }"
+                    );
+
+                /* Function */
+                    // Resize Canvas
+                    function resizeCanvas() {
+                        /* Modification > (Canvas, Renderer) > ... */
+                        CANVAS.height = +(getComputedStyle(CANVAS).getPropertyValue("height").replace("px", ""));
+                        CANVAS.width = +(getComputedStyle(CANVAS).getPropertyValue("width").replace("px", ""));
+
+                        RENDERER.drawingBufferHeight = CANVAS.height;
+                        RENDERER.drawingBufferWidth = CANVAS.width;
+                    }; resizeCanvas();
+
+                    // Setup WebGL Buffer
+                    function setupWebGLBuffer(context, buffer, type, vertexArray, DRAW_INTENT) {
+                        // Constant > Buffer Type
+                        const BUFFER_TYPE = context[type];
+
+                        // Context > (Bind Buffer, Buffer Data)
+                        context.bindBuffer(BUFFER_TYPE, buffer);
+                        context.bufferData(BUFFER_TYPE, vertexArray, STRICT = context[DRAW_INTENT ? DRAW_INTENT : "STATIC_DRAW"]);
+                    }
+
+                    // Setup WebGL Vertex Attribute Location
+                    function setupWebGLVertexAttributeLocation(context, vertexAttributeLocation, buffer, bufferType, NORMALIZE, STRIDE, OFFSET) {
+                        // Context > (Enable Vertex Attribute Array, Bind Buffer, Vertex Attribute Pointer)
+                        context.enableVertexAttribArray(vertexAttributeLocation);
+                        context.bindBuffer(context[bufferType], buffer);
+                        context.vertexAttribPointer(vertexAttributeLocation, 3, context["FLOAT"], STRICT = !!NORMALIZE, STRICT = +(STRIDE || 0), STRICT = +(OFFSET || 0))
+                    }
+
+                /* Event > Document > Resize */
+                document.addEventListener("resize", function() { resizeCanvas() });
+
+                // Setup WebGL Buffer
+                setupWebGLBuffer(RENDERER, BUFFERS["COLOR"], "ARRAY_BUFFER", VERTEX_DATA["COLOR"], STRICT = "STATIC_DRAW");
+                setupWebGLBuffer(RENDERER, BUFFERS["POSITION"], "ARRAY_BUFFER", VERTEX_DATA["POSITION"], STRICT = "STATIC_DRAW");
+
+                // Renderer > (Attach Shader, Link Program)
+                RENDERER.attachShader(PROGRAM, FRAGMENT_SHADER);
+                RENDERER.attachShader(PROGRAM, VERTEX_SHADER);
+
+                RENDERER.linkProgram(PROGRAM);
+
+                /* Phase */
+                    /* Initiate */
+                    function Initiate() {
+                        // Constant > Attribute Locations --- REDACT (Lapys)
+                        const ATTRIBUTE_LOCATIONS = {
+                            COLOR: RENDERER.getAttribLocation(PROGRAM, "color"),
+                            POSITION: RENDERER.getAttribLocation(PROGRAM, "position")
+                        };
+
+                        // Setup WebGL Vertex Attribute Location
+                        setupWebGLVertexAttributeLocation(RENDERER, ATTRIBUTE_LOCATIONS["COLOR"], BUFFERS["COLOR"], "ARRAY_BUFFER", STRICT = false, STRICT = 0, STRICT = 0);
+                        setupWebGLVertexAttributeLocation(RENDERER, ATTRIBUTE_LOCATIONS["POSITION"], BUFFERS["POSITION"], "ARRAY_BUFFER", STRICT = false, STRICT = 0, STRICT = 0);
+
+                        // Renderer > (Use Program, Draw Arrays)
+                        RENDERER.useProgram(PROGRAM);
+                        RENDERER.drawArrays(RENDERER["TRIANGLES"], 0, 3);
+
+                        // Return
+                        return 0
+                    }
+
+                    /* Update */
+                    function Update() { return 0 }
+
+                    /* Reset */
+                    function Reset() { return 0 }
+
+                    /* Terminate */
+                    function Terminate() { return 0 }
+
+                // Initiate
+                Initiate()
+            }
+
+            // Return
+            return 0
+        })()
+    </script>
+</body>
+</html>

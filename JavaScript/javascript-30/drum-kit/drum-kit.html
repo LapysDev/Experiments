@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Document Style -->
+        <style media=all type=text/css>
+            /* DOM Elements */
+                /* All */
+                * { box-sizing: border-box; user-select: none }
+                    /* States > Selection */
+                    ::selection { background-color: transparent }
+
+                /* <body>, <html>, <main> */
+                body, html, main { height: 100%; margin: 0; width: 100% }
+
+            /* Components */
+                /* Key */
+                .key {
+                    background-color: rgba(255, 255, 255, .1);
+                    border: 2.5px solid rgba(0, 0, 0, .75);
+                    border-radius: 5px;
+                    color: #FFFFFF;
+                    cursor: pointer;
+                    display: inline-block;
+                    flex-grow: 1;
+                    font-size: 20px;
+                    outline: 1px solid rgba(255, 255, 255, .1);
+                    overflow: hidden;
+                    margin: 0 5.5px;
+                    padding: 5px 7.5px;
+                    text-align: center;
+                    transition: inherit;
+                    width: 85px
+                }
+                    /* States */
+                        /* Focus, Hover */
+                        .key:focus,
+                        .key:hover {
+                            background-color: rgba(255, 255, 255, .2);
+                            border-color: rgba(236, 236, 0, .75);
+                            margin: 0 5.5px !important;
+                            transform: scale(1) !important
+                        }
+
+                        /* Active */
+                        .key:active,
+                        .key[state~=playing] {
+                            background-color: rgba(255, 255, 255, .3);
+                            border-color: rgba(255, 255, 0, .85);
+                            transition-duration: .05s;
+                            transform: scale(1.1) !important
+                        }
+
+                    /* Content */
+                    .key > * { pointer-events: none }
+
+                    /* Description */
+                    .key > [role~=description] {
+                        color: #FFFF00;
+                        font-family: sans-serif;
+                        font-size: 65%;
+                        opacity: .85
+                    }
+
+                    /* Label */
+                    .key > [role~=label] {
+                        font-family: monospace;
+                        font-size: 120%;
+                        text-shadow: 0 0 3px #000000
+                    }
+
+            /* Assets */
+                /* Keys */
+                #keys {
+                    background-color: rgba(0, 0, 0, .6);
+                    border: 1px solid rgba(255, 255, 255, .5);
+                    border-radius: 3px;
+                    box-shadow: inset 0 0 0 2560px transparent;
+                    display: flex;
+                    margin: auto;
+                    justify-content: center;
+                    overflow-x: auto;
+                    padding: 7.5px 10px;
+                    transition: .1s ease-out;
+                    white-space: nowrap;
+                    width: 95%
+                }
+                    /* States > Active */
+                    #keys:active { box-shadow: inset 0 0 0 2560px rgba(255, 255, 255, .025) }
+
+                    /* Key */
+                    #keys:hover > .key {
+                        margin: 0 4.5px;
+                        transform: scale(.95)
+                    }
+
+                /* Main */
+                #main {
+                    align-content: center;
+                    align-items: center;
+                    background-color: #111111;
+                    background-image: url("background-image-0.jpeg");
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    background-size: contain;
+                    box-shadow: inset 0 0 0 2560px rgba(0, 0, 0, .5);
+                    display: flex;
+                    flex-flow: column;
+                    justify-content: center
+                }
+                    /* Content */
+                    #main > * { margin-bottom: 2.5%; margin-top: 2.5% }
+
+                /* Random */
+                #random {
+                    background-color: rgba(0, 0, 0, .75);
+                    border: 5px solid rgb(236, 236, 236);
+                    border-radius: 6px;
+                    box-shadow: inset 0 0 0 1000px rgba(255, 255, 255, 0);
+                    color: #FFFFFF;
+                    cursor: pointer;
+                    display: block;
+                    font-family: "Google Sans", Roboto, "PT Sans", Calibri, "Calibri Light", Arial, sans-serif;
+                    font-size: 27.5px;
+                    max-width: 90%;
+                    outline: 1px solid rgba(255, 255, 255, .1);
+                    overflow: hidden;
+                    padding: 5px 15px;
+                    text-align: center;
+                    text-shadow: 0 0 5px #000000;
+                    transition: .1s ease-out
+                }
+                #random[state~=active] {
+                    background-color: rgba(0, 0, 0, .9);
+                    border-color: #FFFF00;
+                    box-shadow: inset 0 0 0 1000px rgba(255, 255, 255, 0) !important
+                }
+                    /* States > (Focus, Hover) */
+                    #random:focus,
+                    #random:hover {
+                        box-shadow: inset 0 0 0 1000px rgba(255, 255, 255, .1);
+                        transform: scale(1.1)
+                    }
+        </style>
+
+        <!-- Document Title -->
+       <title> Drum Kit </title>
+    </head>
+
+    <body>
+        <!-- Main -->
+        <main id=main>
+            <!-- Keys -->
+            <div id=keys role=container> </div>
+
+            <!-- Random -->
+            <button id=random role=button> Random Playthrough </button>
+
+            <!-- Sound --- WARN (Lapys) -> The obvious disadvantage of having one `Audio` object is the inability to play multiple sounds in parallel. -->
+            <audio hidden id=sound style=display:none> </audio>
+        </main>
+
+        <!-- Document Script -->
+        <script language=javascript type=application/javascript>
+            /* Constant > (Keys (Element), Random, Sound) */
+            const KEYS = [],
+                KEYS_ELEMENT = document.getElementById("keys"),
+                RANDOM = document.getElementById("random"),
+                SOUND = document.getElementById("sound");
+
+            /* Global > (Key Stream, Random Play) --- UPDATE REQUIRED (Lapys) -> Is there a way to hide this from the global object? */
+            var KEY_STREAM = [], RANDOM_PLAY = false;
+
+            /* Class > Key --- NOTE (Lapys) -> Allow new keys to be created for the drum kit. */
+            function Key(label, description, soundFile) {
+                // Logic
+                if (this instanceof Key)
+                    // Logic
+                    if (arguments.length > 2) {
+                        // Constant > (Key) (Description, Label)
+                        const key = document.createElement("div"),
+                            keyDescription = document.createElement("div"),
+                            keyLabel = document.createElement("kbd");
+
+                        // Initialization > Key Is Playing
+                        let keyIsPlaying = false;
+
+                        // Function > Play
+                        function play() {
+                            // Logic
+                            if (!keyIsPlaying) {
+                                // Update > Key Is Playing
+                                keyIsPlaying = true;
+
+                                // Modification > ...
+                                key.setAttribute("state", "playing");
+
+                                // Modification > Sound > (Source, Current Time)
+                                (SOUND.currentSrc || "").endsWith(key.soundFile) || (SOUND.src = key.soundFile);
+                                SOUND.currentTime = +0;
+
+                                // Sound > Play
+                                SOUND.play();
+
+                                // Set Timeout
+                                setTimeout(function() { keyIsPlaying = false; key.removeAttribute("state") }, 100)
+                            }
+                        }
+
+                        // Modification > ...
+                        keyDescription.setAttribute("role", "description");
+                        keyLabel.setAttribute("role", "label");
+                        key.setAttribute("class", "key");
+                        key.setAttribute("tabindex", '0');
+
+                        keyDescription.innerHTML = ' ' + description + ' ';
+                        keyLabel.innerText = ' ' + label[+0] + ' ';
+                        key.description = keyDescription.innerHTML.trim();
+                        key.label = keyLabel.innerText.trim();
+                        key.play = play;
+                        key.soundFile = soundFile;
+
+                        // Event > Key > (Click, Key Press)
+                        key.addEventListener("click", function() { RANDOM_PLAY || play() });
+                        key.addEventListener("keypress", function(event) { RANDOM_PLAY || ((event.key == ' ' || event.key == "Enter") && play()) });
+
+                        // Insertion
+                        key.appendChild(keyLabel);
+                        key.appendChild(keyDescription);
+
+                        // Return
+                        return key
+                    }
+
+                    else
+                        // Error
+                        throw new TypeError("Failed to create `Key`: 2 arguments required");
+
+                else
+                    // Error
+                    throw new TypeError("`this` must be a `Key`")
+            }
+
+            /* Function > Add Key */
+            function addKey(key) {
+                // Logic
+                if (key instanceof HTMLDivElement) {
+                    // Update > Keys
+                    KEYS.push(key);
+
+                    // Insertion
+                    KEYS_ELEMENT.appendChild(key)
+                }
+
+                else
+                    // Error
+                    throw new TypeError("Argument must be a `Key` object")
+            }
+
+            /* Event */
+                // Global
+                    // Key Down
+                    addEventListener("keydown", function(event) {
+                        // Logic
+                        if (KEYS.length)
+                            // Logic > ... > Focus
+                            switch (event.key) {
+                                // Arrow Left
+                                case "ArrowLeft":
+                                    document.activeElement && (document.activeElement.getAttribute("class") || "").split(' ').includes("key") ?
+                                        document.activeElement.previousElementSibling && document.activeElement.previousElementSibling.focus() :
+                                        KEYS[KEYS.length - 1].focus();
+                                    break;
+
+                                // Arrow Right
+                                case "ArrowRight":
+                                    document.activeElement && (document.activeElement.getAttribute("class") || "").split(' ').includes("key") ?
+                                        document.activeElement.nextElementSibling && document.activeElement.nextElementSibling.focus() :
+                                        KEYS[+0].focus()
+                            }
+                    });
+
+                    // Key Press
+                    addEventListener("keypress", function(event) { KEYS.forEach(key => (key.label == event.key.toUpperCase()) && key.play()) });
+
+            /* Main */
+            (function Main() {
+                /* Global > (Key, ...) */
+                var KEY = null, PLAY_DURATION_TIMEOUT_ID = null;
+
+                /* Function */
+                    // On Ended
+                    function onended() {
+                        // Clear Timeout
+                        clearTimeout(PLAY_DURATION_TIMEOUT_ID);
+
+                        // Logic
+                        if (RANDOM_PLAY) {
+                            // Update > Key (Stream)
+                            KEY = KEYS[(Math.random() * KEYS.length) | +0];
+                            KEY_STREAM.push(KEY);
+
+                            // Constant > Key Stream Length
+                            const KEY_STREAM_LENGTH = KEY_STREAM.length;
+
+                            // Logic --- NOTE (Lapys) -> Do not play the same key over three times.
+                            if (
+                                (KEY_STREAM_LENGTH ? KEY_STREAM[KEY_STREAM_LENGTH - 1] === KEY : false) &&
+                                (KEY_STREAM_LENGTH > 1 ? KEY_STREAM[KEY_STREAM_LENGTH - 2] === KEY : false) &&
+                                (KEY_STREAM_LENGTH > 2 ? KEY_STREAM[KEY_STREAM_LENGTH - 3] === KEY : false)
+                            )
+                                // On Ended
+                                onended();
+
+                            else {
+                                // Update > Key Stream
+                                (KEY_STREAM_LENGTH > 6) && (KEY_STREAM = KEY_STREAM.slice(1));
+
+                                // Modification > Sound > Source
+                                SOUND.src = KEY.soundFile
+                            }
+                        }
+
+                        else
+                            // Update > Key Stream
+                            KEY_STREAM.length = 0
+                    }
+
+                    // On Loaded Data
+                    function onloadeddata() {
+                        // Key > Play
+                        KEY && KEY.play();
+
+                        // Update > Play Duration Timeout ID --- NOTE (Lapys) -> Prevent the sounds lasting too long.
+                        PLAY_DURATION_TIMEOUT_ID = setTimeout(function() {
+                            // Modification > Sound > Current Time
+                            SOUND.currentTime = +0;
+
+                            // On Ended
+                            onended()
+                        }, 1100)
+                    }
+
+                    // Random Play
+                    function randomPlay() {
+                        // Update > Random Play
+                        RANDOM_PLAY = !RANDOM_PLAY;
+
+                        // Logic
+                        if (RANDOM_PLAY) {
+                            // Modification > Random > State
+                            RANDOM.setAttribute("state", "active");
+
+                            // Event > Sound > (Ended, Loaded Data)
+                            SOUND.addEventListener("ended", onended);
+                            SOUND.addEventListener("loadeddata", onloadeddata);
+
+                            // ...
+                            onended()
+                        }
+
+                        else {
+                            // Modification > Random > State
+                            RANDOM.removeAttribute("state");
+
+                            // Deletion
+                            SOUND.removeEventListener("ended", onended);
+                            SOUND.removeEventListener("loadeddata", onloadeddata)
+                        }
+                    }
+
+                /* Event > Random > Click */
+                RANDOM.addEventListener("click", randomPlay);
+
+                // Add Key
+                addKey(new Key('G', "Boom", "boom.wav"));
+                addKey(new Key('A', "Clap", "clap.wav"));
+                addKey(new Key('S', "Hi-Hat", "hihat.wav"));
+                addKey(new Key('D', "Kick", "kick.wav"));
+                addKey(new Key('F', "Open Hat", "openhat.wav"));
+                addKey(new Key('H', "Ride", "ride.wav"));
+                addKey(new Key('J', "Snare", "snare.wav"));
+                addKey(new Key('L', "Tink", "tink.wav"));
+                addKey(new Key('K', "Tom", "tom.wav"))
+            })()
+        </script>
+    </body>
+</html>

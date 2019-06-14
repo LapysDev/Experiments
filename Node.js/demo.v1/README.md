@@ -1,0 +1,2 @@
+- To initiate the project anew, run `npm init` (this creates a `package.json` file).
+- Run `cls && node main.js` in a terminal on this directory (to run the `main.js` file).

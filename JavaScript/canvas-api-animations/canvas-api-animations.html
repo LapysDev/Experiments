@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang=en>
+    <head>
+        <!-- Document Stylesheet -->
+        <style media=all type=text/css>
+            /* DOM Elements */
+                /* <body> */
+                body { margin: 0 }
+
+                /* <body>, <html>, <main> */
+                body, html, main { height: 100%; width: 100% }
+
+            /* Assets */
+                /* Canvas */
+                #canvas {
+                    background-color: #333333;
+                    height: 100%;
+                    pointer-events: none;
+                    width: 100%
+                }
+        </style>
+
+        <!-- Document Title -->
+        <title> Canvas API Animations </title>
+    </head>
+
+    <body>
+        <!-- Main -->
+        <main id=main>
+            <!-- Canvas -->
+            <canvas id=canvas> </canvas>
+        </main>
+
+        <!-- Document Script -->
+        <script language=javascript type=application/javascript>
+            /* Main */
+            (function Main() {
+                /* Constant */
+                    // (Canvas, Renderer)
+                    const CANVAS = document.getElementById("canvas"),
+                        RENDERER = CANVAS.getContext("2d"),
+
+                    // Fallback CSS Style
+                    FALLBACK_CSS_STYLE = getComputedStyle(document.documentElement);
+
+                /* Class */
+                    // Color
+                    class Color {
+                        // [Constructor]
+                        constructor(color) {
+                            // Logic > ...
+                            if (!arguments.length || (typeof color == "object" && color === null)) this.value = "rgba(0, 0, 0, 0)";
+                            else if (typeof color == "string") this.value = color;
+                            else throw new TypeError("\"" + color + "\" is not a valid color.");
+
+                            // Modification > Target > Raw
+                            this.raw = function raw() { return this.value };
+
+                            // Return
+                            return this
+                        }
+                    };
+
+                    // Coordinates
+                    class Coordinates {
+                        // [Constructor]
+                        constructor(x, y) {
+                            // Logic > Modification > Target > (X, Y)
+                            switch (arguments.length) {
+                                case 0: this.x = null; this.y = null; break;
+                                case 1: this.x = x; this.y = x; break;
+                                case 2: this.x = x; this.y = y
+                            }
+
+                            // Modification > Target > Is Available
+                            this.isAvailable = function isAvailable() { return this.x !== null && this.y !== null };
+
+                            // Return
+                            return this
+                        }
+                    };
+
+                    // Draw Option
+                    class DrawOption {
+                        // [Constructor]
+                        constructor(options) {
+                            // Logic
+                            if (typeof options == "object" && options !== null) {
+                                // Initialization > Data
+                                const DATA = {};
+
+                                // Modification > Data
+                                    // Effects
+                                    DATA.effects = {
+                                        // Opacity
+                                        opacity: 1,
+
+                                        // Shadow
+                                        shadow: {
+                                            color: new Color,
+                                            offset: new Coordinates
+                                        }
+                                    };
+
+                                    // Fill
+                                    DATA.fill = {color: new Color};
+
+                                    // Font
+                                    DATA.font = {
+                                        family: FALLBACK_CSS_STYLE.fontFamily,
+                                        size: FALLBACK_CSS_STYLE.fontSize,
+                                        weight: FALLBACK_CSS_STYLE.fontWeight
+                                    };
+
+                                    // Stroke
+                                    DATA.stroke = {color: new Color, miter: null, type: "solid", width: null};
+
+                                    // Text
+                                    DATA.text = {align: "start", baseline: "alphabetic"};
+
+                                // Modification > Options > Effects
+                                options.effects = typeof options.effects == "object" ? options.effects : {};
+
+                                // Logic
+                                    // [Effects]
+                                        // [Opacity]
+                                        if ("opacity" in options || "opacity" in options.effects) {
+                                            // Initialization > Opacity
+                                            var opacity = +options.opacity || +options.effects.opacity;
+
+                                            // ...
+                                            isNaN(opacity) || (DATA.effects.opacity = opacity >= 1 ? 1 : (opacity <= 0 ? 0 : opacity))
+                                        }
+
+                                        // [Shadow]
+                                        if ("shadow" in options || "shadow" in options.effects) {
+                                            // Initialization > Shadow
+                                            var shadow = options.shadow || options.effects.shadow;
+
+                                            // Update > Shadow
+                                            (typeof shadow == "object") || (shadow = {color: new Color(shadow), offset: new Coordinates});
+
+                                            // ...
+                                            (typeof shadow.offset == "object") || (shadow.offset = new Coordinates);
+
+                                            DATA.effects.shadow.color = new Color(shadow.color);
+                                            DATA.effects.shadow.offset = new Coordinates(shadow.offset.x, shadow.offset.y)
+                                        }
+
+                                    // [Fill]
+                                    if ("fill" in options) {
+                                        // Initialization > Fill
+                                        var fill = options.fill;
+
+                                        // Update > Fill
+                                        (typeof fill == "object") || (fill = {color: fill});
+
+                                        // ...
+                                        DATA.fill.color = new Color(fill.color)
+                                    }
+
+                                    // [Font]
+                                    if ("font" in options) {
+                                        // Initialization > Font
+                                        var font = options.font;
+
+                                        // Update > Font
+                                        (typeof font == "object") || (font = {
+                                            family: FALLBACK_CSS_STYLE.fontFamily,
+                                            size: FALLBACK_CSS_STYLE.fontSize,
+                                            weight: FALLBACK_CSS_STYLE.fontWeight
+                                        });
+
+                                        // ...
+                                        (typeof font.family == "string") || (font.family = FALLBACK_CSS_STYLE.fontFamily);
+                                        switch (typeof font.size) {
+                                            case "number": font.size = font.size + "px"; break;
+                                            case "string": font.size = font.size; break;
+                                            default: font.size = FALLBACK_CSS_STYLE.fontSize
+                                        }
+                                        (typeof font.weight == "string") || (font.weight = FALLBACK_CSS_STYLE.fontWeight);
+
+                                        DATA.font.family = font.family;
+                                        DATA.font.size = font.size;
+                                        DATA.font.weight = font.weight
+                                    }
+
+                                    // [Stroke]
+                                    if ("stroke" in options) {
+                                        // Initialization > Stroke
+                                        var stroke = options.stroke;
+
+                                        // Update > Stroke
+                                        (typeof stroke == "object") || (stroke = {color: stroke});
+
+                                        // ...
+                                        ("color" in stroke) && (DATA.stroke.color = new Color(stroke.color));
+                                        ("miter" in stroke) && (DATA.stroke.miter = typeof stroke.miter == "string" ? stroke.miter : null);
+                                        ("type" in stroke) && (DATA.stroke.type = typeof stroke.type == "string" ? stroke.type : "solid");
+                                        if ("width" in stroke) switch (stroke.width) {
+                                            case "number": DATA.stroke.width = stroke.width + "px"; break;
+                                            case "string": DATA.stroke.width = stroke.width; break;
+                                            default: DATA.stroke.width = null
+                                        }
+                                    }
+
+                                    // [Text]
+                                    if ("text" in options) {
+                                        // Initialization > Text
+                                        var text = options.text;
+
+                                        // Update > Text
+                                        (typeof text == "object") || (text = {align: "start", baseline: "alphabetic"});
+
+                                        // ...
+                                        ("align" in text) && (DATA.text.align = typeof text.align == "string" ? text.align : "start");
+                                        ("baseline" in text) && (DATA.text.baseline = typeof text.baseline == "string" ? text.baseline : "alphabetic")
+                                    }
+
+                                // Update > Target
+                                Object.port(this, DATA);
+
+                                // Return
+                                return this
+                            }
+
+                            else
+                                // Error
+                                throw new TypeError("Options for `DrawOption` must be an object.")
+                        }
+                    };
+
+                    // Concept
+                    class Concept {};
+                        // Image
+                        class Image extends Concept {};
+
+                        // Shape
+                        class Shape extends Concept {
+                            // [Constructor]
+                            constructor(options) {
+                                // Super
+                                super();
+
+                                // ...
+                                if (options instanceof DrawOption) this.drawData = options;
+                                else throw new TypeError("Constructor argument must be a `DrawOption` object.");
+
+                                // Return
+                                return this
+                            }
+                        };
+                            // Rectangle
+                            function Rectangle(options) {
+                                // Initialization > Shape
+                                let shape = new Shape(new DrawOption(options));
+
+                                // Loop > Modification > Shape > [Property Name]
+                                for (var propertyName in Rectangle.prototype) Object.defineProperty(shape, propertyName, Object.getOwnPropertyDescriptor(Rectangle.prototype, propertyName));
+
+                                // Logic > ...
+                                if ("coordinates" in options && options.coordinates instanceof Coordinates) shape.coordinates = options.coordinates;
+                                else throw new ReferenceError("Option \"coordinates\" must be well defined.");
+
+                                if ("height" in options && typeof options.height == "number" && !isNaN(options.height)) shape.height = options.height;
+                                else throw new ReferenceError("Option \"height\" must be well defined.");
+
+                                if ("width" in options && typeof options.width == "number" && !isNaN(options.width)) shape.width = options.width;
+                                else throw new ReferenceError("Option \"width\" must be well defined.");
+
+                                // Modification > Shape > Type
+                                shape.type = "rectangle";
+
+                                // Return
+                                return shape
+                            }
+
+                        // Text
+                        class Text extends Concept {};
+
+                /* Modification */
+                    // Canvas Rendering Context 2D > Prototype
+                        // Draw
+                        CanvasRenderingContext2D.prototype.draw = function draw(CONCEPT) {
+                            // Logic
+                            if (CONCEPT instanceof Concept) {
+                                const DRAW_DATA = CONCEPT.drawData;
+
+                                // Logic
+                                    // [Image]
+                                    if (CONCEPT instanceof Image) {}
+
+                                    // [Shape]
+                                    else if (CONCEPT instanceof Shape)
+                                        // Logic
+                                        switch (CONCEPT.type) {
+                                            case "rectangle":
+                                                var hasFill = true, hasStroke = !!DRAW_DATA.stroke.width;
+
+                                                // Logic > ...
+                                                if (hasFill) { RENDERER.fillStyle = DRAW_DATA.fill.color.raw(); RENDERER.fillRect(CONCEPT.coordinates.x, CONCEPT.coordinates.y, CONCEPT.height, CONCEPT.width) }
+                                                if (hasStroke) { RENDERER.strokeStyle = DRAW_DATA.stroke.color.raw(); RENDERER.strokeRect(CONCEPT.coordinates.x, CONCEPT.coordinates.y, CONCEPT.height, CONCEPT.width) }
+
+                                                // [Break]
+                                                break;
+                                        }
+
+                                    // [Text]
+                                    else if (CONCEPT instanceof Text) {}
+                            }
+
+                            else
+                                // Error
+                                throw new TypeError("Argument must be a drawable object")
+                        };
+
+                    // Object
+                        // Port
+                        Object.port = function port(destination, source) { Array.prototype.concat.call([], Object.getOwnPropertyNames(source), Object.getOwnPropertySymbols(source)).forEach(propertyIdentifier => Object.defineProperty(destination, propertyIdentifier, Object.getOwnPropertyDescriptor(source, propertyIdentifier))); arguments[2] && Object.port(destination, arguments[2]); return destination };
+
+                    // Window
+                        // Canvas, Renderer
+                        window.CANVAS = CANVAS;
+                        window.RENDERER = RENDERER;
+
+                /* Phase */
+                    /* Initiate */
+                    function Initiate() {
+                        // Constant > Size
+                        const SIZE = Math.min(innerHeight, innerWidth);
+
+                        // (Modification, Style) > Canvas > (Height, Width)
+                        CANVAS.setAttribute("height", SIZE);
+                        CANVAS.setAttribute("width", SIZE);
+                        CANVAS.style.height = CANVAS.style.width = (CANVAS.height = CANVAS.width = SIZE) + "px"
+                    }
+
+                    /* Update */
+                    function Update() {
+                        // Renderer > Draw
+                        RENDERER.draw(new Rectangle({
+                            fill: "#000000",
+                            coordinates: new Coordinates(0, 0),
+                            height: 100,
+                            stroke: "#FFFFFF",
+                            width: 100
+                        }));
+
+                        // Request Animation Frame > Update
+                        // requestAnimationFrame(Update)
+                    }
+
+                // Initiate; Update
+                Initiate(); Update();
+
+                // Return
+                return 0
+            })()
+        </script>
+    </body>
+</html>

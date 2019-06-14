@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html type="internet-explorer-7 internet-explorer-8 internet-explorer-9"> <![endif]-->
+<!--[if IE 7]>    <html type="internet-explorer-8 internet-explorer-9"> <![endif]-->
+<!--[if IE 8]>    <html class=internet-explorer-9> <![endif]-->
+<html>
+<head>
+    <!-- Document Metadata -->
+        <!-- Character Encoding Set -->
+        <meta charset=utf-8>
+
+    <!-- Document Title -->
+    <title> Node.js | Testing Room </title>
+</head>
+
+<body>
+    <!-- Main -->
+    <main>
+        <!-- Header -->
+        <h1 role=header> Testing Room </h1>
+
+        <!-- Description -->
+        <p role=description> </p>
+
+        <!-- Document Script -->
+        <script language=javascript type=text/javascript>
+            // Modification > [HTMLElement] > Inner HTML
+            document.querySelector("p[role=description").innerHTML = "Running on " +
+                ["Chrome " + process.versions.chrome, "Node " + process.versions.node].join(", ")
+        </script>
+    </main>
+</body>
+</html>

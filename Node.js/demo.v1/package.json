@@ -1,0 +1,16 @@
+{
+  "author": "Lapys",
+  "description": "Node.js | Testing Room",
+  "keywords": [
+    "LapysDev",
+    "Node.js",
+    "Testing"
+  ],
+  "license": "ISC",
+  "main": "main.js",
+  "name": "app",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "1.0.0"
+}
