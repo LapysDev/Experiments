@@ -27,18 +27,14 @@
         /* Components > Canvas */
         #canvas {
             border: 1.5px solid rgba(0, 0, 0, .1);
-            bottom: 12.5%;
             box-shadow: 0 5px 5px 0 rgba(0, 0, 0, .3),
-                0 0 10000px 10000px rgba(0, 0, 0, .4875);
-            height: 75%;
-            left: 12.5%;
+                0 0 10000px 10000px rgba(0, 0, 0, .675);
+            height: 100%;
             margin: auto;
             outline: 1px solid #CCCCCC;
             position: relative;
-            right: 12.5%;
-            top: 12.5%;
             transition: .1s ease-out;
-            width: 75%
+            width: 100%
         }
             /* States > Hover */
             #canvas:hover {
@@ -121,8 +117,8 @@
                                 CANVAS_PARENT_ELEMENT_WIDTH = +(getComputedStyle(CANVAS.parentElement).getPropertyValue("width").remove(/cm|em|ft|in|px|rem|vh|vw|%/));
 
                             // Canvas (Height, Width)
-                            const CANVAS_HEIGHT = Math.perc(CANVAS_PARENT_ELEMENT_HEIGHT, 75),
-                                CANVAS_WIDTH = Math.perc(CANVAS_PARENT_ELEMENT_WIDTH, 75);
+                            const CANVAS_HEIGHT = Math.perc(CANVAS_PARENT_ELEMENT_HEIGHT, 95),
+                                CANVAS_WIDTH = Math.perc(CANVAS_PARENT_ELEMENT_WIDTH, 95);
 
                             // Canvas Size --- NOTE (Lapys) -> Make the canvas a square instead.
                             const CANVAS_SIZE = Math.min(CANVAS_HEIGHT, CANVAS_WIDTH);
@@ -136,11 +132,11 @@
                             RENDERER.drawingBufferHeight = CANVAS.height;
                             RENDERER.drawingBufferWidth = CANVAS.width;
 
-                        // Style > Canvas > ... --- REDACT (Lapys)
+                        /* Style > Canvas > ...
+                                --- NOTE (Lapys) -> It would be cool to shade the area of the canvas not filled because its a square.
+                                --- REDACT (Lapys)
+                        */
                         Object.port(CANVAS.style, {
-                            boxShadow: CANVAS_HEIGHT > CANVAS_SIZE || CANVAS_WIDTH > CANVAS_SIZE ? (function(source) { /* WARN (Lapys) -> Warning, complex logic to shade out which areas the Canvas would've filled if it was not a square.  */
-                                return source.trimLeft()
-                            })(getComputedStyle(CANVAS).getPropertyValue("box-shadow")) : "",
                             bottom: ((innerHeight - CANVAS_SIZE) / 2) + "px",
                             left: ((innerWidth - CANVAS_SIZE) / 2) + "px",
                             height: CANVAS.height + "px",
@@ -180,46 +176,68 @@
                     /* Initiate --- NOTE (Lapys) -> Load up all the boilerplate code and let all third-party code install. */
                     function Initiate() {
                         /* Global */
-                            // Buffers, Shaders, Vertex Data
-                            const BUFFERS = {}, SHADERS = {}, VERTEX_DATA = {};
+                            // Attribute Locations, Buffers, Shaders, Uniform Locations, Vertex Data
+                            const ATTRIBUTE_LOCATIONS = {}, BUFFERS = {}, SHADERS = {}, UNIFORM_LOCATIONS = {}, VERTEX_DATA = {};
 
-                            // Program
+                            // Matrix, Program
+                            var MATRIX = null; // NOTE (Lapys) -> Usually used for transformation data.
                             const PROGRAM = new WebGLProgram(RENDERER);
 
                         /* Function */
+                            /* Animation[ | Continuous] Draw */
+                            function ContinuousDraw() {
+                                // GL Matrix > 4x4 Matrix > Rotate Z
+                                GLMatrix.mat4.rotateZ(MATRIX, MATRIX, Math.PI / 2 / 70); // NOTE (Lapys) -> Rotate (on the Z-axis).
+
+                                // Renderer
+                                    // Uniform 4x4 Float Vector Matrix --- NOTE (Lapys) -> Link the transformation data to the WebGL Rendering Context (Renderer).
+                                    RENDERER.uniformMatrix4fv(UNIFORM_LOCATIONS["MATRIX"], false /* NOTE (Lapys) -> Transpose? */, MATRIX);
+
+                                    // Draw Arrays --- NOTE (Lapys) -> Re-render the updated drawing.
+                                    RENDERER.drawArrays(RENDERER["TRIANGLES"], 0, 3);
+
+                                // Request Animation Frame > Continuous Draw
+                                requestAnimationFrame(ContinuousDraw)
+                            }
+
                             /* Initial Draw --- WARN (Lapys) -> Called by `IntegrateGLMatrix` module. */
                             function InitialDraw() {
+                                // Update
+                                    // Attribute Locations
+                                    Object.port(ATTRIBUTE_LOCATIONS, {
+                                        COLOR: RENDERER.getAttribLocation(PROGRAM, "color"),
+                                        POSITION: RENDERER.getAttribLocation(PROGRAM, "position")
+                                    });
+
+                                    // Matrix
+                                    MATRIX = GLMatrix.mat4.create();
+
+                                    // Uniform Locations
+                                    Object.port(UNIFORM_LOCATIONS, {
+                                        MATRIX: RENDERER.getUniformLocation(PROGRAM, "matrix")
+                                    });
+
                                 // Renderer > Use Program
                                 RENDERER.useProgram(PROGRAM);
 
-                                // Constant
-                                    // Attribute Locations --- REDACT (Lapys)
-                                    const ATTRIBUTE_LOCATIONS = {
-                                        COLOR: RENDERER.getAttribLocation(PROGRAM, "color"),
-                                        POSITION: RENDERER.getAttribLocation(PROGRAM, "position")
-                                    },
-
-                                    // Matrix --- NOTE (Lapys) -> Usually used for transformation data.
-                                    MATRIX = GLMatrix.mat4.create(),
-
-                                    // Uniform Locations
-                                    UNIFORM_LOCATIONS = {
-                                        MATRIX: RENDERER.getUniformLocation(PROGRAM, "matrix")
-                                    };
-
-                                // Translate --- NOTE (Lapys) -> Add some non-default transformation data.
+                                /* GL Matrix > 4x4 Matrix > (Translate, Scale)
+                                        --- NOTE (Lapys) -> Add some non-default transformation data.
+                                        --- WARN (Lapys) -> Transformations are applied in reverse sequence.
+                                */
                                 GLMatrix.mat4.translate(MATRIX, MATRIX, [.2, .5, 0]); // NOTE (Lapys) -> Translate
                                 GLMatrix.mat4.scale(MATRIX, MATRIX, [.25, .25, .25]); // NOTE (Lapys) -> Scale.
-                                GLMatrix.mat4.rotateZ(MATRIX, MATRIX, Math.PI / 2); // NOTE (Lapys) -> Rotate (on the Z-axis).
 
-                                // Renderer > Uniform 4x4 Float Vector Matrix --- NOTE (Lapys) -> Link the transformation data to the WebGL Rendering Context (Renderer).
-                                RENDERER.uniformMatrix4fv(UNIFORM_LOCATIONS["MATRIX"], false /* NOTE (Lapys) -> Transpose? */, MATRIX);
+                                // Renderer > Uniform 4x4 Float Vector Matrix
+                                RENDERER.uniformMatrix4fv(UNIFORM_LOCATIONS["MATRIX"], false, MATRIX);
 
                                 // Loop > Setup WebGL Vertex Attribute Location
                                 Object.iterate(ATTRIBUTE_LOCATIONS, attributeLocationName => setupWebGLVertexAttributeLocation(RENDERER, ATTRIBUTE_LOCATIONS[attributeLocationName], BUFFERS[attributeLocationName], "ARRAY_BUFFER", STRICT = false, STRICT = 0, STRICT = 0));
 
                                 // Renderer > Draw Arrays
-                                RENDERER.drawArrays(RENDERER["TRIANGLES"], 0, 3)
+                                RENDERER.drawArrays(RENDERER["TRIANGLES"], 0, 3);
+
+                                // Continuous Draw
+                                ContinuousDraw()
                             }
 
                             /* Integrate GL Matrix --- NOTE (Lapys) -> Unfortunately, GL Matrix seems to be asynchronously integrated. */
@@ -241,38 +259,47 @@
                                 }
                             }
 
-                        /* Modification */
-                            // Buffers > ...
-                            BUFFERS["COLOR"] = new WebGLBuffer(RENDERER);
-                            BUFFERS["POSITION"] = new WebGLBuffer(RENDERER);
+                        /* Update */
+                            // Buffers
+                            Object.port(BUFFERS, {
+                                COLOR: new WebGLBuffer(RENDERER),
+                                POSITION: new WebGLBuffer(RENDERER)
+                            });
 
-                            // Shaders > ...
-                            SHADERS["FRAGMENT"] = new WebGLShader(RENDERER, "FRAGMENT_SHADER", `
-                                // ...
-                                precision mediump float;
+                            // Shaders
+                            Object.port(SHADERS, {
+                                // [Fragment]
+                                FRAGMENT: new WebGLShader(RENDERER, "FRAGMENT_SHADER", `
+                                    // ...
+                                    precision mediump float;
 
-                                // Initialization > Varying Color
-                                varying vec3 varyingColor;
+                                    // Initialization > Varying Color
+                                    varying vec3 varyingColor;
 
-                                /* Main */
-                                void main() { gl_FragColor = vec4(varyingColor, 1); }
-                            `.slice(1, -1).remove(/                            /g), STRICT = PROGRAM);
-                            SHADERS["VERTEX"] = new WebGLShader(RENDERER, "VERTEX_SHADER", `
-                                // ...
-                                precision mediump float;
+                                    /* Main */
+                                    void main() { gl_FragColor = vec4(varyingColor, 1); }
+                                `.slice(1, -1).remove(/                            /g), STRICT = PROGRAM),
 
-                                // Initialization > (Color, Position, Matrix, Varying Color)
-                                attribute vec3 color, position;
-                                uniform mat4 matrix;
-                                varying vec3 varyingColor;
+                                // [Vertex]
+                                VERTEX: new WebGLShader(RENDERER, "VERTEX_SHADER", `
+                                    // ...
+                                    precision mediump float;
 
-                                /* Main */
-                                void main() { gl_Position = matrix * vec4(position, 1); varyingColor = color; }
-                            `.slice(1, -1).remove(/                            /g), STRICT = PROGRAM);
+                                    // Initialization > (Color, Position, Matrix, Varying Color)
+                                    attribute vec3 color, position;
+                                    uniform mat4 matrix;
+                                    varying vec3 varyingColor;
 
-                            // Vertex Data > ...
-                            VERTEX_DATA["COLOR"] = new WebGLVertexArray([[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
-                            VERTEX_DATA["POSITION"] = new WebGLVertexArray([[0, 1, 0], [1, -1, 0], [-1, -1, 0]]);
+                                    /* Main */
+                                    void main() { gl_Position = matrix * vec4(position, 1); varyingColor = color; }
+                                `.slice(1, -1).remove(/                            /g), STRICT = PROGRAM)
+                            });
+
+                            // Vertex Data
+                            Object.port(VERTEX_DATA, {
+                                COLOR: new WebGLVertexArray([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                POSITION: new WebGLVertexArray([[0, .707, 0], [1, -1, 0], [-1, -1, 0]])
+                            });
 
                         // Loop > Setup WebGL Buffer; Renderer > Link Program
                         Object.iterate(BUFFERS, bufferName => setupWebGLBuffer(RENDERER, BUFFERS[bufferName], "ARRAY_BUFFER", VERTEX_DATA[bufferName], STRICT = "STATIC_DRAW"));
