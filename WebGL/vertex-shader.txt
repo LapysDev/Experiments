@@ -1,9 +1,0 @@
-// Initialization > (Color, Position)
-attribute vec4 COLOR;
-attribute vec3 POSITION;
-
-// Main
-void main() {
-    // Update > (Graphics Library > Position)
-    gl_Position = vec4(POSITION, 1);
-}
