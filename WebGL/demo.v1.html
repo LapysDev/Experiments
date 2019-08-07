@@ -64,20 +64,11 @@
         <script defer language=javascript type=application/javascript>
             /* Main */
             +(function Main() {
-                /* Constant */
-                    // Canvas
-                    const CANVAS = document.getElementById("canvas") || document.createElement("canvas");
-                        // ...
-                        ResizeCanvas();
-
-                    // Global
-                    const GLOBAL = (function() { try { return Function("return this")() || eval("this") } catch (error) {} return typeof self == "undefined" ? (typeof window == "undefined" ? (typeof global == "undefined" ? undefined : global) : window) : self })();
-
-                    // Web GL Renderer
-                    const WEBGL_RENDERER = CANVAS.getContext("webgl");
-
-                    // ...
-                    let STRICT;
+                /* Constant > ... */
+                const CANVAS = document.getElementById("canvas") || document.createElement("canvas"); ResizeCanvas();
+                const GLOBAL = (function() { try { return Function("return this")() || eval("this") } catch (error) {} return typeof self == "undefined" ? (typeof window == "undefined" ? (typeof global == "undefined" ? undefined : global) : window) : self })();
+                let STRICT;
+                const WEBGL_RENDERER = CANVAS.getContext("webgl");
 
                 /* Function > Resize Canvas */
                 function ResizeCanvas() {
@@ -90,93 +81,89 @@
                     CANVAS.width = CANVAS_SIZE;
 
                     CANVAS_STYLE.height = CANVAS_SIZE + "px";
-                    CANVAS_STYLE.width = CANVAS_SIZE + "px"
+                    CANVAS_STYLE.width = CANVAS_SIZE + "px";
                 }
 
-                /* Modification */
-                    // Renderer
-                        // Attach Shaders
-                        WEBGL_RENDERER.attachShaders = function attachShaders(Program, ShaderCollection) { ShaderCollection.foreach(function(Shader) { WEBGL_RENDERER.attachShader(Program, Shader) }) };
+                /* Modification > Renderer --- NOTE (Lapys) -> Abstractions for complex WebGL features. */
+                    // Create Buffer
+                    WEBGL_RENDERER.createBuffer = (function() {
+                        // Constant > Method
+                        const METHOD = WEBGL_RENDERER.createBuffer;
 
-                        // Create Buffer
-                        WEBGL_RENDERER.createBuffer = (function() {
-                            // Constant > Method
-                            const METHOD = WEBGL_RENDERER.createBuffer;
+                        // Return
+                        return function createBuffer(BufferType) {
+                            // Constant > (Renderer, Buffer)
+                            const WEBGL_RENDERER = this;
+                            const BUFFER = METHOD.call(WEBGL_RENDERER);
 
-                            // Return
-                            return function createBuffer(BufferType) {
-                                // Constant > (Renderer, Buffer)
-                                const WEBGL_RENDERER = this;
-                                const BUFFER = METHOD.call(WEBGL_RENDERER);
-
-                                // Renderer > Bind Buffer
-                                arguments.length && WEBGL_RENDERER.bindBuffer(BufferType, BUFFER);
-
-                                // Return
-                                return BUFFER
-                            }
-                        })();
-
-                        // Create Shader
-                        WEBGL_RENDERER.createShader = (function() {
-                            // Constant > Method
-                            const METHOD = WEBGL_RENDERER.createShader;
+                            // Renderer > Bind Buffer
+                            arguments.length && WEBGL_RENDERER.bindBuffer(BufferType, BUFFER);
 
                             // Return
-                            return function createShader(ShaderType, ShaderSourceScriptURL = null) {
-                                // Constant > (Renderer, Shader)
-                                const WEBGL_RENDERER = this;
-                                const SHADER = METHOD.call(WEBGL_RENDERER, ShaderType);
+                            return BUFFER
+                        }
+                    })();
 
-                                // Renderer > Read Source
-                                (ShaderSourceScriptURL === null) || WEBGL_RENDERER.readSource(ShaderSourceScriptURL).then(function(ShaderSourceScript) {
-                                    // Renderer > (Shader Source, Compile Shader)
-                                    WEBGL_RENDERER.shaderSource(SHADER, ShaderSourceScript);
-                                    WEBGL_RENDERER.compileShader(SHADER)
-                                });
+                    // Create Shader
+                    WEBGL_RENDERER.createShader = (function() {
+                        // Constant > Method
+                        const METHOD = WEBGL_RENDERER.createShader;
 
-                                // Return
-                                return SHADER
-                            }
-                        })();
+                        // Return
+                        return function createShader(ShaderType, ShaderSourceScriptURL = null) {
+                            // Constant > (Renderer, Shader)
+                            const WEBGL_RENDERER = this;
+                            const SHADER = METHOD.call(WEBGL_RENDERER, ShaderType);
 
-                        // Create Vertex Data
-                        WEBGL_RENDERER.createVertexData = function createVertexData(CoordinatesA, CoordinatesB, CoordinatesC) { return new Float32Array([CoordinatesA, CoordinatesB, CoordinatesC].flat()) };
-
-                        // Is Ready
-                        WEBGL_RENDERER.def("isReady", {get: function isReady() { return !WEBGL_RENDERER.numberOfSourcesBeingRead }});
-
-                        // Number Of Sources Being Read
-                        WEBGL_RENDERER.numberOfSourcesBeingRead = +0;
-
-                        // Read Source
-                        WEBGL_RENDERER.readSource = function readSource(URL) {
-                            // Constant > (Promises, XML HTTP Request)
-                            const PROMISES = [];
-                            const XML_HTTP_REQUEST = new XMLHttpRequest;
-
-                            // Modification > Renderer > Number Of Sources Being Read
-                            WEBGL_RENDERER.numberOfSourcesBeingRead += 1;
-
-                            // Event > XML HTTP Request
-                            XML_HTTP_REQUEST.addEventListener("loadend", function acquireSource() {
-                                // Deletion
-                                XML_HTTP_REQUEST.removeEventListener("loadend", acquireSource);
-
-                                // Loop > Promise
-                                PROMISES.foreach(function(Promise) { Promise.call(XML_HTTP_REQUEST, XML_HTTP_REQUEST.responseText) });
-
-                                // Modification > Renderer > Number Of Sources Being Read
-                                WEBGL_RENDERER.numberOfSourcesBeingRead -= 1
+                            // Renderer > Read Source
+                            (ShaderSourceScriptURL === null) || WEBGL_RENDERER.readSource(ShaderSourceScriptURL).then(function(ShaderSourceScript) {
+                                // Renderer > (Shader Source, Compile Shader)
+                                WEBGL_RENDERER.shaderSource(SHADER, ShaderSourceScript);
+                                WEBGL_RENDERER.compileShader(SHADER)
                             });
 
-                            // XML HTTP Request > (Open, Send)
-                            XML_HTTP_REQUEST.open("GET", URL);
-                            XML_HTTP_REQUEST.send();
-
                             // Return
-                            return {then: function then(Handler) { PROMISES.push(Handler); return this }}
-                        };
+                            return SHADER
+                        }
+                    })();
+
+                    // Create Vertex Data
+                    WEBGL_RENDERER.createVertexData = function createVertexData(CoordinatesA, CoordinatesB, CoordinatesC) { return new Float32Array([CoordinatesA, CoordinatesB, CoordinatesC].flat()) };
+
+                    // Is Ready
+                    WEBGL_RENDERER.def("isReady", {get: function isReady() { return !WEBGL_RENDERER.numberOfSourcesBeingRead }});
+
+                    // Number Of Sources Being Read
+                    WEBGL_RENDERER.numberOfSourcesBeingRead = +0;
+
+                    // Read Source
+                    WEBGL_RENDERER.readSource = function readSource(URL) {
+                        // Constant > (Promises, XML HTTP Request)
+                        const PROMISES = [];
+                        const XML_HTTP_REQUEST = new XMLHttpRequest;
+
+                        // Modification > Renderer > Number Of Sources Being Read
+                        WEBGL_RENDERER.numberOfSourcesBeingRead += 1;
+
+                        // Event > XML HTTP Request
+                        XML_HTTP_REQUEST.addEventListener("loadend", function acquireSource() {
+                            // Deletion
+                            XML_HTTP_REQUEST.removeEventListener("loadend", acquireSource);
+
+                            // Loop > Promise
+                            PROMISES.foreach(function(Promise) { Promise.call(XML_HTTP_REQUEST, XML_HTTP_REQUEST.responseText) });
+
+                            // Modification > Renderer > Number Of Sources Being Read
+                            WEBGL_RENDERER.numberOfSourcesBeingRead -= 1
+                        });
+
+                        // XML HTTP Request > (Open, Send)
+                        XML_HTTP_REQUEST.open("GET", URL);
+                        XML_HTTP_REQUEST.send();
+
+                        // Return
+                        return {then: function then(Handler) { PROMISES.push(Handler); return this }}
+                    };
 
                 /* Global > ... */
                 GLOBAL.CANVAS = CANVAS;
@@ -186,21 +173,10 @@
                 /* Events > Global > Resize */
                 GLOBAL.addEventListener("resize", ResizeCanvas);
 
-                /* Phases */
-                    // Initiate
-                    function Initiate() {
-                        /* Function */
-                            /* Setup WebGL  --- NOTE (Lapys) -> Setup the OpenGL API in JavaScript`s WebGL form. */
-                            function SetupWebGL() {}
-
-                        // ...
-                        SetupWebGL();
-
-                        const PROGRAM = WEBGL_RENDERER.createProgram();
-
-                        const FRAGMENT_SHADER = WEBGL_RENDERER.createShader(WEBGL_RENDERER["FRAGMENT_SHADER"], "fragment-shader.fs");
-                        const VERTEX_SHADER = WEBGL_RENDERER.createShader(WEBGL_RENDERER["VERTEX_SHADER"], "vertex-shader.vs");
-
+                /* Phases > Initiate */
+                function Initiate() {
+                    /* Constant */
+                        // Buffer, Vertex Data
                         const COLOR_BUFFER = WEBGL_RENDERER.createBuffer(WEBGL_RENDERER["ARRAY_BUFFER"]);
                         const COLOR_VERTEX_DATA = WEBGL_RENDERER.createVertexData([1, +0, +0], [+0, 1, +0], [+0, +0, 1]);
                             WEBGL_RENDERER.bufferData(WEBGL_RENDERER["ARRAY_BUFFER"], COLOR_VERTEX_DATA, WEBGL_RENDERER["STATIC_DRAW"]);
@@ -209,15 +185,29 @@
                         const POSITION_VERTEX_DATA = WEBGL_RENDERER.createVertexData([+0, .707, +0], [1, -1, +0], [-1, -1, +0]);
                             WEBGL_RENDERER.bufferData(WEBGL_RENDERER["ARRAY_BUFFER"], POSITION_VERTEX_DATA, WEBGL_RENDERER["STATIC_DRAW"]);
 
+                        // Locations --- NOTE (Lapys) -> Communicable data with WebGL.
+                        const LOCATIONS = {attributes: {}, uniforms: {}};
+
+                        // Program --- NOTE (Lapys) -> Executable GPU-based program.
+                        const PROGRAM = WEBGL_RENDERER.createProgram();
+
+                        // Shaders --- NOTE (Lapys) -> WebGL abstraction for graphics processing.
+                        const SHADERS = new Iterable({fragment: null, vertex: null});
+                            // ...
+                            SHADERS.fragment = WEBGL_RENDERER.createShader(WEBGL_RENDERER["FRAGMENT_SHADER"], "fragment-shader.fs");
+                            SHADERS.vertex = WEBGL_RENDERER.createShader(WEBGL_RENDERER["VERTEX_SHADER"], "vertex-shader.vs");
+
+                        // Transformation Matrix
                         const TRANSFORMATION_MATRIX = glMatrix.mat4.create();
-                            glMatrix.mat4.scale(TRANSFORMATION_MATRIX, TRANSFORMATION_MATRIX, [.33333, .33333, .33333]);
 
-                        check(function() { return WEBGL_RENDERER.isReady }, null, function() {
-                            const LOCATIONS = {attributes: {}, uniforms: {}};
+                    // Logic --- NOTE (Lapys) -> Do not play with WebGL until all asynchronous (& synchronous) setup processes are done.
+                    check(function() { return WEBGL_RENDERER.isReady }, null, function() {
+                        // WebGL Renderer > (Attach Shader, Link Program) --- NOTE (Lapys) -> The program must be linked before it`s used.
+                        for (const SHADER of SHADERS) WEBGL_RENDERER.attachShader(PROGRAM, SHADER);
+                        WEBGL_RENDERER.linkProgram(PROGRAM);
 
-                            WEBGL_RENDERER.attachShaders(PROGRAM, [FRAGMENT_SHADER, VERTEX_SHADER]);
-                            WEBGL_RENDERER.linkProgram(PROGRAM);
-
+                        // Modification > Locations
+                            // Attributes > ...
                             LOCATIONS.attributes["COLOR"] = WEBGL_RENDERER.getAttribLocation(PROGRAM, "COLOR");
                                 WEBGL_RENDERER.enableVertexAttribArray(LOCATIONS.attributes["COLOR"]);
                                 WEBGL_RENDERER.bindBuffer(WEBGL_RENDERER["ARRAY_BUFFER"], COLOR_BUFFER);
@@ -228,26 +218,36 @@
                                 WEBGL_RENDERER.bindBuffer(WEBGL_RENDERER["ARRAY_BUFFER"], POSITION_BUFFER);
                                 WEBGL_RENDERER.vertexAttribPointer(LOCATIONS.attributes["POSITION"], 3, WEBGL_RENDERER["FLOAT"], STRICT = false, STRICT = +0, STRICT = +0);
 
-                            WEBGL_RENDERER.useProgram(PROGRAM);
+                            // Uniforms > ...
+                            LOCATIONS.uniforms["TRANSFORMATION_MATRIX"] = WEBGL_RENDERER.getUniformLocation(PROGRAM, "TRANSFORMATION_MATRIX");
 
-                            LOCATIONS.uniforms["TRANSFORMATION_MATRIX"]  =WEBGL_RENDERER.getUniformLocation(PROGRAM, "TRANSFORMATION_MATRIX");
+                        // WebGL Renderer > Use Program
+                        WEBGL_RENDERER.useProgram(PROGRAM);
 
-                            (function RotateRender() {
-                                glMatrix.mat4.rotateY(TRANSFORMATION_MATRIX, TRANSFORMATION_MATRIX, Math.degreesToRadians(1));
+                        // Function > Animate Rotation
+                        (function AnimateRotation() {
+                            // Update > Transformation Matrix
+                            glMatrix.mat4.rotateY(TRANSFORMATION_MATRIX, TRANSFORMATION_MATRIX, Math.degreesToRadians(1));
+
+                            // WebGL Renderer
+                                /* Uniform 4x4 Float Matrix --- NOTE (Lapys) ->
+                                    Set the internal Transformation Matrix uniform location (a Vertex Shader variable)
+                                    to be the JavaScript value of Transformation Matrix.
+                                */
                                 WEBGL_RENDERER.uniformMatrix4fv(LOCATIONS.uniforms["TRANSFORMATION_MATRIX"], STRICT = false, TRANSFORMATION_MATRIX);
+
+                                // Draw Arrays --- NOTE (Lapys) -> Draw vertex data stored within the program shaders as Triangles.
                                 WEBGL_RENDERER.drawArrays(WEBGL_RENDERER["TRIANGLES"], STRICT = +0, STRICT = 3);
 
-                                requestAnimationFrame(RotateRender)
-                            })()
+                            // Request Animation Frame > Animate Rotation
+                            requestAnimationFrame(AnimateRotation)
+                        })()
 
-                        });
+                    });
 
-                        // Return
-                        return +0
-                    }
-
-                // ...
-                Initiate();
+                    // Return
+                    return +0
+                } Initiate();
 
                 // Return
                 return +0

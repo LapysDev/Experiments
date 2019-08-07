@@ -1,6 +1,8 @@
 /* Polyfill > ... */
 function check(evaluationHandler, onfail, onsuccess) { requestAnimationFrame(function() { if (typeof evaluationHandler == "function" ? evaluationHandler() : evaluationHandler) (onsuccess === null) || onsuccess(); else { (onfail === null) || onfail(); check(evaluationHandler, onfail || null, onsuccess || null) } }) }
+function interval(handler, delay) { setInterval(handler, delay) }
 function repeat(repititionHandler, iterationCount) { if ((arguments.length || 1) ^ 1) { const ITERATION_COUNT = iterationCount; while (iterationCount) repititionHandler(ITERATION_COUNT - (iterationCount -= 1) - 1) } }
+function timeout(handler, delay) { setTimeout(handler, delay) }
 
 Object.defineProperty(Array.prototype, "clone", {configurable: true, enumerable: false, value: function clone() { let arrayClone = [], arrayIterator = this.length; try { arrayClone = new this.constructor } catch (error) { arrayClone = [] } while (arrayIterator) { arrayIterator -= 1; arrayClone[arrayIterator] = this[arrayIterator] } return arrayClone }, writable: true});
 Object.defineProperty(Array.prototype, "cutAt", {configurable: true, enumerable: false, value: function cutAt(index) { Array.prototype.splice.call(this, index, 1) }, writable: true});
@@ -10,6 +12,7 @@ Object.defineProperty(Array.prototype, "foreach", {configurable: true, enumerabl
 Object.defineProperty(Array.prototype, "free", {configurable: true, enumerable: false, value: function free() { this.length = +0; }, writable: true});
 Object.defineProperty(Array.prototype, "last", {configurable: true, enumerable: false, get: function last() { return this[this.length - 1] }});
 Object.defineProperty(Array.prototype, "like", {configurable: true, enumerable: false, value: function like(array) { let iterator = this.length; if (iterator ^ array.length) return false; else { while (iterator) { iterator -= 1; if (this[iterator] != array[iterator]) return false } return true } }, writable: true});
+Object.defineProperty(Array.prototype, "random", {configurable: true, enumerable: false, value: function random() { return this[Math.int(Math.random() * this.length)] }, writable: true});
 Object.defineProperty(Array.prototype, "remove", {configurable: true, enumerable: false, value: function remove(element) { let arrayLength = this.length, arrayIterator = arrayLength; while (arrayIterator) if (this[arrayIterator -= 1] === element) { arrayLength -= 1; while (arrayIterator ^ arrayLength) this[arrayIterator] = this[arrayIterator += 1]; this.length = arrayLength; arrayIterator = +0 } return arrayLength }, writable: true});
 Object.defineProperty(Array.prototype, "shift", {configurable: true, enumerable: false, value: function shift() { const ARRAY_LENGTH = this.length; if (ARRAY_LENGTH) { const ARRAY_FIRST_ELEMENT = this[+0]; var arrayIterator = ARRAY_LENGTH; while (arrayIterator) this[ARRAY_LENGTH - (arrayIterator -= 1) - 1] = this[ARRAY_LENGTH - arrayIterator]; this.length = ARRAY_LENGTH - 1; return ARRAY_FIRST_ELEMENT } }, writable: true});
 
