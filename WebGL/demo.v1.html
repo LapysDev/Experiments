@@ -70,19 +70,23 @@
                 let STRICT;
                 const WEBGL_RENDERER = CANVAS.getContext("webgl");
 
-                /* Function > Resize Canvas */
-                function ResizeCanvas() {
-                    // Constant > Canvas (Size, Style)
-                    const CANVAS_SIZE = Math.perc(Math.min(innerHeight, innerWidth), 75);
-                    const CANVAS_STYLE = CANVAS.style;
+                /* Function */
+                    // Request Random Color
+                    function RequestRandomColor() { return Object.freeze([Math.random() * 1, Math.random() * 1, Math.random() * 1]) }
 
-                    // Modification > Canvas (Style) > (Height, Width)
-                    CANVAS.height = CANVAS_SIZE;
-                    CANVAS.width = CANVAS_SIZE;
+                    // Resize Canvas
+                    function ResizeCanvas() {
+                        // Constant > Canvas (Size, Style)
+                        const CANVAS_SIZE = Math.perc(Math.min(innerHeight, innerWidth), 75);
+                        const CANVAS_STYLE = CANVAS.style;
 
-                    CANVAS_STYLE.height = CANVAS_SIZE + "px";
-                    CANVAS_STYLE.width = CANVAS_SIZE + "px";
-                }
+                        // Modification > Canvas (Style) > (Height, Width)
+                        CANVAS.height = CANVAS_SIZE;
+                        CANVAS.width = CANVAS_SIZE;
+
+                        CANVAS_STYLE.height = CANVAS_SIZE + "px";
+                        CANVAS_STYLE.width = CANVAS_SIZE + "px";
+                    }
 
                 /* Modification > Renderer --- NOTE (Lapys) -> Abstractions for complex WebGL features. */
                     // Create Buffer
@@ -128,7 +132,57 @@
                     })();
 
                     // Create Vertex Data
-                    WEBGL_RENDERER.createVertexData = function createVertexData(CoordinatesA, CoordinatesB, CoordinatesC) { return new Float32Array([CoordinatesA, CoordinatesB, CoordinatesC].flat()) };
+                    WEBGL_RENDERER.createVertexData = function createVertexData(Coordinates) {
+                        // Constant > Vertex Data (Length)
+                        const VERTEX_DATA = []; let vertexDataLength = +0;
+
+                        // Initialization > Branch ..., Trees ...
+                        let branch = arguments;
+                        let branchLength = arguments.length;
+                        let branchIterator = branchLength;
+
+                        let trees = [];
+                        let treesLength = +0;
+
+                        // Loop
+                        while (branchIterator) {
+                            // Constant > Leaf
+                            const LEAF = branch[branchLength - (branchIterator -= 1) - 1];
+
+                            // Logic
+                            if (typeof LEAF == "object") {
+                                // Update > (Trees ..., Branch ...)
+                                trees[treesLength] = {branch: branch, iterator: branchIterator, length: branchLength}; // -> Branch Data.
+                                treesLength += 1;
+
+                                branch = LEAF;
+                                branchLength = LEAF.length;
+                                branchIterator = branchLength
+                            }
+
+                            else {
+                                // Update > Vertex Data ...
+                                VERTEX_DATA[vertexDataLength] = Number(LEAF);
+                                vertexDataLength += 1
+                            }
+
+                            // Loop
+                            while (!branchIterator && treesLength) {
+                                // Constant > Branch Data
+                                const BRANCH_DATA = trees[treesLength - 1];
+
+                                // Update > (Branch ..., Trees Length)
+                                branch = BRANCH_DATA.branch;
+                                branchIterator = BRANCH_DATA.iterator;
+                                branchLength = BRANCH_DATA.length;
+
+                                treesLength -= 1
+                            }
+                        }
+
+                        // Return
+                        return new Float32Array(VERTEX_DATA)
+                    };
 
                     // Is Ready
                     WEBGL_RENDERER.def("isReady", {get: function isReady() { return !WEBGL_RENDERER.numberOfSourcesBeingRead }});
@@ -178,7 +232,7 @@
                     /* Constant */
                         // Buffer, Vertex Data
                         const COLOR_BUFFER = WEBGL_RENDERER.createBuffer(WEBGL_RENDERER["ARRAY_BUFFER"]);
-                        const COLOR_VERTEX_DATA = WEBGL_RENDERER.createVertexData([1, +0, +0], [+0, 1, +0], [+0, +0, 1]);
+                        const COLOR_VERTEX_DATA = WEBGL_RENDERER.createVertexData(RequestRandomColor(), RequestRandomColor(), RequestRandomColor());
                             WEBGL_RENDERER.bufferData(WEBGL_RENDERER["ARRAY_BUFFER"], COLOR_VERTEX_DATA, WEBGL_RENDERER["STATIC_DRAW"]);
 
                         const POSITION_BUFFER = WEBGL_RENDERER.createBuffer(WEBGL_RENDERER["ARRAY_BUFFER"]);

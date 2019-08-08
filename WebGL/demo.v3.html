@@ -43,7 +43,7 @@
     </style>
 
     <!-- Document Title -->
-    <title> WebGL | Colorful 3D Box with Perspective </title>
+    <title> WebGL | Camera </title>
 </head>
 
 <body>
@@ -279,14 +279,11 @@
                         // Matrices
                         const MATRICES = {transformation: null};
                             // ...
-                            MATRICES["projection"] = WEBGL_MATRIX.mat4.perspective(WEBGL_MATRIX.mat4.create(),
-                                Math.degreesToRadians(90), // Vertical Field-of-View (Angle in Radians)
-                                CANVAS.width / CANVAS.height, // Aspect Ratio
-                                1e-4, // Near Cull Distance/ Near Cull Plain -> How close to the camera can objects get before being out-of-sight
-                                null // Far Cull Distance/ Far Cull Plain -> How far from the camera can objects get before being out-of-sight
-                            );
-                            MATRICES["model"] = WEBGL_MATRIX.mat4.translate(WEBGL_MATRIX.mat4.create(), WEBGL_MATRIX.mat4.create(), [+0, +0, -2]);
-                            MATRICES["transformation"] = WEBGL_MATRIX.mat4.create();
+                            MATRICES["camera"] = WEBGL_MATRIX.mat4.create(); // NOTE (Lapys) -> The Camera.
+                            MATRICES["projection"] = WEBGL_MATRIX.mat4.perspective(WEBGL_MATRIX.mat4.create(), Math.degreesToRadians(90), CANVAS.width / CANVAS.height, 1e-4, null );
+                            MATRICES["model"] = WEBGL_MATRIX.mat4.translate(WEBGL_MATRIX.mat4.create(), WEBGL_MATRIX.mat4.create(), [+0, +0, +0]);
+                            MATRICES["transformation"] = WEBGL_MATRIX.mat4.create(); // NOTE (Lapys) -> The Model-View-Projection matrix.
+                            MATRICES["view"] = WEBGL_MATRIX.mat4.create(); // NOTE (Lapys) -> The Model-View matrix.
 
                         // Program --- NOTE (Lapys) -> Executable GPU-based program.
                         const PROGRAM = WEBGL_RENDERER.createProgram();
@@ -324,28 +321,83 @@
                         // WebGL Renderer > Enable --- NOTE (Lapys) -> Apparently does depth assertion.
                         WEBGL_RENDERER.enable(WEBGL_RENDERER["DEPTH_TEST"]);
 
-                        // Function > Animate Rotation
-                        (function AnimateRotation() {
-                            // Update > Matrices
-                                // Model
-                                WEBGL_MATRIX.mat4.rotateX(MATRICES["model"], MATRICES["model"], Math.degreesToRadians(1));
-                                WEBGL_MATRIX.mat4.rotateY(MATRICES["model"], MATRICES["model"], Math.degreesToRadians(-.5));
+                        // Function > Render Movement
+                        (function RenderMovement() {
+                            // Constant > (Axis Rotation Angle, Coordinates Translation)
+                            const AxisRotationAngle = {x: +0, y: +0, z: +0};
+                            const CoordinatesTranslation = {x: +0, y: +0, z: +0};
 
-                                // Transformation --- NOTE (Lapys) -> Rotate the model, then project perspective.
-                                WEBGL_MATRIX.mat4.multiply(MATRICES["transformation"], MATRICES["projection"], MATRICES["model"]);
+                            // Events > Global --- NOTE (Lapys) -> Move the Camera.
+                                // Key Down
+                                GLOBAL.addEventListener("keydown", function ModifyCoordinatesTranslation(Event) {
+                                    // Logic > Modification > Coordinates Translation > (X, Y)
+                                    switch (Event.key) {
+                                        case "ArrowDown": case 'w': case 'W': CoordinatesTranslation.y = -.1; break;
+                                        case "ArrowLeft": case 'a': case 'A': CoordinatesTranslation.x = .1; break;
+                                        case "ArrowRight": case 'd': case 'D': CoordinatesTranslation.x = -.1; break;
+                                        case "ArrowUp": case 's': case 'S': CoordinatesTranslation.y = .1
+                                    }
+                                });
 
-                            // WebGL Renderer
-                                /* Uniform 4x4 Float Matrix --- NOTE (Lapys) ->
-                                    Set the internal Transformation Matrix uniform location (a Vertex Shader variable)
-                                    to be the JavaScript value of Transformation Matrix.
-                                */
-                                WEBGL_RENDERER.uniformMatrix4fv(LOCATIONS.uniforms["TRANSFORMATION_MATRIX"], STRICT = false, MATRICES["transformation"]);
+                                // Key Up
+                                GLOBAL.addEventListener("keyup", function ResetCoordinatesTranslation(Event) {
+                                    // Logic > Modification > Coordinates Translation > (X, Y)
+                                    switch (Event.key) {
+                                        case "ArrowDown": case 'w': case 'W': CoordinatesTranslation.y = +0; break;
+                                        case "ArrowLeft": case 'a': case 'A': CoordinatesTranslation.x = +0; break;
+                                        case "ArrowRight": case 'd': case 'D': CoordinatesTranslation.x = +0; break;
+                                        case "ArrowUp": case 's': case 'S': CoordinatesTranslation.y = +0
+                                    }
+                                });
 
-                                // Draw Arrays --- NOTE (Lapys) -> Draw vertex data stored within the program shaders as Triangles.
-                                WEBGL_RENDERER.drawArrays(WEBGL_RENDERER["TRIANGLES"], STRICT = +0, STRICT = POSITION_VERTEX_DATA.length / 3);
+                                // Mouse Down
+                                GLOBAL.addEventListener("mousedown", function(Event) { AxisRotationAngle.z = 1 });
 
-                            // Request Animation Frame > Animate Rotation
-                            requestAnimationFrame(AnimateRotation)
+                                // Mouse Up
+                                GLOBAL.addEventListener("mouseup", function(Event) { AxisRotationAngle.z = +0 });
+
+                                // Mouse Wheel
+                                GLOBAL.addEventListener("mousewheel", function(Event) {
+                                    // Logic > Modification > Coordinates Translation > Z
+                                    if (Event.deltaY > +0) CoordinatesTranslation.z = -.1;
+                                    else if (Event.deltaY < +0) CoordinatesTranslation.z = .1;
+
+                                    // Request Animation Frame > Modification > Coordinates Translation > Z
+                                    requestAnimationFrame(function ResetZCoordinateTranslation() { CoordinatesTranslation.z = +0 })
+                                });
+
+                            // Update > Matrices > Camera --- NOTE (Lapys) -> Set the camera position.
+                            WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, +0, 2]);
+                            WEBGL_MATRIX.mat4.invert(MATRICES["camera"], MATRICES["camera"]);
+
+                            // Function > Animate Movement
+                            (function AnimateMovement() {
+                                // Update > Matrices
+                                    // Camera
+                                    WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [CoordinatesTranslation.x, CoordinatesTranslation.y, CoordinatesTranslation.z]);
+                                    WEBGL_MATRIX.mat4.rotateX(MATRICES["camera"], MATRICES["camera"], Math.degreesToRadians(AxisRotationAngle.x));
+                                    WEBGL_MATRIX.mat4.rotateY(MATRICES["camera"], MATRICES["camera"], Math.degreesToRadians(AxisRotationAngle.y));
+                                    WEBGL_MATRIX.mat4.rotateZ(MATRICES["camera"], MATRICES["camera"], Math.degreesToRadians(AxisRotationAngle.z));
+
+                                    // View
+                                    WEBGL_MATRIX.mat4.multiply(MATRICES["view"], MATRICES["camera"], MATRICES["model"]);
+
+                                    // Transformation --- NOTE (Lapys) -> Rotate the model, then project perspective.
+                                    WEBGL_MATRIX.mat4.multiply(MATRICES["transformation"], MATRICES["projection"], MATRICES["view"]);
+
+                                // WebGL Renderer
+                                    /* Uniform 4x4 Float Matrix --- NOTE (Lapys) ->
+                                        Set the internal Transformation Matrix uniform location (a Vertex Shader variable)
+                                        to be the JavaScript value of Transformation Matrix.
+                                    */
+                                    WEBGL_RENDERER.uniformMatrix4fv(LOCATIONS.uniforms["TRANSFORMATION_MATRIX"], STRICT = false, MATRICES["transformation"]);
+
+                                    // Draw Arrays --- NOTE (Lapys) -> Draw vertex data stored within the program shaders as Triangles.
+                                    WEBGL_RENDERER.drawArrays(WEBGL_RENDERER["TRIANGLES"], STRICT = +0, STRICT = POSITION_VERTEX_DATA.length / 3);
+
+                                // Request Animation Frame > Animate Movement
+                                requestAnimationFrame(AnimateMovement)
+                            })()
                         })()
 
                     });
