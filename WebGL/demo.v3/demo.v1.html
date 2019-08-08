@@ -43,7 +43,7 @@
     </style>
 
     <!-- Document Title -->
-    <title> WebGL | Point Cloud Rendering </title>
+    <title> WebGL | Textures </title>
 </head>
 
 <body>
@@ -121,9 +121,9 @@
                             const SHADER = METHOD.call(WEBGL_RENDERER, ShaderType);
 
                             // Renderer > Read Source
-                            (ShaderSourceScriptURL === null) || WEBGL_RENDERER.readSource(ShaderSourceScriptURL).then(function(ShaderSourceScript) {
+                            (ShaderSourceScriptURL === null) || load(ShaderSourceScriptURL).then(function(ShaderSourceData) {
                                 // Renderer > (Shader Source, Compile Shader)
-                                WEBGL_RENDERER.shaderSource(SHADER, ShaderSourceScript);
+                                WEBGL_RENDERER.shaderSource(SHADER, ShaderSourceData.source);
                                 WEBGL_RENDERER.compileShader(SHADER)
                             });
 
@@ -185,39 +185,35 @@
                         return new Float32Array(VERTEX_DATA)
                     };
 
-                    // Is Ready
-                    WEBGL_RENDERER.def("isReady", {get: function isReady() { return !WEBGL_RENDERER.numberOfSourcesBeingRead }});
+                    // Load Texture --- WARN (Lapys) -> The file loaded must be a size of the power of 2.
+                    WEBGL_RENDERER.loadTexture = function loadTexture(URL) {
+                        // Constant > (Image, Texture)
+                        const IMAGE = new Image;
+                        const TEXTURE = WEBGL_RENDERER.createTexture();
 
-                    // Number Of Sources Being Read
-                    WEBGL_RENDERER.numberOfSourcesBeingRead = +0;
+                        // Update > URL
+                        URL = String(URL);
 
-                    // Read Source
-                    WEBGL_RENDERER.readSource = function readSource(URL) {
-                        // Constant > (Promises, XML HTTP Request)
-                        const PROMISES = [];
-                        const XML_HTTP_REQUEST = new XMLHttpRequest;
+                        // Event > Image > (Error, Load)
+                        IMAGE.addEventListener("error", function error() { console.warn("Could not load image source: \"" + URL + "\" via call to `[WebGLRenderingContext object].loadTexture` method"); IMAGE.removeEventListener("error", error) })
+                        IMAGE.addEventListener("load", function load() {
+                            // WebGL Renderer
+                                // Bind Texture, Texture 2D Image
+                                WEBGL_RENDERER.bindTexture(WEBGL_RENDERER["TEXTURE_2D"], TEXTURE);
+                                WEBGL_RENDERER.texImage2D(WEBGL_RENDERER["TEXTURE_2D"], +0, WEBGL_RENDERER["RGBA"], WEBGL_RENDERER["RGBA"], WEBGL_RENDERER["UNSIGNED_BYTE"], IMAGE);
 
-                        // Modification > Renderer > Number Of Sources Being Read
-                        WEBGL_RENDERER.numberOfSourcesBeingRead += 1;
+                                // Generate MipMap
+                                WEBGL_RENDERER.generateMipmap(WEBGL_RENDERER["TEXTURE_2D"]);
 
-                        // Event > XML HTTP Request
-                        XML_HTTP_REQUEST.addEventListener("loadend", function acquireSource() {
                             // Deletion
-                            XML_HTTP_REQUEST.removeEventListener("loadend", acquireSource);
-
-                            // Loop > Promise
-                            PROMISES.foreach(function(Promise) { Promise.call(XML_HTTP_REQUEST, XML_HTTP_REQUEST.responseText) });
-
-                            // Modification > Renderer > Number Of Sources Being Read
-                            WEBGL_RENDERER.numberOfSourcesBeingRead -= 1
+                            IMAGE.removeEventListener("load", load)
                         });
 
-                        // XML HTTP Request > (Open, Send)
-                        XML_HTTP_REQUEST.open("GET", URL);
-                        XML_HTTP_REQUEST.send();
+                        // Modification > Image > Source
+                        IMAGE.src = URL;
 
                         // Return
-                        return {then: function then(Handler) { PROMISES.push(Handler); return this }}
+                        return TEXTURE
                     };
 
                 /* Global > ... */
@@ -231,11 +227,53 @@
 
                 /* Phases > Initiate */
                 function Initiate() {
+                    // ...
+                    preload("fragment-shader.fs");
+                    preload("../lapys.invert.png");
+                    preload("vertex-shader.vs");
+
                     /* Constant */
                         // Buffer, Vertex Data
                         const POSITION_BUFFER = WEBGL_RENDERER.createBuffer(WEBGL_RENDERER["ARRAY_BUFFER"]);
-                        const POSITION_VERTEX_DATA = WEBGL_RENDERER.createVertexData(SpherePointCloud(Math.avg(1e4, 1e4, 1e4, 1e4, 1e5)));
+                        const POSITION_VERTEX_DATA = WEBGL_RENDERER.createVertexData(
+                            // [Back]
+                            [[-1, 1, -1], [-1, -1, -1], [1, 1, -1]],
+                            [[1, 1, -1], [-1, -1, -1], [1, -1, -1]],
+
+                            // [Bottom]
+                            [[1, -1, 1], [1, -1, -1], [-1, -1, 1]],
+                            [[-1, -1, 1], [1, -1, -1], [-1, -1, -1]],
+
+                            // [Front]
+                            [[1, 1, 1], [1, -1, 1], [-1, 1, 1]],
+                            [[-1, 1, 1], [1, -1, 1], [-1, -1, 1]],
+
+                            // [Left]
+                            [[-1, 1, 1], [-1, -1, 1], [-1, 1, -1]],
+                            [[-1, 1, -1], [-1, -1, 1], [-1, -1, -1]],
+
+                            // [Right]
+                            [[1, 1, -1], [1, -1, -1], [1, 1, 1]],
+                            [[1, 1, 1], [1, -1, -1], [1, -1, 1]],
+
+                            // [Top]
+                            [[1, 1, 1], [1, 1, -1], [-1, 1, 1]],
+                            [[-1, 1, 1], [1, 1, -1], [-1, 1, -1]]
+                        );
                             WEBGL_RENDERER.bufferData(WEBGL_RENDERER["ARRAY_BUFFER"], POSITION_VERTEX_DATA, WEBGL_RENDERER["STATIC_DRAW"]);
+
+                        const TEXTURE_BUFFER = WEBGL_RENDERER.createBuffer(WEBGL_RENDERER["ARRAY_BUFFER"]);
+                        const TEXTURE_DATA = WEBGL_RENDERER.createVertexData([
+                            // NOTE (Lapys) -> Textures are drawn  on vertices.
+                            [1, 1], // [Top Right]
+                            [+0, 1], // [Top Left]
+                            [1, +0], // [Bottom Right]
+
+                            [1, +0], // [Bottom Right]
+                            [+0, 1], // [Top Left]
+                            [+0, +0]  // [Bottom Left]
+                        ].repeat(6));
+                            WEBGL_RENDERER.bufferData(WEBGL_RENDERER["ARRAY_BUFFER"], TEXTURE_DATA, WEBGL_RENDERER["STATIC_DRAW"]);
 
                         // Locations --- NOTE (Lapys) -> Communicable data with WebGL.
                         const LOCATIONS = {attributes: {}, uniforms: {}};
@@ -253,78 +291,41 @@
                         const PROGRAM = WEBGL_RENDERER.createProgram();
 
                         // Shaders --- NOTE (Lapys) -> WebGL abstraction for graphics processing.
-                        const SHADERS = new Iterable({fragment: null, vertex: null});
+                        const SHADERS = new Iterable({fragment: null, geometric: null, tesselation: null, vertex: null});
                             // ...
                             SHADERS.fragment = WEBGL_RENDERER.createShader(WEBGL_RENDERER["FRAGMENT_SHADER"], "fragment-shader.fs");
                             SHADERS.vertex = WEBGL_RENDERER.createShader(WEBGL_RENDERER["VERTEX_SHADER"], "vertex-shader.vs");
 
-                    /* Function > Sphere Point Cloud */
-                    function SpherePointCloud(PointCount) {
-                        // Constant > Points
-                        const POINTS = [];
+                        // Textures
+                        const TEXTURES = {};
 
-                        // Class > Point
-                        class Point extends Array {
-                            // [Constructor]
-                            constructor(XCoordinate, YCoordinate, ZCoordinate) {
-                                // ...
-                                super();
-
-                                if (typeof XCoordinate == "object") {
-                                    // Modification > Target > ...
-                                    this.def('x', {configurable: false, enumerable: false, value: this[+0] = XCoordinate[+0] || XCoordinate.x, writable: true});
-                                    this.def('y', {configurable: false, enumerable: false, value: this[1] = XCoordinate[1] || XCoordinate.y, writable: true});
-                                    this.def('z', {configurable: false, enumerable: false, value: this[2] = XCoordinate[2] || XCoordinate.z, writable: true})
-                                }
-
-                                else {
-                                    // Modification > Target > ...
-                                    this.def('x', {configurable: false, enumerable: false, value: this[+0] = XCoordinate, writable: true});
-                                    this.def('y', {configurable: false, enumerable: false, value: this[1] = YCoordinate, writable: true});
-                                    this.def('z', {configurable: false, enumerable: false, value: this[2] = ZCoordinate, writable: true})
-                                }
-
-                                // Update > Target
-                                Object.freeze(this)
-                            }
-                        };
-
-                        // Loop
-                        repeat(function AddPoint(IterationCount) {
-                            // Constant > Point
-                            const POINT = new Point(
-                                WEBGL_MATRIX.vec3.normalize( // NOTE (Lapys) -> Constrain the Point to the origin (this gives the model a spherical look).
-                                    WEBGL_MATRIX.vec3.create(),
-                                    [Math.random() - .5, Math.random() - .5, Math.random() - .5] // NOTE (Lapys) -> The coordinates will be between -.5 and .5
-                                ).map(function(Coordinate) {
-                                    // Return --- NOTE (Lapys) -> Multiplying by a fixed distance.
-                                    return Coordinate * 1
-                                })
-                            );
-
-                            // Update > Points
-                            Array.prototype.push.apply(POINTS, POINT)
-                        }, PointCount);
-
-                        // Return
-                        return POINTS
-                    }
-
-                    // Logic --- NOTE (Lapys) -> Do not play with WebGL until all asynchronous (& synchronous) setup processes are done.
-                    check(function() { return WEBGL_RENDERER.isReady }, null, function() {
+                    // [Setup] Logic --- NOTE (Lapys) -> Do not play with WebGL until all asynchronous (& synchronous) setup processes are done.
+                    check(function() { return !document.pending }, null, function Setup() {
                         // WebGL Renderer > (Attach Shader, Link Program) --- NOTE (Lapys) -> The program must be linked before it`s used.
-                        for (const SHADER of SHADERS) WEBGL_RENDERER.attachShader(PROGRAM, SHADER);
+                        for (const SHADER of SHADERS) (SHADER === null) || WEBGL_RENDERER.attachShader(PROGRAM, SHADER);
                         WEBGL_RENDERER.linkProgram(PROGRAM);
 
-                        // Modification > Locations
-                            // Attributes > ...
-                            LOCATIONS.attributes["POSITION"] = WEBGL_RENDERER.getAttribLocation(PROGRAM, "POSITION");
-                                WEBGL_RENDERER.enableVertexAttribArray(LOCATIONS.attributes["POSITION"]);
-                                WEBGL_RENDERER.bindBuffer(WEBGL_RENDERER["ARRAY_BUFFER"], POSITION_BUFFER);
-                                WEBGL_RENDERER.vertexAttribPointer(LOCATIONS.attributes["POSITION"], 3, WEBGL_RENDERER["FLOAT"], STRICT = false, STRICT = +0, STRICT = +0);
+                        // Modification
+                            // Textures > ...
+                            TEXTURES["ship"] = WEBGL_RENDERER.loadTexture("../lapys.invert.png");
+                                WEBGL_RENDERER.activeTexture(WEBGL_RENDERER["TEXTURE0"]);
+                                WEBGL_RENDERER.bindTexture(WEBGL_RENDERER["TEXTURE_2D"], TEXTURES["ship"]);
 
-                            // Uniforms > ...
-                            LOCATIONS.uniforms["TRANSFORMATION_MATRIX"] = WEBGL_RENDERER.getUniformLocation(PROGRAM, "TRANSFORMATION_MATRIX");
+                            // Locations
+                                // Attributes > ...
+                                LOCATIONS.attributes["POSITION"] = WEBGL_RENDERER.getAttribLocation(PROGRAM, "POSITION");
+                                    WEBGL_RENDERER.enableVertexAttribArray(LOCATIONS.attributes["POSITION"]);
+                                    WEBGL_RENDERER.bindBuffer(WEBGL_RENDERER["ARRAY_BUFFER"], POSITION_BUFFER);
+                                    WEBGL_RENDERER.vertexAttribPointer(LOCATIONS.attributes["POSITION"], 3, WEBGL_RENDERER["FLOAT"], STRICT = false, STRICT = +0, STRICT = +0);
+
+                                LOCATIONS.attributes["TEXTURE"] = WEBGL_RENDERER.getAttribLocation(PROGRAM, "TEXTURE");
+                                    WEBGL_RENDERER.enableVertexAttribArray(LOCATIONS.attributes["TEXTURE"]);
+                                    WEBGL_RENDERER.bindBuffer(WEBGL_RENDERER["ARRAY_BUFFER"], TEXTURE_BUFFER);
+                                    WEBGL_RENDERER.vertexAttribPointer(LOCATIONS.attributes["TEXTURE"], 2, WEBGL_RENDERER["FLOAT"], STRICT = false, STRICT = +0, STRICT = +0);
+
+                                // Uniforms > ...
+                                LOCATIONS.uniforms["TEXTURE_ID"] = WEBGL_RENDERER.getUniformLocation(PROGRAM, "TEXTURE_ID");
+                                LOCATIONS.uniforms["TRANSFORMATION_MATRIX"] = WEBGL_RENDERER.getUniformLocation(PROGRAM, "TRANSFORMATION_MATRIX");
 
                         // WebGL Renderer > Use Program
                         WEBGL_RENDERER.useProgram(PROGRAM);
@@ -332,73 +333,52 @@
                         // WebGL Renderer > Enable --- NOTE (Lapys) -> Apparently does depth assertion.
                         WEBGL_RENDERER.enable(WEBGL_RENDERER["DEPTH_TEST"]);
 
-                        // Function > Render Movement
-                        (function RenderMovement() {
-                            // Constant > (Coordinates Translation, Y-Axis Rotation Angle)
-                            const CoordinatesTranslation = {x: +0, y: +0, z: +0};
-                            let YAxisRotationAngle = 2;
+                        /* Function */
+                            // Pan
+                            function Pan() {
+                                // Events > Global --- NOTE (Lapys) -> Move the Camera.
+                                    // Key Down
+                                    GLOBAL.addEventListener("keydown", function ModifyCoordinatesTranslation(Event) {
+                                        // Logic > Modification > Coordinates Translation > (X, Y)
+                                        switch (Event.key) {
+                                            case "ArrowDown": case 'w': case 'W': WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, -.1, +0]); break;
+                                            case "ArrowLeft": case 'a': case 'A': WEBGL_MATRIX.mat4.rotateY(MATRICES["camera"], MATRICES["camera"], Math.degreesToRadians(-2)); break;
+                                            case "ArrowRight": case 'd': case 'D': WEBGL_MATRIX.mat4.rotateY(MATRICES["camera"], MATRICES["camera"], Math.degreesToRadians(2)); break;
+                                            case "ArrowUp": case 's': case 'S': WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, .1, +0])
+                                        }
+                                    });
 
-                            // Update > Matrices > Camera --- NOTE (Lapys) -> Set the camera position.
-                            WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, +0, 2]);
-                            WEBGL_MATRIX.mat4.invert(MATRICES["camera"], MATRICES["camera"]);
+                                    // Mouse Wheel
+                                    GLOBAL.addEventListener("mousewheel", function(Event) {
+                                        // Logic > Modification > Coordinates Translation > Z
+                                        if (Event.deltaY > +0) WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, +0, -.1]);
+                                        else if (Event.deltaY < +0) WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, +0, .1])
+                                    })
+                            } Pan();
 
-                            // Events > Global
-                                // Key Down
-                                GLOBAL.addEventListener("keydown", function ModifyCoordinatesTranslation(Event) {
-                                    // Logic > ...
-                                    switch (Event.key) {
-                                        case "ArrowDown": case 'w': case 'W': CoordinatesTranslation.y = -.1; YAxisRotationAngle = -2; break;
-                                        case "ArrowLeft": case 'a': case 'A': CoordinatesTranslation.x = .1; YAxisRotationAngle = -2; break;
-                                        case "ArrowRight": case 'd': case 'D': CoordinatesTranslation.x = -.1; YAxisRotationAngle = -2; break;
-                                        case "ArrowUp": case 's': case 'S': CoordinatesTranslation.y = .1; YAxisRotationAngle = -2
-                                    }
-                                });
+                            // Render
+                            function Render() {
+                                // Update > Matrices > Camera
+                                WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [+0, +0, 3]);
+                                WEBGL_MATRIX.mat4.invert(MATRICES["camera"], MATRICES["camera"]);
 
-                                // Key Up
-                                GLOBAL.addEventListener("keyup", function ResetCoordinatesTranslation(Event) {
-                                    // Logic > ...
-                                    switch (Event.key) {
-                                        case "ArrowDown": case 'w': case 'W': CoordinatesTranslation.y = +0; YAxisRotationAngle = 2; break;
-                                        case "ArrowLeft": case 'a': case 'A': CoordinatesTranslation.x = +0; YAxisRotationAngle = 2; break;
-                                        case "ArrowRight": case 'd': case 'D': CoordinatesTranslation.x = +0; YAxisRotationAngle = 2; break;
-                                        case "ArrowUp": case 's': case 'S': CoordinatesTranslation.y = +0; YAxisRotationAngle = 2
-                                    }
-                                });
-
-                                // Mouse Wheel
-                                GLOBAL.addEventListener("mousewheel", function(Event) {
-                                    // Logic > Modification > Coordinates Translation > Z
-                                    if (Event.deltaY > +0) { CoordinatesTranslation.z = -.1; YAxisRotationAngle = -2 }
-                                    else if (Event.deltaY < +0) { CoordinatesTranslation.z = .1; YAxisRotationAngle = -2 }
-
-                                    // Request Animation Frame > Modification > Coordinates Translation > Z
-                                    requestAnimationFrame(function ResetZCoordinateTranslation() { CoordinatesTranslation.z = +0; YAxisRotationAngle = 2 })
-                                });
-
-                            // Function > Animate Movement
-                            (function AnimateMovement() {
-                                // Update > Matrices
-                                    // Camera
-                                    WEBGL_MATRIX.mat4.rotateY(MATRICES["camera"], MATRICES["camera"], Math.degreesToRadians(YAxisRotationAngle));
-                                    WEBGL_MATRIX.mat4.translate(MATRICES["camera"], MATRICES["camera"], [CoordinatesTranslation.x, CoordinatesTranslation.y, CoordinatesTranslation.z]);
-
-                                    // View
+                                /* Animate */
+                                check(function() { return !document.pending }, null, function Animate() {
+                                    // Update > Matrices > (View, Transformation)
                                     WEBGL_MATRIX.mat4.multiply(MATRICES["view"], MATRICES["camera"], MATRICES["model"]);
-
-                                    // Transformation --- NOTE (Lapys) -> Rotate the model, then project perspective.
                                     WEBGL_MATRIX.mat4.multiply(MATRICES["transformation"], MATRICES["projection"], MATRICES["view"]);
 
-                                // WebGL Renderer
-                                    // Uniform 4x4 Float Matrix
+                                    // ...
+                                    WEBGL_RENDERER.uniform1i(LOCATIONS.uniforms["TEXTURE_ID"], +0);
                                     WEBGL_RENDERER.uniformMatrix4fv(LOCATIONS.uniforms["TRANSFORMATION_MATRIX"], STRICT = false, MATRICES["transformation"]);
 
-                                    // Draw Arrays
-                                    WEBGL_RENDERER.drawArrays(WEBGL_RENDERER["POINTS"], STRICT = +0, STRICT = POSITION_VERTEX_DATA.length / 3);
+                                    // WebGL Renderer > Draw Arrays
+                                    WEBGL_RENDERER.drawArrays(WEBGL_RENDERER["TRIANGLES"], STRICT = +0, STRICT = POSITION_VERTEX_DATA.length / 3);
 
-                                // Request Animation Frame > Animate Movement
-                                requestAnimationFrame(AnimateMovement)
-                            })()
-                        })()
+                                    // Animate
+                                    defer(Animate)
+                                })
+                            } Render()
                     });
 
                     // Return
