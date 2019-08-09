@@ -66,18 +66,18 @@
             /* Main */
             +(function Main() {
                 /* Constant > ... */
-                const CANVAS = document.getElementById("canvas") || document.createElement("canvas"); ResizeCanvas();
-                const GLOBAL = (function() { try { return Function("return this")() || eval("this") } catch (error) {} return typeof self == "undefined" ? (typeof window == "undefined" ? (typeof global == "undefined" ? undefined : global) : window) : self })();
                 let STRICT;
+                const CANVAS = document.getElementById("canvas") || document.createElement("canvas"); ResizeCanvas(STRICT = true);
+                const GLOBAL = (function() { try { return Function("return this")() || eval("this") } catch (error) {} return typeof self == "undefined" ? (typeof window == "undefined" ? (typeof global == "undefined" ? undefined : global) : window) : self })();
                 const WEBGL_MATRIX = glMatrix;
-                const WEBGL_RENDERER = CANVAS.getContext("webgl");
+                const WEBGL_RENDERER = CANVAS.getContext("webgl") || CANVAS.getContext("experimental-webgl");
 
                 /* Function */
                     // Request Random Color
                     function RequestRandomColor() { return Object.freeze([Math.random() * 1, Math.random() * 1, Math.random() * 1]) }
 
                     // Resize Canvas
-                    function ResizeCanvas() {
+                    function ResizeCanvas(ONLY_MODIFY_CANVAS) {
                         // Constant > Canvas (Size, Style)
                         const CANVAS_SIZE = Math.perc(Math.min(innerHeight, innerWidth), 95);
                         const CANVAS_STYLE = CANVAS.style;
@@ -87,7 +87,10 @@
                         CANVAS.width = CANVAS_SIZE;
 
                         CANVAS_STYLE.height = CANVAS_SIZE + "px";
-                        CANVAS_STYLE.width = CANVAS_SIZE + "px"
+                        CANVAS_STYLE.width = CANVAS_SIZE + "px";
+
+                        // Web GL Renderer > ...
+                        ONLY_MODIFY_CANVAS || WEBGL_RENDERER.viewport(+0, +0, CANVAS.width, CANVAS.height)
                     }
 
                 /* Modification > Renderer --- NOTE (Lapys) -> Abstractions for complex WebGL features. */
@@ -224,7 +227,7 @@
                 GLOBAL.WEBGL_RENDERER = WEBGL_RENDERER;
 
                 /* Events > Global > Resize */
-                GLOBAL.addEventListener("resize", ResizeCanvas);
+                GLOBAL.addEventListener("resize", function() { ResizeCanvas(STRICT = false) });
 
                 /* Phases > Initiate */
                 function Initiate() {

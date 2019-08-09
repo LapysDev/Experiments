@@ -69,7 +69,7 @@
                 const GLOBAL = (function() { try { return Function("return this")() || eval("this") } catch (error) {} return typeof self == "undefined" ? (typeof window == "undefined" ? (typeof global == "undefined" ? undefined : global) : window) : self })();
                 let STRICT;
                 const WEBGL_MATRIX = glMatrix;
-                const WEBGL_RENDERER = CANVAS.getContext("webgl");
+                const WEBGL_RENDERER = CANVAS.getContext("webgl") || CANVAS.getContext("experimental-webgl");
 
                 /* Function */
                     // Request Random Color
