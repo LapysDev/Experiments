@@ -65,21 +65,26 @@
         <script defer language=javascript type=application/javascript>
             /* Main */
             +(function Main() {
-                /* Global > ... */
-                const CANVAS = document.getElementById("canvas") || document.createElement("canvas"); ResizeViewport(STRICT = false);
-                const MAIN = document.getElementById("main") || document.createElement("main");
-                var STRICT;
-                const WEBGL_DATA = {
-                    IMAGES: {},
-                    LOCATIONS: {ATTRIBUTES: {}, UNIFORMS: {}},
-                    MATRICES: {PROJECTION: null, VIEW: null, WORLD: null},
-                    MODELS: {},
-                    PROGRAM: null,
-                    SHADER: new Iterable({FRAGMENT: null, GEOMETRIC: null, TESSELATION: null, TESSELATION_EVALUATION: null, VERTEX: null})
-                };
-                const WEBGL_MATRIX = GLOBAL.glMatrix;
-                const WEBGL_CONTEXT = CANVAS.getContext("webgl") || CANVAS.getContext("experimental-webgl");
-                const WEBGL_RENDERER = WEBGL_CONTEXT;
+                /* Global */
+                    // ...
+                    const CANVAS = document.getElementById("canvas") || document.createElement("canvas"); ResizeViewport(STRICT = false);
+                    const MAIN = document.getElementById("main") || document.createElement("main");
+                    const WEBGL_DATA = {
+                        LOCATIONS: {ATTRIBUTES: {}, UNIFORMS: {}},
+                        MATRICES: {PROJECTION: null, VIEW: null, WORLD: null},
+                        MODELS: {},
+                        PROGRAM: null,
+                        SHADER: new Iterable({FRAGMENT: null, GEOMETRIC: null, TESSELATION: null, TESSELATION_EVALUATION: null, VERTEX: null})
+                    };
+                    const WEBGL_MATRIX = GLOBAL.glMatrix;
+                    const WEBGL_CONTEXT = CANVAS.getContext("webgl") || CANVAS.getContext("experimental-webgl");
+                    const WEBGL_RENDERER = WEBGL_CONTEXT;
+
+                    // ...
+                    let CURRENT_MODEL = null;
+                    let FORMER_CURRENT_MODEL = null;
+                    let NULL_IMAGE = new Image; (NULL_IMAGE.src = "../null.png");
+                    var STRICT;
 
                 /* Class */
                     // WebGL Color
@@ -105,31 +110,84 @@
                             // Constant > Model
                             const MODEL = this;
 
-                            // Initialization > Model (Indices, Vertices)
+                            // Initialization > Model (Indices, Texture Image, Vertices)
                             let modelIndices = [];
+                            let modelTextureImage = NULL_IMAGE;
                             let modelVertices = Array.from(arguments).flat();
 
-                            // Modification > Model
-                                // (Element) Array Buffer
-                                MODEL.def("arrayBuffer", {configurable: false, enumerable: false, value: WEBGL_CONTEXT.createBuffer(), writable: false});
-                                MODEL.def("elementArrayBuffer", {configurable: false, enumerable: false, value: WEBGL_CONTEXT.createBuffer(), writable: false});
+                            // Modification
+                                // Model
+                                    // (Element) Array Buffer
+                                    MODEL.def("arrayBuffer", {configurable: false, enumerable: false, value: WEBGL_CONTEXT.createBuffer(), writable: false});
+                                    MODEL.def("elementArrayBuffer", {configurable: false, enumerable: false, value: WEBGL_CONTEXT.createBuffer(), writable: false});
 
-                                // Indices
-                                MODEL.def("indices", {configurable: false, enumerable: true, get: function indices() { return modelIndices }, set: function indices(Indices) { modelIndices = Indices.flat() }});
-                                MODEL.def("indicesDataType", {configurable: false, enumerable: false, value: Uint16Array, writable: true});
+                                    // Indices
+                                    MODEL.def("indices", {configurable: false, enumerable: true, get: function indices() { return modelIndices }, set: function indices(Indices) { modelIndices = Indices.flat() }});
+                                    MODEL.def("indicesDataType", {configurable: false, enumerable: false, value: Uint16Array, writable: true});
 
-                                // Matrices
-                                MODEL.def("matrices", {configurable: false, enumerable: true, value: null, writable: false});
+                                    // Matrices
+                                    MODEL.def("matrices", {configurable: false, enumerable: true, value: null, writable: false});
 
-                                // Texture ...
-                                MODEL.def("texture", {configurable: false, enumerable: true, value: WEBGL_CONTEXT.createTexture(), writable: true});
-                                MODEL.def("textureImage", {configurable: false, enumerable: true, value: null, writable: true});
+                                    // Texture ...
+                                    MODEL.def("texture", {configurable: false, enumerable: true, value: WEBGL_CONTEXT.createTexture(), writable: true});
+                                    MODEL.def("textureImage", {configurable: false, enumerable: true, get: function textureImage() { return modelTextureImage }, set: function textureImage(Value) { Value instanceof HTMLImageElement || Value instanceof HTMLCanvasElement || Value instanceof HTMLVideoElement || Value instanceof Image ? modelTextureImage = Value : (Value === null ? modelTextureImage = NULL_IMAGE : modelTextureImage.src = Value) }});
 
-                                // Vertices ...
-                                MODEL.def("vertices", {configurable: false, enumerable: true, get: function vertices() { return modelVertices }, set: function vertices(Vertices) { modelVertices = Vertices.flat() }});
-                                MODEL.def("verticesDataType", {configurable: false, enumerable: false, value: Float32Array, writable: true})
+                                    // Vertices ...
+                                    MODEL.def("vertices", {configurable: false, enumerable: true, get: function vertices() { return modelVertices }, set: function vertices(Vertices) { modelVertices = Vertices.flat() }});
+                                    MODEL.def("verticesDataType", {configurable: false, enumerable: false, value: Float32Array, writable: true})
                         }
                     };
+                        // Prototype > Render
+                        WebGLModel.prototype.render = function render() {
+                            // Constant > Model (Indices, Vertices) Data Type
+                            const MODEL = this;
+                            const MODEL_INDICES_DATA_TYPE = MODEL.indicesDataType;
+                            const MODEL_VERTICES_DATA_TYPE = MODEL.verticesDataType;
+
+                            // Update > (Former) Current Model
+                            FORMER_CURRENT_MODEL = CURRENT_MODEL;
+                            CURRENT_MODEL = MODEL;
+
+                            // Logic --- NOTE (Lapys) -> Prevent expensive operations repeatedly running.
+                            if (CURRENT_MODEL !== FORMER_CURRENT_MODEL) {
+                                // Update > Model > (Element) Array Buffer
+                                WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ARRAY_BUFFER"], MODEL.arrayBuffer);
+                                WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ARRAY_BUFFER"], new MODEL_VERTICES_DATA_TYPE(MODEL.vertices), WEBGL_CONTEXT["STATIC_DRAW"]);
+
+                                WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], MODEL.elementArrayBuffer);
+                                WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], new MODEL_INDICES_DATA_TYPE(MODEL.indices), WEBGL_CONTEXT["STATIC_DRAW"]);
+
+                                // Logic
+                                if (MODEL.textureImage === null)
+                                    // Update > Model > Texture
+                                    WEBGL_CONTEXT.bindTexture(WEBGL_CONTEXT["TEXTURE_2D"], null);
+
+                                else {
+                                    // Update > Model > Texture
+                                    WEBGL_CONTEXT.bindTexture(WEBGL_CONTEXT["TEXTURE_2D"], MODEL.texture);
+                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_WRAP_S"], WEBGL_CONTEXT["CLAMP_TO_EDGE"]);
+                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_WRAP_T"], WEBGL_CONTEXT["CLAMP_TO_EDGE"]);
+                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_MAG_FILTER"], WEBGL_CONTEXT["LINEAR"]);
+                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_MIN_FILTER"], WEBGL_CONTEXT["LINEAR"]);
+                                    WEBGL_CONTEXT.texImage2D(WEBGL_CONTEXT["TEXTURE_2D"], +0, WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["UNSIGNED_BYTE"], MODEL.textureImage)
+                                }
+                            }
+
+                            // Update > (WebGL Data > Locations > Attributes) > Vertex (Color, Position) --- NOTE (Lapys) -> Update Vertex Shader attributes via the currently used buffer.
+                            WEBGL_CONTEXT.vertexAttribPointer(WEBGL_DATA["LOCATIONS"]["ATTRIBUTES"]["VERTEX_COLOR"], 4, WEBGL_CONTEXT["FLOAT"], WEBGL_CONTEXT["FALSE"], 9 * MODEL_VERTICES_DATA_TYPE["BYTES_PER_ELEMENT"], STRICT = +0);
+                            WEBGL_CONTEXT.vertexAttribPointer(WEBGL_DATA["LOCATIONS"]["ATTRIBUTES"]["VERTEX_POSITION"], 3, WEBGL_CONTEXT["FLOAT"], WEBGL_CONTEXT["FALSE"], 9 * MODEL_VERTICES_DATA_TYPE["BYTES_PER_ELEMENT"], STRICT = 4 * MODEL_VERTICES_DATA_TYPE["BYTES_PER_ELEMENT"]);
+                            WEBGL_CONTEXT.vertexAttribPointer(WEBGL_DATA["LOCATIONS"]["ATTRIBUTES"]["VERTEX_TEXTURE_POSITION"], 2, WEBGL_CONTEXT["FLOAT"], WEBGL_CONTEXT["FALSE"], 9 * MODEL_VERTICES_DATA_TYPE["BYTES_PER_ELEMENT"], STRICT = 7 * MODEL_VERTICES_DATA_TYPE["BYTES_PER_ELEMENT"]);
+
+                            // Update > (WebGL Data > Locations > Uniforms) > (Projection, View, World) Matrix --- NOTE (Lapys) -> Update Vertex Shader uniforms via the currently used buffer.
+                            WEBGL_CONTEXT.uniformMatrix4fv(WEBGL_DATA["LOCATIONS"]["UNIFORMS"]["PROJECTION_MATRIX"], WEBGL_CONTEXT["FALSE"], WEBGL_DATA["MATRICES"]["PROJECTION"]);
+                            WEBGL_CONTEXT.uniformMatrix4fv(WEBGL_DATA["LOCATIONS"]["UNIFORMS"]["VIEW_MATRIX"], WEBGL_CONTEXT["FALSE"], WEBGL_DATA["MATRICES"]["VIEW"]);
+                            WEBGL_CONTEXT.uniformMatrix4fv(WEBGL_DATA["LOCATIONS"]["UNIFORMS"]["WORLD_MATRIX"], WEBGL_CONTEXT["FALSE"], WEBGL_DATA["MATRICES"]["WORLD"]);
+
+                            // WebGL Context > ...
+                            // WEBGL_RENDERER.clear(WEBGL_CONTEXT["COLOR_BUFFER_BIT"] | WEBGL_CONTEXT["DEPTH_BUFFER_BIT"]);
+                            // WEBGL_CONTEXT.drawArrays(WEBGL_CONTEXT["TRIANGLES"], +0, 3);
+                            WEBGL_CONTEXT.drawElements(WEBGL_CONTEXT["TRIANGLES"], MODEL.indices.length, WEBGL_CONTEXT["UNSIGNED_SHORT"], +0)
+                        };
 
                 /* Function > Resize Viewport */
                 function ResizeViewport(VIEWPORT_HAS_RENDERING_CONTEXT) {
@@ -181,11 +239,6 @@
                         preload("../lapys.png");
 
                         /* Modification > WebGL Data */
-                            // Images
-                            WEBGL_DATA["IMAGES"].test = new Image;
-                                // ...
-                                WEBGL_DATA["IMAGES"].test.src = "../lapys.png";
-
                             // Matrices
                             WEBGL_DATA["MATRICES"]["PROJECTION"] = WEBGL_MATRIX.mat4.create();
                             WEBGL_DATA["MATRICES"]["VIEW"] = WEBGL_MATRIX.mat4.create();
@@ -253,10 +306,6 @@
 
                     /* Update --- NOTE (Lapys) -> Modify WebGL variables and render to the screen. */
                     function Update() {
-                        /* Global > (Former) Current Model */
-                        let CURRENT_MODEL = null;
-                        let FORMER_CURRENT_MODEL = null;
-
                         /* Modification > WebGL Data */
                             // Locations
                                 // Attributes > Vertex ...
@@ -335,10 +384,10 @@
 
                                     // Vertices
                                     WEBGL_DATA["MODELS"].polygon.vertices = [
-                                        // [Color], [Position]
-                                        ...WEBGL_CONTEXT.createColor(255, +0, +0), [+0, 1, +0],
-                                        ...WEBGL_CONTEXT.createColor(+0, 255, +0), [-1, -1, +0],
-                                        ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, -1, +0]
+                                        // [Color], [Position], [Texture Position]
+                                        ...WEBGL_CONTEXT.createColor(255, +0, +0), [+0, 1, +0], [+0, +0],
+                                        ...WEBGL_CONTEXT.createColor(+0, 255, +0), [-1, -1, +0], [+0, +0],
+                                        ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, -1, +0], [+0, +0]
                                     ]; WEBGL_DATA["MODELS"].polygon.verticesDataType = Float32Array;
 
                                 // Textured Cube
@@ -354,7 +403,7 @@
                                     ]; WEBGL_DATA["MODELS"].texturedCube.indicesDataType = Uint16Array;
 
                                     // Texture Image
-                                    WEBGL_DATA["MODELS"].texturedCube.textureImage = WEBGL_DATA["IMAGES"].test;
+                                    WEBGL_DATA["MODELS"].texturedCube.textureImage = "../lapys.png";
 
                                     // Vertices
                                     WEBGL_DATA["MODELS"].texturedCube.vertices = [
@@ -400,55 +449,14 @@
                         WEBGL_CONTEXT.useProgram(WEBGL_DATA["PROGRAM"]);
 
                         /* Render */
-                        defer(function Render() {
-                            // Update > (Former) Current Model
-                            FORMER_CURRENT_MODEL = CURRENT_MODEL;
-                            CURRENT_MODEL = WEBGL_DATA["MODELS"].texturedCube;
-
-                            /* Constant > Model ... */
-                            const MODEL = CURRENT_MODEL;
-                            const MODEL_INDICES_TYPE = CURRENT_MODEL.indicesDataType;
-                            const MODEL_VERTICES_TYPE = CURRENT_MODEL.verticesDataType;
-
-                            // Logic
-                            if (CURRENT_MODEL !== FORMER_CURRENT_MODEL) {
-                                // Update > Model --- NOTE (Lapys) -> Specify which buffer to use.
-                                    // Array Buffer
-                                    WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ARRAY_BUFFER"], MODEL.arrayBuffer);
-                                    WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ARRAY_BUFFER"], new MODEL_VERTICES_TYPE(MODEL.vertices), WEBGL_CONTEXT["STATIC_DRAW"]);
-
-                                    // Element Array Buffer
-                                    WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], MODEL.elementArrayBuffer);
-                                    WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], new MODEL_INDICES_TYPE(MODEL.indices), WEBGL_CONTEXT["STATIC_DRAW"]);
-
-                                    // Texture
-                                    WEBGL_CONTEXT.bindTexture(WEBGL_CONTEXT["TEXTURE_2D"], MODEL.texture);
-                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_WRAP_S"], WEBGL_CONTEXT["CLAMP_TO_EDGE"]);
-                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_WRAP_T"], WEBGL_CONTEXT["CLAMP_TO_EDGE"]);
-                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_MAG_FILTER"], WEBGL_CONTEXT["LINEAR"]);
-                                    WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_MIN_FILTER"], WEBGL_CONTEXT["LINEAR"]);
-                                    WEBGL_CONTEXT.texImage2D(WEBGL_CONTEXT["TEXTURE_2D"], +0, WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["UNSIGNED_BYTE"], MODEL.textureImage);
-
-                                // Update > (WebGL Data > Locations > Attributes) > Vertex (Color, Position) --- NOTE (Lapys) -> Update Vertex Shader attributes via the currently used buffer.
-                                WEBGL_CONTEXT.vertexAttribPointer(WEBGL_DATA["LOCATIONS"]["ATTRIBUTES"]["VERTEX_COLOR"], 4, WEBGL_CONTEXT["FLOAT"], WEBGL_CONTEXT["FALSE"], 9 * MODEL_VERTICES_TYPE["BYTES_PER_ELEMENT"], STRICT = +0);
-                                WEBGL_CONTEXT.vertexAttribPointer(WEBGL_DATA["LOCATIONS"]["ATTRIBUTES"]["VERTEX_POSITION"], 3, WEBGL_CONTEXT["FLOAT"], WEBGL_CONTEXT["FALSE"], 9 * MODEL_VERTICES_TYPE["BYTES_PER_ELEMENT"], STRICT = 4 * MODEL_VERTICES_TYPE["BYTES_PER_ELEMENT"]);
-                                WEBGL_CONTEXT.vertexAttribPointer(WEBGL_DATA["LOCATIONS"]["ATTRIBUTES"]["VERTEX_TEXTURE_POSITION"], 2, WEBGL_CONTEXT["FLOAT"], WEBGL_CONTEXT["FALSE"], 9 * MODEL_VERTICES_TYPE["BYTES_PER_ELEMENT"], STRICT = 7 * MODEL_VERTICES_TYPE["BYTES_PER_ELEMENT"])
-                            }
-
+                        check(function() { return !document.pending }, null, function Render() {
                             // Update > (WebGL Data > Matrices) > World
                             WEBGL_MATRIX.mat4.rotateX(WEBGL_DATA["MATRICES"]["WORLD"], WEBGL_DATA["MATRICES"]["WORLD"], Math.degreesToRadians(-.9));
                             WEBGL_MATRIX.mat4.rotateY(WEBGL_DATA["MATRICES"]["WORLD"], WEBGL_DATA["MATRICES"]["WORLD"], Math.degreesToRadians(1.8));
                             WEBGL_MATRIX.mat4.rotateZ(WEBGL_DATA["MATRICES"]["WORLD"], WEBGL_DATA["MATRICES"]["WORLD"], Math.degreesToRadians(.45));
 
-                            // Update > (WebGL Data > Locations > Uniforms) > (Projection, View, World) Matrix --- NOTE (Lapys) -> Update Vertex Shader uniforms via the currently used buffer.
-                            WEBGL_CONTEXT.uniformMatrix4fv(WEBGL_DATA["LOCATIONS"]["UNIFORMS"]["PROJECTION_MATRIX"], WEBGL_CONTEXT["FALSE"], WEBGL_DATA["MATRICES"]["PROJECTION"]);
-                            WEBGL_CONTEXT.uniformMatrix4fv(WEBGL_DATA["LOCATIONS"]["UNIFORMS"]["VIEW_MATRIX"], WEBGL_CONTEXT["FALSE"], WEBGL_DATA["MATRICES"]["VIEW"]);
-                            WEBGL_CONTEXT.uniformMatrix4fv(WEBGL_DATA["LOCATIONS"]["UNIFORMS"]["WORLD_MATRIX"], WEBGL_CONTEXT["FALSE"], WEBGL_DATA["MATRICES"]["WORLD"]);
-
-                            // WebGL Context > ...
-                            // WEBGL_RENDERER.clear(WEBGL_CONTEXT["COLOR_BUFFER_BIT"] | WEBGL_CONTEXT["DEPTH_BUFFER_BIT"]);
-                            // WEBGL_CONTEXT.drawArrays(WEBGL_CONTEXT["TRIANGLES"], +0, 3);
-                            WEBGL_CONTEXT.drawElements(WEBGL_CONTEXT["TRIANGLES"], MODEL.indices.length, WEBGL_CONTEXT["UNSIGNED_SHORT"], +0);
+                            // [Model] > Render
+                            WEBGL_DATA["MODELS"].polygon.render();
 
                             // Render
                             defer(Render)
