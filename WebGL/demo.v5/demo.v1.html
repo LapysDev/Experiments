@@ -44,7 +44,7 @@
     </style>
 
     <!-- Document Title -->
-    <title> WebGL | Importing 3D Objects </title>
+    <title> WebGL | 3D Models </title>
 </head>
 
 <body>
@@ -150,27 +150,22 @@
 
                             // Logic --- NOTE (Lapys) -> Prevent expensive operations repeatedly running.
                             if (CURRENT_MODEL !== FORMER_CURRENT_MODEL) {
-                                // Update > Model > (Element) Array Buffer
-                                WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ARRAY_BUFFER"], MODEL.arrayBuffer);
-                                WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ARRAY_BUFFER"], new MODEL_VERTICES_DATA_TYPE(MODEL.vertices), WEBGL_CONTEXT["STATIC_DRAW"]);
+                                // Update > Model
+                                    // (Element) Array Buffer
+                                    WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ARRAY_BUFFER"], MODEL.arrayBuffer);
+                                    WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ARRAY_BUFFER"], new MODEL_VERTICES_DATA_TYPE(MODEL.vertices), WEBGL_CONTEXT["STATIC_DRAW"]);
 
-                                WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], MODEL.elementArrayBuffer);
-                                WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], new MODEL_INDICES_DATA_TYPE(MODEL.indices), WEBGL_CONTEXT["STATIC_DRAW"]);
+                                    WEBGL_CONTEXT.bindBuffer(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], MODEL.elementArrayBuffer);
+                                    WEBGL_CONTEXT.bufferData(WEBGL_CONTEXT["ELEMENT_ARRAY_BUFFER"], new MODEL_INDICES_DATA_TYPE(MODEL.indices), WEBGL_CONTEXT["STATIC_DRAW"]);
 
-                                // Logic
-                                if (MODEL.textureImage === null)
-                                    // Update > Model > Texture
-                                    WEBGL_CONTEXT.bindTexture(WEBGL_CONTEXT["TEXTURE_2D"], null);
-
-                                else {
-                                    // Update > Model > Texture
+                                    // Texture
                                     WEBGL_CONTEXT.bindTexture(WEBGL_CONTEXT["TEXTURE_2D"], MODEL.texture);
                                     WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_WRAP_S"], WEBGL_CONTEXT["CLAMP_TO_EDGE"]);
                                     WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_WRAP_T"], WEBGL_CONTEXT["CLAMP_TO_EDGE"]);
                                     WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_MAG_FILTER"], WEBGL_CONTEXT["LINEAR"]);
                                     WEBGL_CONTEXT.texParameteri(WEBGL_CONTEXT["TEXTURE_2D"], WEBGL_CONTEXT["TEXTURE_MIN_FILTER"], WEBGL_CONTEXT["LINEAR"]);
-                                    WEBGL_CONTEXT.texImage2D(WEBGL_CONTEXT["TEXTURE_2D"], +0, WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["UNSIGNED_BYTE"], MODEL.textureImage)
-                                }
+                                    WEBGL_CONTEXT.texImage2D(WEBGL_CONTEXT["TEXTURE_2D"], +0, WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["RGBA"], WEBGL_CONTEXT["UNSIGNED_BYTE"], MODEL.textureImage);
+                                    WEBGL_CONTEXT.activeTexture(WEBGL_CONTEXT["TEXTURE0"])
                             }
 
                             // Update > (WebGL Data > Locations > Attributes) > Vertex (Color, Position) --- NOTE (Lapys) -> Update Vertex Shader attributes via the currently used buffer.
@@ -252,8 +247,8 @@
                             WEBGL_DATA["PROGRAM"] = WEBGL_CONTEXT.createProgram();
 
                             // Shader > ...
-                            WEBGL_DATA["SHADER"]["FRAGMENT"] = WEBGL_CONTEXT.createShader(WEBGL_CONTEXT["FRAGMENT_SHADER"]).setOwn("sourceScript", "fragment-shader.fs");
-                            WEBGL_DATA["SHADER"]["VERTEX"] = WEBGL_CONTEXT.createShader(WEBGL_CONTEXT["VERTEX_SHADER"]).setOwn("sourceScript", "vertex-shader.vs");
+                            WEBGL_DATA["SHADER"]["FRAGMENT"] = WEBGL_CONTEXT.createShader(WEBGL_CONTEXT["FRAGMENT_SHADER"]).setOwn("sourceScript", "fragment-shader.glsl");
+                            WEBGL_DATA["SHADER"]["VERTEX"] = WEBGL_CONTEXT.createShader(WEBGL_CONTEXT["VERTEX_SHADER"]).setOwn("sourceScript", "vertex-shader.glsl");
 
                         // WebGL Renderer > ...
                         WEBGL_RENDERER.clearColor(...WEBGL_CONTEXT.createColor(255, 255, 255, +0));
@@ -328,79 +323,82 @@
                                 WEBGL_DATA["MODELS"].cube = WEBGL_CONTEXT.createModel();
                                     // Indices
                                     WEBGL_DATA["MODELS"].cube.indices = [
-                                        [[+0, 1, 2], [+0, 2, 3]], // [Front]
-                                        [[5, 4, 6], [6, 4, 7]], // [Bottom]
-                                        [[8, 9, 10], [8, 10, 11]], // [Back]
-                                        [[13, 12, 14], [15, 14, 12]], // [Right]
-                                        [[16, 17, 18], [16, 18, 19]], // [Left]
-                                        [[21, 20, 22], [22, 20, 23]] // [Top]
-                                    ]; WEBGL_DATA["MODELS"].cube.indicesDataType = Uint16Array;
+                                        [[+0, 1, 2], [+0, 2, 3]], // [Top]
+                                        [[5, 4, 6], [6, 4, 7]], // [Left]
+                                        [[8, 9, 10], [8, 10, 11]], // [Right]
+                                        [[13, 12, 14], [15, 14, 12]], // [Back]
+                                        [[16, 17, 18], [16, 18, 19]], // [Front]
+                                        [[21, 20, 22], [22, 20, 23]] // [Bottom]
+                                    ];
 
                                     // Vertices
                                     WEBGL_DATA["MODELS"].cube.vertices = [
-                                        // [Color], [Position]
-                                            // [Front]
-                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [1, 1, -1],
-                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [1, -1, -1],
-                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [-1, -1, -1],
-                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [-1, 1, -1],
-
-                                            // [Bottom]
-                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [-1, -1, -1],
-                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [-1, -1, 1],
-                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [1, -1, 1],
-                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [1, -1, -1],
-
-                                            // [Back]
-                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [1, 1, 1],
-                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [1, -1, 1],
-                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [-1, -1, 1],
-                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [-1, 1, 1],
-
-                                            // [Right]
-                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [-1, 1, 1],
-                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [-1, -1, 1],
-                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [-1, -1, -1],
-                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [-1, 1, -1],
+                                        // [Color], [Position], [Texture Position]
+                                            // [Top]
+                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [-1, 1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [-1, 1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [1, 1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, +0, +0), [1, 1, -1], [+0, +0],
 
                                             // [Left]
-                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [1, 1, 1],
-                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [1, -1, 1],
-                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [1, -1, -1],
-                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [1, 1, -1],
+                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [-1, 1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [-1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [-1, -1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(127.5, +0, 255), [-1, 1, -1], [+0, +0],
 
-                                            // [Top]
-                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [-1, 1, -1],
-                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [-1, 1, 1],
-                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, 1, 1],
-                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, 1, -1]
-                                    ]; WEBGL_DATA["MODELS"].cube.verticesDataType = Float32Array;
+                                            // [Right]
+                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [1, 1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [1, -1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, 255, +0), [1, 1, -1], [+0, +0],
+
+                                            // [Back]
+                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [1, 1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [-1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(255, 127.5, +0), [-1, 1, 1], [+0, +0],
+
+                                            // [Front]
+                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [1, 1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [1, -1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [-1, -1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(+0, 255, +0), [-1, 1, -1], [+0, +0],
+
+                                            // [Bottom]
+                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [-1, -1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [-1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, -1, -1], [+0, +0]
+                                    ];
 
                                 // Polygon
                                 WEBGL_DATA["MODELS"].polygon = WEBGL_CONTEXT.createModel();
-                                    // Indices
+                                    // Indices, Vertices
                                     WEBGL_DATA["MODELS"].polygon.indices = [+0, 1, 2];
-                                    WEBGL_DATA["MODELS"].polygon.indicesDataType = Uint16Array;
-
-                                    // Vertices
                                     WEBGL_DATA["MODELS"].polygon.vertices = [
                                         // [Color], [Position], [Texture Position]
                                         ...WEBGL_CONTEXT.createColor(255, +0, +0), [+0, 1, +0], [+0, +0],
                                         ...WEBGL_CONTEXT.createColor(+0, 255, +0), [-1, -1, +0], [+0, +0],
                                         ...WEBGL_CONTEXT.createColor(+0, +0, 255), [1, -1, +0], [+0, +0]
-                                    ]; WEBGL_DATA["MODELS"].polygon.verticesDataType = Float32Array;
+                                    ];
+
+                                // "Suzanne"
+                                WEBGL_DATA["MODELS"].suzanne = WEBGL_CONTEXT.createModel();
+                                    // Indices, Vertices
+                                    WEBGL_DATA["MODELS"].suzanne.indices = [];
+                                    WEBGL_DATA["MODELS"].suzanne.vertices = [];
 
                                 // Textured Cube
                                 WEBGL_DATA["MODELS"].texturedCube = WEBGL_CONTEXT.createModel();
                                     // Indices
                                     WEBGL_DATA["MODELS"].texturedCube.indices = [
-                                        [[+0, 1, 2], [+0, 2, 3]], // [Front]
-                                        [[5, 4, 6], [6, 4, 7]], // [Bottom]
-                                        [[8, 9, 10], [8, 10, 11]], // [Back]
-                                        [[13, 12, 14], [15, 14, 12]], // [Right]
-                                        [[16, 17, 18], [16, 18, 19]], // [Left]
-                                        [[21, 20, 22], [22, 20, 23]] // [Top]
-                                    ]; WEBGL_DATA["MODELS"].texturedCube.indicesDataType = Uint16Array;
+                                        [[+0, 1, 2], [+0, 2, 3]], // [Top]
+                                        [[5, 4, 6], [6, 4, 7]], // [Left]
+                                        [[8, 9, 10], [8, 10, 11]], // [Right]
+                                        [[13, 12, 14], [15, 14, 12]], // [Back]
+                                        [[16, 17, 18], [16, 18, 19]], // [Front]
+                                        [[21, 20, 22], [22, 20, 23]] // [Bottom]
+                                    ];
 
                                     // Texture Image
                                     WEBGL_DATA["MODELS"].texturedCube.textureImage = "../lapys.png";
@@ -408,42 +406,42 @@
                                     // Vertices
                                     WEBGL_DATA["MODELS"].texturedCube.vertices = [
                                         // [Color], [Position], [Texture Position]
+                                            // [Top]
+                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, -1], [1, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, 1], [1, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [1, 1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [1, 1, -1], [+0, 1],
+
+                                            // [Left]
+                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, 1], [1, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, 1], [1, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, -1], [+0, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, -1], [+0, +0],
+
+                                            // [Right]
+                                            ...WEBGL_CONTEXT.createColor(), [1, 1, 1], [1, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [1, -1, 1], [+0, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [1, -1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [1, 1, -1], [1, +0],
+
+                                            // [Back]
+                                            ...WEBGL_CONTEXT.createColor(), [1, 1, 1], [1, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [1, -1, 1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, 1], [+0, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, 1], [1, 1],
+
                                             // [Front]
-                                            ...WEBGL_CONTEXT.createColor(), [1, 1, -1], [1, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [1, -1, -1], [1, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, -1], [+0, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, -1], [+0, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [1, 1, -1], [+0, +0],
+                                            ...WEBGL_CONTEXT.createColor(), [1, -1, -1], [+0, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, -1], [1, 1],
+                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, -1], [1, +0],
 
                                             // [Bottom]
                                             ...WEBGL_CONTEXT.createColor(), [-1, -1, -1], [1, 1],
                                             ...WEBGL_CONTEXT.createColor(), [-1, -1, 1], [1, +0],
                                             ...WEBGL_CONTEXT.createColor(), [1, -1, 1], [+0, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [1, -1, -1], [+0, 1],
-
-                                            // [Back]
-                                            ...WEBGL_CONTEXT.createColor(), [1, 1, 1], [+0, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [1, -1, 1], [+0, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, 1], [1, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, 1], [1, +0],
-
-                                            // [Right]
-                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, 1], [1, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, 1], [+0, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, -1, -1], [+0, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, -1], [1, +0],
-
-                                            // [Left]
-                                            ...WEBGL_CONTEXT.createColor(), [1, 1, 1], [+0, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [1, -1, 1], [1, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [1, -1, -1], [1, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [1, 1, -1], [+0, 1],
-
-                                            // [Top]
-                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, -1], [+0, +0],
-                                            ...WEBGL_CONTEXT.createColor(), [-1, 1, 1], [+0, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [1, 1, 1], [1, 1],
-                                            ...WEBGL_CONTEXT.createColor(), [1, 1, -1], [1, +0]
-                                    ]; WEBGL_DATA["MODELS"].texturedCube.verticesDataType = Float32Array;
+                                            ...WEBGL_CONTEXT.createColor(), [1, -1, -1], [+0, 1]
+                                    ];
 
                         // WebGL Context > Use Program > (WebGL Data > Program)
                         WEBGL_CONTEXT.useProgram(WEBGL_DATA["PROGRAM"]);
@@ -456,7 +454,7 @@
                             WEBGL_MATRIX.mat4.rotateZ(WEBGL_DATA["MATRICES"]["WORLD"], WEBGL_DATA["MATRICES"]["WORLD"], Math.degreesToRadians(.45));
 
                             // [Model] > Render
-                            WEBGL_DATA["MODELS"].polygon.render();
+                            WEBGL_DATA["MODELS"].texturedCube.render();
 
                             // Render
                             defer(Render)
@@ -469,7 +467,7 @@
                             const THEME = HOURS < 7 || HOURS > 17 ? "dark" : "light";
 
                             // Modification > Main > Theme
-                            MAIN.setAttribute("theme", "dark");
+                            MAIN.setAttribute("theme", THEME);
 
                             // Theme
                             timeout(Theme, 36e5)
