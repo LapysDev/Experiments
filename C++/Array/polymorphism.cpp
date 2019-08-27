@@ -20,8 +20,8 @@
             // Initialization > ID
             unsigned short id;
 
-            // Function > Announce
-            virtual void announce() const { if (id) ::printf("[Entity #%i]:\t\t\"Hello, World!\"\n", this -> id); else ::write(1, "[Entity]:\t\t\"Hello, World!\"\n", 27); }
+            // Function > Print
+            virtual void print() const { if (id) ::printf("[Entity #%i]:\t\t\"Hello, World!\"\n", this -> id); else ::write(1, "[Entity]:\t\t\"Hello, World!\"\n", 27); }
     };
         // Dynamic Entity
         class DynamicEntity : Entity {
@@ -31,8 +31,8 @@
                 inline DynamicEntity() { this -> id = 0u; }
                 inline DynamicEntity(const unsigned id) { this -> id = id; }
 
-                // Function > Announce
-                void announce() const { if (id) ::printf("[Dynamic Entity #%i]:\t\"Hello, World!\"\n", this -> id); else ::write(1, "[Dynamic Entity]:\t\"Hello, World!\"\n", 34); }
+                // Function > Print
+                void print() const { if (id) ::printf("[Dynamic Entity #%i]:\t\"Hello, World!\"\n", this -> id); else ::write(1, "[Dynamic Entity]:\t\"Hello, World!\"\n", 34); }
         };
 
         // Static Entity
@@ -43,8 +43,8 @@
                 inline StaticEntity() { this -> id = 0u; }
                 inline StaticEntity(const unsigned id) { this -> id = id; }
 
-                // Function > Announce
-                void announce() const { if (id) ::printf("[Static Entity #%i]:\t\"Hello, World!\"\n", this -> id); else ::write(1, "[Static Entity]:\t\"Hello, World!\"\n", 33); }
+                // Function > Print
+                void print() const { if (id) ::printf("[Static Entity #%i]:\t\"Hello, World!\"\n", this -> id); else ::write(1, "[Static Entity]:\t\"Hello, World!\"\n", 33); }
         };
 
 /* Main */
@@ -55,9 +55,9 @@ int main(void) {
     const StaticEntity STATIC_ENTITY;
 
     // Entity > Announce; ...
-    ENTITY.announce();
-    DYNAMIC_ENTITY.announce();
-    STATIC_ENTITY.announce();
+    ENTITY.print();
+    DYNAMIC_ENTITY.print();
+    STATIC_ENTITY.print();
     ::write(1, "\n", 1);
 
     // [Test A] Logic --- WARN (Lapys) -> Referencing the entities causes undefined behavior.
@@ -76,11 +76,11 @@ int main(void) {
         *(((Entity*) (entitiesCollectionA)) + 4u) = Entity(5u);
 
         // [Entity] > Announce
-        (*(((Entity*) entitiesCollectionA) + 0u)).announce();
-        (*(((Entity*) entitiesCollectionA) + 1u)).announce();
-        (*(((Entity*) entitiesCollectionA) + 2u)).announce();
-        (*(((Entity*) entitiesCollectionA) + 3u)).announce();
-        (*(((Entity*) entitiesCollectionA) + 4u)).announce();
+        (*(((Entity*) entitiesCollectionA) + 0u)).print();
+        (*(((Entity*) entitiesCollectionA) + 1u)).print();
+        (*(((Entity*) entitiesCollectionA) + 2u)).print();
+        (*(((Entity*) entitiesCollectionA) + 3u)).print();
+        (*(((Entity*) entitiesCollectionA) + 4u)).print();
 
         // Deletion
         std::free(entitiesCollectionA);
@@ -105,11 +105,11 @@ int main(void) {
         *(((Entity*) (entitiesCollectionB)) + 4u) = Entity(5u);
 
         // [Entity] > Announce
-        (*(((Entity*) entitiesCollectionB) + 0u)).announce();
-        (*(((Entity*) entitiesCollectionB) + 1u)).announce();
-        (*(((Entity*) entitiesCollectionB) + 2u)).announce();
-        (*(((Entity*) entitiesCollectionB) + 3u)).announce();
-        (*(((Entity*) entitiesCollectionB) + 4u)).announce();
+        (*(((Entity*) entitiesCollectionB) + 0u)).print();
+        (*(((Entity*) entitiesCollectionB) + 1u)).print();
+        (*(((Entity*) entitiesCollectionB) + 2u)).print();
+        (*(((Entity*) entitiesCollectionB) + 3u)).print();
+        (*(((Entity*) entitiesCollectionB) + 4u)).print();
 
         // Deletion --- WARN (Lapys) -> Deleting `void*` types is undefined.
         std::free(entitiesCollectionB);
@@ -134,11 +134,11 @@ int main(void) {
         *(entitiesCollectionC + 4u) = Entity(5u);
 
         // [Entity] > Announce
-        (*(((Entity*) entitiesCollectionC) + 0u)).announce();
-        (*(((Entity*) entitiesCollectionC) + 1u)).announce();
-        (*(((Entity*) entitiesCollectionC) + 2u)).announce();
-        (*(((Entity*) entitiesCollectionC) + 3u)).announce();
-        (*(((Entity*) entitiesCollectionC) + 4u)).announce();
+        (*(((Entity*) entitiesCollectionC) + 0u)).print();
+        (*(((Entity*) entitiesCollectionC) + 1u)).print();
+        (*(((Entity*) entitiesCollectionC) + 2u)).print();
+        (*(((Entity*) entitiesCollectionC) + 3u)).print();
+        (*(((Entity*) entitiesCollectionC) + 4u)).print();
 
         // Deletion
         std::free(entitiesCollectionC);
@@ -163,11 +163,11 @@ int main(void) {
         *(entitiesCollectionD + 4u) = Entity(5u);
 
         // [Entity] > Announce
-        (*(((Entity*) entitiesCollectionD) + 0u)).announce();
-        (*(((Entity*) entitiesCollectionD) + 1u)).announce();
-        (*(((Entity*) entitiesCollectionD) + 2u)).announce();
-        (*(((Entity*) entitiesCollectionD) + 3u)).announce();
-        (*(((Entity*) entitiesCollectionD) + 4u)).announce();
+        (*(((Entity*) entitiesCollectionD) + 0u)).print();
+        (*(((Entity*) entitiesCollectionD) + 1u)).print();
+        (*(((Entity*) entitiesCollectionD) + 2u)).print();
+        (*(((Entity*) entitiesCollectionD) + 3u)).print();
+        (*(((Entity*) entitiesCollectionD) + 4u)).print();
 
         // Deletion --- WARN (Lapys) -> Deleting objects of polymorphic types with a non-virtual destructor may cause undefined behavior.
         std::free(entitiesCollectionD);
@@ -192,11 +192,11 @@ int main(void) {
         entitiesCollectionE[4u] = Entity(5u);
 
         // [Entity] > Announce
-        entitiesCollectionE[0u].announce();
-        entitiesCollectionE[1u].announce();
-        entitiesCollectionE[2u].announce();
-        entitiesCollectionE[3u].announce();
-        entitiesCollectionE[4u].announce();
+        entitiesCollectionE[0u].print();
+        entitiesCollectionE[1u].print();
+        entitiesCollectionE[2u].print();
+        entitiesCollectionE[3u].print();
+        entitiesCollectionE[4u].print();
 
         // [End] ...
         ::write(1, "\n", 1);
@@ -227,11 +227,11 @@ int main(void) {
         *((Entity*) *(entitiesCollectionF + 5u)) = Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionF + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionF + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionF + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionF + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionF + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionF + 0u))).print();
+        (*((Entity*) *(entitiesCollectionF + 1u))).print();
+        (*((Entity*) *(entitiesCollectionF + 2u))).print();
+        (*((Entity*) *(entitiesCollectionF + 3u))).print();
+        (*((Entity*) *(entitiesCollectionF + 4u))).print();
 
         // Deletion
         { unsigned short iterator = 5u; while (iterator) std::free(*(entitiesCollectionF + (iterator -= 1))); std::free(entitiesCollectionF); }
@@ -259,11 +259,11 @@ int main(void) {
         *(entitiesCollectionG + 0u) = new Entity(1u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionG + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionG + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionG + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionG + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionG + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionG + 0u))).print();
+        (*((Entity*) *(entitiesCollectionG + 1u))).print();
+        (*((Entity*) *(entitiesCollectionG + 2u))).print();
+        (*((Entity*) *(entitiesCollectionG + 3u))).print();
+        (*((Entity*) *(entitiesCollectionG + 4u))).print();
 
         // Deletion --- WARN (Lapys) -> Deleting `void*` types is undefined.
         { unsigned short iterator = 5u; while (iterator) std::free(*(entitiesCollectionG + (iterator -= 1))); std::free(entitiesCollectionG); }
@@ -297,11 +297,11 @@ int main(void) {
         *((Entity*) *(entitiesCollectionH + 5u)) = Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionH + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionH + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionH + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionH + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionH + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionH + 0u))).print();
+        (*((Entity*) *(entitiesCollectionH + 1u))).print();
+        (*((Entity*) *(entitiesCollectionH + 2u))).print();
+        (*((Entity*) *(entitiesCollectionH + 3u))).print();
+        (*((Entity*) *(entitiesCollectionH + 4u))).print();
 
         // Deletion
         delete[] entitiesCollectionH;
@@ -326,11 +326,11 @@ int main(void) {
         *(entitiesCollectionI + 4u) = new Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionI + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionI + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionI + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionI + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionI + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionI + 0u))).print();
+        (*((Entity*) *(entitiesCollectionI + 1u))).print();
+        (*((Entity*) *(entitiesCollectionI + 2u))).print();
+        (*((Entity*) *(entitiesCollectionI + 3u))).print();
+        (*((Entity*) *(entitiesCollectionI + 4u))).print();
 
         // Deletion
         delete[] entitiesCollectionI;
@@ -364,11 +364,11 @@ int main(void) {
         *((Entity*) entitiesCollectionJ[4u]) = Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) entitiesCollectionJ[0u])).announce();
-        (*((Entity*) entitiesCollectionJ[1u])).announce();
-        (*((Entity*) entitiesCollectionJ[2u])).announce();
-        (*((Entity*) entitiesCollectionJ[3u])).announce();
-        (*((Entity*) entitiesCollectionJ[4u])).announce();
+        (*((Entity*) entitiesCollectionJ[0u])).print();
+        (*((Entity*) entitiesCollectionJ[1u])).print();
+        (*((Entity*) entitiesCollectionJ[2u])).print();
+        (*((Entity*) entitiesCollectionJ[3u])).print();
+        (*((Entity*) entitiesCollectionJ[4u])).print();
 
         // [End] ...
         ::write(1, "\n", 1);
@@ -390,11 +390,11 @@ int main(void) {
         *(entitiesCollectionK + 4u) = new Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionK + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionK + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionK + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionK + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionK + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionK + 0u))).print();
+        (*((Entity*) *(entitiesCollectionK + 1u))).print();
+        (*((Entity*) *(entitiesCollectionK + 2u))).print();
+        (*((Entity*) *(entitiesCollectionK + 3u))).print();
+        (*((Entity*) *(entitiesCollectionK + 4u))).print();
 
         // [End] ...
         ::write(1, "\n", 1);
@@ -425,11 +425,11 @@ int main(void) {
         *((Entity*) *(entitiesCollectionL + 5u)) = Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionL + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionL + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionL + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionL + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionL + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionL + 0u))).print();
+        (*((Entity*) *(entitiesCollectionL + 1u))).print();
+        (*((Entity*) *(entitiesCollectionL + 2u))).print();
+        (*((Entity*) *(entitiesCollectionL + 3u))).print();
+        (*((Entity*) *(entitiesCollectionL + 4u))).print();
 
         // Deletion
         { unsigned short iterator = 5u; while (iterator) std::free(*(entitiesCollectionL + (iterator -= 1))); std::free(entitiesCollectionL); }
@@ -457,11 +457,11 @@ int main(void) {
         *(entitiesCollectionM + 0u) = new Entity(1u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionM + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionM + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionM + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionM + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionM + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionM + 0u))).print();
+        (*((Entity*) *(entitiesCollectionM + 1u))).print();
+        (*((Entity*) *(entitiesCollectionM + 2u))).print();
+        (*((Entity*) *(entitiesCollectionM + 3u))).print();
+        (*((Entity*) *(entitiesCollectionM + 4u))).print();
 
         // Deletion --- WARN (Lapys) -> Deleting objects of polymorphic types with a non-virtual destructor may cause undefined behavior.
         { unsigned short iterator = 5u; while (iterator) std::free(*(entitiesCollectionM + (iterator -= 1))); std::free(entitiesCollectionM); }
@@ -495,11 +495,11 @@ int main(void) {
         *((Entity*) *(entitiesCollectionN + 5u)) = Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionN + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionN + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionN + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionN + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionN + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionN + 0u))).print();
+        (*((Entity*) *(entitiesCollectionN + 1u))).print();
+        (*((Entity*) *(entitiesCollectionN + 2u))).print();
+        (*((Entity*) *(entitiesCollectionN + 3u))).print();
+        (*((Entity*) *(entitiesCollectionN + 4u))).print();
 
         // Deletion
         delete[] entitiesCollectionN;
@@ -524,11 +524,11 @@ int main(void) {
         *(entitiesCollectionO + 4u) = new Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionO + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionO + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionO + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionO + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionO + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionO + 0u))).print();
+        (*((Entity*) *(entitiesCollectionO + 1u))).print();
+        (*((Entity*) *(entitiesCollectionO + 2u))).print();
+        (*((Entity*) *(entitiesCollectionO + 3u))).print();
+        (*((Entity*) *(entitiesCollectionO + 4u))).print();
 
         // Deletion
         delete[] entitiesCollectionO;
@@ -562,11 +562,11 @@ int main(void) {
         *((Entity*) entitiesCollectionP[4u]) = Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) entitiesCollectionP[0u])).announce();
-        (*((Entity*) entitiesCollectionP[1u])).announce();
-        (*((Entity*) entitiesCollectionP[2u])).announce();
-        (*((Entity*) entitiesCollectionP[3u])).announce();
-        (*((Entity*) entitiesCollectionP[4u])).announce();
+        (*((Entity*) entitiesCollectionP[0u])).print();
+        (*((Entity*) entitiesCollectionP[1u])).print();
+        (*((Entity*) entitiesCollectionP[2u])).print();
+        (*((Entity*) entitiesCollectionP[3u])).print();
+        (*((Entity*) entitiesCollectionP[4u])).print();
 
         // [End] ...
         ::write(1, "\n", 1);
@@ -588,11 +588,11 @@ int main(void) {
         *(entitiesCollectionQ + 4u) = new Entity(5u);
 
         // [Entity] > Announce
-        (*((Entity*) *(entitiesCollectionQ + 0u))).announce();
-        (*((Entity*) *(entitiesCollectionQ + 1u))).announce();
-        (*((Entity*) *(entitiesCollectionQ + 2u))).announce();
-        (*((Entity*) *(entitiesCollectionQ + 3u))).announce();
-        (*((Entity*) *(entitiesCollectionQ + 4u))).announce();
+        (*((Entity*) *(entitiesCollectionQ + 0u))).print();
+        (*((Entity*) *(entitiesCollectionQ + 1u))).print();
+        (*((Entity*) *(entitiesCollectionQ + 2u))).print();
+        (*((Entity*) *(entitiesCollectionQ + 3u))).print();
+        (*((Entity*) *(entitiesCollectionQ + 4u))).print();
 
         // [End] ...
         ::write(1, "\n", 1);

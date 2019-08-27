@@ -1,6 +1,6 @@
 /* Import */
-#include "main.hpp" // Main --- NOTE (Lapys) -> Single entry-point for all programs.
-#include "win-api.hpp" // Windows 32-Bit
+#include "C:/LapysDev/Assets/hpp/main.hpp" // Main --- NOTE (Lapys) -> Single entry-point for all programs.
+#include "C:/LapysDev/Assets/hpp/win-api.hpp" // Windows 32-Bit
 
 /* Utilization > ... */
 using namespace Win32;

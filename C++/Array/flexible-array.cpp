@@ -1,185 +1,73 @@
 /* Import */
-    // C Standard Input-Output
-    #include <cstdio>
+#include <exception> // Exception
+#include <iostream> // Input-Output Stream
+#include <unistd.h> // UNIX Standard
 
-    // Standard Library
-    #include <stdlib.h>
+/* Class > Flexible Array */
+template <typename type>
+class FlexibleArray {
+    // Function > Print
+    template <typename classType> friend void print(FlexibleArray<classType>& flexibleArray);
 
-/* Function > (To) Character String (Length) --- MINIFY */
-constexpr static std::size_t characterStringLength(char characterString[]) { if (NULL == characterString) return 0; else { std::size_t length = 0; while (*(characterString + length) != '\0') length += 1; return length; } }
-constexpr inline static char* toCharacterString(int arg) { char* characterString = (char*) std::malloc(255); std::sprintf(characterString, "%i", arg); characterString = (char*) std::realloc(characterString, characterStringLength(characterString)); return characterString; }
+    // ...
+    private:
+        // Class > Flexible Array
+        struct flexible_array { public: inline flexible_array() : length(0u) {} unsigned length; type array[]; };
 
-/* Class */
-    // Flexible Array
-    template <typename structType>
-    struct flexible_array {
-        // [Private]
-        private:
-            // Definition > Structure Type Size
-            #define STRUCT_TYPE_SIZE sizeof(structType)
+        // Initialization > Flexible Array (Size)
+        flexible_array *flexibleArray = NULL;
+        unsigned flexibleArraySize = 0u;
 
-            // Initialization > (Array, Batched, Length, Size)
-            structType* array = NULL;
-            bool batched = false; // NOTE (Lapys) -> Is allocating memory in batch?
-            std::size_t length = 0, size = 0;
+        // Function > ...
+        type& elementAt(const unsigned index) { if (this -> flexibleArray -> length > index) return (this -> flexibleArray -> array)[index]; else throw std::out_of_range(NULL); }
+        const unsigned resize(const unsigned length) { if (this -> flexibleArray -> length < length) this -> flexibleArray = (flexible_array*) std::realloc(this -> flexibleArray, flexibleArraySize += (sizeof(type) * (length - (this -> flexibleArray -> length)))); else if (this -> flexibleArray -> length > length) this -> flexibleArray = (flexible_array*) std::realloc(this -> flexibleArray, flexibleArraySize -= (sizeof(type) * (this -> flexibleArray -> length - length))); return (this -> flexibleArray -> length = length); }
+        void setIndex(const unsigned index, type element) { if (this -> flexibleArray -> length > index) this -> flexibleArray -> array[index] = element; else throw std::out_of_range(NULL); }
 
-            // Phase > (Initiate, Terminate)
-            constexpr inline void init() { this -> array = (structType*) std::malloc(STRUCT_TYPE_SIZE); }
-            constexpr inline void terminate() { std::free(this -> array); this -> batched = this -> length = this -> size = 0; }
+    // ...
+    public:
+        // [Constructor]
+        FlexibleArray() {
+            // Update > (Target > (Flexible Array) ( > Length, Size))
+            this -> flexibleArraySize = sizeof(flexible_array);
+            this -> flexibleArray = (flexible_array*) std::malloc(flexibleArraySize);
+            this -> flexibleArray -> length = 0u;
+        }
 
-        // [Protected]
-        protected:
-            // Function > (Allocate, Request) Size
-            constexpr inline void allocateSize(std::size_t size) { if (this -> size < size) this -> array = (structType*) std::realloc(this -> array, sizeof(&(this -> array)) + ((this -> size = size) * STRUCT_TYPE_SIZE)); }
-            constexpr inline std::size_t requestSize(structType element) { return sizeof element; }
-            template <typename... types, typename = structType> constexpr std::size_t requestSize(structType element, types... elements) { return this -> requestSize(element) + this -> requestSize(elements...); }
+        // Function > ...
+        type& pop() { type& element = this -> elementAt(this -> flexibleArray -> length - 1u); this -> resize(this -> flexibleArray -> length - 1u); return element; }
+        const unsigned push(type element) { this -> resize(this -> flexibleArray -> length + 1u); this -> setIndex(this -> flexibleArray -> length - 1u, element); }
+};
 
-        // [Public]
-        public:
-            // [Constructor]
-            explicit flexible_array(structType element) { this -> init(); this -> add(element); }
-            template <typename... types, typename = structType> explicit flexible_array(types... elements) { this -> init(); this -> batched = true; this -> allocateSize(this -> requestSize(elements...)); this -> add(elements...); this -> batched = false; }
+/* Function > Print */
+inline void print() {}
 
-            // [Destructor]
-            ~flexible_array() {
-                // Target > Terminate
-                this -> terminate();
+void print(const char character) { const char string[1u] {character}; ::write(1u, string, 1u); }
+void print(const char* string) { ::printf("%s", string); }
+void print(const float number) { ::printf("%f", number); }
+void print(const int number) { ::printf("%i", number); }
+void print(const void* pointer) { ::printf("%p", pointer); }
 
-                // Deletion
-                #undef STRUCT_TYPE_SIZE
-            }
+template <typename type> void print(FlexibleArray<type>& array) { unsigned iterator = array.flexibleArray -> length; ::print('['); while (iterator) { ::print(array.elementAt((array.flexibleArray -> length) - (iterator -= 1u) - 1u)); if (iterator) ::print(", "); } ::print(']'); }
 
-            // [Operator] > [[]]
-            constexpr inline structType operator [](std::size_t index) { return *(this -> array + index); }
+template <typename type, typename... types> void print(type argument, types... arguments) { ::print(argument); ::print(arguments...); }
 
-            // Function
-                // Add --- MINIFY
-                constexpr inline void add(structType element) { if (!(this -> batched)) this -> allocateSize(this -> size + this -> requestSize(element)); *(this -> array + this -> length) = element; this -> length += 1; }
-                template <typename... types> constexpr void add(structType element, types... elements) { this -> add(element); this -> add(elements...); }
+/* Main */
+int main(void) {
+    // Initialization > Array
+    FlexibleArray<char> array;
 
-                // Free --- NOTE (Lapys) -> Remove all elements.
-                constexpr inline void free() { this -> terminate(); this -> init(); }
+    // ...
+    ::print("Array: ", array, '\n');
 
-                // Index --- NOTE (Lapys) -> Forward indexing.
-                constexpr inline int index(structType element) { std::size_t iterator = this -> length; while (iterator) if (*(this -> array + (this -> length - (iterator -= 1) - 1)) == element) return this -> length - iterator - 1; return -1; }
+    array.push('H'); array.push('e'); array.push('l'); array.push('l'); array.push('o');
+    ::print("Array: ", array, '\n');
 
-                // Remove
-                constexpr inline void remove(structType element) {
-                    // Initialization > Index
-                    int index = this -> index(element);
+    array.pop(); array.pop(); array.pop();
+    ::print("Array: ", array, '\n');
 
-                    // Logic
-                    if (~index) {
-                        // Initialization > Length
-                        const std::size_t length = this -> length;
+    array.push('`'); array.push('l'); array.push('l');
+    ::print("Array: ", array, '\n');
 
-                        // Logic
-                        if (length == 1)
-                            // Target > Free --- NOTE (Lapys) -> Faster processing...
-                            this -> free();
-
-                        else {
-                            // Initialization > (Element Is Removed, Former Array, Iterator, Size)
-                            bool elementIsRemoved = false;
-                            structType formerArray[length - 1] {0}; // NOTE (Lapys) -> Cache...
-                            std::size_t iterator = length, size = 0;
-
-                            // Loop
-                            while (iterator) {
-                                // Update > Index --- NOTE (Lapys) -> Re-purpose the Index variable.
-                                index = length - (iterator -= 1) - 1;
-
-                                // Initialization > Former Element
-                                structType formerElement = *(this -> array + index);
-
-                                // Logic > Update > (...)
-                                if (element == formerElement && !elementIsRemoved) elementIsRemoved = true;
-                                else size += this -> requestSize(*(formerArray + index - elementIsRemoved) = formerElement);
-                            }
-
-                            // Target > (Free, Allocate Size)
-                            this -> free();
-                            this -> allocateSize(size);
-
-                            // Modification > Target > Length
-                            this -> length = index;
-
-                            // Loop > Update > (Index, Target > Array)
-                            while (index) { index -= 1; *(this -> array + index) = *(formerArray + index); }
-                        }
-                    }
-                }
-                template <typename... types> constexpr void remove(structType element, types... elements) { this -> remove(element); this -> remove(elements...); }
-
-                // To String
-                constexpr inline const char* toString() {
-                    // Initialization > (Character String (Length), Array String (Length))
-                    const std::size_t length = this -> length;
-                    std::size_t characterStringLength = 2, iterator = length;
-                    char* arrayString[length];
-                    std::size_t arrayStringLength[length];
-
-                    /* Loop
-                            --- NOTE (Lapys) -> Populate the Array String & Array String Length arrays whilst
-                                determining the string length required to print all the Array's elements.
-                    */
-                    while (iterator) {
-                        // Update > Character String Length
-                        (iterator -= 1) && (characterStringLength += 2);
-                        characterStringLength += *(arrayStringLength + iterator) = ::characterStringLength(*(arrayString + iterator) = toCharacterString(*(this -> array + iterator)));
-                    }
-
-                    // Initialization > Character String
-                    char* characterString = (char*) std::malloc(characterStringLength);
-
-                    // Update > Character String (Length)
-                    *characterString = '[';
-                    *(characterString + (characterStringLength - 1)) = ']';
-                    *(characterString + characterStringLength) = '\0';
-                    characterStringLength = 1;
-
-                    // Loop --- NOTE (Lapys) -> Use the recently populated Array String & Array String Length (cache) to write data into the Character String.
-                    while (iterator != length) {
-                        // Initialization > (Array String Element) (Length, Iterator)
-                        char* arrayStringElement = *(arrayString + iterator);
-                        const std::size_t arrayStringElementLength = *(arrayStringLength + iterator);
-                        std::size_t arrayStringElementIterator = arrayStringElementLength;
-
-                        // Loop
-                        while (arrayStringElementIterator) {
-                            // Update > (Array String Element Iterator, Character String)
-                            arrayStringElementIterator -= 1;
-                            *(characterString + (characterStringLength + arrayStringElementIterator)) = *(arrayStringElement + arrayStringElementIterator);
-                        }
-
-                        // Update > Character String Length
-                        characterStringLength += arrayStringElementLength;
-
-                        // Logic
-                        if ((iterator += 1) != length) {
-                            // Update > Character String (Length)
-                            *(characterString + characterStringLength) = ',';
-                            *(characterString + characterStringLength + 1) = ' ';
-                            characterStringLength += 2;
-                        }
-                    }
-
-                    // Return
-                    return characterString;
-                }
-    };
-
-/* Function */
-    /* Main */
-    int main(int argc, char* argv[]) {
-        // Initialization > Array
-        flexible_array<int> array(1, 0, 1);
-
-        // Print; Update > Array
-        std::printf("Array: %s\n", array.toString()); array.add(2, 3, 5);
-        std::printf("Array: %s\n", array.toString()); array.remove(1, 3, 5);
-        std::printf("Array: %s\n", array.toString());
-
-        // Return
-        return 0;
-    }
+    // Return
+    return 0;
+}

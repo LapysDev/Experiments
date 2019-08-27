@@ -1,43 +1,65 @@
 /* Import */
-    // C Standard Input-Output
-    #include <cstdio>
+#include <exception> // Exception
+#include <iostream> // Input-Output Stream
+#include <stddef.h> // Standard Definition
+#include <stdio.h> // Standard Input-Output
+#include <stdlib.h> // Standard Library
+#include <unistd.h> // UNIX Standard
 
-/* Function */
-    // Add To Front
-    void addToFront(int array[], unsigned int index) {}
-    template <typename type, typename... types> void addToFront(int array[], unsigned int index, type arg, types... args) { *(array + ((index += 1) - 1)) = arg; addToFront(array, index, args...); }
+/* Class > Variable Length Array */
+template <typename type>
+class VariableLengthArray {
+    // Function > Print
+    template <typename classType> friend void print(VariableLengthArray<classType>& variableLengthArray);
 
-    // Get Arguments Length
-    inline unsigned int getArgumentsLength() { return 0; }
-    template <typename type, typename... types> const unsigned int getArgumentsLength(type arg, types... args) { return 1 + getArgumentsLength(args...); }
+    // ...
+    private:
+        // Initialization > (Array, ...)
+        void **array = NULL;
+        unsigned length = 0u, size = 0u;
 
-    // Get Variable Length Array
-    template <typename... types>
-    int* getVariableLengthArray(types... args) {
-        // Initialization > (Length, Array)
-        unsigned int length = getArgumentsLength(args...);
-        int* array = new int[length];
+        // Function > ...
+        type& elementAt(const unsigned index) { if (this -> length > index) return *((type*) *(this -> array + index)); else throw std::out_of_range(NULL); }
+        const unsigned resize(const unsigned length) { signed long iterator = length - (this -> length); if (this -> length < length) { this -> array = (void**) std::realloc(this -> array, this -> size += sizeof(type) * iterator); while (iterator) *(this -> array + (this -> length + (iterator -= 1))) = std::malloc(sizeof(type)); } else if (this -> length > length) { iterator = -iterator; while (iterator) std::free(*(this -> array + (this -> length - (iterator -= 1)))); this -> array = (void**) std::realloc(this -> array, this -> size -= sizeof(type) * iterator); } this -> length = length; return length; }
+        void setIndex(const unsigned index, type element) { if (this -> length > index) *((type*) *(this -> array + index)) = element; else throw std::out_of_range(NULL); }
 
-        // Add to Front
-        addToFront(array, 0, args...);
+    // ...
+    public:
+        // Function > ...
+        const unsigned push(type element) { this -> resize(this -> length + 1u); this -> setIndex(this -> length - 1u, element); }
+        void pop() { this -> resize(this -> length - 1u); }
+};
 
-        // Return
-        return array;
-    }
+/* Function > Print */
+inline void print() {}
 
-    // Main
-    int main(int argc, char* argv[]) {
-        // Initialization > Array
-        int* array = getVariableLengthArray(1, 0, 1, 2, 3, 5);
+void print(const char character) { const char string[1u] {character}; ::write(1u, string, 1u); }
+void print(const char* string) { ::printf("%s", string); }
+void print(const float number) { ::printf("%f", number); }
+void print(const int number) { ::printf("%i", number); }
+void print(const void* pointer) { ::printf("%p", pointer); }
 
-        // Print
-        std::printf("[%i, ", *array);
-        std::printf("%i, ", *(array += 1));
-        std::printf("%i, ", *(array += 1));
-        std::printf("%i, ", *(array += 1));
-        std::printf("%i, ", *(array += 1));
-        std::printf("%i]", *(array += 1));
+template <typename type> void print(VariableLengthArray<type>& variableLengthArray) { unsigned iterator = variableLengthArray.length; ::print('['); while (iterator) { ::print(variableLengthArray.elementAt(variableLengthArray.length - (iterator -= 1u) - 1u)); if (iterator) ::print(", "); } ::print(']'); }
 
-        // Return
-        return 0;
-    }
+template <typename type, typename... types> void print(type argument, types... arguments) { ::print(argument); ::print(arguments...); }
+
+/* Main */
+int main(void) {
+    // Initialization > Array
+    VariableLengthArray<char> array;
+
+    // ...
+    ::print("Array: ", array, '\n');
+
+    array.push('L'); array.push('a'); array.push('p'); array.push('y'); array.push('s');
+    ::print("Array: ", array, '\n');
+
+    array.pop(); array.pop(); array.pop();
+    ::print("Array: ", array, '\n');
+
+    array.push('z'); array.push('u'); array.push('l'); array.push('i');
+    ::print("Array: ", array, '\n');
+
+    // Return
+    return 0;
+}
