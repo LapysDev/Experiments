@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head> <style media=all type=text/css> canvas { border: 1px solid #CCCCCC; display: block } </style> </head>
+
+<body>
+    <!-- Canvas -->
+    <canvas id=canvas> </canvas>
+
+    <!-- Document Script -->
+    <script language=javascript type=text/javascript>
+        /* Main */
+        +(function Main() {
+            /* Global > ... */
+            const CANVAS = document.getElementById("canvas");
+            const GLOBAL = window;
+            const RENDERING_CONTEXT = CANVAS.getContext("2d");
+
+            /* Event > ... */
+            GLOBAL.addEventListener("mouseover", function onmouseover() { Initiate(); GLOBAL.removeEventListener("mouseover", onmouseover) });
+
+            /* Phase */
+                // Initiate
+                function Initiate() {
+                    /* Constant > Audio ... */
+                    const AUDIO = new Audio;
+                    const AUDIO_CONTEXT = new AudioContext;
+
+                    const AUDIO_ANALYSER = typeof AnalyserNode == "undefined" ? AUDIO_CONTEXT.createAnalyser() : new AnalyserNode(AUDIO_CONTEXT);
+                    const AVAILABLE_AUDIO_DATA_COUNT = AUDIO_ANALYSER.frequencyBinCount;
+                    const AUDIO_DATA_ARRAY = new Uint8Array(AVAILABLE_AUDIO_DATA_COUNT);
+
+                    /* Function > Render ... */
+                    function RenderAudioData() {
+                        // Constant > (Audio Render Size, ...)
+                        const AUDIO_RENDER_SIZE = 5;
+                        const CANVAS_HEIGHT = CANVAS.height;
+                        const CANVAS_WIDTH = CANVAS.width;
+
+                        // ...
+                        RENDERING_CONTEXT.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                        // Audio Analyser > Get Byte Frequency Data
+                        AUDIO_ANALYSER.getByteFrequencyData(AUDIO_DATA_ARRAY);
+
+                        // Initialization > Audio Render Iterator; Loop
+                        let audioRenderIterator = CANVAS_WIDTH;
+                        while (audioRenderIterator > 0) {
+                            // Update > Audio Render Iterator
+                            audioRenderIterator -= AUDIO_RENDER_SIZE;
+
+                            // Constant > Audio Data Value --- NOTE (Lapys) -> The value here is normalized from 0 to 1.
+                            const AUDIO_DATA_VALUE = AUDIO_DATA_ARRAY[audioRenderIterator * AVAILABLE_AUDIO_DATA_COUNT / CANVAS_WIDTH | 0] / 255;
+
+                            const AUDIO_RENDER_X_COORDINATE = audioRenderIterator;
+                            const AUDIO_RENDER_Y_COORDINATE = AUDIO_DATA_VALUE * CANVAS_HEIGHT;
+
+                            // ...
+                            RENDERING_CONTEXT.fillRect(AUDIO_RENDER_X_COORDINATE, AUDIO_RENDER_Y_COORDINATE, AUDIO_RENDER_SIZE, AUDIO_RENDER_SIZE)
+                        }
+
+                        // ...
+                        requestAnimationFrame(RenderAudioData)
+                    }
+
+                    /* Modification > Audio > ... */
+                    AUDIO.autoplay = true;
+                    AUDIO.loop = true;
+                    AUDIO.src = "audio.mp3";
+
+                    /* Event > Audio > Can Play */
+                    AUDIO.addEventListener("canplay", function oncanplay() {
+                        // Constant > Source
+                        const SOURCE = AUDIO_CONTEXT.createMediaElementSource(AUDIO);
+
+                        // (Source, Audio Analyser) > Connect
+                        SOURCE.connect(AUDIO_ANALYSER);
+                        AUDIO_ANALYSER.connect(AUDIO_CONTEXT.destination);
+
+                        // ...
+                        RenderAudioData();
+
+                        // Deletion
+                        AUDIO.removeEventListener("canplay", oncanplay)
+                    });
+
+                    // ...
+                    AUDIO.load();
+
+                    // Return
+                    return 0
+                }
+
+            // Return
+            return 0
+        })();
+    </script>
+</body>
+</html>
