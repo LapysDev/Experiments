@@ -1,0 +1,168 @@
+CONTENT SECTIONING
+address: Contact information.
+article: Self-contained composition in a document.
+aside: Represents a portion of a document whose content is indirectly related to the document`s main content.
+footer: Represents a footer for its nearest sectioning content or sectioning root element.
+header: Represents introductory content.
+h1: First-level heading.
+h2: Second-level heading.
+h3: Third-level heading.
+h4: Fourth-level heading.
+h5: Fifth-level heading.
+h6: Sixth-level heading.
+hgroup: Group of headings.
+nav: Page section meant to provide navigation links.
+section: Standalone-section.
+
+DEMARCATING EDITS
+del: Deleted text.
+ins: Inserted text.
+
+DOCUMENT METADATA
+base: Base URL for all relative URLs within a document.
+head: Contains machine-readable information (metadata) about the document.
+link: Specifies relationships between the current document and an external resource (HTML External Resource Link Element).
+meta: Represents metadata that cannot be represented by other HTML meta-related elements
+style: Style information for a document.
+title: Title of the document.
+
+EMBEDDED CONTENT
+iframe: Nested DOM within the current DOM.
+param: Parameters for an <object> element.
+picture: Contains multiple <source> elements and a single <img> to provide alternative versions of an image for differing devices/ viewports.
+source: Specifies multiple media resources for the <audio>, <picture> or <video> element.
+
+FORMS
+button: Click-able button.
+datalist: List of <option> elements that represent the values for other controls.
+fieldset: Group several controls.
+form: Document section containing interactive controls for submitting information to a web server.
+input: Interactive controls for web-based forms to accept user data.
+label: Caption for a user-interface item.
+legend: Caption for the content of its parent <fieldset> element.
+meter: Scalar value within a known range or fractional value.
+optgroup: Group of options within a <select> element.
+option: Item within a <datalist>, <optgroup> or <select> element.
+output: Container for the result of an external app.
+progress: Indicator showing completion progress of a task.
+select: Provides a menu of options.
+textarea: Multi-line plaintext editing control.
+
+IMAGE AND MULTIMEDIA
+area: Defines a point of interest region on an image (mostly associated with hypertext links). Used only with the <map> element.
+audio: Embed sound content in documents.
+img: Embed images into the document. It is a replaced element.
+map: Used with <area> elements to define an image map (a click-able link area).
+track: Child of <audio> or <video> element that allows specified timed text tracks.
+video: Embeds video playbacks in documents.
+
+INLINE TEXT SEMANTICS
+a: Creates a hyperlink to email addresses, files, locations within the same page, other URLs or other web pages.
+abbr: Represents an abbreviation or acronym (its `title` attribute can provide extra description for its content).
+b: Draw the user`s attention to the element`s contents (HTML Bring Attention To Element).
+bdi: Renders the direction of text.
+br: Produces a line break.
+cite: Describes referenced content.
+code: Represents programmable computer code.
+data: Links specified content with a machine-readable translation.
+dfn: Indicate a term to be defined within a specific context.
+em: Stresses emphasis on its content.
+i: Represents text that is set off from normal text.
+kbd: Denotes textual user input from a text entry device.
+mark: Represents highlighted or marked text.
+q: Specifies inline quotation.
+rb: Delimits base text components of <ruby> elements.
+rp: Provides fallback parenthesis for browsers that do not support display of ruby annotations using the <ruby> element.
+rt: Specifies ruby text component of a ruby annotation. Which is used to provide pronunciation, translation or transliteration information for East-Asian typography.
+rtc: Embraces semantic annotations of characters presented in a ruby of <rb> elements inside a <ruby> element.
+ruby: Represents a ruby annotation.
+s: Renders text with a strike-through.
+samp: Encloses inline text with sample (or quoted) output from a computer program.
+small: Represents minimal font-sized text.
+span: Generic inline container for phrasing content.
+strong: Indicates content with strong importance.
+sub: Renders subscript text.
+sup: Renders superscript text.
+time: Represents time-based content.
+u: Inline text with non-textual annotation (HTML Unarticulated Annotation Element).
+var: Denotes name of a variable in a mathematical expression or programming context.
+wbr: Injects word breaks.
+
+INTERACTIVE ELEMENTS
+details: Disclosure widget (i.e.: Accordion).
+dialog: Dialog box.
+menu: List of commands that a user can invoke.
+summary: Caption for a <details> element.
+
+MAIN ROOT
+html: Top-level element of an HTML document.
+
+SCRIPTING CONTENT
+canvas: Uses the Canvas API or the WebGL API to draw animations and graphics.
+noscript: Provide alternative content for browsers that do not support the <script> element.
+script: Embed or reference executable code (which is typically JavaScript code).
+
+SECTIONING ROOT
+body: Content of an HTML document.
+
+TABLE CONTENT
+caption: Caption or title of a table.
+col: Column within a table.
+colgroup: Group of columns within a table.
+table: Represents tabular data (information within a table).
+tbody: Set of table rows composing the body of a table.
+td: Represents the cell of a table.
+tfoot: Set of table rows composing the footer of a table.
+th: Represents the header or identifier cell of a table.
+thead: Set of table rows composing the header of a table.
+tr: Groups of cells of a table. Row within a table.
+
+TEXT CONTENT
+blockquote: Indicates enclosed text as an extended quotation.
+dd: Provides details about the definition of a preceding item (i.e.: <dt> element) in a description list (i.e.: <dl> element).
+div: Container for flow content (HTML Content Division Element).
+dl: Represents a description list.
+dt: Specifies a term in a description or definition list.
+figcaption: Represents a caption or legend describing the rest of the contents of its parent <figure> element.
+figure: Represents self-contained content.
+hr: Thematic break between paragraph-level elements.
+li: List item.
+main: Represents dominant content of the <body> of a document.
+ol: Ordered list.
+p: Paragraph.
+pre: Pre-formatted text.
+ul: Unordered list.
+
+MISCELLANEOUS
+acronym: Indicate characters that are abbreviations for a word (Use <abbr> element instead).
+applet: Embeds Java applet into the DOM (Use the <object> element instead).
+basefont: Sets the default font face, size and color for elements descended from its parent.
+bgsound: Injects a sound file to play in the background while the page is used (Internet Explorer only).
+big: Renders text within it to a larger font size.
+blink: Causes text within it to flash slowly.
+center: Block-level elements that horizontally centers its content.
+command: Represents user-level commands.
+content: ...?
+dir: Container for file/ folder directories.
+element: Defines custom DOM elements.
+font: Defines font size, color and face for its content.
+frame: Partitions the current DOM with the contents of another HTML document.
+frameset: Contains <frame> elements.
+image: Use <img> element instead.
+isindex: Puts a text field in a page for querying the document.
+keygen: Facilitates generation of key material, and public key submission as part of an HTML form.
+listing: Renders HTML syntax as raw text.
+marquee: Inserts dynamic scrolling area of text.
+menuitem: Command user can invoke through a popup (or context) menu.
+multicol: Designed for multiple column layouts.
+nextid: Serves to enable NeXT (the operating system) web designing tool to generate automatic NAME labels for its anchors.
+nobr: Prevents text within it from wrapping across multiple lines.
+noembed: Provide alternative content for browsers that do not support the <embed> element.
+noframes: Provide alternative content for browsers that do not support the <frame> element.
+plaintext: Renders HTML syntax as raw text.
+shadow: Used as a shadow DOM insertion point.
+spacer: Inserts empty spaces on pages (made by Netscape, so ignore it...).
+strike: Strikes a line through over text.
+template: Holds HTML that is only rendered via JavaScript.
+tt: Creates inline text that uses the `monospace` font face (i.e.: HTML Teletype Text Element).
+xmp: Renders HTML syntax as raw text in `monospace` font (i.e.: HTML Example Element).
