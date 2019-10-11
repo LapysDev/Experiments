@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head> </head>
+<body>
+    <!-- Title -->
+    <h1 role="instruction title"> Click the page to initiate the script </h1>
+
+    <!-- Document Script -->
+    <script language=javascript type=text/javascript>
+        // Oscillator > Start
+        addEventListener("click", function Main() {
+            /* Constant > (Context, Gain Node, Oscillator) */
+            const CONTEXT = new (AudioContext || webkitAudioContext);
+            const GAIN_NODE = CONTEXT.createGain();
+            const OSCILLATOR = CONTEXT.createOscillator();
+
+            /* Function */
+                // Initiate
+                function Initiate() {
+                    // Modification > Oscillator > (Frequency > Value, Type)
+                    OSCILLATOR.frequency.value = 196;
+                    OSCILLATOR.type = "sine";
+
+                    // (Gain Node, Oscillator) > Connect
+                    OSCILLATOR.connect(GAIN_NODE);
+                    GAIN_NODE.connect(CONTEXT.destination);
+
+                    // ...; Return
+                    Update();
+                    return 0
+                }
+
+                // Update
+                function Update() {
+                    const DURATION = 2;
+
+                    OSCILLATOR.start(0);
+                    GAIN_NODE.gain.linearRampToValueAtTime(.0001, CONTEXT.currentTime + DURATION);
+                    OSCILLATOR.stop(CONTEXT.currentTime + DURATION)
+                }
+
+            // ...
+            Initiate();
+
+            // Deletion; Return
+            removeEventListener("click", Main);
+            return 0
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!-- Document Scripts -->
+<script language=javascript type=text/javascript>
+    /* Constant > Global */
+    const ANY = new class Any {};
+    const GLOBAL = new class Global {};
+
+    /* Class */
+        /* Listener */
+        function Listener(handler) {
+            // Constant > ((Constructor, Queue) ...)
+            const CONSTRUCTOR = arguments.callee;
+            const CONSTRUCTOR_ARGUMENTS = [...arguments];
+            const QUEUE = [];
+            const QUEUE_MEDIATOR = handler;
+
+            // Function > Invoke
+            function invoke() {
+                // : Constant > Arguments
+                // : Definition > State
+                const ARGUMENTS = arguments;
+                let STATE;
+
+                // ...; Loop > ...; ...
+                QUEUE_MEDIATOR.call(LISTENER, STATE = "unloading", undefined, [...ARGUMENTS]);
+                QUEUE.forEach(routine => QUEUE_MEDIATOR.call(LISTENER, STATE = "pending", routine.apply(LISTENER, [...ARGUMENTS]), [...ARGUMENTS]));
+                QUEUE.length && QUEUE_MEDIATOR.call(LISTENER, STATE = "complete", undefined, [...ARGUMENTS])
+            }
+
+            // Constant > Listener
+            const LISTENER = function Listener(routine) {
+                // Logic > ... --- REDACT (Lapys)
+                if (typeof routine == "function") [...arguments].forEach(routine => {
+                    if (typeof routine == "function") QUEUE.push(routine);
+                    else throw new TypeError("Arguments must all be functions")
+                });
+                else invoke.apply(LISTENER, arguments)
+            };
+
+            // : Modification > Listener > Invoke
+            // : Update > Listener
+            LISTENER.invoke = invoke;
+            Object.setPrototypeOf(LISTENER, CONSTRUCTOR.prototype);
+
+            // Return
+            return LISTENER
+        }; Listener.prototype.invoke = function invoke() {};
+
+        /* Wrapper */
+        function Wrapper(handler) {
+            // Constant > (Constructor, Stack)
+            const CONSTRUCTOR = arguments.callee;
+            const STACK = [];
+
+            // Function > Invoke
+            function invoke(target) {
+                // : Constant > Arguments
+                // : Loop > ...
+                const ARGUMENTS = arguments;
+                for (let iterator = STACK.length - 1; ~iterator; iterator -= 1) { const routine = STACK[iterator]; routine.apply(WRAPPER, [...ARGUMENTS]) }
+            }
+
+            // Constant > Wrapper
+            const WRAPPER = function Wrapper(handler) { typeof handler == "function" ? STACK.push(handler) : invoke.apply(WRAPPER, arguments) };
+
+            // : Modification > Wrapper > Invoke
+            // : Update > (Wrapper, ...)
+            WRAPPER.invoke = invoke;
+
+            STACK.push(handler);
+            Object.setPrototypeOf(WRAPPER, CONSTRUCTOR.prototype);
+
+            // Return
+            return WRAPPER
+        }; Wrapper.prototype.invoke = function invoke() {};
+</script>
+
+<script language=javascript type=text/javascript>
+    /* Function > ... */
+    function TestListeners() {
+        // [Begin]
+        console.group("TESTING LISTENERS", Listener);
+            // [LISTENER]
+            const ondomchange = new Listener((state, value, arguments) => { switch (state) {
+                case "unloading": console.warn("[LISTENER]: BEFORE EVENT (", ...arguments, ") -> ", value); break;
+                case "complete": console.warn("[LISTENER]: AFTER EVENT (", ...arguments, ") -> ", value); break;
+                case "pending": console.warn("[LISTENER]: DURING EVENT (", ...arguments, ") -> ", value); break;
+            }});
+
+            // [PROCEDURE]
+            ondomchange(function RepairDOM() { console.log("[PROCEDURE]: REPAIRING DOM... (", ...arguments, ")"); return 1 });
+            ondomchange(
+                function UpdateDatabase() { console.log("[PROCEDURE]: UPDATING DATABASE... (", ...arguments, ")"); return 2 },
+                function Cleanup() { console.log("[PROCEDURE]: FINISHED! (", ...arguments, ")"); return 3 }
+            );
+
+            // ...
+            ondomchange(/1/, /2/, /3/); // -> listener.invoke(...)
+
+        // [End]
+        console.groupEnd();
+        console.log("%c\nFINISHED TESTING\n", "font-weight: bold")
+    }
+
+    function TestWrappers() {
+        // [Begin]
+        console.group("TESTING WRAPPERS", Wrapper);
+            // [ROOT]
+            const cascade = new Wrapper(function() { console.log("[WRAPPED FUNC.]: ROOT (", ...arguments, ")\n\n") });
+
+            // [CASCADE/ WATERFALL]
+            cascade(0); cascade(function() { console.log("[WRAPPED FUNC.]: WRAPPER 1 (", ...arguments, ")") });
+            cascade(1, 2); cascade(function() { console.log("[WRAPPED FUNC.]: WRAPPER 2 (", ...arguments, ")") });
+            cascade(3, 4, 5); cascade(function() { console.log("[WRAPPED FUNC.]: TOP (", ...arguments, ")") });
+            cascade(6, 7, 8, 9);
+
+        // [End]
+        console.groupEnd();
+        console.log("%c\nFINISHED TESTING\n", "font-weight: bold")
+    }
+
+    // ...
+    TestListeners();
+    TestWrappers()
+</script>

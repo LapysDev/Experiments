@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang=en>
+    <head> <title> HTML Icons Timer Display </title> </head>
+
+    <body style="align-content: center; display: flex; font: 125px 'Google Sans'; height: 100%; justify-content: center; margin: 0; padding: 0 5%">
+        <!-- Container -->
+        <div id=container style="
+            background-color: rgba(0, 0, 0, .025);
+            border: 1px solid rgba(127, 127, 127, .5);
+            border-radius: 10px;
+            display: inline-block;
+            margin-right: auto;
+            margin-top: 25vh;
+            padding: 5%;
+            width: 50%
+        ">
+            <!-- Icon -->
+            <div id=icon style="display: inline"> </div>
+
+            <!-- Icon Index -->
+            <div id=iconIndex style="display: inline; opacity: .575"> </div>
+        </div>
+
+        <!-- Stop -->
+        <button id=stop style="
+            appearance: none;
+            background-color: rgba(127, 127, 127, .5);
+            border: 1px solid #CCCCCC !important;
+            border-radius: 2.5px;
+            color: rgba(0, 0, 0, .85);
+            cursor: pointer;
+            display: inline-block;
+            font: inherit;
+            font-size: 85%;
+            margin-left: auto;
+            margin-top: 25vh;
+            padding: 2.5% 5%;
+            outline: none !important;
+            text-shadow: 0 0 2px #FFFFFF;
+            text-transform: uppercase
+        "> Stop </button>
+
+        <!-- Document Script -->
+        <script language=javascript type=application/javascript>
+            /* Function > Main */
+            (function Main() {
+                // Initialization > (...)
+                var FRAME = null,
+                    ICON_ELEMENT = document.getElementById("icon"),
+                    ICON_INDEX_ELEMENT = document.getElementById("iconIndex"),
+                    INDEX = 1e5, ITERATION_COUNT = 0, SECOND = 60,
+                    STOP_BUTTON = document.getElementById("stop"),
+                    STOPPED = false;
+
+                // Initialization > Interval
+                var INTERVAL = (SECOND * .12) | 0, START = 1e4;
+
+                // Update > Interval
+                (START < INDEX && START > -1) && (INDEX = START);
+
+                // Event > Stop Button > Click
+                STOP_BUTTON.onclick = function stop() {
+                    // Logic
+                    if (!STOPPED) {
+                        // Initialization > (Count, Range)
+                        var range = 250,
+                            count = INDEX + range > START ? START : INDEX, iterator = (range * 2) + 1;
+
+                        // Modification > [HTML Body Element] > Inner HTML
+                        document.body.innerHTML = "";
+
+                        // Style > [HTML Body Element] > Display
+                        document.body.style.display = "block";
+
+                        // Loop
+                        while (iterator -= 1) {
+                            // Initialization > Source
+                            var source = "&#" + (count > 1000 ? count : (count > 100 ? '0' + count : (count > 10 ? "00" + count : "000" + count))) + ';';
+
+                            // Modification > [HTML Body Element] > Inner HTML
+                            document.body.innerHTML += "<div>" +
+                                source + " | <span style=opacity:.575>" + ((count -= 1) + 1) + " </span>" +
+                            "</div>"
+                        }
+
+                        // Update > Stopped
+                        STOPPED = true
+                    }
+                };
+
+                // Function > Display
+                (function display() {
+                    // Logic
+                    if (INDEX && !STOPPED) {
+                        // Logic
+                        if (ITERATION_COUNT == INTERVAL) {
+                            // Modification > Icon (Index) Element > Inner HTML
+                            ICON_ELEMENT.innerHTML = "&#" + (INDEX > 1000 ? INDEX : (INDEX > 100 ? '0' + INDEX : (INDEX > 10 ? "00" + INDEX : "000" + INDEX))) + ';';
+                            ICON_INDEX_ELEMENT.innerHTML = INDEX;
+
+                            // Update > (Index, Iteration Count)
+                            INDEX -= 1; ITERATION_COUNT = 0
+                        }
+
+                        // Update > Iteration Count
+                        ITERATION_COUNT += 1;
+
+                        // Request Animation Frame > Display
+                        requestAnimationFrame(display)
+                    }
+
+                    else
+                        // Cancel Animation Frame > Frame
+                        cancelAnimationFrame(FRAME)
+                })()
+            })()
+        </script>
+    </body>
+</html>

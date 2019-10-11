@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Document Style -->
+        <style media=all type=text/css>
+            /* DOM Elements */
+                /* <body>, <html> */
+                body, html { height: 100%; margin: 0; width: 100% }
+
+                /* <html> */
+                html { overflow-y: hidden }
+
+            /* Components */
+                /* Header */
+                [role~=header] {
+                    color: #999999;
+                    font-family: "Google Sans", Roboto, Calibri, "Calibri Light", Arial, sans-serif;
+                    font-size: 7.5vh;
+                    font-weight: 500;
+                    margin: 0;
+                    text-align: center
+                }
+
+            /* Assets */
+                /* Aside */
+                #aside {
+                    background-color: #333333;
+                    box-shadow: 0 3px 3px 0 rgba(0, 0, 0, .3);
+                    display: block;
+                    padding: 1vh 0;
+                    z-index: 2
+                }
+                    #aside > [role~=header] { color: #FFFFFF }
+
+                /* Aside, Main */
+                #aside, #main { margin: 0 }
+
+                /* Canvas */
+                #canvas { outline: 1px solid rgba(127, 127, 127, .5) }
+
+                /* Main */
+                #main { overflow: hidden; width: 100%; z-index: 1 }
+                #main[state~=blurred] { pointer-events: none; user-select: none; z-index: 0 }
+                    /* Pseudo > After */
+                    #main[state=blurred]::after {
+                        background-color: rgba(0, 0, 0, .375);
+                        height: 100%;
+                        left: 0;
+                        position: fixed;
+                        top: 0;
+                        width: 100%
+                    }
+                    #main[state=blurred]::after,
+                    #main[state=focused]::after {
+                        content: "";
+                        transition: .125s ease-out
+                    }
+
+                    #main[state=focused]::after { z-index: -1 }
+        </style>
+
+        <!-- Document Title -->
+       <title> Analog Clock </title>
+    </head>
+
+    <body>
+        <!-- Analog Clock -->
+        <aside id=aside> <h1 role=header> Analog Clock </h1> </aside>
+
+        <!-- Main -->
+        <main id=main> <canvas id=canvas> </canvas> </main>
+
+        <!-- Document Script -->
+        <script language=javascript type=application/javascript>
+            /* Constant > Canvas */
+            const CANVAS = document.getElementById("canvas");
+
+            /* Main --- UPDATE REQUIRED (Lapys) -> For some reason, the clock slows down at some point. */
+            (function Main() {
+                /* Class > Clock */
+                function Clock() {
+                    // Logic
+                    if (this instanceof Clock) {
+                        // Modification > Target > (Coordinates, Dimensions, Style)
+                        this.coordinates = {x: +0, y: +0};
+                        this.dimensions = {height: +0, width: +0};
+                        this.style = {
+                            backgroundColor: "transparent", // NOTE (Lapys) -> Not sure if you can slice an image into other shapes.
+                            borderColor: "transparent",
+                            borderWidth: 1,
+                            dropShadow: null,
+                            handColor: null
+                        }
+                    }
+
+                    else
+                        // Error
+                        throw TypeError("`this` must be a `Clock` object.")
+                };
+                    // Prototype
+                        // ...
+                        Clock.prototype.hours = +0;
+                        Clock.prototype.minutes = +0;
+                        Clock.prototype.seconds = +0;
+
+                        // Render
+                        Clock.prototype.render = function render() {
+                            // Logic
+                            if (this instanceof Clock) {
+                                // Target > Render (Body, Hand)
+                                this.renderBody();
+
+                                // Constant > Seconds
+                                const seconds = (360 * this.seconds) / 60;
+
+                                // Target > Render Hand
+                                this.renderHand(seconds, (this.dimensions.width / 2) * .75, STRICT = "rgba(255, 255, 255, .875)");
+
+                                // Logic
+                                if (seconds) {
+                                    // Constant > Minutes
+                                    const minutes = (360 * this.minutes) / 60;
+
+                                    // Target > Render Hand
+                                    this.renderHand(minutes, (this.dimensions.width / 2) * .5, STRICT = "rgba(255, 255, 255, .75)");
+
+                                    // Logic > Target > Render Hand
+                                    if (minutes) {
+                                        (this.hours > 12) && (this.hours -= 12);
+                                        this.renderHand(((360 * this.hours) / 12), (this.dimensions.width / 2) * .25, STRICT = this.style.handColor)
+                                    }
+                                }
+                            }
+
+                            else
+                                // Error
+                                throw TypeError("`this` must be a `Clock` object.")
+                        };
+                            // Body
+                            Clock.prototype.renderBody = function renderBody() {
+                                // Logic
+                                if (this instanceof Clock) {
+                                    // Renderer > Save
+                                    RENDERER.save();
+
+                                    // Modification > Renderer > Fill Style
+                                    RENDERER.fillStyle = this.style.backgroundColor;
+
+                                    // Renderer > (Arc, Fill)
+                                    RENDERER.arc(this.coordinates.x + (this.dimensions.width / 2), this.coordinates.y + (this.dimensions.height / 2), ((this.dimensions.height + this.dimensions.width) / 2) / 2, 0, 360, STRICT = false);
+                                    RENDERER.fill();
+
+                                    // Logic
+                                    if (this.style.dropShadow !== null) {
+                                        // Initialization > Drop Shadow
+                                        let dropShadow = this.style.dropShadow
+                                            .replace(/rgb(a|)\(.*\)/g, match => match.replace(/ /g, ""))
+                                            .replace(/ {1,}/g, ' ')
+                                            .split(' ');
+
+                                        // Modification > Renderer > Shadow ...
+                                        RENDERER.shadowBlur = +(dropShadow[2].replace("px", ""));
+                                        RENDERER.shadowColor = dropShadow[dropShadow.length - 1];
+                                        RENDERER.shadowOffsetX = +(dropShadow[+0].replace("px", ""));
+                                        RENDERER.shadowOffsetY = +(dropShadow[1].replace("px", ""))
+                                    }
+                                    // Modification > Renderer > (Line Join, Stroke Style)
+                                    RENDERER.lineWidth = this.style.borderWidth;
+                                    RENDERER.strokeStyle = this.style.borderColor;
+
+                                    // Renderer > (Stroke, Restore)
+                                    RENDERER.stroke();
+                                    RENDERER.restore()
+                                }
+
+                                else
+                                    // Error
+                                    throw TypeError("`this` must be a `Clock` object.")
+                            };
+
+                            // Hand
+                            Clock.prototype.renderHand = function renderHand(rotation, length, COLOR) {
+                                // Logic
+                                if (this instanceof Clock) {
+                                    // Constant > X, Y
+                                    const x = this.coordinates.x + (this.dimensions.width / 2), y = this.coordinates.y + (this.dimensions.height / 2);
+
+                                    // Update > Rotation --- NOTE (Lapys) -> Degrees to radians.
+                                    rotation = (Math.PI / 180) * rotation;
+
+                                    // Renderer > Save
+                                    RENDERER.save();
+
+                                    // Modification > Renderer > Fill Style
+                                    RENDERER.fillStyle = COLOR || this.style.handColor || this.style.borderColor;
+
+                                    // Renderer > (Translate, Rotate) --- NOTE (Lapys) -> Rotate the hand.
+                                    if (rotation) {
+                                        RENDERER.translate(x, y);
+                                        RENDERER.rotate(rotation);
+                                        RENDERER.rotate(Math.PI);
+                                        RENDERER.translate(-x, -y);
+                                    }
+
+                                    // Renderer > Fill Rectangle --- NOTE (Lapys) -> Draw the hand.
+                                    RENDERER.fillRect(
+                                        x, y,
+                                        ( // NOTE (Lapys) -> Automatically calculate the width based on the length of the hand.
+                                            ((innerWidth < innerHeight ? innerWidth : innerHeight) / 102.4) + // NOTE (Lapys) -> Default size of the clock border.
+                                            (((100 * length) / (this.dimensions.width / 2)) / 20) // NOTE (Lapys) -> Default berth of the hand.
+                                        ) / 2, length
+                                    );
+
+                                    // Renderer > Restore
+                                    RENDERER.restore()
+                                }
+
+                                else
+                                    // Error
+                                    throw TypeError("`this` must be a `Clock` object.")
+                            };
+
+                /* Constant > (Canvas (Data, Style), Frame Data, Renderer) --- NOTE (Lapys) -> Supports only solid/ transparent color fills and pixel measurements. */
+                const CANVAS_DATA = {
+                    backgroundColor: "#000000",
+                    backgroundImage: "backdrop.jpg",
+                    backgroundPosition: "center",
+                    backgroundSize: "cover", // NOTE (Lapys) -> `"contain"` or `"cover"`.
+                    height: null,
+                    width: null
+                }, CANVAS_STYLE = CANVAS.style,
+                FRAME_DATA = { currentFrameId: null },
+                RENDERER = CANVAS.getContext("2d");
+
+                /* Global */
+                    // Clock
+                    const CLOCK = window.CLOCK = new Clock;
+                        // ...
+                        Object.defineProperty(window, "CLOCK", {value: CLOCK});
+
+                        // ...
+                        CLOCK.hours = (new Date).getHours();
+                        CLOCK.minutes = (new Date).getMinutes();
+                        CLOCK.seconds = (new Date).getSeconds();
+
+                        // Style > ...
+                        CLOCK.style.backgroundColor = "rgba(0, 0, 0, .425)";
+                        CLOCK.style.borderColor = "#FFFFFF";
+                        CLOCK.style.borderWidth = 5;
+                        CLOCK.style.dropShadow = "0 0 20px rgba(0, 0, 0, 1)";
+                        CLOCK.style.handColor = "#FFFFFF";
+
+                    // Main
+                    const MAIN = document.getElementById("main");
+
+                // Initialization > (Allow Pausing, Frame Rate, Pause, Strict)
+                var ALLOW_PAUSING = false,
+                    FRAME_RATE = 60,
+                    PAUSED = false, // NOTE (Lapys) -> Do not render a new frame all the time.
+                    REALTIME = true,
+                    STRICT = null;
+
+                /* Function */
+                    /* Draw --- NOTE (Lapys) -> Drawings on the canvas after a frame has been refreshed. */
+                    function Draw() {
+                        // Logic
+                        if (REALTIME) {
+                            // Constant > Data
+                            const DATE = new Date;
+
+                            // Modification > Clock > (Hours, Minutes, Seconds)
+                            CLOCK.hours = DATE.getHours();
+                            CLOCK.minutes = DATE.getMinutes();
+                            CLOCK.seconds = DATE.getSeconds();
+
+                            // Clock > Render
+                            CLOCK.render()
+                        }
+
+                        else {
+                            // Clock > Render
+                            CLOCK.render();
+
+                            // Modification > Clock > Seconds
+                            CLOCK.seconds += 1;
+
+                            // Logic
+                            if (CLOCK.seconds == 60 + 1) {
+                                // Modification > Clock > (Minutes, Seconds)
+                                CLOCK.minutes += 1;
+                                CLOCK.seconds = 1;
+
+                                // Logic
+                                if (CLOCK.minutes == 60 + 1) {
+                                    // Modification > Clock > (Hours, Minutes, Seconds)
+                                    CLOCK.hours += 1;
+                                    CLOCK.minutes = +0;
+                                    CLOCK.seconds = 1;
+
+                                    // Logic
+                                    if (CLOCK.hours == 24 + 1) {
+                                        // Modification > Clock > (Hours, Minutes, Seconds)
+                                        CLOCK.hours = +0;
+                                        CLOCK.minutes = +0;
+                                        CLOCK.seconds = 1
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    /* Refresh --- NOTE (Lapys) -> Redraw a blank frame. */
+                    function Refresh() {
+                        // Renderer > (Save, Clear Rectangle)
+                        RENDERER.save();
+                        RENDERER.clearRect(+0, +0, CANVAS_DATA.width, CANVAS_DATA.height);
+
+                        // Modification > Renderer > Fill Style
+                        RENDERER.fillStyle = CANVAS_DATA.backgroundColor || "#000000";
+
+                        // Renderer > Fill Rectangle
+                        RENDERER.fillRect(+0, +0, CANVAS_DATA.width, CANVAS_DATA.height);
+
+                        // Logic
+                        if (RENDERER.backgroundImage !== null) {
+                            // Initialization > Background Image Element --- NOTE (Lapys) -> Prevent multiple asynchronous requests to the same image.
+                            const backgroundImageElement = window.image = (function() {
+                                // Logic
+                                if (CANVAS_DATA.backgroundImageElement instanceof Image)
+                                    // Return
+                                    return CANVAS_DATA.backgroundImageElement;
+
+                                else {
+                                    // Constant > Background Image Element
+                                    const backgroundImageElement = new Image;
+
+                                    // Modification > ...
+                                    backgroundImageElement.src = CANVAS_DATA.backgroundImage;
+                                    CANVAS_DATA.backgroundImageElement = backgroundImageElement;
+
+                                    // Return
+                                    return backgroundImageElement
+                                }
+                            })();
+
+                            // Logic
+                            if (CANVAS_DATA.backgroundSize == "cover") {
+                                // Modification > Background Image Element > (Height, Width)
+                                backgroundImageElement.height = CANVAS_DATA.height;
+                                backgroundImageElement.width = CANVAS_DATA.width
+                            }
+
+                            else if (CANVAS_DATA.backgroundSize == "contain") {
+                                // Constant > Background Image Aspect Ratio
+                                const backgroundImageApsectRatio = backgroundImageElement.height / backgroundImageElement.width;
+
+                                // Logic
+                                if (backgroundImageElement.height && backgroundImageElement.width && backgroundImageElement.height == backgroundImageElement.width) {
+                                    // Constant > Canvas Minimum Size
+                                    const CANVAS_MIN_SIZE = Math.min(CANVAS_DATA.height, CANVAS_DATA.width);
+
+                                    // Modification > Background Image Element > (Height, Width)
+                                    backgroundImageElement.height = CANVAS_MIN_SIZE;
+                                    backgroundImageElement.width = CANVAS_MIN_SIZE
+                                }
+
+                                else if (backgroundImageElement.height > backgroundImageElement.width) {
+                                    // Modification > Background Image Element > (Height, Width)
+                                    backgroundImageElement.height = CANVAS_DATA.height;
+                                    backgroundImageElement.width = backgroundImageElement.height / backgroundImageApsectRatio
+                                }
+
+                                else if (backgroundImageElement.width > backgroundImageElement.height) {
+                                    // Modification > Background Image Element > (Height, Width)
+                                    backgroundImageElement.width = CANVAS_DATA.width;
+                                    backgroundImageElement.height = backgroundImageApsectRatio * backgroundImageElement.width
+                                }
+
+                                else if (
+                                    backgroundImageElement.height == CANVAS_DATA.height &&
+                                    backgroundImageElement.width == CANVAS_DATA.width
+                                ) {
+                                    // Modification > Background Image Element > (Height, Width)
+                                    backgroundImageElement.height = CANVAS_DATA.height;
+                                    backgroundImageElement.width = CANVAS_DATA.width
+                                }
+
+                                else {
+                                    // Constant > Canvas Aspect Ratio
+                                    const CANVAS_ASPECT_RATIO = CANVAS_DATA.height / CANVAS_DATA.width;
+
+                                    // Logic
+                                    if (
+                                        backgroundImageApsectRatio == CANVAS_ASPECT_RATIO ||
+                                        +(backgroundImageApsectRatio.toFixed(4)) == +(CANVAS_ASPECT_RATIO.toFixed(4))
+                                    ) {
+                                        // Modification > Background Image Element > (Height, Width)
+                                        backgroundImageElement.height = CANVAS_DATA.height;
+                                        backgroundImageElement.width = CANVAS_DATA.width
+                                    }
+                                }
+                            }
+
+                            // Renderer > Draw Image
+                            RENDERER.drawImage(
+                                backgroundImageElement,
+                                CANVAS_DATA.backgroundPosition == "center" ? (CANVAS_DATA.width - backgroundImageElement.width) / 2 : 0,
+                                CANVAS_DATA.backgroundPosition == "center" ? (CANVAS_DATA.height - backgroundImageElement.height) / 2 : 0,
+                                STRICT = backgroundImageElement.width, STRICT = backgroundImageElement.height
+                            )
+                        }
+
+                        // Renderer > Restore
+                        RENDERER.restore()
+                    }
+
+                    /* Render */
+                    function Render() { Refresh(); Draw() }
+
+                    // Set Canvas Style
+                    function setCanvasStyles() {
+                        // Modification > Canvas Data > (Height, Width)
+                        CANVAS_DATA.height = innerHeight - CANVAS.getBoundingClientRect().top;
+                        CANVAS_DATA.width = innerWidth;
+
+                        // Style > Canvas > ... --- NOTE (Lapys) -> Center the canvas.
+                        CANVAS_STYLE.height = (CANVAS.height = CANVAS_DATA.height) + "px";
+                        CANVAS_STYLE.width = (CANVAS.width = CANVAS_DATA.width) + "px";
+
+                        // Modification > Clock
+                            // Dimensions > (Height, Width)
+                            CANVAS_DATA.width < CANVAS_DATA.height ?
+                                CLOCK.dimensions.height = CLOCK.dimensions.width = CANVAS_DATA.width * .75 :
+                                CLOCK.dimensions.height = CLOCK.dimensions.width = CANVAS_DATA.height * .75;
+
+                            // Coordinates > (X, Y)
+                            CLOCK.coordinates.x = (CANVAS_DATA.width - CLOCK.dimensions.width) / 2;
+                            CLOCK.coordinates.y = (CANVAS_DATA.height - CLOCK.dimensions.height) / 2;
+
+                            // Style > Border Width
+                            CLOCK.style.borderWidth = (innerWidth < innerHeight ? innerWidth : innerHeight) / (100 * (2 / 3));
+
+                        // Render --- NOTE (Lapys) -> Re-render a frame to prevent skewed images.
+                        Render()
+                    }; setCanvasStyles();
+
+                /* Phase > Update */
+                function Update() {
+                    // Logic --- NOTE (Lapys) -> 60 frames represent one second of frame updates.
+                    if (Update.frameCounter == FRAME_RATE || Update.frameCounter > FRAME_RATE) {
+                        // Modification > Update > Frame Counter
+                        Update.frameCounter = +0;
+
+                        // Logic
+                        if (ALLOW_PAUSING && PAUSED) {
+                            // Logic
+                            if (FRAME_DATA.currentFrameId !== null) {
+                                // Render
+                                Render();
+
+                                // ...
+                                (cancelAnimationFrame || clearTimeout)(FRAME_DATA.currentFrameId);
+
+                                // Modification > Frame Data > Current Frame Id
+                                FRAME_DATA.currentFrameId = null
+                            }
+                        }
+
+                        else
+                            // Render
+                            Render()
+                    }
+
+                    else
+                        // Modification > Update > Frame Counter
+                        Update.frameCounter += 1;
+
+                    // Logic
+                    if (!ALLOW_PAUSING || !PAUSED) {
+                        // ...
+                        (FRAME_DATA.currentFrameId === null) || (cancelAnimationFrame || clearTimeout)(FRAME_DATA.currentFrameId);
+
+                        // Modification > Frame Data > Current Frame ID
+                        FRAME_DATA.currentFrameId = (requestAnimationFrame || setTimeout)(Update)
+                    }
+                };
+                    // Frame Counter
+                    Update.frameCounter = FRAME_RATE;
+
+                /* Event > Global > (Blur, Focus, Resize) */
+                addEventListener("blur", function() { PAUSED = true; MAIN.setAttribute("state", "blurred"); ALLOW_PAUSING && Update() });
+                addEventListener("focus", function() { PAUSED = false; MAIN.setAttribute("state", "focused"); ALLOW_PAUSING && Update() });
+                addEventListener("load", Update);
+                addEventListener("resize", setCanvasStyles);
+            })()
+        </script>
+    </body>
+</html>
