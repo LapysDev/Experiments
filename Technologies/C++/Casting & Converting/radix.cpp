@@ -1,7 +1,8 @@
 /* Import */
+#include <fcntl.h> // Functional
 #include <math.h> // Mathematics
 #include <stdlib.h> // Standard Library
-#include <stdio.h>
+#include <stdio.h> // Standard Input-Output
 #include <string.h> // String
 
 /* Function --- NOTE (Lapys) -> Assumes all arguments are syntactically valid & unsigned. */
@@ -111,14 +112,13 @@
         }
 
         // Update > Decimal String
-        decimalString = (char*) std::realloc(decimalString, (decimalNumberCharacteristicsCardinality + decimalNumberMantissaCardinality + 1u) * sizeof(char));
         *(decimalString + (decimalNumberCharacteristicsCardinality + decimalNumberMantissaCardinality)) = '\0';
 
         // Return
         return decimalString;
     }
 
-    // Binary To Radix --- FLAG (Lapys) -> Fails on the mantissa & really large numbers.
+    // Binary To Radix
     const char* binary_string_to_radix_string(const char binaryString[], const unsigned radix) {
         // Constant > Decimal Number
         const float DECIMAL_NUMBER = ::binary_string_to_decimal_number((char*) binaryString);
@@ -158,7 +158,7 @@
         if (decimalNumberMantissa) {
             // Update > (Decimal Number Mantissa Cardinality, Radix String)
             decimalNumberMantissaCardinality += 1u;
-            *(radixString + decimalNumberMantissaCardinality) = '.';
+            *(radixString + decimalNumberCharacteristicsCardinality) = '.';
 
             // Loop
             while (decimalNumberMantissa - float(unsigned(decimalNumberMantissa))) {
@@ -172,7 +172,6 @@
         }
 
         // Update > Radix String
-        radixString = (char*) std::realloc(radixString, (decimalNumberCharacteristicsCardinality + decimalNumberMantissaCardinality + 1u) * sizeof(char));
         *(radixString + (decimalNumberCharacteristicsCardinality + decimalNumberMantissaCardinality)) = '\0';
 
         // Return
@@ -187,29 +186,41 @@ int main(int argc, char* argv[]) {
     // ...
     ::printf("\n");
 
-    binary  = (char*) "1";
-    decimal = (char*) ::binary_string_to_decimal_string(binary); hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16); octal = (char*) ::binary_string_to_radix_string(binary, 8);
-    ::printf("[BINARY (2)]: %s\n\n", binary); ::printf("[DECIMAL (10)]: %s\n", decimal); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal); ::printf("[OCTAL (8)]: %s\n", octal);
+    binary  = (char*) "1"; ::printf("[BINARY (2)]: %s\n\n", binary);
+    decimal = (char*) ::binary_string_to_decimal_string(binary); ::printf("[DECIMAL (10)]: %s\n", decimal);
+    hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16u); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal);
+    octal = (char*) ::binary_string_to_radix_string(binary, 8u); ::printf("[OCTAL (8)]: %s\n", octal);
     ::printf("\n========================================\n\n");
 
-    binary  = (char*) "01";
-    decimal = (char*) ::binary_string_to_decimal_string(binary); hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16); octal = (char*) ::binary_string_to_radix_string(binary, 8);
-    ::printf("[BINARY (2)]: %s\n\n", binary); ::printf("[DECIMAL (10)]: %s\n", decimal); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal); ::printf("[OCTAL (8)]: %s\n", octal);
+    binary  = (char*) "01"; ::printf("[BINARY (2)]: %s\n\n", binary);
+    decimal = (char*) ::binary_string_to_decimal_string(binary); ::printf("[DECIMAL (10)]: %s\n", decimal);
+    hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16u); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal);
+    octal = (char*) ::binary_string_to_radix_string(binary, 8u); ::printf("[OCTAL (8)]: %s\n", octal);
     ::printf("\n========================================\n\n");
 
-    binary  = (char*) "10";
-    decimal = (char*) ::binary_string_to_decimal_string(binary); hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16); octal = (char*) ::binary_string_to_radix_string(binary, 8);
-    ::printf("[BINARY (2)]: %s\n\n", binary); ::printf("[DECIMAL (10)]: %s\n", decimal); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal); ::printf("[OCTAL (8)]: %s\n", octal);
+    binary  = (char*) ".1"; ::printf("[BINARY (2)]: %s\n\n", binary);
+    decimal = (char*) ::binary_string_to_decimal_string(binary); ::printf("[DECIMAL (10)]: %s\n", decimal);
+    hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16u); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal);
+    octal = (char*) ::binary_string_to_radix_string(binary, 8u); ::printf("[OCTAL (8)]: %s\n", octal);
     ::printf("\n========================================\n\n");
 
-    binary  = (char*) "101.11";
-    decimal = (char*) ::binary_string_to_decimal_string(binary); hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16); octal = (char*) ::binary_string_to_radix_string(binary, 8);
-    ::printf("[BINARY (2)]: %s\n\n", binary); ::printf("[DECIMAL (10)]: %s\n", decimal); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal); ::printf("[OCTAL (8)]: %s\n", octal);
+    binary  = (char*) "10"; ::printf("[BINARY (2)]: %s\n\n", binary);
+    decimal = (char*) ::binary_string_to_decimal_string(binary); ::printf("[DECIMAL (10)]: %s\n", decimal);
+    hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16u); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal);
+    octal = (char*) ::binary_string_to_radix_string(binary, 8u); ::printf("[OCTAL (8)]: %s\n", octal);
     ::printf("\n========================================\n\n");
 
-    binary  = (char*) "1010101010.0110101";
-    decimal = (char*) ::binary_string_to_decimal_string(binary); hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16); octal = (char*) ::binary_string_to_radix_string(binary, 8);
-    ::printf("[BINARY (2)]: %s\n\n", binary); ::printf("[DECIMAL (10)]: %s\n", decimal); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal); ::printf("[OCTAL (8)]: %s\n", octal);
+    binary  = (char*) "101.11"; ::printf("[BINARY (2)]: %s\n\n", binary);
+    decimal = (char*) ::binary_string_to_decimal_string(binary); ::printf("[DECIMAL (10)]: %s\n", decimal);
+    hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16u); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal);
+    octal = (char*) ::binary_string_to_radix_string(binary, 8u); ::printf("[OCTAL (8)]: %s\n", octal);
+    ::printf("\n========================================\n\n");
+
+    binary  = (char*) "1010101010.0110101"; ::printf("[BINARY (2)]: %s\n\n", binary);
+    decimal = (char*) ::binary_string_to_decimal_string(binary); ::printf("[DECIMAL (10)]: %s\n", decimal);
+    hexadecimal = (char*) ::binary_string_to_radix_string(binary, 16u); ::printf("[HEXADECIMAL (16)]: %s\n", hexadecimal);
+    octal = (char*) ::binary_string_to_radix_string(binary, 8u); ::printf("[OCTAL (8)]: %s\n", octal);
+    ::printf("\n========================================\n\n");
 
     // Return
     return 0;
