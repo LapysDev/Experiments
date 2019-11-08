@@ -88,6 +88,12 @@ public class GUI extends JFrame {
             components.poster.getAccessibleContext().setAccessibleName("Poster");
             components.poster.getAccessibleContext().setAccessibleDescription("Poster");
 
+            components.poster.paint = (Graphics graphics) -> {
+                // Error > ...
+                try { graphics.drawImage(ImageIO.read(new File("image.png")), 0, 0, null); }
+                catch (Exception error) { error.printStackTrace(); }
+            };
+
             components.poster.setBackground(new Color(0, 0, 0));
             components.poster.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
             components.poster.setEnabled(false);
