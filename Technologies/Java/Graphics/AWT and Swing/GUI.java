@@ -30,18 +30,18 @@ class GUI extends JFrame {
         private class Components {
             // Initialization > ...
             private JLabel header = new JLabel();
-            private JButton loopButton = new JButton();
+            private JButton loopButton = new JButton("...");
             private JPanel main = new JPanel();
             private JLabel musicArtiste = new JLabel();
             private JLabel musicDuration = new JLabel();
             private JSlider musicSeeker = new JSlider();
             private JLabel musicTimestamp = new JLabel();
             private JLabel musicTitle = new JLabel();
-            private JButton nextSongButton = new JButton();
-            private JButton playButton = new JButton();
+            private JButton nextSongButton = new JButton("...");
+            private JButton playButton = new JButton("...");
             private Canvas poster = new Canvas();
-            private JButton previousSongButton = new JButton();
-            private JButton shuffleButton = new JButton();
+            private JButton previousSongButton = new JButton("...");
+            private JButton shuffleButton = new JButton("...");
             private JToolBar toolbar = new JToolBar();
             private JToggleButton toolbarMenuButton = new JToggleButton();
         };
@@ -421,7 +421,7 @@ class GUI extends JFrame {
                     .addGroup(mainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(mainLayout.createSequentialGroup()
                     .addComponent(components.loopButton, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(43, 43, 43)
+                    .addGap(45, 45, 45)
                     .addComponent(components.previousSongButton, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGap(35, 35, 35)
                     .addComponent(components.playButton, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
