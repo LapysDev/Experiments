@@ -178,6 +178,9 @@
         return radixString;
     }
 
+    // Decimal To Binary --- UPDATE (Lapys)
+    // Decimal To Radix --- UPDATE (Lapys)
+
 /* Main */
 int main(int argc, char* argv[]) {
     // Initialization > (Binary, ...)
