@@ -118,7 +118,7 @@
         return decimalString;
     }
 
-    // Binary To Radix
+    // Binary To Radix --- NOTE (Lapys) -> Retroactively converts decimal forms to other natural bases.
     const char* binary_string_to_radix_string(const char binaryString[], const unsigned radix) {
         // Constant > Decimal Number
         const float DECIMAL_NUMBER = ::binary_string_to_decimal_number((char*) binaryString);
@@ -177,9 +177,6 @@
         // Return
         return radixString;
     }
-
-    // Decimal To Binary --- UPDATE (Lapys)
-    // Decimal To Radix --- UPDATE (Lapys)
 
 /* Main */
 int main(int argc, char* argv[]) {

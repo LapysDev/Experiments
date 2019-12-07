@@ -1,18 +1,9 @@
 /* Import */
-    // C Standard Input-Output --- NOTE (Lapys) -> For the `std::fprintf`, `std::fputc`, `std::fputs`, `std::fwrite`, `std::printf`, `std::putc`, `std::putchar` & `std::puts` methods.
-    #include <cstdio>
-
-    // Input-Output Manipulation --- NOTE (Lapys) -> For the `std::setprecision` method.
-    #include <iomanip>
-
-    // Input-Output Stream --- NOTE (Lapys) -> For the `std::cerr`, `std::clog`, `std::cout`, `std::wcerr`, `std::wclog` & `std::wcout` objects.
-    #include <iostream>
-
-    // Limits --- NOTE (Lapys) -> For the `std::numeric_limits<>digits10` data.
-    #include <limits>
-
-    // Unix Standard --- NOTE (Lapys) -> For the `::write` function.
-    #include <unistd.h>
+#include <cstdio> // C Standard Input-Output --- NOTE (Lapys) -> For the `std::fprintf`, `std::fputc`, `std::fputs`, `std::fwrite`, `std::printf`, `std::putc`, `std::putchar` & `std::puts` methods.
+#include <iomanip> // Input-Output Manipulation --- NOTE (Lapys) -> For the `std::setprecision` method.
+#include <iostream> // Input-Output Stream --- NOTE (Lapys) -> For the `std::cerr`, `std::clog`, `std::cout`, `std::wcerr`, `std::wclog` & `std::wcout` objects.
+#include <limits> // Limits --- NOTE (Lapys) -> For the `std::numeric_limits<...>digits10` data.
+#include <unistd.h> // Unix Standard --- NOTE (Lapys) -> For the `::write` function.
 
 /* Function */
     // Main
@@ -20,7 +11,7 @@
         // C Standard Library > Set Precision
         std::setprecision(std::numeric_limits<long double>::digits10);
 
-        // [Print] --- NOTE (Lapys) -> Write to the default error/ output stream
+        // [Print] --- NOTE (Lapys) -> Write to the error/ output stream
         putw('[', stdout); putw('1', stdout); putw(']', stdout); putw(':', stdout); putw(' ', stdout); putw('H', stdout); putw('e', stdout); putw('l', stdout); putw('l', stdout); putw('o', stdout); putw(',', stdout); putw(' ', stdout); putw('W', stdout); putw('o', stdout); putw('r', stdout); putw('l', stdout); putw('d', stdout); putw('!', stdout); putw('\n', stdout); // --- NOTE (Lapys) -> Pretty trite for entry-level C/ C++ developers.
         ::write(1, "[2]: Hello, World!\n", sizeof "[2]: Hello, World!\n" - 1); // NOTE (Lapys) -> `-1` to exclude the terminating null character (usually `\0`).
         std::fprintf(stderr, "%s", "[3]: Hello, World!\n");
