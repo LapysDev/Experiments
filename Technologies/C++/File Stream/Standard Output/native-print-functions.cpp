@@ -8,7 +8,7 @@
 /* Function */
     // Main
     int main(int argc, char* argv[]) {
-        // C Standard Library > Set Precision
+        // ...
         std::setprecision(std::numeric_limits<long double>::digits10);
 
         // [Print] --- NOTE (Lapys) -> Write to the error/ output stream
