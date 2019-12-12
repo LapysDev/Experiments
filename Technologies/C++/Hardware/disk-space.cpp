@@ -10,7 +10,7 @@ int main(void) {
     _ULARGE_INTEGER totalNumberOfFreeBytes {};
 
     // ...
-    std::cout << "[STATE]: " << ::GetDiskFreeSpaceExA(".", &freeBytesAvailableToCaller, &totalNumberOfBytes, &totalNumberOfFreeBytes) << "\r\n" << std::endl;
+    std::cout << "[STATE]: " << ::GetDiskFreeSpaceExA("." /* -> "\\.\C:" or "\\.\PhysicalDrive0" */, &freeBytesAvailableToCaller, &totalNumberOfBytes, &totalNumberOfFreeBytes) << "\r\n" << std::endl;
 
     std::cout << "Free Bytes Available To Caller: " << freeBytesAvailableToCaller.QuadPart << std::endl;
     std::cout << "Total Number of Bytes:\t\t" << totalNumberOfBytes.QuadPart << std::endl;
