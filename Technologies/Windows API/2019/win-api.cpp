@@ -5,11 +5,11 @@
 using namespace Lapys;
 
 /* Functions > Main Event Loop */
-LRESULT CALLBACK MainEventLoop(HWND HandlerWindow, unsigned int Message, WPARAM MessageInformation, LPARAM AdditionalMessageInformatio) {
+LRESULT CALLBACK MainEventLoop(HWND HandlerWindow, unsigned int Message, WPARAM MessageInformation, LPARAM AdditionalMessageInformation) {
     // Logic > ...
     switch (Message) {
         case Event::Window::Destroy: ::PostQuitMessage(0); return 0;
-        default: return ::DefWindowProc(HandlerWindow, Message, MessageInformation, AdditionalMessageInformatio);
+        default: return ::DefWindowProc(HandlerWindow, Message, MessageInformation, AdditionalMessageInformation);
     }
 }
 
