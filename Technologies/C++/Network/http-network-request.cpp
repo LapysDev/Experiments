@@ -6,9 +6,6 @@
 #include <windows.h> // Windows
 #include <wininet.h> // Windows Internet
 
-/* Directive > ... */
-#pragma comment(lib, "wininet.lib")
-
 /* Main */
 int main(void) {
     // ...
@@ -23,10 +20,10 @@ int main(void) {
     hOpenHandle = ::InternetOpen("HTTPS", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (hOpenHandle == NULL) { return false; }
 
-    hConnectHandle = ::InternetConnect(hOpenHandle, "www.w3.org", INTERNET_DEFAULT_HTTPS_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 1);
+    hConnectHandle = ::InternetConnect(hOpenHandle, "en.wikipedia.org", INTERNET_DEFAULT_HTTPS_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 1);
     if (hConnectHandle == NULL) { ::InternetCloseHandle(hOpenHandle); return false; }
 
-    hResourceHandle = ::HttpOpenRequest(hConnectHandle, "GET", "TR/PNG/iso_8859-1.txt", NULL, "", NULL, INTERNET_FLAG_SECURE | INTERNET_FLAG_KEEP_CONNECTION, 1);
+    hResourceHandle = ::HttpOpenRequest(hConnectHandle, "GET", "wiki/%22Hello,_World!%22_program", NULL, "", NULL, INTERNET_FLAG_SECURE | INTERNET_FLAG_KEEP_CONNECTION, 1);
     if (hResourceHandle == NULL) { ::InternetCloseHandle(hOpenHandle); ::InternetCloseHandle(hConnectHandle); return false; }
 
     // Initialization > Buffer

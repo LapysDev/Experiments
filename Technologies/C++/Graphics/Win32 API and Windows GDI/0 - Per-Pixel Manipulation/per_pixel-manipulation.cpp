@@ -64,7 +64,7 @@ LRESULT CALLBACK windowProcedure(HWND window, unsigned message, unsigned message
                         unsigned long count = COUNT; while (count > (threshold * 2)) count /= (threshold * 2);
 
                         // ... --- NOTE (Lapys) -> Fill a rectangular region the size of the window with a dynamically changing color based on the `COUNT` (number of times the window has been painted) variable.
-                        ::FillRect(graphicsDeviceContext, &paintInformation.rcPaint /* -> const RECT */, (HBRUSH) ::CreateSolidBrush(RGB(0, 0, (count > threshold ? (threshold * 2) - count : count) * (maxima / threshold))));
+                        ::FillRect(graphicsDeviceContext, &paintInformation.rcPaint /* -> const RECT& */, (HBRUSH) ::CreateSolidBrush(RGB(0, 0, (count > threshold ? (threshold * 2) - count : count) * (maxima / threshold))));
                     }
 
                     /* [Sine Wave] ...
