@@ -1,5 +1,6 @@
 /* Import */
 #include <cstdio> // C Standard Input-Output --- NOTE (Lapys) -> For the `std::fprintf`, `std::fputc`, `std::fputs`, `std::fwrite`, `std::printf`, `std::putc`, `std::putchar` & `std::puts` methods.
+#include <cstdlib.h> // C Standard Library --- NOTE (Lapys) -> For the `STDERR_FILENO` and `STDOUT_FILENO` macros.
 #include <iomanip> // Input-Output Manipulation --- NOTE (Lapys) -> For the `std::setprecision` method.
 #include <iostream> // Input-Output Stream --- NOTE (Lapys) -> For the `std::cerr`, `std::clog`, `std::cout`, `std::wcerr`, `std::wclog` & `std::wcout` objects.
 #include <limits> // Limits --- NOTE (Lapys) -> For the `std::numeric_limits<...>digits10` data.
@@ -13,15 +14,15 @@
 
         // [Print] --- NOTE (Lapys) -> Write to the error/ output stream
         putw('[', stdout); putw('1', stdout); putw(']', stdout); putw(':', stdout); putw(' ', stdout); putw('H', stdout); putw('e', stdout); putw('l', stdout); putw('l', stdout); putw('o', stdout); putw(',', stdout); putw(' ', stdout); putw('W', stdout); putw('o', stdout); putw('r', stdout); putw('l', stdout); putw('d', stdout); putw('!', stdout); putw('\n', stdout); // --- NOTE (Lapys) -> Pretty trite for entry-level C/ C++ developers.
-        ::write(1, "[2]: Hello, World!\n", sizeof "[2]: Hello, World!\n" - 1); // NOTE (Lapys) -> `-1` to exclude the terminating null character (usually `\0`).
+        ::write(STDOUT_FILENO, "[2]: Hello, World!\n", sizeof "[2]: Hello, World!\n" - 1); // NOTE (Lapys) -> `-1` to exclude the terminating null character (usually `\0`).
         std::fprintf(stderr, "%s", "[3]: Hello, World!\n");
         std::fprintf(stdout, "%s", "[4]: Hello, World!\n");
         std::fputc('[', stderr); std::fputc('5', stderr); std::fputc(']', stderr); std::fputc(':', stderr); std::fputc(' ', stderr); std::fputc('H', stderr); std::fputc('e', stderr); std::fputc('l', stderr); std::fputc('l', stderr); std::fputc('o', stderr); std::fputc(',', stderr); std::fputc(' ', stderr); std::fputc('W', stderr); std::fputc('o', stderr); std::fputc('r', stderr); std::fputc('l', stderr); std::fputc('d', stderr); std::fputc('!', stderr); std::fputc('\n', stderr);
         std::fputc('[', stdout); std::fputc('6', stdout); std::fputc(']', stdout); std::fputc(':', stdout); std::fputc(' ', stdout); std::fputc('H', stdout); std::fputc('e', stdout); std::fputc('l', stdout); std::fputc('l', stdout); std::fputc('o', stdout); std::fputc(',', stdout); std::fputc(' ', stdout); std::fputc('W', stdout); std::fputc('o', stdout); std::fputc('r', stdout); std::fputc('l', stdout); std::fputc('d', stdout); std::fputc('!', stdout); std::fputc('\n', stdout);
         std::fputs("[7]: Hello, World!\n", stderr);
         std::fputs("[8]: Hello, World!\n", stdout);
-        std::fwrite("[9]: Hello, World!\n", 1, sizeof "[9]: Hello, World!\n" - 1, stderr);
-        std::fwrite("[10]: Hello, World!\n", 1, sizeof "[10]: Hello, World!\n" - 1, stdout);
+        std::fwrite("[9]: Hello, World!\n", STDERR_FILENO, sizeof "[9]: Hello, World!\n" - 1, stderr);
+        std::fwrite("[10]: Hello, World!\n", STDOUT_FILENO, sizeof "[10]: Hello, World!\n" - 1, stdout);
         std::printf("%s", "[11]: Hello, World!\n");
         std::putc('[', stderr); std::putc('1', stderr); std::putc('2', stderr); std::putc(']', stderr); std::putc(':', stderr); std::putc(' ', stderr); std::putc('H', stderr); std::putc('e', stderr); std::putc('l', stderr); std::putc('l', stderr); std::putc('o', stderr); std::putc(',', stderr); std::putc(' ', stderr); std::putc('W', stderr); std::putc('o', stderr); std::putc('r', stderr); std::putc('l', stderr); std::putc('d', stderr); std::putc('!', stderr); std::putc('\n', stderr);
         std::putc('[', stdout); std::putc('1', stdout); std::putc('3', stdout); std::putc(']', stdout); std::putc(':', stdout); std::putc(' ', stdout); std::putc('H', stdout); std::putc('e', stdout); std::putc('l', stdout); std::putc('l', stdout); std::putc('o', stdout); std::putc(',', stdout); std::putc(' ', stdout); std::putc('W', stdout); std::putc('o', stdout); std::putc('r', stdout); std::putc('l', stdout); std::putc('d', stdout); std::putc('!', stdout); std::putc('\n', stdout);
