@@ -5,10 +5,15 @@
 
 #include <iostream>
 
-/* Global > Application ... */
-HANDLE applicationConsoleActiveScreenBufferHandle = NULL;
-char *applicationName = NULL;
-int applicationStatus = 0;
+/* Global */
+    // Application ...
+    HANDLE applicationConsoleActiveScreenBufferHandle = NULL;
+    char *applicationName = NULL;
+    int applicationStatus = 0;
+
+    // [Phase > ...]
+    void Terminate(const int);
+    void Terminate(void);
 
 /* Declaration > ... */
 const BITMAP captureImage(void); // NOTE (Lapys) -> Renders display into an image format.
@@ -22,11 +27,13 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
     const BITMAP captureImage();
 
     // Create Image Mask --- NOTE (Lapys) -> Monochrome (two colors only) cast of a bitmap.
-    HBITMAP createImageMask(const HBITMAP bitmapHandle, const COLORREF transparencyColor) {
+    HBITMAP createImageMask(HBITMAP bitmapHandle, const COLORREF transparencyColor) {
         // Initialization > Bitmap (Mask) ...
         BITMAP bitmap;
+        HGDIOBJ bitmapDummyObject;
         HDC bitmapGraphicsDeviceContext = ::CreateCompatibleDC(NULL);
 
+        HGDIOBJ bitmapMaskDummyObject;
         HDC bitmapMaskGraphicsDeviceContext = ::CreateCompatibleDC(NULL);
         HBITMAP bitmapMaskHandle;
 
@@ -34,13 +41,16 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
         ::GetObject(bitmapHandle, sizeof(BITMAP), &bitmap);
         bitmapMaskHandle = ::CreateBitmap(bitmap.bmWidth, bitmap.bmHeight, 1, 1, NULL);
 
-        ::SelectObject(bitmapGraphicsDeviceContext, (HGDIOBJ) (HBITMAP) bitmapHandle);
-        ::SelectObject(bitmapMaskGraphicsDeviceContext, (HGDIOBJ) (HBITMAP) bitmapMaskHandle);
+        bitmapDummyObject = ::SelectObject(bitmapGraphicsDeviceContext, (HGDIOBJ) (HBITMAP) bitmapHandle);
+        bitmapMaskDummyObject = ::SelectObject(bitmapMaskGraphicsDeviceContext, (HGDIOBJ) (HBITMAP) bitmapMaskHandle);
 
         ::SetBkColor(bitmapGraphicsDeviceContext, transparencyColor);
 
         ::BitBlt(bitmapMaskGraphicsDeviceContext, 0, 0, bitmap.bmWidth, bitmap.bmHeight, bitmapGraphicsDeviceContext, 0, 0, SRCCOPY);
         ::BitBlt(bitmapGraphicsDeviceContext, 0, 0, bitmap.bmWidth, bitmap.bmHeight, bitmapMaskGraphicsDeviceContext, 0, 0, SRCINVERT);
+
+        bitmapHandle = (HBITMAP) ::SelectObject(bitmapGraphicsDeviceContext, bitmapDummyObject);
+        bitmapMaskHandle = (HBITMAP) ::SelectObject(bitmapMaskGraphicsDeviceContext, bitmapMaskDummyObject);
 
         // Deletion
         ::DeleteDC(bitmapGraphicsDeviceContext);
@@ -62,9 +72,11 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
         bitmapHandle = (HBITMAP) ::LoadImage((HMODULE) ::GetWindowLong(windowHandle, GWL_HINSTANCE), imageFilepath, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_LOADFROMFILE);
 
         // Logic
-        if (bitmapHandle == NULL)
+        if (bitmapHandle == NULL) {
             // Error
             ::WriteFile(applicationConsoleActiveScreenBufferHandle, "[ERROR]: Unable to retrieve specified image file\n\0\r", 51uL, NULL, NULL);
+            Terminate(EXIT_FAILURE);
+        }
 
         else {
             // Initialization > (Bitmap ..., Graphics Device Context, Paint Information, ...)
@@ -106,9 +118,11 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
         bitmapHandle = (HBITMAP) ::LoadImage(NULL, imageFilepath, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_LOADFROMFILE);
 
         // Logic
-        if (bitmapHandle == NULL)
+        if (bitmapHandle == NULL) {
             // Error
             ::WriteFile(applicationConsoleActiveScreenBufferHandle, "[ERROR]: Unable to retrieve specified image file\n\0\r", 51uL, NULL, NULL);
+            Terminate(EXIT_FAILURE);
+        }
 
         else {
             // Initialization > (Graphics Device Context, ...)
@@ -133,7 +147,6 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
         switch (message) {
             // [Window Manager ...]
             case WM_CLOSE: ::DestroyWindow(windowHandle); break;
-            case WM_CREATE: break;
             case WM_DESTROY: ::PostQuitMessage(0); break;
             case WM_PAINT: {
                 // ...
@@ -147,6 +160,15 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
         // Return
         return 0;
     }
+
+/* Phase > Terminate */
+void Terminate(const int status) {
+    // Deletion
+    ::CloseHandle(applicationConsoleActiveScreenBufferHandle);
+
+    // [Terminate] ...
+    ::exit(status);
+} void Terminate() { Terminate(applicationStatus); }
 
 /* Main */
 int WinMain(HINSTANCE handlerInstance, HINSTANCE /*previousHandlerInstance*/, LPSTR /*programInitiationCommandLine*/, int windowAppearance) {
@@ -229,10 +251,7 @@ int WinMain(HINSTANCE handlerInstance, HINSTANCE /*previousHandlerInstance*/, LP
     }
 
     // [Terminate]
-    {
-        // Deletion
-        ::CloseHandle(applicationConsoleActiveScreenBufferHandle);
-    }
+    Terminate();
 
     // Return
     return applicationStatus;
