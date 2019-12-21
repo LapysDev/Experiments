@@ -180,7 +180,6 @@ int main(int argumentCount, char* argumentVector[]) {
             switch (character) {
                 case '\a': ::fputs("\\a", file); break;
                 case '\b': ::fputs("\\b", file); break;
-                case '\e': ::fputs("\\e", file); break;
                 case '\f': ::fputs("\\f", file); break;
                 case '\n': ::fputs("\\n", file); break;
                 case '\r': ::fputs("\\r", file); break;
@@ -206,6 +205,7 @@ int main(int argumentCount, char* argumentVector[]) {
                 case '\u0018': ::fputs("\\u0018", file); break;
                 case '\u0019': ::fputs("\\u0019", file); break;
                 case '\u001A': ::fputs("\\u001A", file); break;
+                case '\u001B': ::fputs("\\e", file); break;
                 case '\u001C': ::fputs("\\u001C", file); break;
                 case '\u001D': ::fputs("\\u001D", file); break;
                 case '\u001E': ::fputs("\\u001E", file); break;
