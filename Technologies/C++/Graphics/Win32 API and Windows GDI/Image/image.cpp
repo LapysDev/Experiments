@@ -3,8 +3,6 @@
 #include <stdlib.h> // Standard Library
 #include <windows.h> // Windows
 
-#include <iostream>
-
 /* Global */
     // Application ...
     HANDLE applicationConsoleActiveScreenBufferHandle = NULL;

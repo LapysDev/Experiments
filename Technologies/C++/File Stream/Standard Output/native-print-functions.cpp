@@ -12,7 +12,7 @@
         // ...
         std::setprecision(std::numeric_limits<long double>::digits10);
 
-        // [Print] --- NOTE (Lapys) -> Write to the error/ output stream
+        // [Print] --- NOTE (Lapys) -> Write to the standard file error/ output stream
         putw('[', stdout); putw('1', stdout); putw(']', stdout); putw(':', stdout); putw(' ', stdout); putw('H', stdout); putw('e', stdout); putw('l', stdout); putw('l', stdout); putw('o', stdout); putw(',', stdout); putw(' ', stdout); putw('W', stdout); putw('o', stdout); putw('r', stdout); putw('l', stdout); putw('d', stdout); putw('!', stdout); putw('\n', stdout); // --- NOTE (Lapys) -> Pretty trite for entry-level C/ C++ developers.
         ::write(STDOUT_FILENO, "[2]: Hello, World!\n", sizeof "[2]: Hello, World!\n" - 1); // NOTE (Lapys) -> `-1` to exclude the terminating null character (usually `\0`).
         std::fprintf(stderr, "%s", "[3]: Hello, World!\n");
