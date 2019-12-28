@@ -1074,7 +1074,7 @@ int main(void) {
             if ((keyState = ::GetAsyncKeyState(VK_ZOOM))) keyState & keySize ? keyStream.add(Zoom, true) : keyStream.add(Zoom, false); else if (keyStream.has(Zoom)) { KeyInformation& keyInformation = keyStream.get(Zoom); keyInformation.activated ? keyInformation.release() : keyStream.remove(keyInformation); }
         #elif defined(linux) || defined(__linux) || defined(__linux__)
         #elif defined(unix) || defined(__unix) || defined(__unix__)
-        #elif defined(__APPLE__) || defined(__MACH__)
+        #elif defined(__APPLE__) || defined(__MACH__) || defined(TARGET_OS_MAC)
         #elif defined(__ANDROID__)
         #endif
 
