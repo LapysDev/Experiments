@@ -23,8 +23,11 @@
             inline unsigned long long abs(const unsigned long long number) { return number < 0 ? -number : number; }
             inline unsigned short abs(const unsigned short number) { return number < 0 ? -number : number; }
 
-            // Align --- CONTINUE (Lapy) --- NOTE (Lapys) -> Aligns the number to a block size (which must be a power of 2).
-            void align(const int number, const int blockSize) {}
+            // Align --- CONTINUE (Lapys) --- NOTE (Lapys) -> Aligns the number to a block size (which must be a power of 2).
+            inline int align(const int number, const int blockSize) { return (number + ((blockSize) - 1)) & ~((blockSize) - 1); }
+            inline int align(const int number, const long blockSize) { return (number + ((blockSize) - 1)) & ~((blockSize) - 1); }
+            inline int align(const int number, const long long blockSize) { return (number + ((blockSize) - 1)) & ~((blockSize) - 1); }
+            inline int align(const int number, const short blockSize) { return (number + ((blockSize) - 1)) & ~((blockSize) - 1); }
 
             // Fit To --- NOTE (Lapys) -> Fits the number to a unit size.
             inline int fitTo(const int number, const int unitSize) { return unitSize ? (number / unitSize) + (number % unitSize ? 1 : 0) : 0; } inline int fitTo(const int number, const long unitSize) { return unitSize ? (number / unitSize) + (number % unitSize ? 1 : 0) : 0; } inline int fitTo(const int number, const long long unitSize) { return unitSize ? (number / unitSize) + (number % unitSize ? 1 : 0) : 0; } inline int fitTo(const int number, const short unitSize) { return unitSize ? (number / unitSize) + (number % unitSize ? 1 : 0) : 0; }
