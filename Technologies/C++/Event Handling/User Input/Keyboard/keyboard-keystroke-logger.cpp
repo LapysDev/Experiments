@@ -1091,18 +1091,27 @@ int main(void) {
             if (keyInformation.activated) {
                 // Logic
                 if (!activeKeyStream.has(key)) {
-                    // Logic > Print
+                    // Logic
                     if (!(
                         (key == Shift && (keyStream.has(LeftShift) || keyStream.has(RightShift))) ||
                         ((
                             key == CharacterA || key == CharacterB || key == CharacterC || key == CharacterD || key == CharacterE || key == CharacterF || key == CharacterG || key == CharacterH || key == CharacterI || key == CharacterJ || key == CharacterK || key == CharacterL || key == CharacterM || key == CharacterN || key == CharacterO || key == CharacterP || key == CharacterQ || key == CharacterR || key == CharacterS || key == CharacterT || key == CharacterU || key == CharacterV || key == CharacterW || key == CharacterX || key == CharacterY || key == CharacterZ ||
                             key == Digit0 || key == Digit1 || key == Digit2 || key == Digit3 || key == Digit4 || key == Digit5 || key == Digit6 || key == Digit7 || key == Digit8 || key == Digit9
                         ) && (keyStream.has(LeftShift) || keyStream.has(RightShift) || keyStream.has(Shift)))
-                    )) ::printf("%s (pressed)\n", KeyStream::keyInformationToString(keyStream, keyInformation));
+                    )) {
+                        // Constant > Key Information String
+                        const char *keyInformationString = KeyStream::keyInformationToString(keyStream, keyInformation);
 
-                    // Update > (Active Key Stream, Keystroke Log File)
+                        // Print
+                        ::printf("%s (pressed)\n", keyInformationString);
+
+                        // (Logic > )Update > Keystroke Log File
+                        ::fprintf(keystrokeLogFile, "%s[P]\n", KeyStream::keyInformationToString(keyStream, keyInformation));
+                        if (NULL != keyInformationString && *keyInformationString == '<') { ::fputc('\n', keystrokeLogFile); ::fputc('\r', keystrokeLogFile); }
+                    }
+
+                    // Update > Active Key Stream
                     activeKeyStream.add(keyInformation);
-                    ::fprintf(keystrokeLogFile, "%s[P]\n", KeyStream::keyInformationToString(keyStream, keyInformation));
                 }
 
                 // Update > Key Information
@@ -1121,6 +1130,8 @@ int main(void) {
                 // Logic > Update > Keystroke Log File
                 if (keyInformationActiveEventTime) ::fprintf(keystrokeLogFile, "%s[R after %fs]\n", keyInformationString, keyInformationActiveEventTime);
                 else ::fprintf(keystrokeLogFile, "%s[R]\n", keyInformationString);
+
+                if (NULL != keyInformationString && *keyInformationString == '<') { ::fputc('\n', keystrokeLogFile); ::fputc('\r', keystrokeLogFile); }
 
                 // Deletion
                 activeKeyStream.remove(key);
