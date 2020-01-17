@@ -84,7 +84,7 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM message
                     } else { *(buffer + 12) = '0'; *(buffer + 13) = ')'; }
 
                     // ...
-                    ::FillRect(graphicsDeviceContext, &paintInformation.rcPaint /* -> const RECT& -> windowBoundingRectangle */, (HBRUSH) ::CreateSolidBrush(RGB(0, 0, 33)));
+                    ::FillRect(graphicsDeviceContext, &paintInformation.rcPaint /* -> const RECT& -> windowBoundingRectangle */, (HBRUSH) ::CreateSolidBrush(2162688 /*RGB(0, 0, 33)*/));
 
                     /* [Sine Wave] ...
                             --- PARAMETER ---
@@ -98,10 +98,10 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM message
                         y = (windowHeight / 2L) - y; // NOTE (Lapys) -> Center the plot point.
 
                         // ... --- NOTE (Lapys) -> Pad the pixel to be .5 unit(s) wider.
-                        ::SetPixel(graphicsDeviceContext, x, y, RGB(255, 255, 255));
-                        ::SetPixel(graphicsDeviceContext, x, y + 1.0, RGB(127, 127, 127));
-                        ::SetPixel(graphicsDeviceContext, x + 1.0, y, RGB(127, 127, 127));
-                        ::SetPixel(graphicsDeviceContext, x + 1.0, y + 1.0, RGB(0, 0, 0));
+                        ::SetPixelV(graphicsDeviceContext, x, y, RGB(255, 255, 255));
+                        ::SetPixelV(graphicsDeviceContext, x, y + 1.0, RGB(127, 127, 127));
+                        ::SetPixelV(graphicsDeviceContext, x + 1.0, y, RGB(127, 127, 127));
+                        ::SetPixelV(graphicsDeviceContext, x + 1.0, y + 1.0, RGB(0, 0, 0));
                     }
 
                     // [Data] ...

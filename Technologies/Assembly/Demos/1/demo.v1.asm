@@ -20,5 +20,6 @@ main:
     mov ebx, 1 ; NOTE (Lapys) -> File descriptor (`stdout` object from C).
     mov eax, 4 ; NOTE (Lapys) -> System call number: `sys_write`.
     int 0x80 ; NOTE (Lapys) -> Call the system kernel.
+
     mov eax, 1 ; NOTE (Lapys) -> System call number: `sys_exit`.
     int 0x80 ; NOTE (Lapys) -> Call the system kernel.

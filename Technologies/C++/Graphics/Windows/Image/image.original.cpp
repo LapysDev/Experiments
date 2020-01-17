@@ -5,6 +5,8 @@
 
 /* Global */
     // Application ...
+    char **applicationArguments = NULL;
+    char *applicationImage = NULL;
     HANDLE applicationConsoleActiveScreenBufferHandle = NULL;
     char *applicationName = NULL;
     int applicationStatus = 0;
@@ -42,10 +44,19 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
         bitmapDummyObject = ::SelectObject(bitmapGraphicsDeviceContext, (HGDIOBJ) (HBITMAP) bitmapHandle);
         bitmapMaskDummyObject = ::SelectObject(bitmapMaskGraphicsDeviceContext, (HGDIOBJ) (HBITMAP) bitmapMaskHandle);
 
-        ::SetBkColor(bitmapGraphicsDeviceContext, transparencyColor);
+        // Loop > ... --- WARN (Lapys) -> Ad-hoc method for creating the image mask.
+        for (int bitmapRowIterator = 0; bitmapRowIterator ^ bitmap.bmWidth; bitmapRowIterator++)
+        for (int bitmapColumnIterator = 0; bitmapColumnIterator ^ bitmap.bmHeight; bitmapColumnIterator++)
+            ::GetPixel(bitmapGraphicsDeviceContext, bitmapRowIterator, bitmapColumnIterator) == transparencyColor ?
+            ::SetPixelV(bitmapMaskGraphicsDeviceContext, bitmapRowIterator, bitmapColumnIterator, 16777215 /* -> RGB(255, 255, 255) */) :
+            ::SetPixelV(bitmapMaskGraphicsDeviceContext, bitmapRowIterator, bitmapColumnIterator, 0);
 
-        ::BitBlt(bitmapMaskGraphicsDeviceContext, 0, 0, bitmap.bmWidth, bitmap.bmHeight, bitmapGraphicsDeviceContext, 0, 0, SRCCOPY);
-        ::BitBlt(bitmapGraphicsDeviceContext, 0, 0, bitmap.bmWidth, bitmap.bmHeight, bitmapMaskGraphicsDeviceContext, 0, 0, SRCINVERT);
+        /* --- FLAG (Lapys) -> This code doesn`t work for some God-forsaken reason; Weeks have gone into rectifying this, don`t fix it!
+            ::SetBkColor(bitmapMaskGraphicsDeviceContext, transparencyColor);
+
+            ::BitBlt(bitmapMaskGraphicsDeviceContext, 0, 0, bitmap.bmWidth, bitmap.bmHeight, bitmapGraphicsDeviceContext, 0, 0, SRCCOPY);
+            ::BitBlt(bitmapGraphicsDeviceContext, 0, 0, bitmap.bmWidth, bitmap.bmHeight, bitmapMaskGraphicsDeviceContext, 0, 0, SRCINVERT);
+        */
 
         bitmapHandle = (HBITMAP) ::SelectObject(bitmapGraphicsDeviceContext, bitmapDummyObject);
         bitmapMaskHandle = (HBITMAP) ::SelectObject(bitmapMaskGraphicsDeviceContext, bitmapMaskDummyObject);
@@ -101,6 +112,7 @@ COLORREF getPixelColorFromImage(const char[], const unsigned, const unsigned);
             // Deletion
             ::DeleteDC(bitmapGraphicsDeviceContext);
             ::DeleteObject(bitmapHandle);
+            ::DeleteObject(bitmapMaskHandle);
             ::ReleaseDC(windowHandle, graphicsDeviceContext);
             ::EndPaint(windowHandle, &paintInformation);
         }
