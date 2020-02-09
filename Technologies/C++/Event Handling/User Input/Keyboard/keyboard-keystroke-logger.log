@@ -2,46 +2,43 @@
 
 <arrow::down>[R]
 
-<capital-lock>[P]
+'+'[P]
+'+'[R after 0.088000s]
+'+'[R after 0.088000s]
+'+'[P]
+'+'[R after 0.073000s]
+'+'[R after 0.073000s]
+'-'[P]
+'-'[R after 0.045000s]
+'-'[R after 0.045000s]
+'-'[P]
+'-'[R after 0.070000s]
+'-'[R after 0.070000s]
+<oem::adder>[P]
 
-<capital-lock>[R after 0.092000s]
+<oem::adder>[R after 0.060000s]
 
-'l'[P]
-'l'[R after 0.058000s]
-<capital-lock>[P]
+<oem::adder>[R after 0.060000s]
 
-<capital-lock>[R after 0.070000s]
+<oem::adder>[P]
 
-'O'[P]
-'o'[R after 0.058000s]
-'o'[R after 0.058000s]
-'r'[P]
-'r'[R after 0.067000s]
-'r'[R after 0.067000s]
-'e'[P]
-'m'[P]
-'e'[R after 0.074000s]
-'m'[R after 0.058000s]
-'m'[R after 0.058000s]
-' '[P]
-' '[R after 0.089000s]
-' '[R after 0.089000s]
-'i'[P]
-'i'[R after 0.057000s]
-'i'[R after 0.057000s]
-'p'[P]
-'p'[R after 0.053000s]
-'p'[R after 0.053000s]
-'s'[P]
-'s'[R after 0.065000s]
-'s'[R after 0.065000s]
-'u'[P]
-'u'[R after 0.040000s]
-'u'[R after 0.040000s]
-'m'[P]
-'m'[R after 0.054000s]
-'m'[R after 0.054000s]
-<control::left>[P]
+<oem::adder>[R after 0.065000s]
+
+<oem::adder>[R after 0.065000s]
+
+<oem::subtracter>[P]
+
+<oem::subtracter>[R]
+
+<oem::subtracter>[R]
+
+<oem::subtracter>[P]
+
+<oem::subtracter>[R after 0.045000s]
+
+<oem::subtracter>[R after 0.045000s]
+
+<control::left>[P]
 
 <control::left>[P]
 
