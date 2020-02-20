@@ -47,7 +47,7 @@ int main(void) {
     // Update > Pointers
     pointers[0] = (Pointer*) std::malloc(3u * sizeof(Pointer));
     pointers[1] = (Pointer*) std::calloc(5u, sizeof(Pointer));
-    pointers[2] = new Pointer[5] {pointer, pointer, pointer, pointer, pointer};
+    pointers[2] = new Pointer[3] {pointer, pointer, pointer};
 
     // Print
     ::printf("%s%p", "[Main]: ", pointer);
@@ -63,25 +63,30 @@ int main(void) {
 
         // [Allocated and (well) Constructed]
         ::printf("%s", "[Pointers] (Allocated & Constructed):      [");
-        ::printp(pointers[2]); ::putchar('\n'); ::putchar('\r');
+        ::printp(pointers[2], 3u); ::putchar('\n'); ::putchar('\r');
 
-
-    // [Re-allocated Only] Print
+    // Print
     ::putchar('\n');
 
-        // [Shrunk Only]
+        // [Re-allocated (Shrunk) Only]
         ::printf("%s", "[Pointers] (Reallocated (Shrunk) Only):    [");
         ::printp(pointers[0] = (Pointer*) std::realloc(pointers[0], 1u * sizeof(Pointer)), 1u); ::putchar('\n'); ::putchar('\r');
 
-        // [Expanded Only]
+        // [Re-allocated (Expanded) Only]
         ::printf("%s", "[Pointers] (Reallocated (Expanded) Only):  [");
-        ::printp(pointers[0] = (Pointer*) std::realloc(pointers[0], 5u * sizeof(Pointer)));
+        ::printp(pointers[0] = (Pointer*) std::realloc(pointers[0], 5u * sizeof(Pointer))); ::putchar('\n'); ::putchar('\r');
+
+        // [Re-allocated and (well) Constructed]
+        ::printf("%s", "[Pointers] (Reallocated & Constructed):  ["); {
+            Pointer *pointersCopy; std::copy(pointers[2], pointers[2] + 3, pointersCopy = new Pointer[5u] {0, 0, 0, pointer, pointer});
+            delete[] pointers[2]; pointers[2] = pointersCopy;
+        } ::printp(pointers[2]);
 
     // Deletion
     std::free(pointers[0]);
     std::free(pointers[1]);
 
-    delete pointers[2];
+    delete[] pointers[2];
 
     // Return
     return EXIT_SUCCESS;

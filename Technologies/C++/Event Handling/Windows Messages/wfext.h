@@ -12,7 +12,9 @@
 extern "C" {
 #endif  /* __cplusplus */
 
+#ifndef MENU_TEXT_LEN
 #define MENU_TEXT_LEN           40
+#endif
 
 #define FMMENU_FIRST            1
 #define FMMENU_LAST             99
