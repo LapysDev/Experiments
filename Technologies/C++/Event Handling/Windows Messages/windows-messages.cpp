@@ -5,20 +5,19 @@
 
     // [Windows]
     #include <winbase.h> // Windows Base
-    // #include <windef.h> // Windows Definitions
     #include <winuser.h> // Windows User
 
-    #  include "commctrl.h" // Common Controls
-    #  include "ftsiface.h" // ...
-    #  include "olectl.h" // Object-Linking & Embedding Controls
-    #  include "penwin.h" // Pen for Windows
-    #  include "prsht.h" // Prop Sheet
-    #  include "richedit.h" // Rich Edit
-    #  include "smx.h" // Server Manager Extensions
-    #  include "shellapi.h" // Shell API
-    #  include "shlobj.h" // Shell Object
-    #  include "vfw.h" // Video for Windows
-    #  include "wfext.h" // Windows File Extensions
+    #  include "windows/commctrl.h" // Common Controls
+    #  include "windows/ftsiface.h" // ...
+    #  include "windows/olectl.h" // Object-Linking & Embedding Controls
+    #  include "windows/penwin.h" // Pen for Windows
+    #  include "windows/prsht.h" // Prop Sheet
+    #  include "windows/richedit.h" // Rich Edit
+    #  include "windows/smx.h" // Server Manager Extensions
+    #  include "windows/shellapi.h" // Shell API
+    #  include "windows/shlobj.h" // Shell Object
+    #  include "windows/vfw.h" // Video for Windows
+    #  include "windows/wfext.h" // Windows File Extensions
 
 /* Definition */
     /* [Common Controls] `<commctrl.h>` */
@@ -1525,7 +1524,16 @@
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Page Setup Dialog Full Page");
                  ::printge(screenConsoleBufferHandle, "]");
             break;
-            case CBEM_GETEDITCONTROL /* -> IE_GETPAINTDC || PBM_GETRANGE || RB_SETPARENT || SB_GETBORDERS || TBM_SETRANGEMIN || TTM_RELAYEVENT */: break;
+            case CBEM_GETEDITCONTROL /* -> IE_GETPAINTDC || PBM_GETRANGE || RB_SETPARENT || SB_GETBORDERS || TBM_SETRANGEMIN || TTM_RELAYEVENT */:
+                ::printh(screenConsoleBufferHandle, CBEM_GETEDITCONTROL); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Rich Editor -> Get Paint Device Context");
+                    ::printmln(screenConsoleBufferHandle, "    Progress Bar -> Get Range");
+                    ::printmln(screenConsoleBufferHandle, "    Rebar -> Set Parent");
+                    ::printmln(screenConsoleBufferHandle, "    Scrollbar -> Get Borders");
+                    ::printmln(screenConsoleBufferHandle, "    Trackbar -> Set Range Minimum");
+                    ::printmln(screenConsoleBufferHandle, "    Tooltips -> Relay Event");
+                 ::printge(screenConsoleBufferHandle, "]");
+            break;
             case CBEM_GETEXSTYLE /* -> CBEM_GETEXTENDEDSTYLE || PBM_SETBARCOLOR || RB_GETRECT || SB_SIMPLE || TBM_CLEARTICS || TB_ISBUTTONENABLED || TTM_SETTOOLINFOA */: break;
             /*case CDM_GETFILEPATH: break;*/
             /*case CDM_GETFOLDERPATH: break;*/
@@ -2591,9 +2599,7 @@ int WinMain(HINSTANCE instanceHandle, HINSTANCE /*previousInstanceHandle*/, LPST
     // Logic
     if (::RegisterClass(&windowClass)) {
         // Update > Window Handle
-        ::printe(screenConsoleBufferHandle);
         windowHandle = ::CreateWindowEx(0, windowClass.lpszClassName, "Windows Messages", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, (int) ((float) ::GetSystemMetrics(SM_CXSCREEN) * (75.0f / 100.0f)), (int) ((float) ::GetSystemMetrics(SM_CYSCREEN) * (75.0f / 100.0f)), 0x0, 0x0, instanceHandle, 0x0);
-        ::printe(screenConsoleBufferHandle);
 
         // Logic > ...
         if (windowHandle) {

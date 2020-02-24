@@ -8,10 +8,7 @@ const unsigned short LENGTH = 250u;
 const unsigned short ORIGIN = (unsigned short) (((float) LENGTH) * (125.0f / 100.0f));
 
 /* Declaration > ... */
-void drawLine(const HWND, const HDC, const float) noexcept;
-void drawLine(const HWND, const HDC, const short, const short) noexcept;
 void drawOriginCrosshair(const HWND, const HDC) noexcept;
-
 void putPixel(const HWND, const HDC, const int, const int, const COLORREF) noexcept;
 
 /* Function */
@@ -26,7 +23,6 @@ void putPixel(const HWND, const HDC, const int, const int, const COLORREF) noexc
             else if (angle == 90.0f) for (unsigned short iterator = 0u; iterator ^ LENGTH; ++iterator) ::putPixel(windowHandle, graphicsDeviceContextHandle, iterator, 0, color);
             else if (angle == 180.0f) for (unsigned short iterator = 0u; iterator ^ LENGTH; ++iterator) ::putPixel(windowHandle, graphicsDeviceContextHandle, 0, iterator, color);
             else if (angle == 270.0f) for (unsigned short iterator = 0u; iterator ^ LENGTH; ++iterator) ::putPixel(windowHandle, graphicsDeviceContextHandle, -((short) iterator), 0, color);
-
             else {
                 /* ... */
                 #define LINE_DRAW_METHOD
@@ -87,13 +83,14 @@ void putPixel(const HWND, const HDC, const int, const int, const COLORREF) noexc
                         yRatioIterator += yRatio;
 
                         // Logic > ... --- NOTE (Lapys) -> Determines the length of the line (at an angle).
-                        if (::sqrt((x * x) + (y * y)) <= LENGTH)
+                        if ((x * x) + (y * y) <= LENGTH * LENGTH)
                         ::putPixel(windowHandle, graphicsDeviceContextHandle, x, y, color);
 
                         // Logic > Update > ... --- NOTE (Lapys) -> Determines the angle of the line.
                         if (xRatioIterator >= 1.0f) { xWeight < 0.0f ? --x : ++x; --xRatioIterator; }
                         if (yRatioIterator >= 1.0f) { yWeight < 0.0f ? --y : ++y; --yRatioIterator; }
                     }
+
                 #elif LINE_DRAW_METHOD == PYTHAGOREAN_METHOD
                     // Initialization > (X, Y) Iterator
                     short xIterator = 0;
@@ -106,18 +103,15 @@ void putPixel(const HWND, const HDC, const int, const int, const COLORREF) noexc
                         short y = yIterator / ::sin(angle * (M_PI / 180.0f));
 
                         // Logic > ... --- NOTE (Lapys) -> Determines the length of the line (at an angle).
-                        if (::sqrt((x * x) + (y * y)) <= LENGTH)
+                        if (::(x * x) + (y * y) <= LENGTH * LENGTH)
                         ::putPixel(windowHandle, graphicsDeviceContextHandle, x, y, color);
 
-                        // Logic > Update > (x, Y) Iterator
+                        // Logic > Update > (X, Y) Iterator
                         if (angle > 0.0f && angle < 90.0f) { ++xIterator; --yIterator; }
                         else if (angle > 90.0f && angle < 180.0f) { --xIterator; ++yIterator; }
                         else if (angle > 180.0f && angle < 270.0f) { ++xIterator; --yIterator; }
                         else if (angle > 270.0f && angle < 360.0f) { --xIterator; ++yIterator; }
                     }
-
-                    // X2 = X1 + ::cos(angle) * LENGTH
-                    // Y2 = Y1 + ::sin(angle) * LENGTH
                 #endif
 
                 #undef CUSTOM_METHOD
@@ -243,7 +237,6 @@ void putPixel(const HWND, const HDC, const int, const int, const COLORREF) noexc
                     for (float angle = 0.0f; angle <= 360.0f; ++angle)
                     ::drawLine(windowHandle, windowGraphicsDeviceContextHandle, angle, RGB(204, 204, 204));
                 }
-
                 /* [To a Coordinate] */ {
                     RECT& windowClientAreaBoundingBox = windowPaintInformation.rcPaint;
 

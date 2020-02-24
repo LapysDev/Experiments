@@ -31,7 +31,7 @@ int main(void) {
     ::VirtualProtect(buffer, 6, PAGE_EXECUTE_READ, &previousAccessProtectionValue); // NOTE (Lapys) -> Mark the memory as executable.
 
     function = (unsigned(*)(void)) buffer; // NOTE (Lapys) -> Interpret the beginning of the (currently) executable memory as the entry point of a function taking no arguments and returning a 4-byte integer.
-    functionReturnValue = function();
+    functionReturnValue = function(); // NOTE (Lapys) -> Invoke the dynamically-created function.
 
     // Deletion --- NOTE (Lapys) -> Free the executable memory.
     ::VirtualFree(buffer, 0, MEM_RELEASE);
