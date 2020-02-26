@@ -16,10 +16,11 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM message
         case WM_DESTROY: ::PostQuitMessage(0); break;
         case WM_KEYDOWN: if (messageParameter == VK_ESCAPE) { ::DestroyWindow(windowHandle); ::PostQuitMessage(0); } break;
         case WM_QUIT: ::DestroyWindow(windowHandle); break;
+        case WM_SYSCOMMAND: if (messageParameter == SC_CLOSE) { ::DestroyWindow(windowHandle); ::PostQuitMessage(0); } break;
         case WM_SYSKEYDOWN: if (messageParameter == VK_F4) { ::DestroyWindow(windowHandle); ::PostQuitMessage(0); } break;
     } ::printf("\r                                   \r%s%u", "Message Count: ", ++windowProcedureInvocationCount);
 
-    // Return
+    // Return --- NOTE (Lapys) -> Prevent control reaching here to abate default procedures to window messages.
     return ::DefWindowProc(windowHandle, message, messageParameter, additionalMessageParameter);
 }
 
