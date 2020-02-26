@@ -1,4 +1,5 @@
 /* Import */
+#include <stdio.h>
 #include <windows.h> // Windows
 
 /* Global > ... */
@@ -10,38 +11,48 @@ void putPixel(const HDC, const int, const int, const COLORREF) noexcept;
 
 /* Function */
     // Draw Curve
-    void drawCurve(const HDC graphicsDeviceContextHandle, const short xStart, const short yStart, const short xEnd, const short yEnd, const short /*xAuxiliaryStart*/, const short /*yAuxiliaryStart*/, const short /*xAuxiliaryEnd*/, const short /*yAuxiliaryEnd*/, const COLORREF color) noexcept {
-        // Logic --- NOTE (Lapys) -> Can also optimize for diagonal, horizontal and vertical lines.
-        if (false) {}
-        else {
-            // Initialization > (X, Y) ...
-            short x = 0;
-            unsigned short xDistance = xStart < xEnd ? xEnd - xStart : xStart - xEnd;
-            float xRatio = 1.0f, xRatioIterator = 0.0f;
+    void drawCurve(const HDC graphicsDeviceContextHandle, const short xStart, const short yStart, const short xEnd, const short yEnd, const short xAuxiliary, const short yAuxiliary, const COLORREF color) noexcept {
+        // Initialization > (X, Y) ...
+        short x, xIterator;
+        unsigned short xDistance;
+        float xRatio, xRatioIterator;
 
-            short y = 0;
-            unsigned short yDistance = yStart < yEnd ? yEnd - yStart : yStart - yEnd;
-            float yRatio = 1.0f, yRatioIterator = 0.0f;
+        short y, yIterator;
+        unsigned short yDistance;
+        float yRatio, yRatioIterator;
 
-            // Logic > Update > (X, Y) Ratio
-            if (xDistance > yDistance) yRatio = ((float) yDistance) / (float) xDistance;
-            else if (xDistance < yDistance) xRatio = ((float) xDistance) / (float) yDistance;
+        // Update > (X, Y) ...
+        xDistance = xStart < xEnd ? xEnd - xStart : xStart - xEnd;
+        xIterator = 0; xRatioIterator = 0.0f;
 
-            // Loop
-            while (((x + xStart) ^ xEnd) && ((y + yStart) ^ yEnd)) {
-                // Update > (X, Y) Ratio Iterator
-                xRatioIterator += xRatio;
-                yRatioIterator += yRatio;
+        yDistance = yStart < yEnd ? yEnd - yStart : yStart - yEnd;
+        yIterator = 0; yRatioIterator = 0.0f;
 
-                // ...
-                ::putPixel(graphicsDeviceContextHandle, x, y, color);
+        if (xDistance > yDistance) { xRatio = 1.0f; yRatio = ((float) yDistance) / (float) xDistance; }
+        else if (xDistance < yDistance) { xRatio = ((float) xDistance) / (float) yDistance; yRatio = 1.0f; }
+        else { xRatio = 1.0f; yRatio = 1.0f; }
 
-                // Logic > Update > ...
-                if (xRatioIterator >= 1.0f) { xStart > xEnd ? --x : ++x; --xRatioIterator; }
-                if (yRatioIterator >= 1.0f) { yStart > yEnd ? --y : ++y; --yRatioIterator; }
-            }
+        // Loop
+        while (
+            ((xIterator + xStart) ^ xEnd) &&
+            ((yIterator + yStart) ^ yEnd)
+        ) {
+            // Update > (X, Y) ...
+            xRatioIterator += xRatio;
+            yRatioIterator += yRatio;
+
+            x = xIterator;
+            y = yIterator;
+
+            // ...
+            ::putPixel(graphicsDeviceContextHandle, x, y, color);
+
+            // Logic > Update > ...
+            if (xRatioIterator >= 1.0f) { xStart > xEnd ? --xIterator : ++xIterator; --xRatioIterator; }
+            if (yRatioIterator >= 1.0f) { yStart > yEnd ? --yIterator : ++yIterator; --yRatioIterator; }
         }
     }
+    void drawCurve(const HDC graphicsDeviceContextHandle, const short xStart, const short yStart, const short xEnd, const short yEnd, const short xAuxiliarys[], const short yAuxiliarys[], const COLORREF color) noexcept;
 
     // Put Pixel
     inline void putPixel(const HDC graphicsDeviceContextHandle, const int x, const int y, const COLORREF color) noexcept { ::SetPixelV(graphicsDeviceContextHandle, x, y, color); }
@@ -62,7 +73,7 @@ void putPixel(const HDC, const int, const int, const COLORREF) noexcept;
                 /* ... */
                 ::drawCurve(windowGraphicsDeviceContextHandle,
                     0, 0, LENGTH, LENGTH,
-                    LENGTH / 2u, LENGTH / 3u, LENGTH + (LENGTH / 2u), LENGTH / 2u,
+                    LENGTH + (LENGTH / 3u), (LENGTH / 2u) + (LENGTH / 4u),
                     RGB(240, 240, 240)
                 );
 

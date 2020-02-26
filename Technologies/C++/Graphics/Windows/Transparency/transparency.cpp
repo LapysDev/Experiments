@@ -2,6 +2,13 @@
 #include <windows.h> // Windows
 
 /* Function */
+    void SetTransparency(HWND hwnd, std::uint8_t Transperancy)
+{
+    long wAttr = GetWindowLong(hwnd, GWL_EXSTYLE);
+    SetWindowLong(hwnd, GWL_EXSTYLE, wAttr | WS_EX_LAYERED);
+    SetLayeredWindowAttributes(hwnd, 0, Transperancy, 0x02);
+}
+
     // Draw Transparent Window
     void drawTransparentWindow(const HWND windowHandle, const HDC graphicsDeviceContextHandle) noexcept {
         // Initialization > (Display ..., Window Bounding Box)
