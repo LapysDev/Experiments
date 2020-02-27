@@ -1,6 +1,6 @@
 /* Import */
 #include <cstdio> // C Standard Input-Output --- NOTE (Lapys) -> For the `std::fprintf`, `std::fputc`, `std::fputs`, `std::fwrite`, `std::printf`, `std::putc`, `std::putchar` & `std::puts` methods.
-#include <cstdlib.h> // C Standard Library --- NOTE (Lapys) -> For the `STDERR_FILENO` and `STDOUT_FILENO` macros.
+#include <cstdlib> // C Standard Library --- NOTE (Lapys) -> For the `STDERR_FILENO` and `STDOUT_FILENO` macros.
 #include <iomanip> // Input-Output Manipulation --- NOTE (Lapys) -> For the `std::setprecision` method.
 #include <iostream> // Input-Output Stream --- NOTE (Lapys) -> For the `std::cerr`, `std::clog`, `std::cout`, `std::wcerr`, `std::wclog` & `std::wcout` objects.
 #include <limits> // Limits --- NOTE (Lapys) -> For the `std::numeric_limits<...>digits10` data.
