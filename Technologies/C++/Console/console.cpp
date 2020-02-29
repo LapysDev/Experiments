@@ -4,21 +4,12 @@
     #include <math.h> // Mathematics
     #include <stdlib.h> // Standard Library
     #include <stdio.h> // Standard Input-Output
-    #include <wchar.h> // Wide Character --- NOTE (Lapys) -> `wchar_t` primitive character type.
-
-    // [C++ Standard Library]
-    #include <type_traits> // Type Traits --- WARN (Lapys) -> Only works with C++ 2011, ISO/IEC 14882:2011.
 
     // [Platform-Dependent]
-    #include <conio.h> // Console Input-Output
-    #include <fcntl.h> // Functional Control
-    #include <unistd.h> // UNIX Standard Library
-
     #include <windows.h> // Windows
 
     // [...]
-    #include <stdio.h>
-    #include <iostream>
+    #include <conio.h> // Console Input-Output
 
 /* Definition > ... */
 #define ANDROID_EXISTS defined(__ANDROID__)
@@ -47,11 +38,14 @@
             void getYear(...) noexcept;
     } clock;
 
-    /* Console */
-    class Console {
+    /* Console --- WARN (Lapys) -> Supports ASCII characters only. */
+    class Console { friend int main(void); // UPDATE (Lapys)
         // [...]
         private:
-            // Definition > (Error, Input, Output) ...
+            // Definition > (Buffer ..., (Error, Input, Output) ..., Stream)
+            size_t bufferLength;
+            char *bufferValue;
+
             FILE *errorFile, *inputFile, *outputFile;
             #if LINUX_EXISTS
                 int errorFileDescriptor, inputFileDescriptor, outputFileDescriptor;
@@ -60,9 +54,113 @@
                 HANDLE errorBufferHandle, inputBufferHandle, outputBufferHandle;
             #endif
 
-            // Declaration > ...
-            void fetch(...) noexcept; // NOTE (Lapys) -> Atomic scanning.
-            void put(...) noexcept; // NOTE (Lapys) -> Atomic printing.
+            enum ConsoleStream {$BUFFER, $ERROR, $INPUT, $OUTPUT} stream;
+
+            // Function
+                // Allocate
+                void allocate(void) noexcept {
+                    // Logic
+                    if (NULL == this -> bufferValue)
+                        // Modification > Target > Buffer
+                        this -> bufferValue = (char*) ::malloc(32u * sizeof(char));
+
+                    else {
+                        // Initialization > Buffer Size
+                        size_t bufferSize = 32u;
+
+                        // : Loop > Update > Buffer Size
+                        // : Modification > Target > Buffer
+                        while (this -> bufferLength > bufferSize) bufferSize <<= 1u;
+                        this -> bufferValue = (char*) ::realloc(this -> bufferValue, bufferSize * sizeof(char));
+                    }
+                }
+
+                // Fetch
+                void fetch(...) noexcept; // NOTE (Lapys) -> Atomic scanning.
+
+                // Print --- NOTE (Lapys) -> Print an output.
+                inline void print(const bool) noexcept { std::cout << "[boolean]" << std::endl; }
+                inline void print(const char) noexcept { std::cout << "[character]" << std::endl; }
+                inline void print(char[]) noexcept { std::cout << "[character string]" << std::endl; }
+                inline void print(const char[]) noexcept { std::cout << "[character string]" << std::endl; }
+                inline void print(const double) noexcept { std::cout << "[rational]" << std::endl; }
+                inline void print(const float) noexcept { std::cout << "[rational]" << std::endl; }
+                inline void print(const int) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const long) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const long double) noexcept { std::cout << "[rational]" << std::endl; }
+                inline void print(const short) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned int) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned long) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned long long) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned short) noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(void) const noexcept { std::cout << "[]" << std::endl; }
+                template <size_t length> inline void print(char (*)[length]) noexcept { std::cout << "[character string array pointer]" << std::endl; }
+                template <size_t length> inline void print(const char (*)[length]) noexcept { std::cout << "[character string array pointer]" << std::endl; }
+                template <size_t length> inline void print(char (&)[length]) noexcept { std::cout << "[character string array]" << std::endl; }
+                template <size_t length> inline void print(const char (&)[length]) noexcept { std::cout << "[character string array]" << std::endl; }
+                template <typename type> inline void print(type) noexcept { std::cout << "[object]" << std::endl; }
+                template <typename type> inline void print(type*) noexcept { std::cout << "[pointer]" << std::endl; }
+                template <size_t length, typename type> inline void print(type (*)[length]) noexcept { std::cout << "[array pointer]" << std::endl; }
+                template <size_t length, typename type> inline void print(type (&)[length]) noexcept { std::cout << "[array]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (*)(types...)) noexcept { std::cout << "[function pointer]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (&)(types...)) noexcept { std::cout << "[function]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (*)(types..., ...)) noexcept { std::cout << "[function pointer]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (&)(types..., ...)) noexcept { std::cout << "[function]" << std::endl; }
+                template <typename type, typename... types> inline void print(type, types...) noexcept { std::cout << "[...]" << std::endl; }
+                template <size_t length, typename type, typename... types> inline void print(type (*)[length], types...) noexcept { std::cout << "[...]" << std::endl; }
+                template <size_t length, typename type, typename... types> inline void print(type (&)[length], types...) noexcept { std::cout << "[...]" << std::endl; }
+                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (*)(message_types...), types...) noexcept { std::cout << "[...]" << std::endl; }
+                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (&)(message_types...), types...) noexcept { std::cout << "[...]" << std::endl; }
+                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (*)(message_types..., ...), types...) noexcept { std::cout << "[...]" << std::endl; }
+                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (&)(message_types..., ...), types...) noexcept { std::cout << "[...]" << std::endl; }
+
+                // Print Line
+                inline void println(void) noexcept { std::endl(std::cout); }
+                template <typename... types> void println(types... messages) noexcept { Console::print(messages...); }
+
+                // Print Pretty
+                void printp(...) noexcept;
+
+                // Print Pretty Line
+                void printpln(...) noexcept;
+
+                // Put --- NOTE (Lapys) -> Atomic printing.
+                inline bool put(const char character) noexcept { ::putchar(character); return true; }
+                #if LINUX_EXISTS
+                    inline bool put(const char character, const int fileDescriptor) noexcept { int fileWriteProcedureEvaluation = ::write(fileDescriptor, &character, 1u); return fileWriteProcedureEvaluation ^ -1; }
+                #endif
+                #if WINDOWS_EXISTS
+                    inline bool put(const char character, HANDLE consoleBufferHandle, COORD* coordinates) noexcept {
+                        // Initialization > Console Buffer Bytes Written
+                        static DWORD consoleBufferBytesWritten;
+
+                        // Logic > ...
+                        switch (character) {
+                            case '\a': break;
+                            case '\b': --(coordinates -> X); break;
+                            case '\f': break;
+                            case '\n': ++(coordinates -> Y); break;
+                            case '\r': coordinates -> X = 0; break;
+                            case '\t': while (coordinates -> X % 4) ++(coordinates -> X); break;
+                            case '\v': while (coordinates -> Y % 4) ++(coordinates -> Y); break;
+                            default: {
+                                // Initialization > Console Buffer Write Procedure Evaluation
+                                // : Logic > Return
+                                BOOL consoleBufferWriteProcedureEvaluation = ::WriteConsoleOutputCharacter(consoleBufferHandle, &character, 1uL, *coordinates, &consoleBufferBytesWritten);
+
+                                if (1 != consoleBufferBytesWritten || false == consoleBufferWriteProcedureEvaluation) return false;
+                                else ++(coordinates -> X);
+                            } break;
+                        }
+
+                        // ...; Return
+                        ::SetConsoleCursorPosition(consoleBufferHandle, *coordinates);
+                        return true;
+                    }
+                #endif
+
+                // Scan
+                void scan(...) noexcept;
 
             // Function*
                 // Get Default (Error, Input, Output) File
@@ -121,6 +219,9 @@
                     inline bool hasOutputBufferHandle(void) noexcept { return INVALID_HANDLE_VALUE != this -> outputBufferHandle && NULL != this -> outputBufferHandle; }
                 #endif
 
+                // Is Buffered
+                inline bool isBuffered(void) const noexcept { return Console::mode == Console::BUFFERED; }
+
                 // Is Console --- *NOTE (Lapys) -> Requires the `console` object to be defined.
                 inline bool isConsole(void) noexcept;
 
@@ -154,68 +255,63 @@
                 }
 
                 // Set (Error, Input, Output) --- CONSIDERATION (Lapys) -> These functions are invoked before definition on the instantiation of the `console` object.
-                inline void setError(FILE*) noexcept;
-                inline void setError(const FILE*) noexcept;
+                inline void setError(FILE*) noexcept; inline void setError(const FILE*) noexcept;
+                inline void setInput(FILE*) noexcept; inline void setInput(const FILE*) noexcept;
+                inline void setOutput(FILE*) noexcept; inline void setOutput(const FILE*) noexcept;
                 #if LINUX_EXISTS
                     inline void setError(const int) noexcept;
-                #endif
-                #if WINDOWS_EXISTS
-                    inline void setError(HANDLE) noexcept;
-                #endif
-
-                inline void setInput(FILE*) noexcept;
-                inline void setInput(const FILE*) noexcept;
-                #if LINUX_EXISTS
                     inline void setInput(const int) noexcept;
-                #endif
-                #if WINDOWS_EXISTS
-                    inline void setInput(HANDLE) noexcept;
-                #endif
-
-                inline void setOutput(FILE*) noexcept;
-                inline void setOutput(const FILE*) noexcept;
-                #if LINUX_EXISTS
                     inline void setOutput(const int) noexcept;
                 #endif
                 #if WINDOWS_EXISTS
+                    inline void setError(HANDLE) noexcept;
+                    inline void setInput(HANDLE) noexcept;
                     inline void setOutput(HANDLE) noexcept;
                 #endif
+
+                // Set Stream
+                inline void setStream(const ConsoleStream STREAM) noexcept { this -> stream = STREAM; }
 
         // [...]
         public:
             // [Constructor]
-            Console(void) : errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
+            Console(void) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
                 #if LINUX_EXISTS
                     , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
                 #endif
                 #if WINDOWS_EXISTS
                     , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
                 #endif
-            , count{}, mode{}, timestamp{} { Console::setDefaultError(); Console::setDefaultInput(); Console::setDefaultOutput(); }
-            template <typename outputType> explicit Console(outputType output) : errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
+            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setDefaultError(); Console::setDefaultInput(); Console::setDefaultOutput(); }
+            template <typename outputType> explicit Console(outputType output) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
                 #if LINUX_EXISTS
                     , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
                 #endif
                 #if WINDOWS_EXISTS
                     , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
                 #endif
-            , count{}, mode{}, timestamp{} { Console::setDefaultError(); Console::setDefaultInput(); Console::setOutput(output); }
-            template <typename inputType, typename outputType> explicit Console(outputType output, inputType input) : errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
+            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setDefaultError(); Console::setDefaultInput(); Console::setOutput(output); }
+            template <typename inputType, typename outputType> explicit Console(outputType output, inputType input) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
                 #if LINUX_EXISTS
                     , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
                 #endif
                 #if WINDOWS_EXISTS
                     , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
                 #endif
-            , count{}, mode{}, timestamp{} { Console::setDefaultError(); Console::setInput(input); Console::setOutput(output); }
-            template <typename errorType, typename inputType, typename outputType> explicit Console(outputType output, inputType input, errorType error) : errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
+            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setDefaultError(); Console::setInput(input); Console::setOutput(output); }
+            template <typename errorType, typename inputType, typename outputType> explicit Console(outputType output, inputType input, errorType error) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
                 #if LINUX_EXISTS
                     , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
                 #endif
                 #if WINDOWS_EXISTS
                     , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
                 #endif
-            , count{}, mode{}, timestamp{} { Console::setError(error); Console::setInput(input); Console::setOutput(output); }
+            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setError(error); Console::setInput(input); Console::setOutput(output); }
+
+            inline Console(Console&);
+            inline Console(Console&&);
+            inline Console(const Console&);
+            inline Console(const Console&&);
 
             // [Destructor]
             inline ~Console(void) {
@@ -232,20 +328,66 @@
                 #endif
             }
 
-            // Declaration > ...
-            void batch(...) noexcept;
-            void clear(...) noexcept;
-            void end(...) noexcept;
-            void error(...) noexcept;
-            void flush(...) noexcept;
-            void group(...) noexcept;
-            void log(...) noexcept;
-            void prompt(...) noexcept;
+            // Initialization
+                // Count --- MINIFY (Lapys) --- REDACT (Lapys)
+                struct console_counter { private: size_t value; public:
+                    constexpr inline console_counter(void) : value{0u} {}
+                    inline operator size_t(void) noexcept { return this -> value++; }
+                } count;
 
-            // Initialization > ...
-            struct console_counter {} count;
-            struct console_mode {} mode;
-            struct console_timestamp {} timestamp;
+                // Files --- MINIFY (Lapys)
+                struct console_files { private: const Console *console; public:
+                    // [Constructor]
+                    constexpr inline console_files(const Console* console) : console{(Console*) console}, error{this}, input{this}, output{this} {}
+                    constexpr inline console_files(void) : console{NULL}, error{this}, input{this}, output{this} {}
+
+                    // Initialization > (Error, Input, Output)  --- REDACT (Lapys)
+                    struct console_error { private: const console_files *files; public:
+                        constexpr inline console_error(const console_files* consoleFiles) : files{(console_files*) consoleFiles} {}
+                        constexpr inline console_error(void) : files{NULL} {}
+
+                        inline operator FILE*(void) const noexcept { return this -> files -> console -> errorFile; }
+                        inline operator const FILE*(void) const noexcept { return this -> files -> console -> errorFile; }
+                    } error;
+                    struct console_input { private: const console_files *files; public:
+                        constexpr inline console_input(const console_files* consoleFiles) : files{(console_files*) consoleFiles} {}
+                        constexpr inline console_input(void) : files{NULL} {}
+
+                        inline operator FILE*(void) const noexcept { return this -> files -> console -> inputFile; }
+                        inline operator const FILE*(void) const noexcept { return this -> files -> console -> inputFile; }
+                    } input;
+                    struct console_output { private: const console_files *files; public:
+                        constexpr inline console_output(const console_files* consoleFiles) : files{(console_files*) consoleFiles} {}
+                        constexpr inline console_output(void) : files{NULL} {}
+
+                        inline operator FILE*(void) const noexcept { return this -> files -> console -> outputFile; }
+                        inline operator const FILE*(void) const noexcept { return this -> files -> console -> outputFile; }
+                    } output;
+                } files;
+
+                // Mode
+                enum modes {BUFFERED, UNBUFFERED} mode;
+
+                // Timestamp
+                struct console_timestamp {} timestamp;
+
+            // Function
+            void buffer(void) noexcept { Console::setStream(Console::$OUTPUT); Console::println(this -> bufferValue); Console::clear(); } // NOTE (Lapys) -> Print the buffered data and clear it.
+            inline void clear(void) noexcept { ::free(this -> bufferValue); this -> bufferLength = 0u; this -> bufferValue = NULL; }
+            void end(void) noexcept; // NOTE (Lapys) -> General-purpose method with multiple semantic meanings e.g.: ending a console group e.t.c.
+            template <typename... types> void error(types... messages) noexcept { Console::setStream(Console::isBuffered() ? Console::$BUFFER : Console::$ERROR); Console::println(messages...); } // NOTE (Lapys) -> Print an error.
+            inline void flush(void) noexcept { ::fflush(this -> errorFile); ::fflush(this -> inputFile); ::fflush(this -> outputFile); } // NOTE (Lapys) -> Flush the error, input & output file.
+            void group(...) noexcept;
+            template <typename... types> void log(types... messages) noexcept { Console::setStream(Console::isBuffered() ? Console::$BUFFER : Console::$OUTPUT); Console::println(messages...); }
+            template <typename... types> friend inline void print(types...) noexcept;
+            void prompt(...) noexcept; // NOTE (Lapys) -> Scan an input.
+            template <typename... types> friend inline void scan(types...) noexcept;
+
+            // [Operator] > [=]
+            inline Console& operator =(Console&) const noexcept;
+            inline Console& operator =(Console&&) const noexcept;
+            inline Console& operator =(const Console&) const noexcept;
+            inline Console& operator =(const Console&&) const noexcept;
     } console;
 
 /* Namespace */
@@ -274,6 +416,12 @@
 
         // Is Console
         inline bool Console::isConsole(void) noexcept { return this == &console; }
+
+        // Print
+        template <typename... types> inline void print(types... messages) noexcept { console.print(messages...); }
+
+        // Scan
+        template <typename... types> inline void scan(types... messages) noexcept { console.scan(messages...); }
 
         // Set ...
         inline void Console::setError(FILE* errorFile) noexcept { this -> errorFile = errorFile; }
@@ -310,6 +458,10 @@ typedef Clock::Date Date;
 
 /* Main */
 int main(void) {
+    const char string[14] {'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!', '\0'};
+    console.print(string);
+    // console.log("Hello, World!");
+
     // Return
     return EXIT_SUCCESS;
 }
