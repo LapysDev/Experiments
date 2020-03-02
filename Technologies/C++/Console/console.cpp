@@ -1,21 +1,24 @@
 /* Import */
     // [C Standard Library]
     #include <float.h> // Floating-Point --- NOTE (Lapys) -> Number-to-string conversion.
-    #include <math.h> // Mathematics
+    #include <math.h> // Mathematics --- NOTE (Lapys) -> Number-to-string conversion.
     #include <stdlib.h> // Standard Library
-    #include <stdio.h> // Standard Input-Output
+    #include <stdio.h> // Standard Input-Output --- NOTE (Lapys) -> Standard library console input/ output.
 
     // [Platform-Dependent]
-    #include <windows.h> // Windows
+    #include <unistd.h> // UNIX Standard Library --- NOTE (Lapys) -> Linux platform console input/ output.
+    #include <windows.h> // Windows --- NOTE (Lapys) -> Windows platform console input/ output.
 
     // [...]
-    #include <conio.h> // Console Input-Output
+    #include <conio.h> // Console Input-Output --- NOTE (Lapys) -> Non-standard console input/ output.
+
+#include <iostream>
 
 /* Definition > ... */
-#define ANDROID_EXISTS defined(__ANDROID__)
-#define LINUX_EXISTS defined(__gnu_linux__) || defined(linux) || defined(__linux) || defined(__linux__)
-#define MACINTOSH_EXISTS defined(__APPLE__ ) && defined(__MACH__)
-#define WINDOWS_EXISTS defined(__TOS_WIN__) || defined(_WIN16) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN32_WCE) || defined(_WIN64) || defined(__WINDOWS__)
+#define ANDROID_EXISTS (defined(__ANDROID__))
+#define LINUX_EXISTS (defined(__gnu_linux__) || defined(linux) || defined(__linux) || defined(__linux__))
+#define MACINTOSH_EXISTS (defined(__APPLE__ ) && defined(__MACH__))
+#define WINDOWS_EXISTS (defined(__TOS_WIN__) || defined(_WIN16) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN32_WCE) || defined(_WIN64) || defined(__WINDOWS__))
 
 /* Global */
     /* Clock */
@@ -38,357 +41,313 @@
             void getYear(...) noexcept;
     } clock;
 
-    /* Console --- WARN (Lapys) -> Supports ASCII characters only. */
-    class Console { friend int main(void); // UPDATE (Lapys)
+    /* Console --- WARN (Lapys) -> Supports ASCII characters only (`char8_t`, `char16_t`, `char32_t` and `wchar_t` types are ignored). */
+    class Console { friend int main(void); // UPDATE (Lapys) -> For testing only.
         // [...]
         private:
-            // Definition > (Buffer ..., (Error, Input, Output) ..., Stream)
-            size_t bufferLength;
-            char *bufferValue;
+            // Definition
+                // Buffer ...
+                size_t bufferLength;
+                char *bufferValue;
 
-            FILE *errorFile, *inputFile, *outputFile;
-            #if LINUX_EXISTS
-                int errorFileDescriptor, inputFileDescriptor, outputFileDescriptor;
-            #endif
-            #if WINDOWS_EXISTS
-                HANDLE errorBufferHandle, inputBufferHandle, outputBufferHandle;
-            #endif
-
-            enum ConsoleStream {$BUFFER, $ERROR, $INPUT, $OUTPUT} stream;
-
-            // Function
-                // Allocate
-                void allocate(void) noexcept {
-                    // Logic
-                    if (NULL == this -> bufferValue)
-                        // Modification > Target > Buffer
-                        this -> bufferValue = (char*) ::malloc(32u * sizeof(char));
-
-                    else {
-                        // Initialization > Buffer Size
-                        size_t bufferSize = 32u;
-
-                        // : Loop > Update > Buffer Size
-                        // : Modification > Target > Buffer
-                        while (this -> bufferLength > bufferSize) bufferSize <<= 1u;
-                        this -> bufferValue = (char*) ::realloc(this -> bufferValue, bufferSize * sizeof(char));
-                    }
-                }
-
-                // Fetch
-                void fetch(...) noexcept; // NOTE (Lapys) -> Atomic scanning.
-
-                // Print --- NOTE (Lapys) -> Print an output.
-                inline void print(const bool) noexcept { std::cout << "[boolean]" << std::endl; }
-                inline void print(const char) noexcept { std::cout << "[character]" << std::endl; }
-                inline void print(char[]) noexcept { std::cout << "[character string]" << std::endl; }
-                inline void print(const char[]) noexcept { std::cout << "[character string]" << std::endl; }
-                inline void print(const double) noexcept { std::cout << "[rational]" << std::endl; }
-                inline void print(const float) noexcept { std::cout << "[rational]" << std::endl; }
-                inline void print(const int) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(const long) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(const long double) noexcept { std::cout << "[rational]" << std::endl; }
-                inline void print(const short) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(const unsigned int) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(const unsigned long) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(const unsigned long long) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(const unsigned short) noexcept { std::cout << "[integral]" << std::endl; }
-                inline void print(void) const noexcept { std::cout << "[]" << std::endl; }
-                template <size_t length> inline void print(char (*)[length]) noexcept { std::cout << "[character string array pointer]" << std::endl; }
-                template <size_t length> inline void print(const char (*)[length]) noexcept { std::cout << "[character string array pointer]" << std::endl; }
-                template <size_t length> inline void print(char (&)[length]) noexcept { std::cout << "[character string array]" << std::endl; }
-                template <size_t length> inline void print(const char (&)[length]) noexcept { std::cout << "[character string array]" << std::endl; }
-                template <typename type> inline void print(type) noexcept { std::cout << "[object]" << std::endl; }
-                template <typename type> inline void print(type*) noexcept { std::cout << "[pointer]" << std::endl; }
-                template <size_t length, typename type> inline void print(type (*)[length]) noexcept { std::cout << "[array pointer]" << std::endl; }
-                template <size_t length, typename type> inline void print(type (&)[length]) noexcept { std::cout << "[array]" << std::endl; }
-                template <typename type, typename... types> inline void print(type (*)(types...)) noexcept { std::cout << "[function pointer]" << std::endl; }
-                template <typename type, typename... types> inline void print(type (&)(types...)) noexcept { std::cout << "[function]" << std::endl; }
-                template <typename type, typename... types> inline void print(type (*)(types..., ...)) noexcept { std::cout << "[function pointer]" << std::endl; }
-                template <typename type, typename... types> inline void print(type (&)(types..., ...)) noexcept { std::cout << "[function]" << std::endl; }
-                template <typename type, typename... types> inline void print(type, types...) noexcept { std::cout << "[...]" << std::endl; }
-                template <size_t length, typename type, typename... types> inline void print(type (*)[length], types...) noexcept { std::cout << "[...]" << std::endl; }
-                template <size_t length, typename type, typename... types> inline void print(type (&)[length], types...) noexcept { std::cout << "[...]" << std::endl; }
-                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (*)(message_types...), types...) noexcept { std::cout << "[...]" << std::endl; }
-                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (&)(message_types...), types...) noexcept { std::cout << "[...]" << std::endl; }
-                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (*)(message_types..., ...), types...) noexcept { std::cout << "[...]" << std::endl; }
-                template <typename message_type, typename... message_types, typename... types> inline void print(message_type (&)(message_types..., ...), types...) noexcept { std::cout << "[...]" << std::endl; }
-
-                // Print Line
-                inline void println(void) noexcept { std::endl(std::cout); }
-                template <typename... types> void println(types... messages) noexcept { Console::print(messages...); }
-
-                // Print Pretty
-                void printp(...) noexcept;
-
-                // Print Pretty Line
-                void printpln(...) noexcept;
-
-                // Put --- NOTE (Lapys) -> Atomic printing.
-                inline bool put(const char character) noexcept { ::putchar(character); return true; }
+                // Error, Input, Output --- NOTE (Lapys) -> Alias: stream.
+                FILE *errorFile, *inputFile, *outputFile;
                 #if LINUX_EXISTS
-                    inline bool put(const char character, const int fileDescriptor) noexcept { int fileWriteProcedureEvaluation = ::write(fileDescriptor, &character, 1u); return fileWriteProcedureEvaluation ^ -1; }
+                    int errorFileDescriptor, inputFileDescriptor, outputFileDescriptor;
                 #endif
                 #if WINDOWS_EXISTS
-                    inline bool put(const char character, HANDLE consoleBufferHandle, COORD* coordinates) noexcept {
-                        // Initialization > Console Buffer Bytes Written
-                        static DWORD consoleBufferBytesWritten;
+                    HANDLE errorBufferHandle, inputBufferHandle, outputBufferHandle;
+                #endif
 
-                        // Logic > ...
-                        switch (character) {
-                            case '\a': break;
-                            case '\b': --(coordinates -> X); break;
-                            case '\f': break;
-                            case '\n': ++(coordinates -> Y); break;
-                            case '\r': coordinates -> X = 0; break;
-                            case '\t': while (coordinates -> X % 4) ++(coordinates -> X); break;
-                            case '\v': while (coordinates -> Y % 4) ++(coordinates -> Y); break;
-                            default: {
-                                // Initialization > Console Buffer Write Procedure Evaluation
-                                // : Logic > Return
-                                BOOL consoleBufferWriteProcedureEvaluation = ::WriteConsoleOutputCharacter(consoleBufferHandle, &character, 1uL, *coordinates, &consoleBufferBytesWritten);
+                // Stream
+                enum {$BUFFER, $ERROR, $INPUT, $OUTPUT} stream;
 
-                                if (1 != consoleBufferBytesWritten || false == consoleBufferWriteProcedureEvaluation) return false;
-                                else ++(coordinates -> X);
-                            } break;
+            // Declaration > ...
+            const FILE* getDefaultErrorFile(void) const noexcept;
+            const FILE* getDefaultInputFile(void) const noexcept;
+            const FILE* getDefaultOutputFile(void) const noexcept;
+            inline const FILE* getFile(void) const noexcept;
+            inline bool hasErrorFile(void) const noexcept;
+            inline bool hasInputFile(void) const noexcept;
+            inline bool hasOutputFile(void) const noexcept;
+            inline bool isBuffered(void) const noexcept;
+            inline bool isSpecial(void) const noexcept;
+            void setError(FILE*) noexcept; void setError(const FILE*) noexcept; void setError(void) noexcept;
+            void setInput(FILE*) noexcept; void setInput(const FILE*) noexcept; void setInput(void) noexcept;
+            void setOutput(FILE*) noexcept; void setOutput(const FILE*) noexcept; void setOutput(void) noexcept;
+
+            #if LINUX_EXISTS
+                int getDefaultErrorFileDescriptor(void) const noexcept;
+                int getDefaultInputFileDescriptor(void) const noexcept;
+                int getDefaultOutputFileDescriptor(void) const noexcept;
+                inline int getFileDescriptor(void) const noexcept;
+                inline bool hasErrorFileDescriptor(void) const noexcept;
+                inline bool hasInputFileDescriptor(void) const noexcept;
+                inline bool hasOutputFileDescriptor(void) const noexcept;
+                void setError(const int) noexcept;
+                void setInput(const int) noexcept;
+                void setOutput(const int) noexcept;
+            #endif
+
+            #if WINDOWS_EXISTS
+                HANDLE createDefaultErrorBufferHandle(void) const noexcept;
+                HANDLE createDefaultInputBufferHandle(void) const noexcept;
+                HANDLE createDefaultOutputBufferHandle(void) const noexcept;
+                HANDLE getDefaultErrorBufferHandle(void) const noexcept;
+                HANDLE getDefaultInputBufferHandle(void) const noexcept;
+                HANDLE getDefaultOutputBufferHandle(void) const noexcept;
+                inline HANDLE getBufferHandle(void) const noexcept;
+                inline bool hasErrorBufferHandle(void) const noexcept;
+                inline bool hasInputBufferHandle(void) const noexcept;
+                inline bool hasOutputBufferHandle(void) const noexcept;
+                void setError(HANDLE) noexcept;
+                void setInput(HANDLE) noexcept;
+                void setOutput(HANDLE) noexcept;
+            #endif
+
+        // [...]
+        protected:
+            // Class > Console Stream
+            struct ConsoleStream { friend Console;
+                // [...]
+                private:
+                    // Definition > (Type, Value) --- MINIFY (Lapys)
+                    struct state { public:
+                        bool buffer_handle; bool file; bool file_descriptor;
+                        constexpr inline state(const bool value = false) : buffer_handle{value}, file{value}, file_descriptor{value} {}
+                    } type;
+
+                    struct { public: FILE *file; // NOTE (Lapys) -> Unsupported members are typed as `void*` instead.
+                        #if LINUX_EXISTS
+                            int descriptor;
+                        #else
+                            void *descriptor;
+                        #endif
+                        #if WINDOWS_EXISTS
+                            HANDLE handle;
+                        #else
+                            void *handle;
+                        #endif
+                    } value;
+
+                // [...]
+                public:
+                    // [Constructor] --- MINIFY (Lapys)
+                    inline ConsoleStream(FILE* file) : type{false}, value{} { this -> type.file = true; this -> value.file = file; }
+                    inline ConsoleStream(const FILE* file) : type{false}, value{} { this -> type.file = true; this -> value.file = (FILE*) file; }
+                    #if LINUX_EXISTS
+                        inline ConsoleStream(const int fileDescriptor) : type{false}, value{} { this -> type.file_descriptor = true; this -> value.descriptor = fileDescriptor; }
+                        inline ConsoleStream(FILE* file, const int fileDescriptor) : type{false}, value{} { this -> type.file = true; this -> type.file_descriptor = true; this -> value.descriptor = fileDescriptor; this -> value.file = file; }
+                        inline ConsoleStream(const FILE* file, const int fileDescriptor) : type{false}, value{} { this -> type.file = true; this -> type.file_descriptor = true; this -> value.descriptor = fileDescriptor; this -> value.file = (FILE*) file; }
+                    #endif
+                    #if LINUX_EXISTS && WINDOWS_EXISTS
+                        inline ConsoleStream(FILE* file, const int fileDescriptor, HANDLE bufferHandle) : type{false}, value{} { this -> type.buffer_handle = true; this -> type.file = true; this -> type.file_descriptor = true; this -> value.descriptor = fileDescriptor; this -> value.file = file; this -> value.handle = bufferHandle; }
+                        inline ConsoleStream(const FILE* file, const int fileDescriptor, HANDLE bufferHandle) : type{false}, value{} { this -> type.buffer_handle = true; this -> type.file = true; this -> type.file_descriptor = true; this -> value.descriptor = fileDescriptor; this -> value.file = (FILE*) file; this -> value.handle = bufferHandle; }
+                    #endif
+                    #if WINDOWS_EXISTS
+                        inline ConsoleStream(HANDLE bufferHandle) : type{false}, value{} { this -> type.buffer_handle = true; this -> value.handle = bufferHandle; }
+                        inline ConsoleStream(FILE* file, HANDLE bufferHandle) : type{false}, value{} { this -> type.buffer_handle = true; this -> type.file = true; this -> value.file = file; this -> value.handle = bufferHandle; }
+                        inline ConsoleStream(const FILE* file, HANDLE bufferHandle) : type{false}, value{} { this -> type.buffer_handle = true; this -> type.file = true; this -> value.file = (FILE*) file; this -> value.handle = bufferHandle; }
+                    #endif
+            };
+
+            // Function --- NOTE (Lapys) -> Atomic routines.
+                // Fetch
+                #if WINDOWS_EXISTS
+                    inline bool fetch(char* character) noexcept {
+                        // Initialization > Console Input Buffer ...
+                        DWORD consoleInputBufferEventsReadCount;
+                        INPUT_RECORD consoleInputBufferInformation[1];
+
+                        // Logic --- NOTE (Lapys) -> Synchronous.
+                        if (::ReadConsoleInput(Console::getDefaultInputBufferHandle(), consoleInputBufferInformation, 1uL, &consoleInputBufferEventsReadCount)) {
+                            // Logic
+                            if (consoleInputBufferInformation -> EventType == KEY_EVENT) {
+                                // Constant > Console Input Buffer Key Event Record
+                                const KEY_EVENT_RECORD& consoleInputBufferKeyEventRecord = consoleInputBufferInformation -> Event.KeyEvent;
+
+                                // Logic
+                                if (consoleInputBufferKeyEventRecord.bKeyDown)
+                                *character = consoleInputBufferKeyEventRecord.uChar.AsciiChar;
+                            }
+
+                            return true;
                         }
 
-                        // ...; Return
-                        ::SetConsoleCursorPosition(consoleBufferHandle, *coordinates);
-                        return true;
+                        else
+                            return false;
                     }
+
+                #else
+                    inline bool fetch(char* character) noexcept {
+                        // Initialization > Evaluation
+                        int evaluation;
+
+                        // ...; Update > Evaluation --- NOTE (Lapys) -> Synchronous.
+                        while (0 == ::_kbhit()) continue;
+                        evaluation = ::_getch();
+
+                        // Logic > ...
+                        if (ERR == evaluation) { *character = evaluation; return true; }
+                        else return false;
+                    }
+
                 #endif
 
-                // Scan
-                void scan(...) noexcept;
-
-            // Function*
-                // Get Default (Error, Input, Output) File
-                inline const FILE* getDefaultErrorFile(void) noexcept { return stderr; }
-                inline const FILE* getDefaultInputFile(void) noexcept { return stdin; }
-                inline const FILE* getDefaultOutputFile(void) noexcept { return stdout; }
-
-                // Get Default (Error, Input, Output) File Descriptor
+                // Put
                 #if LINUX_EXISTS
-                    inline int getDefaultErrorFileDescriptor(void) noexcept { return STDERR_FILENO; }
-                    inline int getDefaultInputFileDescriptor(void) noexcept { return STDIN_FILENO; }
-                    inline int getDefaultOutputFileDescriptor(void) noexcept { return STDOUT_FILENO; }
+                    inline bool put(char string[], size_t length = 0u) noexcept { if (0u == length) while (*(string + length)) ++length; return ::write(Console::getFileDescriptor(), string, length) ^ -1; }
+                    inline bool put(const char string[], size_t length = 0u) noexcept { if (0u == length) while (*(string + length)) ++length; return ::write(Console::getFileDescriptor(), string, length) ^ -1; }
+                #elif WINDOWS_EXISTS
+                    inline bool put(char string[], size_t = 0u) noexcept {
+                        // Initialization > Console Buffer ...
+                        static DWORD consoleBufferBytesWritten = 0;
+                        HANDLE consoleBufferHandle = Console::getBufferHandle();
+                        CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInformation {};
+
+                        BOOL consoleBufferWriteProcedureEvaluation = true;
+
+                        // Update > ...; Loop
+                        ::GetConsoleScreenBufferInfo(consoleBufferHandle, &consoleScreenBufferInformation);
+                        for (char *iterator = (char*) string; consoleBufferBytesWritten != 1L && consoleBufferWriteProcedureEvaluation; ++iterator) {
+                            // Constant > Character
+                            const char character = *iterator;
+
+                            // Logic
+                            if ('\0' == character || '\a' == character || '\b' == character || '\f' == character || '\n' == character || '\r' == character || '\t' == character || '\v' == character) {
+                                // ...
+                                consoleBufferWriteProcedureEvaluation = ::WriteConsoleOutputCharacter(
+                                    consoleBufferHandle, string, (DWORD) (iterator - string),
+                                    consoleScreenBufferInformation.dwCursorPosition,
+                                    &consoleBufferBytesWritten
+                                );
+
+                                // Logic
+                                if (consoleBufferWriteProcedureEvaluation) {
+                                    // ... Update ...
+                                    switch (character) {
+                                        case '\a': ::MessageBeep(0xFFFFFFFF); break;
+                                        case '\b': --consoleScreenBufferInformation.dwCursorPosition.X; break;
+                                        case '\f': --consoleScreenBufferInformation.dwCursorPosition.X; ++consoleScreenBufferInformation.dwCursorPosition.Y; break;
+                                        case '\n': consoleScreenBufferInformation.dwCursorPosition.X = 0; ++consoleScreenBufferInformation.dwCursorPosition.Y; break;
+                                        case '\r': consoleScreenBufferInformation.dwCursorPosition.X = 0; break;
+                                        case '\t': while (consoleScreenBufferInformation.dwCursorPosition.X % 4) ++consoleScreenBufferInformation.dwCursorPosition.X; break;
+                                        case '\v': while (consoleScreenBufferInformation.dwCursorPosition.Y % 4) ++consoleScreenBufferInformation.dwCursorPosition.Y; break;
+                                        default: consoleScreenBufferInformation.dwCursorPosition.X += consoleBufferBytesWritten;
+                                    }
+                                    consoleBufferWriteProcedureEvaluation = character;
+                                    string = iterator + 1;
+                                }
+                            }
+                        }
+
+                        ::SetConsoleCursorPosition(consoleBufferHandle, consoleScreenBufferInformation.dwCursorPosition);
+
+                        // Return
+                        return consoleBufferWriteProcedureEvaluation;
+                    }
+                    inline bool put(const char string[], size_t length = 0u) noexcept { return Console::put((char*) string, length); }
+                #else
+                    inline bool put(char string[], const size_t = 0u) noexcept { return ::fprintf(Console::getFile(), "%s", string) > 0; }
+                    inline bool put(const char string[], const size_t = 0u) noexcept { return ::fprintf(Console::getFile(), "%s", string) > 0; }
                 #endif
 
-                // Get Default (Error, Input, Output) Buffer Handle
-                #if WINDOWS_EXISTS
-                    inline HANDLE getDefaultErrorBufferHandle(void) noexcept; // *NOTE (Lapys) -> Requires the `console` object to be defined.
-                    inline HANDLE getDefaultInputBufferHandle(void) noexcept;
-                    inline HANDLE getDefaultOutputBufferHandle(void) noexcept;
-
-                    // NOTE (Lapys) -> Helpers for the `getDefault...BufferHandle` methods.
-                    inline HANDLE requestDefaultErrorBufferHandle(void) noexcept { return Console::requestDefaultOutputBufferHandle(); }
-                    inline HANDLE requestDefaultInputBufferHandle(void) noexcept { return ::CreateFile("CONIN$", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); }
-                    inline HANDLE requestDefaultOutputBufferHandle(void) noexcept { return ::CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); }
-                #endif
-
-                // Has Default (Error, Input, Output) File
-                inline bool hasDefaultErrorFile(void) noexcept { return this -> errorFile == Console::getDefaultErrorFile(); }
-                inline bool hasDefaultInputFile(void) noexcept { return this -> inputFile == Console::getDefaultInputFile(); }
-                inline bool hasDefaultOutputFile(void) noexcept { return this -> outputFile == Console::getDefaultOutputFile(); }
-
-                // Has (Error, Input, Output) File
-                inline bool hasErrorFile(void) noexcept { return NULL != this -> errorFile; }
-                inline bool hasInputFile(void) noexcept { return NULL != this -> inputFile; }
-                inline bool hasOutputFile(void) noexcept { return NULL != this -> outputFile; }
-
-                // Has (Default) (Error, Input, Output) File Descriptor
-                #if LINUX_EXISTS
-                    inline bool hasDefaultErrorFileDescriptor(void) noexcept { return this -> errorFileDescriptor == Console::getDefaultErrorFileDescriptor(); }
-                    inline bool hasDefaultInputFileDescriptor(void) noexcept { return this -> inputFileDescriptor == Console::getDefaultInputFileDescriptor(); }
-                    inline bool hasDefaultOutputFileDescriptor(void) noexcept { return this -> outputFileDescriptor == Console::getDefaultOutputFileDescriptor(); }
-
-                    inline bool hasErrorFileDescriptor(void) noexcept { return this -> errorFileDescriptor ^ -1; }
-                    inline bool hasInputFileDescriptor(void) noexcept { return this -> inputFileDescriptor ^ -1; }
-                    inline bool hasOutputFileDescriptor(void) noexcept { return this -> outputFileDescriptor ^ -1; }
-                #endif
-
-                // Has (Default) (Error, Input, Output) Buffer Handle
-                #if WINDOWS_EXISTS
-                    inline bool hasDefaultErrorBufferHandle(void) noexcept; // *NOTE (Lapys) -> Requires the `console` object to be defined.
-                    inline bool hasDefaultInputBufferHandle(void) noexcept;
-                    inline bool hasDefaultOutputBufferHandle(void) noexcept;
-
-                    inline bool hasErrorBufferHandle(void) noexcept { return INVALID_HANDLE_VALUE != this -> errorBufferHandle && NULL != this -> errorBufferHandle; }
-                    inline bool hasInputBufferHandle(void) noexcept { return INVALID_HANDLE_VALUE != this -> inputBufferHandle && NULL != this -> inputBufferHandle; }
-                    inline bool hasOutputBufferHandle(void) noexcept { return INVALID_HANDLE_VALUE != this -> outputBufferHandle && NULL != this -> outputBufferHandle; }
-                #endif
-
-                // Is Buffered
-                inline bool isBuffered(void) const noexcept { return Console::mode == Console::BUFFERED; }
-
-                // Is Console --- *NOTE (Lapys) -> Requires the `console` object to be defined.
-                inline bool isConsole(void) noexcept;
-
-                // Set Default (Error, Input, Output)
-                inline void setDefaultError(void) noexcept {
-                    this -> errorFile = (FILE*) Console::getDefaultErrorFile();
-                    #if LINUX_EXISTS
-                        this -> errorFileDescriptor = Console::getDefaultErrorFileDescriptor();
-                    #endif
-                    #if WINDOWS_EXISTS
-                        this -> errorBufferHandle = Console::getDefaultErrorBufferHandle();
-                    #endif
-                }
-                inline void setDefaultInput(void) noexcept {
-                    this -> inputFile = (FILE*) Console::getDefaultInputFile();
-                    #if LINUX_EXISTS
-                        this -> inputFileDescriptor = Console::getDefaultInputFileDescriptor();
-                    #endif
-                    #if WINDOWS_EXISTS
-                        this -> inputBufferHandle = Console::getDefaultInputBufferHandle();
-                    #endif
-                }
-                inline void setDefaultOutput(void) noexcept {
-                    this -> outputFile = (FILE*) Console::getDefaultOutputFile();
-                    #if LINUX_EXISTS
-                        this -> outputFileDescriptor = Console::getDefaultOutputFileDescriptor();
-                    #endif
-                    #if WINDOWS_EXISTS
-                        this -> outputBufferHandle = Console::getDefaultOutputBufferHandle();
-                    #endif
-                }
-
-                // Set (Error, Input, Output) --- CONSIDERATION (Lapys) -> These functions are invoked before definition on the instantiation of the `console` object.
-                inline void setError(FILE*) noexcept; inline void setError(const FILE*) noexcept;
-                inline void setInput(FILE*) noexcept; inline void setInput(const FILE*) noexcept;
-                inline void setOutput(FILE*) noexcept; inline void setOutput(const FILE*) noexcept;
-                #if LINUX_EXISTS
-                    inline void setError(const int) noexcept;
-                    inline void setInput(const int) noexcept;
-                    inline void setOutput(const int) noexcept;
-                #endif
-                #if WINDOWS_EXISTS
-                    inline void setError(HANDLE) noexcept;
-                    inline void setInput(HANDLE) noexcept;
-                    inline void setOutput(HANDLE) noexcept;
-                #endif
-
-                // Set Stream
-                inline void setStream(const ConsoleStream STREAM) noexcept { this -> stream = STREAM; }
+            // Function
+                // Print
+                inline void print(const bool) const noexcept { std::cout << "[boolean]" << std::endl; }
+                inline void print(const char) const noexcept { std::cout << "[character]" << std::endl; }
+                inline void print(char[]) const noexcept { std::cout << "[string]" << std::endl; }
+                inline void print(const char[]) const noexcept { std::cout << "[constant string]" << std::endl; }
+                inline void print(const double) const noexcept { std::cout << "[rational]" << std::endl; }
+                inline void print(const float) const noexcept { std::cout << "[rational]" << std::endl; }
+                inline void print(const int) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const long) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const long double) const noexcept { std::cout << "[rational]" << std::endl; }
+                inline void print(const long long) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const short) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned int) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned long) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned long long) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(const unsigned short) const noexcept { std::cout << "[integral]" << std::endl; }
+                inline void print(void) const noexcept { std::cout << "[]" << std::endl; }
+                template <size_t length> inline void print(char (*)[length]) const noexcept { std::cout << "[array pointer string]" << std::endl; }
+                template <size_t length> inline void print(char (&)[length]) const noexcept { std::cout << "[array string]" << std::endl; }
+                template <typename type> inline void print(type) const noexcept { std::cout << "[object]" << std::endl; }
+                template <typename type> inline void print(type*) const noexcept { std::cout << "[pointer]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (*)(types...)) const noexcept { std::cout << "[function pointer (template)]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (*)(types..., ...)) const noexcept { std::cout << "[function pointer (template variadic)]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (&)(types...)) const noexcept { std::cout << "[function (template)]" << std::endl; }
+                template <typename type, typename... types> inline void print(type (&)(types..., ...)) const noexcept { std::cout << "[function (template variadic)]" << std::endl; }
+                template <size_t length, typename type> inline void print(type (*)[length]) const noexcept { std::cout << "[array pointer]" << std::endl; }
+                template <size_t length, typename type> inline void print(type (&)[length]) const noexcept { std::cout << "[array]" << std::endl; }
+                template <typename type, typename... types> inline void print(type, types...) const noexcept { std::cout << "[...]" << std::endl; }
 
         // [...]
         public:
+            // Initialization > ... --- REDACT (Lapys)
+            const struct ConsoleBuffer { private: const Console *console; public:
+                constexpr inline ConsoleBuffer(const Console* console) : console{console} {}
+                constexpr inline ConsoleBuffer(void) : console{NULL} {}
+
+                inline operator char*(void) const noexcept { char *buffer = (char*) ::calloc(this -> console -> bufferLength + 1u, sizeof(char)); ::memcpy(buffer, this -> console -> bufferValue, this -> console -> bufferLength * sizeof(char)); return buffer; }
+                inline operator const char*(void) const noexcept { char *buffer = (char*) ::calloc(this -> console -> bufferLength + 1u, sizeof(char)); ::memcpy(buffer, this -> console -> bufferValue, this -> console -> bufferLength * sizeof(char)); return (const char*) buffer; }
+            } buffer;
+
+            struct ConsoleFiles {
+                private: const Console *console;
+                protected: struct ConsoleFile { private: FILE* const* file; public:
+                    constexpr inline ConsoleFile(FILE* const* consoleFile) : file{consoleFile} {}
+                    constexpr inline ConsoleFile(void) : file{NULL} {}
+
+                    inline operator FILE*(void) const noexcept { return *(this -> file); }
+                    inline operator const FILE*(void) const noexcept { return *(this -> file); }
+                };
+                public: ConsoleFile error, input, output;
+
+                constexpr inline ConsoleFiles(const Console* console) : console{console}, error{&(console -> errorFile)}, input{&(console -> inputFile)}, output{&(console -> outputFile)} {}
+                constexpr inline ConsoleFiles(void) : console{NULL}, error{NULL}, input{NULL}, output{NULL} {}
+            } files;
+
+            // Descriptors
+            #if LINUX_EXISTS
+                struct ConsoleFileDescriptors {
+                    private: const Console *console;
+                    protected: struct ConsoleFileDescriptor { private: const int *fileDescriptor; public:
+                        constexpr inline ConsoleFileDescriptor(const int* consoleFileDescriptor) : fileDescriptor{consoleFileDescriptor} {}
+                        constexpr inline ConsoleFileDescriptor(void) : fileDescriptor{NULL} {}
+
+                        inline operator int(void) const noexcept { return *(this -> fileDescriptor); }
+                    };
+                    public: ConsoleFileDescriptor error, input, output;
+
+                    constexpr inline ConsoleFileDescriptors(const Console* console) : console{console}, error{&(console -> errorFileDescriptor)}, input{&(console -> inputFileDescriptor)}, output{&(console -> outputFileDescriptor)} {}
+                    constexpr inline ConsoleFileDescriptors(void) : console{NULL}, error{NULL}, input{NULL}, output{NULL} {}
+                } descriptors;
+            #endif
+
+            // Handles
+            #if WINDOWS_EXISTS
+                struct ConsoleBufferHandles {
+                    private: const Console *console;
+                    protected: struct ConsoleBufferHandle { private: const HANDLE *handle; public:
+                        constexpr inline ConsoleBufferHandle(const HANDLE* consoleBufferHandle) : handle{consoleBufferHandle} {}
+                        constexpr inline ConsoleBufferHandle(void) : handle{NULL} {}
+
+                        inline operator HANDLE(void) const noexcept { return *(this -> handle); }
+                    };
+                    public: ConsoleBufferHandle error, input, output;
+
+                    constexpr inline ConsoleBufferHandles(const Console* console) : console{console}, error{&(console -> errorBufferHandle)}, input{&(console -> inputBufferHandle)}, output{&(console -> outputBufferHandle)} {}
+                    constexpr inline ConsoleBufferHandles(void) : console{NULL}, error{NULL}, input{NULL}, output{NULL} {}
+                } handles;
+            #endif
+
             // [Constructor]
-            Console(void) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
-                #if LINUX_EXISTS
-                    , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
-                #endif
-                #if WINDOWS_EXISTS
-                    , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
-                #endif
-            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setDefaultError(); Console::setDefaultInput(); Console::setDefaultOutput(); }
-            template <typename outputType> explicit Console(outputType output) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
-                #if LINUX_EXISTS
-                    , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
-                #endif
-                #if WINDOWS_EXISTS
-                    , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
-                #endif
-            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setDefaultError(); Console::setDefaultInput(); Console::setOutput(output); }
-            template <typename inputType, typename outputType> explicit Console(outputType output, inputType input) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
-                #if LINUX_EXISTS
-                    , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
-                #endif
-                #if WINDOWS_EXISTS
-                    , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
-                #endif
-            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setDefaultError(); Console::setInput(input); Console::setOutput(output); }
-            template <typename errorType, typename inputType, typename outputType> explicit Console(outputType output, inputType input, errorType error) : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}
-                #if LINUX_EXISTS
-                    , errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}
-                #endif
-                #if WINDOWS_EXISTS
-                    , errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}
-                #endif
-            , stream{}, count{}, files{this}, mode{Console::modes::UNBUFFERED}, timestamp{} { Console::setError(error); Console::setInput(input); Console::setOutput(output); }
-
-            inline Console(Console&);
-            inline Console(Console&&);
-            inline Console(const Console&);
-            inline Console(const Console&&);
-
-            // [Destructor]
-            inline ~Console(void) {
-                // Logic > Deletion
-                #if WINDOWS_EXISTS
-                    ::CloseHandle(this -> errorBufferHandle);
-                    ::CloseHandle(this -> inputBufferHandle);
-                    ::CloseHandle(this -> outputBufferHandle);
-
-                #else
-                    if (Console::hasErrorFile()) ::fclose(this -> errorFile);
-                    if (Console::hasInputFile()) ::fclose(this -> inputFile);
-                    if (Console::hasOutputFile()) ::fclose(this -> outputFile);
-                #endif
-            }
-
-            // Initialization
-                // Count --- MINIFY (Lapys) --- REDACT (Lapys)
-                struct console_counter { private: size_t value; public:
-                    constexpr inline console_counter(void) : value{0u} {}
-                    inline operator size_t(void) noexcept { return this -> value++; }
-                } count;
-
-                // Files --- MINIFY (Lapys)
-                struct console_files { private: const Console *console; public:
-                    // [Constructor]
-                    constexpr inline console_files(const Console* console) : console{(Console*) console}, error{this}, input{this}, output{this} {}
-                    constexpr inline console_files(void) : console{NULL}, error{this}, input{this}, output{this} {}
-
-                    // Initialization > (Error, Input, Output)  --- REDACT (Lapys)
-                    struct console_error { private: const console_files *files; public:
-                        constexpr inline console_error(const console_files* consoleFiles) : files{(console_files*) consoleFiles} {}
-                        constexpr inline console_error(void) : files{NULL} {}
-
-                        inline operator FILE*(void) const noexcept { return this -> files -> console -> errorFile; }
-                        inline operator const FILE*(void) const noexcept { return this -> files -> console -> errorFile; }
-                    } error;
-                    struct console_input { private: const console_files *files; public:
-                        constexpr inline console_input(const console_files* consoleFiles) : files{(console_files*) consoleFiles} {}
-                        constexpr inline console_input(void) : files{NULL} {}
-
-                        inline operator FILE*(void) const noexcept { return this -> files -> console -> inputFile; }
-                        inline operator const FILE*(void) const noexcept { return this -> files -> console -> inputFile; }
-                    } input;
-                    struct console_output { private: const console_files *files; public:
-                        constexpr inline console_output(const console_files* consoleFiles) : files{(console_files*) consoleFiles} {}
-                        constexpr inline console_output(void) : files{NULL} {}
-
-                        inline operator FILE*(void) const noexcept { return this -> files -> console -> outputFile; }
-                        inline operator const FILE*(void) const noexcept { return this -> files -> console -> outputFile; }
-                    } output;
-                } files;
-
-                // Mode
-                enum modes {BUFFERED, UNBUFFERED} mode;
-
-                // Timestamp
-                struct console_timestamp {} timestamp;
-
-            // Function
-            void buffer(void) noexcept { Console::setStream(Console::$OUTPUT); Console::println(this -> bufferValue); Console::clear(); } // NOTE (Lapys) -> Print the buffered data and clear it.
-            inline void clear(void) noexcept { ::free(this -> bufferValue); this -> bufferLength = 0u; this -> bufferValue = NULL; }
-            void end(void) noexcept; // NOTE (Lapys) -> General-purpose method with multiple semantic meanings e.g.: ending a console group e.t.c.
-            template <typename... types> void error(types... messages) noexcept { Console::setStream(Console::isBuffered() ? Console::$BUFFER : Console::$ERROR); Console::println(messages...); } // NOTE (Lapys) -> Print an error.
-            inline void flush(void) noexcept { ::fflush(this -> errorFile); ::fflush(this -> inputFile); ::fflush(this -> outputFile); } // NOTE (Lapys) -> Flush the error, input & output file.
-            void group(...) noexcept;
-            template <typename... types> void log(types... messages) noexcept { Console::setStream(Console::isBuffered() ? Console::$BUFFER : Console::$OUTPUT); Console::println(messages...); }
-            template <typename... types> friend inline void print(types...) noexcept;
-            void prompt(...) noexcept; // NOTE (Lapys) -> Scan an input.
-            template <typename... types> friend inline void scan(types...) noexcept;
-
-            // [Operator] > [=]
-            inline Console& operator =(Console&) const noexcept;
-            inline Console& operator =(Console&&) const noexcept;
-            inline Console& operator =(const Console&) const noexcept;
-            inline Console& operator =(const Console&&) const noexcept;
-    } console;
+            inline Console(void);
+            inline Console(const ConsoleStream);
+            inline Console(const ConsoleStream, const ConsoleStream);
+            inline Console(const ConsoleStream, const ConsoleStream, const ConsoleStream);
+    } console {};
 
 /* Namespace */
     /* Mathematics */
@@ -400,56 +359,195 @@
 /* Modification */
     /* Clock */
     /* Console */
-        // Get Default ... Buffer Handle
-        #if WINDOWS_EXISTS
-            inline HANDLE Console::getDefaultErrorBufferHandle(void) noexcept { static HANDLE errorBufferHandle = Console::requestDefaultErrorBufferHandle(); if (!Console::isConsole()) errorBufferHandle = Console::requestDefaultErrorBufferHandle(); return errorBufferHandle; }
-            inline HANDLE Console::getDefaultInputBufferHandle(void) noexcept { static HANDLE inputBufferHandle = Console::requestDefaultInputBufferHandle(); if (!Console::isConsole()) inputBufferHandle = Console::requestDefaultInputBufferHandle(); return inputBufferHandle; }
-            inline HANDLE Console::getDefaultOutputBufferHandle(void) noexcept { static HANDLE outputBufferHandle = Console::requestDefaultOutputBufferHandle(); if (!Console::isConsole()) outputBufferHandle = Console::requestDefaultOutputBufferHandle(); return outputBufferHandle; }
+        // ...
+        #if LINUX_EXISTS && WINDOWS_EXISTS
+            #define console__constructor_initializer_list : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}, \
+                errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}, \
+                errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}, \
+                stream{$OUTPUT}, buffer{this}, files{this}, \
+                descriptors{this}, \
+                handles{this}
+        #elif LINUX_EXISTS
+            #define console__constructor_initializer_list : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}, \
+                errorFileDescriptor{-1}, inputFileDescriptor{-1}, outputFileDescriptor{-1}, \
+                stream{$OUTPUT}, buffer{this}, files{this}, \
+                descriptors{this}
+        #elif WINDOWS_EXISTS
+            #define console__constructor_initializer_list : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}, \
+                errorBufferHandle{INVALID_HANDLE_VALUE}, inputBufferHandle{INVALID_HANDLE_VALUE}, outputBufferHandle{INVALID_HANDLE_VALUE}, \
+                stream{$OUTPUT}, buffer{this}, files{this}, \
+                handles{this}
+        #else
+            #define console__constructor_initializer_list : bufferLength{0u}, bufferValue{NULL}, errorFile{NULL}, inputFile{NULL}, outputFile{NULL}, \
+                stream{$OUTPUT}, buffer{this}, files{this}
         #endif
 
-        // Has Default ... Buffer Handle
+        // [Constructor] --- MINIFY (Lapys)
+        inline Console::Console(void) console__constructor_initializer_list { Console::setError(); Console::setInput(); Console::setOutput(); }
+        inline Console::Console(const ConsoleStream output) console__constructor_initializer_list {
+            Console::setError();
+            Console::setInput();
+
+            if (output.type.file) { Console::setOutput((FILE*) output.value.file); if (false == Console::hasOutputFile()) Console::setOutput(Console::getDefaultOutputFile()); } else Console::setOutput(Console::getDefaultOutputFile());
+            #if LINUX_EXISTS
+            if (output.type.file_descriptor) { Console::setOutput(output.value.descriptor); if (false == Console::hasOutputFileDescriptor()) Console::setOutput(Console::getDefaultOutputFileDescriptor()); } else Console::setOutput(Console::getDefaultOutputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+            if (output.type.buffer_handle) { Console::setOutput(output.value.handle); if (false == Console::hasOutputBufferHandle()) Console::setOutput(Console::getDefaultOutputBufferHandle()); } else Console::setOutput(Console::getDefaultOutputBufferHandle());
+            #endif
+        }
+        inline Console::Console(const ConsoleStream output, const ConsoleStream input) console__constructor_initializer_list {
+            Console::setError();
+
+            if (input.type.file) { Console::setInput((FILE*) input.value.file); if (false == Console::hasInputFile()) Console::setInput(Console::getDefaultInputFile()); } else Console::setInput(Console::getDefaultInputFile());
+            #if LINUX_EXISTS
+            if (input.type.file_descriptor) { Console::setInput(input.value.descriptor); if (false == Console::hasInputFileDescriptor()) Console::setInput(Console::getDefaultInputFileDescriptor()); } else Console::setInput(Console::getDefaultInputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+            if (input.type.buffer_handle) { Console::setInput(input.value.handle); if (false == Console::hasInputBufferHandle()) Console::setInput(Console::getDefaultInputBufferHandle()); } else Console::setInput(Console::getDefaultInputBufferHandle());
+            #endif
+
+            if (output.type.file) { Console::setOutput((FILE*) output.value.file); if (false == Console::hasOutputFile()) Console::setOutput(Console::getDefaultOutputFile()); } else Console::setOutput(Console::getDefaultOutputFile());
+            #if LINUX_EXISTS
+            if (output.type.file_descriptor) { Console::setOutput(output.value.descriptor); if (false == Console::hasOutputFileDescriptor()) Console::setOutput(Console::getDefaultOutputFileDescriptor()); } else Console::setOutput(Console::getDefaultOutputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+            if (output.type.buffer_handle) { Console::setOutput(output.value.handle); if (false == Console::hasOutputBufferHandle()) Console::setOutput(Console::getDefaultOutputBufferHandle()); } else Console::setOutput(Console::getDefaultOutputBufferHandle());
+            #endif
+        }
+        inline Console::Console(const ConsoleStream output, const ConsoleStream input, const ConsoleStream error) console__constructor_initializer_list {
+            if (error.type.file) { Console::setError((FILE*) error.value.file); if (false == Console::hasErrorFile()) Console::setError(Console::getDefaultErrorFile()); } else Console::setError(Console::getDefaultErrorFile());
+            #if LINUX_EXISTS
+            if (error.type.file_descriptor) { Console::setError(error.value.descriptor); if (false == Console::hasErrorFileDescriptor()) Console::setError(Console::getDefaultErrorFileDescriptor()); } else Console::setError(Console::getDefaultErrorFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+            if (error.type.buffer_handle) { Console::setError(error.value.handle); if (false == Console::hasErrorBufferHandle()) Console::setError(Console::getDefaultErrorBufferHandle()); } else Console::setError(Console::getDefaultErrorBufferHandle());
+            #endif
+
+            if (input.type.file) { Console::setInput((FILE*) input.value.file); if (false == Console::hasInputFile()) Console::setInput(Console::getDefaultInputFile()); } else Console::setInput(Console::getDefaultInputFile());
+            #if LINUX_EXISTS
+            if (input.type.file_descriptor) { Console::setInput(input.value.descriptor); if (false == Console::hasInputFileDescriptor()) Console::setInput(Console::getDefaultInputFileDescriptor()); } else Console::setInput(Console::getDefaultInputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+            if (input.type.buffer_handle) { Console::setInput(input.value.handle); if (false == Console::hasInputBufferHandle()) Console::setInput(Console::getDefaultInputBufferHandle()); } else Console::setInput(Console::getDefaultInputBufferHandle());
+            #endif
+
+            if (output.type.file) { Console::setOutput((FILE*) output.value.file); if (false == Console::hasOutputFile()) Console::setOutput(Console::getDefaultOutputFile()); } else Console::setOutput(Console::getDefaultOutputFile());
+            #if LINUX_EXISTS
+            if (output.type.file_descriptor) { Console::setOutput(output.value.descriptor); if (false == Console::hasOutputFileDescriptor()) Console::setOutput(Console::getDefaultOutputFileDescriptor()); } else Console::setOutput(Console::getDefaultOutputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+            if (output.type.buffer_handle) { Console::setOutput(output.value.handle); if (false == Console::hasOutputBufferHandle()) Console::setOutput(Console::getDefaultOutputBufferHandle()); } else Console::setOutput(Console::getDefaultOutputBufferHandle());
+            #endif
+        }
+
+        // Create Default ...
         #if WINDOWS_EXISTS
-            inline bool Console::hasDefaultErrorBufferHandle(void) noexcept { return this -> errorBufferHandle == console.errorBufferHandle; }
-            inline bool Console::hasDefaultInputBufferHandle(void) noexcept { return this -> inputBufferHandle == console.inputBufferHandle; }
-            inline bool Console::hasDefaultOutputBufferHandle(void) noexcept { return this -> outputBufferHandle == console.outputBufferHandle; }
+            HANDLE Console::createDefaultErrorBufferHandle(void) const noexcept { return Console::createDefaultOutputBufferHandle(); }
+            HANDLE Console::createDefaultInputBufferHandle(void) const noexcept { return ::CreateFile("CONIN$", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); }
+            HANDLE Console::createDefaultOutputBufferHandle(void) const noexcept { return ::CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); }
         #endif
 
-        // Is Console
-        inline bool Console::isConsole(void) noexcept { return this == &console; }
+        // Get Default ...
+        const FILE* Console::getDefaultErrorFile(void) const noexcept { return stderr; }
+        const FILE* Console::getDefaultInputFile(void) const noexcept { return stdin; }
+        const FILE* Console::getDefaultOutputFile(void) const noexcept { return stdout; }
+        #if LINUX_EXISTS
+            int Console::getDefaultErrorFileDescriptor(void) const noexcept { return STDOUT_FILENO; }
+            int Console::getDefaultInputFileDescriptor(void) const noexcept { return STDIN_FILENO; }
+            int Console::getDefaultOutputFileDescriptor(void) const noexcept { return STDERR_FILENO; }
+        #endif
+        #if WINDOWS_EXISTS
+            HANDLE Console::getDefaultErrorBufferHandle(void) const noexcept { static HANDLE consoleErrorBufferHandle = Console::createDefaultErrorBufferHandle(); return Console::isSpecial() ? consoleErrorBufferHandle : Console::createDefaultErrorBufferHandle(); }
+            HANDLE Console::getDefaultInputBufferHandle(void) const noexcept { static HANDLE consoleInputBufferHandle = Console::createDefaultInputBufferHandle(); return Console::isSpecial() ? consoleInputBufferHandle : Console::createDefaultInputBufferHandle(); }
+            HANDLE Console::getDefaultOutputBufferHandle(void) const noexcept { static HANDLE consoleOutputBufferHandle = Console::createDefaultOutputBufferHandle(); return Console::isSpecial() ? consoleOutputBufferHandle : Console::createDefaultOutputBufferHandle(); }
+        #endif
 
-        // Print
-        template <typename... types> inline void print(types... messages) noexcept { console.print(messages...); }
+        // Get ...
+        inline const FILE* Console::getFile(void) const noexcept { switch (this -> stream) { case $BUFFER: return NULL; case $ERROR: return this -> errorFile; case $INPUT: return this -> inputFile; case $OUTPUT: return this -> outputFile; } return NULL; }
+        #if LINUX_EXISTS
+            inline int Console::getFileDescriptor(void) const noexcept { switch (this -> stream) { case $BUFFER: return -1; case $ERROR: return this -> errorFileDescriptor; case $INPUT: return this -> inputFileDescriptor; case $OUTPUT: return this -> outputFileDescriptor; } return -1; }
+        #endif
+        #if WINDOWS_EXISTS
+            inline HANDLE Console::getBufferHandle(void) const noexcept { switch (this -> stream) { case $BUFFER: return INVALID_HANDLE_VALUE; case $ERROR: return this -> errorBufferHandle; case $INPUT: return this -> inputBufferHandle; case $OUTPUT: return this -> outputBufferHandle; } return INVALID_HANDLE_VALUE; }
+        #endif
 
-        // Scan
-        template <typename... types> inline void scan(types... messages) noexcept { console.scan(messages...); }
+        // Has ...
+        inline bool Console::hasErrorFile(void) const noexcept { return NULL != this -> errorFile; }
+        inline bool Console::hasInputFile(void) const noexcept { return NULL != this -> inputFile; }
+        inline bool Console::hasOutputFile(void) const noexcept { return NULL != this -> outputFile; }
+        #if LINUX_EXISTS
+            inline bool Console::hasErrorFileDescriptor(void) const noexcept { return this -> errorFileDescriptor ^ -1; }
+            inline bool Console::hasInputFileDescriptor(void) const noexcept { return this -> inputFileDescriptor ^ -1; }
+            inline bool Console::hasOutputFileDescriptor(void) const noexcept { return this -> outputFileDescriptor ^ -1; }
+        #endif
+        #if WINDOWS_EXISTS
+            inline bool Console::hasErrorBufferHandle(void) const noexcept { return INVALID_HANDLE_VALUE != this -> errorBufferHandle && NULL != this -> errorBufferHandle; }
+            inline bool Console::hasInputBufferHandle(void) const noexcept { return INVALID_HANDLE_VALUE != this -> inputBufferHandle && NULL != this -> inputBufferHandle; }
+            inline bool Console::hasOutputBufferHandle(void) const noexcept { return INVALID_HANDLE_VALUE != this -> outputBufferHandle && NULL != this -> outputBufferHandle; }
+        #endif
+
+        // Is ...
+        inline bool Console::isBuffered(void) const noexcept { return this -> stream == $BUFFER; }
+        inline bool Console::isSpecial(void) const noexcept { return this == &console; }
 
         // Set ...
-        inline void Console::setError(FILE* errorFile) noexcept { this -> errorFile = errorFile; }
-        inline void Console::setError(const FILE* errorFile) noexcept { this -> errorFile = (FILE*) errorFile; }
+        void Console::setError(FILE* file) noexcept { this -> errorFile = file; }
+        void Console::setError(const FILE* file) noexcept { this -> errorFile = (FILE*) file; }
+        void Console::setError(void) noexcept {
+            Console::setError(Console::getDefaultErrorFile());
+            #if LINUX_EXISTS
+                Console::setError(Console::getDefaultErrorFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+                Console::setError(Console::getDefaultErrorBufferHandle());
+            #endif
+        }
         #if LINUX_EXISTS
-            inline void Console::setError(const int errorFileDescriptor) noexcept { this -> errorFileDescriptor = errorFileDescriptor; }
+            void Console::setError(const int fileDescriptor) noexcept { this -> errorFileDescriptor = fileDescriptor; }
         #endif
         #if WINDOWS_EXISTS
-            inline void Console::setError(HANDLE errorBufferHandle) noexcept { this -> errorBufferHandle = errorBufferHandle; }
+            void Console::setError(HANDLE bufferHandle) noexcept { this -> errorBufferHandle = bufferHandle; }
         #endif
 
-        inline void Console::setInput(FILE* inputFile) noexcept { this -> inputFile = inputFile; }
-        inline void Console::setInput(const FILE* inputFile) noexcept { this -> inputFile = (FILE*) inputFile; }
+        void Console::setInput(FILE* file) noexcept { this -> inputFile = file; }
+        void Console::setInput(const FILE* file) noexcept { this -> inputFile = (FILE*) file; }
+        void Console::setInput(void) noexcept {
+            Console::setInput(Console::getDefaultInputFile());
+            #if LINUX_EXISTS
+                Console::setInput(Console::getDefaultInputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+                Console::setInput(Console::getDefaultInputBufferHandle());
+            #endif
+        }
         #if LINUX_EXISTS
-            inline void Console::setInput(const int inputFileDescriptor) noexcept { this -> inputFileDescriptor = inputFileDescriptor; }
+            void Console::setInput(const int fileDescriptor) noexcept { this -> inputFileDescriptor = fileDescriptor; }
         #endif
         #if WINDOWS_EXISTS
-            inline void Console::setInput(HANDLE inputBufferHandle) noexcept { this -> inputBufferHandle = inputBufferHandle; }
+            void Console::setInput(HANDLE bufferHandle) noexcept { this -> inputBufferHandle = bufferHandle; }
         #endif
 
-        inline void Console::setOutput(FILE* outputFile) noexcept { this -> outputFile = outputFile; }
-        inline void Console::setOutput(const FILE* outputFile) noexcept { this -> outputFile = (FILE*) outputFile; }
+        void Console::setOutput(FILE* file) noexcept { this -> outputFile = file; }
+        void Console::setOutput(const FILE* file) noexcept { this -> outputFile = (FILE*) file; }
+        void Console::setOutput(void) noexcept {
+            Console::setOutput(Console::getDefaultOutputFile());
+            #if LINUX_EXISTS
+                Console::setOutput(Console::getDefaultOutputFileDescriptor());
+            #endif
+            #if WINDOWS_EXISTS
+                Console::setOutput(Console::getDefaultOutputBufferHandle());
+            #endif
+        }
         #if LINUX_EXISTS
-            inline void Console::setOutput(const int outputFileDescriptor) noexcept { this -> outputFileDescriptor = outputFileDescriptor; }
+            void Console::setOutput(const int fileDescriptor) noexcept { this -> outputFileDescriptor = fileDescriptor; }
         #endif
         #if WINDOWS_EXISTS
-            inline void Console::setOutput(HANDLE outputBufferHandle) noexcept { this -> outputBufferHandle = outputBufferHandle; }
+            void Console::setOutput(HANDLE bufferHandle) noexcept { this -> outputBufferHandle = bufferHandle; }
         #endif
+
+        // ...
+        #undef console__constructor_initializer_list
 
     /* Mathematics */
 
@@ -459,8 +557,9 @@ typedef Clock::Date Date;
 /* Main */
 int main(void) {
     const char string[14] {'H', 'e', 'l', 'l', 'o', ',', ' ', 'W', 'o', 'r', 'l', 'd', '!', '\0'};
+
     console.print(string);
-    // console.log("Hello, World!");
+    console.print("Hello, World!");
 
     // Return
     return EXIT_SUCCESS;
