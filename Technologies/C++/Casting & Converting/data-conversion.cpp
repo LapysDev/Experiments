@@ -1,6 +1,7 @@
 /* Import */
 #include <fcntl.h> // File Control --- NOTE (Lapys) -> Output.
 #include <float.h> // Floating-Point --- NOTE (Lapys) -> Conversion assertion.
+#include <limits.h> // Limits
 #include <math.h> // Mathematics --- NOTE (Lapys) -> Data assertion.
 #include <stdio.h> // Standard Input-Output --- NOTE (Lapys) -> Output.
 #include <stdlib.h> // Standard Library --- NOTE (Lapys) -> Output.
@@ -14,17 +15,7 @@
 #endif
 
 /* Definition > ...  --- NOTE (Lapys) -> Decimals are interpreted with a precision of 8 digits. */
-    /* [Convert] */
-    double number_to_integer(double const) noexcept;
-    float number_to_integer(float const) noexcept;
-    constexpr int number_to_integer(int const) noexcept;
-    constexpr long number_to_integer(long const) noexcept;
-    long double number_to_integer(long double const) noexcept;
-    constexpr short number_to_integer(short const) noexcept;
-    constexpr unsigned int number_to_integer(unsigned int const) noexcept;
-    constexpr unsigned long number_to_integer(unsigned long const) noexcept;
-    constexpr unsigned short number_to_integer(unsigned short const) noexcept;
-
+    /* [Conversion] */
     char const* number_to_string(double const) noexcept;
     char const* number_to_string(float const) noexcept;
     char const* number_to_string(int const) noexcept;
@@ -38,7 +29,7 @@
     template <typename type> char const* pointer_to_string(type* const) noexcept;
 
     constexpr long double string_to_number(char const) noexcept;
-    long double string_to_number(char* const) noexcept;
+    long double string_to_number(char*) noexcept;
     long double string_to_number(char const* const) noexcept;
 
     /* [Output] --- NOTE (Lapys) -> Textually converted data can be performance-optimized when only printing. */
@@ -69,23 +60,40 @@
     template <typename type> void println(type* const) noexcept;
 
 /* Function --- MINIFY (Lapys) -> Minified due to the numerous amounts of overloads. */
-    // Number to Integer
-    inline double number_to_integer(double const number) noexcept { return number_to_integer((long double) number); }
-    inline float number_to_integer(float const number) noexcept { return number_to_integer((long double) number); }
-    constexpr inline int number_to_integer(int const number) noexcept { return number; }
-    constexpr inline long number_to_integer(long const number) noexcept { return number; }
-    inline long double number_to_integer(long double const number) noexcept { if (::isfinite(number) && false == ::isnan(number) && ::isnormal(number)) { if (number < 0.00) return -number_to_integer(-number); else { double evaluation = 0.00; for (unsigned long increment = 1uL, overflow = 0uL; increment; overflow = 0uL) { for (increment = 1uL; evaluation + increment <= number && increment > overflow; increment <<= 1uL) { overflow = increment; } increment = increment == 1uL || increment <= overflow ? 0uL : increment >> 1uL; evaluation += increment; } return evaluation; } } else return number; }
-    constexpr inline short number_to_integer(short const number) noexcept { return number; }
-    constexpr inline unsigned int number_to_integer(unsigned int const number) noexcept { return number; }
-    constexpr inline unsigned long number_to_integer(unsigned long const number) noexcept { return number; }
-    constexpr inline unsigned short number_to_integer(unsigned short const number) noexcept { return number; }
-
     // Number to String
     inline char const* number_to_string(double const number) noexcept { return number_to_string((long double) number); }
     inline char const* number_to_string(float const number) noexcept { return number_to_string((long double) number); }
     inline char const* number_to_string(int const number) noexcept { return number_to_string((long) number); }
     inline char const* number_to_string(long const number) noexcept { static char string[21] {0}; ::strncpy(string + (number < 0L), number_to_string((unsigned long) (number < 0L ? -number : number)), sizeof(string)); if (number < 0L) *string = '-'; return (char const*) string; }
-    inline char const* number_to_string(long double const number) noexcept { static char string[LDBL_MANT_DIG + 28] {0}; ::memset(string, '\0', sizeof(string)); if (::isinf(number)) ::strncpy(string, "-Infinity" + (number >= 0.00), 8u + (number < 0.00)); else if (::isnan(number)) ::strncpy(string, "NaN", 3u); else if (number && false == ::isnormal(number)) ::strncpy(string, "Denormalized", 12u); else { long double const characteristics = number_to_integer(number); long double const mantissa = number - characteristics; ::strcpy(string, number_to_string((long) characteristics)); if (mantissa) ::strncpy(&(*(string + ::strlen(string)) = '.'), number_to_string((long) number_to_integer((mantissa * 1e8) * (mantissa * 10.0 < 0.00 ? -1.00 : 1.00))), 8u); } return (char const*) string; }
+    inline char const* number_to_string(long double const number) noexcept {
+        static char string[LDBL_DIG + 28] {0};
+        ::memset(string, '\0', sizeof(string));
+        if (::isinf(number)) ::strncpy(string, "-Infinity" + (number >= 0.00), 8u + (number < 0.00));
+        else if (::isnan(number)) ::strncpy(string, "NaN", 3u);
+        else if (number && false == ::isnormal(number)) ::strncpy(string, "Denormalized", 12u);
+        else {
+            long double characteristics;
+            unsigned char index = 0u;
+            long double const mantissa = ::modf(number < 0.00 ? -number : number, &characteristics);
+
+            if (number < 0.00 && (characteristics || mantissa)) *(string + index++) = '-';
+
+            if (1.00 > characteristics) *(string + index++) = '0';
+            else {
+                for (long double digit, iterator = characteristics; iterator >= 1.00; iterator /= 10.00) { ::modf(::fmod(iterator, 10.00), &digit); *(string + index++) = *("0123456789" + (unsigned char) digit); }
+                for (unsigned char iterator = number < 0.00, length = index - 1u; iterator < length; (++iterator, --length)) { *(string + length) ^= *(string + iterator); *(string + iterator) ^= *(string + length); *(string + length) ^= *(string + iterator); }
+            }
+
+            if (mantissa) {
+                *(string + index++) = '.';
+                for (long double digit, iterator = mantissa * 10.00; ::modf(iterator, &digit) || '.' == *(string + (index - 1u)); iterator *= 10.00) {
+                    *(string + index++) = *("0123456789" + (unsigned char) (digit < 10.00 ? digit : ::fmod(digit, 10.00)));
+                }
+            }
+        }
+
+        return (char const*) string;
+    }
     inline char const* number_to_string(short const number) noexcept { return number_to_string((long) number); }
     inline char const* number_to_string(unsigned int const number) noexcept { return number_to_string((unsigned long) number); }
     inline char const* number_to_string(unsigned long const number) noexcept { static char string[21] {0}; ::memset(string, '\0', sizeof(string)); *string = '0'; for (unsigned long index = 0u, iterator = number; iterator; iterator /= 10u) { *(string + index++) = *("0123456789" + (iterator % 10u)); if (iterator < 10u) for ((--index, iterator = 0u); iterator < index; (--index, ++iterator)) { *(string + index) ^= *(string + iterator); *(string + iterator) ^= *(string + index); *(string + index) ^= *(string + iterator); } } return (char const*) string; }
@@ -103,7 +111,7 @@
     inline void print(float const message) noexcept { print((long double) message); }
     inline void print(int const message) noexcept { print((long) message); }
     inline void print(long const message) noexcept { if (message < 0L) print('-'); print((unsigned long) (message < 0L ? -message : message)); }
-    inline void print(long double const message) noexcept { if (::isinf(message)) ::write(STDOUT_FILENO, "-Infinity" + (message >= 0.00), 8u + (message < 0.00)); else if (::isnan(message)) ::write(STDOUT_FILENO, "NaN", 3u); else if (message && false == ::isnormal(message)) ::write(STDOUT_FILENO, "Denormalized", 12u); else { long double const characteristics = number_to_integer(message); long double mantissa = message - characteristics; print((long) characteristics); if (mantissa) { print('.'); print((long) number_to_integer((mantissa * 1e8) * (mantissa * 10.0 < 0.00 ? -1.00 : 1.00))); } } }
+    inline void print(long double const message) noexcept { print(number_to_string(message)); }
     inline void print(short const message) noexcept { print((long) message); }
     inline void print(unsigned int const message) noexcept { print((unsigned long) message); }
     inline void print(unsigned long const message) noexcept { if (message > 1e9) print(number_to_string(message)); else if (message) { for (unsigned long iterator = 1e9, trailing = true; iterator; iterator /= 10u) { unsigned char const digit = (message % (iterator * 10u)) / iterator; if (digit || false == trailing) { print(*("0123456789" + digit)); trailing = false; } } } else print('0'); }
@@ -118,7 +126,7 @@
     inline void println(float const message) noexcept { println((long double) message); }
     inline void println(int const message) noexcept { println((long) message); }
     inline void println(long const message) noexcept { if (message < 0L) print('-'); println((unsigned long) (message < 0L ? -message : message)); }
-    inline void println(long double const message) noexcept { if (::isinf(message)) ::write(STDOUT_FILENO, "-Infinity\n\r" + (message >= 0.00), 10u + (message < 0.00)); else if (::isnan(message)) ::write(STDOUT_FILENO, "NaN\n\r", 5u); else if (message && false == ::isnormal(message)) ::write(STDOUT_FILENO, "Denormalized\n\r", 14u); else { long double const characteristics = number_to_integer(message); if (message - characteristics) { print(message); println(); } else println((long) characteristics); } }
+    inline void println(long double const message) noexcept { print(message); println(); }
     inline void println(short const message) noexcept { println((long) message); }
     inline void println(unsigned int const message) noexcept { println((unsigned long) message); }
     inline void println(unsigned long const message) noexcept { if (message > 1e9) { for (unsigned long iterator = message; iterator; iterator /= 10u) print(' '); for (unsigned long iterator = message; iterator; iterator /= 10u) { print('\b'); print(*("0123456789" + (iterator % 10u))); print('\b'); } } else print(message); println(); }
@@ -126,166 +134,253 @@
     template <typename type> inline void println(type* const message) noexcept { if (message) { ::write(STDOUT_FILENO, "0x", 2u); for (unsigned int iterator = (int) message; iterator; iterator >>= 4u) print(' '); for (unsigned int iterator = (int) message; iterator; iterator >>= 4u) { print('\b'); print(*("0123456789ABCDEF" + (iterator % 16u))); print('\b'); } } else ::write(STDOUT_FILENO, "NULL", 4u); println(); }
     template <typename... types> inline void println(types... messages) noexcept { print(messages...); println(); }
 
-    // String to Number --- NOTE (Lapys) -> Return type of `long double` for consistency.
+    // String to Number --- NOTE (Lapys) -> Return type of `long double` for consistency (evaluates the number in fixed notation).
     constexpr inline long double string_to_number(char const string) noexcept { switch (string) { case '0': return 0.00; case '1': return 1.00; case '2': return 2.00; case '3': return 3.00; case '4': return 4.00; case '5': return 5.00; case '6': return 6.00; case '7': return 7.00; case '8': return 8.00; case '9': return 9.00; } return NAN; }
-    inline long double string_to_number(char* const string) noexcept { return string_to_number((char const*) string); }
-    inline long double string_to_number(char const* const string) noexcept {
-        if (string) {
-            if (0 == ::strncmp(string, "nan", 3u) || 0 == ::strncmp(string, "NaN", 3u)) return NAN;
-            else if (0 == ::strncmp(string, "inf", 3u) || 0 == ::strncmp(string, "infinity", 8u) || 0 == ::strncmp(string, "Infinity", 8u)) return INFINITY;
-            else if ('-' == *string) return -string_to_number(string + 1);
-            else if (' ' == *string || '\b' == *string || '\n' == *string || '\r' == *string || '\t' == *string || '\v' == *string) return string_to_number(string + 1);
-            else if ('\0' == *string) return NAN;
+    inline long double string_to_number(char* string) noexcept {
+        if (string && '\0' ^ *string) {
+            if ('\0' == *string || 0 == ::strncmp(string, "nan", 4u) || 0 == ::strncmp(string, "NaN", 4u) || 0 == ::strncmp(string, "NAN", 4u)) return NAN;
+            else if (0 == ::strncmp(string, "inf", 4u) || 0 == ::strncmp(string, "infinity", 9u) || 0 == ::strncmp(string, "Infinity", 9u) || 0 == ::strncmp(string, "INFINITY", 9u)) return INFINITY;
             else {
-                long double number = 0.00;
+                char character = *string;
+                long double number = 0.00L;
+                char *numberBinaryCharacteristicsComponent = NULL, *numberBinaryMantissaComponent = NULL; unsigned short numberBinaryCharacteristicsLength = 0u, numberBinaryMantissaLength = 0u;
+                static char numberComponents[SHRT_MAX] {0};
+                char *numberDecimalCharacteristicsComponent = NULL, *numberDecimalMantissaComponent = NULL; unsigned short numberDecimalCharacteristicsLength = 0u, numberDecimalMantissaLength = 0u;
+                char *numberHexadecimalCharacteristicsComponent = NULL, *numberHexadecimalMantissaComponent = NULL; unsigned short numberHexadecimalCharacteristicsLength = 0u, numberHexadecimalMantissaLength = 0u;
+                char *numberOctalCharacteristicsComponent = NULL, *numberOctalMantissaComponent = NULL; unsigned short numberOctalCharacteristicsLength = 0u, numberOctalMantissaLength = 0u;
+                char *numberScientificExponentComponent = NULL; unsigned char numberScientificExponentLength = 0u;
+                bool numberSignedness = false;
+                static char numberSuffixComponent[3] {0}; unsigned char numberSuffixLength = 0u;
+                bool parseContinue = true;
+                enum {binary_characteristics, binary_mantissa, decimal_characteristics, decimal_mantissa, hexadecimal_characteristics, hexadecimal_mantissa, octal_characteristics, octal_mantissa, scientific_exponent, suffix, trailing} parseState = trailing;
 
-                char binaryCharacteristics[20] {0}, binaryMantissa[20] {0}; unsigned char binaryCharacteristicsLength = 0u, binaryMantissaLength = 0u;
-                char decimalCharacteristics[20] {0}, decimalMantissa[20] {0}; unsigned char decimalCharacteristicsLength = 0u, decimalMantissaLength = 0u;
-                char exponentCharacteristics[5] {0}; unsigned char exponentCharacteristicsLength = 0u;
-                char hexadecimalCharacteristics[20] {0}, hexadecimalMantissa[20] {0}; unsigned char hexadecimalCharacteristicsLength = 0u, hexadecimalMantissaLength = 0u;
-                char octalCharacteristics[20] {0}, octalMantissa[20] {0}; unsigned char octalCharacteristicsLength = 0u, octalMantissaLength = 0u;
-                char suffixes[3] {0}; unsigned char suffixesLength = 0u;
-
-                enum {
-                    binary_characteristics, binary_mantissa,
-                    decimal_characteristics, decimal_mantissa,
-                    hexadecimal_characteristics, hexadecimal_mantissa,
-                    octal_characteristics, octal_mantissa,
-                    scientific_notation,
-                    suffix
-                } state = decimal_characteristics;
-
-                for (unsigned char continueParsing = true, iterator = 0u; continueParsing && *(string + iterator); ++iterator) {
-                    char const& character = *(string + iterator);
-
-                    switch (state) {
-                        case binary_characteristics: switch (character) {
-                            case '0': case '1': *(binaryCharacteristics + binaryCharacteristicsLength++) = character; break;
-                            default: continueParsing = false; break;
-                        } break;
-                        case binary_mantissa: {} break;
-                        case decimal_characteristics: switch (character) {
-                            case '.': state = decimal_mantissa; break;
-                            case 'b': if (iterator && *(string + (iterator + 1u))) state = binary_characteristics; else continueParsing = false; break;
-                            case 'e': if (iterator && *(string + (iterator + 1u))) state = scientific_notation; else continueParsing = false; break;
-                            case 'f': case 'F': case 'l': case 'L': case 'n': case 'u': case 'U': if (iterator) { --iterator; state = suffix; } else continueParsing = false; break;
-                            case 'x': if (iterator && *(string + (iterator + 1u))) state = hexadecimal_characteristics; else continueParsing = false; break;
-                            case '0': {
-                                if (iterator) *(decimalCharacteristics + decimalCharacteristicsLength++) = character;
-                                else switch (*(string + (iterator + 1u))) {
-                                    case '.': ++iterator; state = decimal_mantissa; break;
-                                    case 'b': ++iterator; state = binary_characteristics; break;
-                                    case 'e': ++iterator; state = scientific_notation; break;
-                                    case 'f': case 'F': case 'l': case 'L': case 'n': case 'u': case 'U': state = suffix; break;
-                                    case 'x': ++iterator; state = hexadecimal_characteristics; break;
-                                    case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': state = octal_characteristics; break;
-                                    default: continueParsing = false; break;
-                                }
-                            } break;
-                            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(decimalCharacteristics + decimalCharacteristicsLength++) = character; break;
-                            default: continueParsing = false; break;
-                        } break;
-                        case decimal_mantissa: switch (character) {
-                            case 'e': if ('.' == *(string + (iterator - 1u))) continueParsing = false; else state = scientific_notation; break;
-                            case 'f': case 'F': if ('.' == *(string + (iterator - 1u))) continueParsing = false; else { --iterator; state = suffix; } break;
-                            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(decimalMantissa + decimalMantissaLength++) = character; break;
-                            default: continueParsing = false; break;
-                        } break;
-                        case hexadecimal_characteristics: switch (character) {
-                            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(hexadecimalCharacteristics + hexadecimalCharacteristicsLength++) = character; break;
-                            default: continueParsing = false; break;
-                        } break;
-                        case hexadecimal_mantissa: {} break;
-                        case octal_characteristics: switch (character) {
-                            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': *(octalCharacteristics + octalCharacteristicsLength++) = character; break;
-                            default: continueParsing = false; break;
-                        } break;
-                        case octal_mantissa: {} break;
-                        case scientific_notation: switch (character) {
-                            case '-': if ('e' ^ *(string + (iterator - 1u))) continueParsing = false; break;
-                            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(exponentCharacteristics + exponentCharacteristicsLength++) = character; break;
-                        } break;
-                        case suffix: {} break;
-                    }
-
-                    if (false == continueParsing)
-                    number = NAN;
+                for (size_t iterator = 0u; parseContinue && ('\0' ^ character); character = *(string + ++iterator))
+                switch (parseState) {
+                    case binary_characteristics: switch (character) {
+                        case '.': numberBinaryMantissaComponent = numberBinaryCharacteristicsComponent + (numberBinaryCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = binary_mantissa; (string += iterator, iterator = 0u); break;
+                        case 'E': case 'e': numberScientificExponentComponent = numberBinaryCharacteristicsComponent + (numberBinaryCharacteristicsLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
+                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break;
+                        case '0': case '1': *(numberBinaryCharacteristicsComponent + numberBinaryCharacteristicsLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case binary_mantissa: switch (character) {
+                        case 'E': case 'e': numberScientificExponentComponent = numberBinaryMantissaComponent + (numberBinaryMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
+                        case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
+                        case '0': case '1': *(numberBinaryMantissaComponent + numberBinaryMantissaLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case decimal_characteristics: switch (character) {
+                        case '.': numberDecimalMantissaComponent = numberDecimalCharacteristicsComponent + (numberDecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = decimal_mantissa; (string += iterator, iterator = 0u); break;
+                        case 'B': case 'b': numberDecimalCharacteristicsLength = 0u; numberBinaryCharacteristicsComponent = numberComponents; parseContinue = 1u == iterator && '0' == *string && ('\0' ^ *(string + (iterator + 1u))); parseState = binary_characteristics; (string += iterator, iterator = 0u); break;
+                        case 'E': case 'e': numberScientificExponentComponent = numberDecimalCharacteristicsComponent + (numberDecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
+                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseState = suffix; break;
+                        case 'X': case 'x': numberDecimalCharacteristicsLength = 0u; numberHexadecimalCharacteristicsComponent = numberComponents; parseContinue = 1u == iterator && '0' == *string && ('\0' ^ *(string + (iterator + 1u))); parseState = hexadecimal_characteristics; (string += iterator, iterator = 0u); break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': if ('0' == *string) { numberDecimalCharacteristicsLength = 0u; numberOctalCharacteristicsComponent = numberComponents; parseState = octal_characteristics; (string += iterator - 1u, iterator = 0u); } else *(numberDecimalCharacteristicsComponent + numberDecimalCharacteristicsLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case decimal_mantissa: switch (character) {
+                        case 'E': case 'e': numberScientificExponentComponent = numberDecimalMantissaComponent + (numberDecimalMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
+                        case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(numberDecimalMantissaComponent + numberDecimalMantissaLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case hexadecimal_characteristics: switch (character) {
+                        case '.': numberHexadecimalMantissaComponent = numberHexadecimalCharacteristicsComponent + (numberHexadecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = hexadecimal_mantissa; (string += iterator, iterator = 0u); break;
+                        case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(numberHexadecimalCharacteristicsComponent + numberHexadecimalCharacteristicsLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case hexadecimal_mantissa: switch (character) {
+                        case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(numberHexadecimalMantissaComponent + numberHexadecimalMantissaLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case octal_characteristics: switch (character) {
+                        case '.': numberOctalMantissaComponent = numberOctalCharacteristicsComponent + (numberOctalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = octal_mantissa; (string += iterator, iterator = 0u); break;
+                        case 'E': case 'e': numberScientificExponentComponent = numberOctalCharacteristicsComponent + (numberOctalCharacteristicsLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
+                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': *(numberOctalCharacteristicsComponent + numberOctalCharacteristicsLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case octal_mantissa: switch (character) {
+                        case 'E': case 'e': numberScientificExponentComponent = numberOctalMantissaComponent + (numberOctalMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
+                        case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
+                        case '0': case '1': *(numberOctalMantissaComponent + numberOctalMantissaLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case scientific_exponent: switch (character) {
+                        case '-': parseContinue = 1u == iterator; *(numberScientificExponentComponent + numberScientificExponentLength++) = character; break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(numberScientificExponentComponent + numberScientificExponentLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case suffix: switch (character) {
+                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': parseContinue = numberSuffixLength ^ (sizeof(numberSuffixComponent) / sizeof(char)); *(numberSuffixComponent + numberSuffixLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
+                    case trailing: switch (character) {
+                        case '-': numberSignedness = !numberSignedness; break;
+                        case '.': numberDecimalMantissaComponent = numberComponents; parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = decimal_mantissa; (string += iterator, iterator = 0u); break;
+                        case '+': case ' ': case '\b': case '\n': case '\r': case '\t': case '\v': break;
+                        case '0': parseState = decimal_characteristics; (string += iterator, iterator = 0u); *((numberDecimalCharacteristicsComponent = numberComponents) + numberDecimalCharacteristicsLength++) = character; break;
+                        case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': parseState = decimal_characteristics; *((numberDecimalCharacteristicsComponent = numberComponents) + numberDecimalCharacteristicsLength++) = character; break;
+                        default: parseContinue = false; break;
+                    } break;
                 }
 
-                if (false == ::isnan(number)) {
-                    unsigned char iterator;
-                    size_t multiplier;
+                if (false == parseContinue || (1u == numberScientificExponentLength && '-' == *numberScientificExponentComponent) || (numberSuffixLength && (
+                    (numberBinaryMantissaLength || numberDecimalMantissaLength || numberHexadecimalMantissaLength || numberOctalMantissaLength) && (
+                        0 == ::strncmp(numberSuffixComponent, "LL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ll", numberSuffixLength) ||
+                        0 == ::strncmp(numberSuffixComponent, "n", numberSuffixLength) ||
+                        0 == ::strncmp(numberSuffixComponent, "u", 1u)
+                    )
+                ))) number = NAN;
 
-                    // -.4f
-                    // 0x
-                    // 0xDEADBEEF
+                else {
+                    long double component;
+                    long double multiplier;
 
-                    // [Suffixes]
-                    if (suffixesLength && false == (
-                        0 == ::strncmp(suffixes, "F", suffixesLength) || 0 == ::strncmp(suffixes, "f", suffixesLength) ||
-                        0 == ::strncmp(suffixes, "L", suffixesLength) || 0 == ::strncmp(suffixes, "l", suffixesLength) ||
-                        0 == ::strncmp(suffixes, "LL", suffixesLength) || 0 == ::strncmp(suffixes, "ll", suffixesLength) ||
-                        0 == ::strncmp(suffixes, "UL", suffixesLength) || 0 == ::strncmp(suffixes, "Ul", suffixesLength) ||
-                        0 == ::strncmp(suffixes, "ULL", suffixesLength) || 0 == ::strncmp(suffixes, "Ull", suffixesLength) ||
-                        0 == ::strncmp(suffixes, "uL", suffixesLength) || 0 == ::strncmp(suffixes, "ul", suffixesLength) ||
-                        0 == ::strncmp(suffixes, "uLL", suffixesLength) || 0 == ::strncmp(suffixes, "ull", suffixesLength)
-                    )) number = NAN;
+                    if (numberBinaryCharacteristicsLength) {
+                        component = 1.00L;
+                        for (int iterator = numberBinaryCharacteristicsLength - 1u; ~iterator; --iterator) {
+                            if ('1' == *(numberBinaryCharacteristicsComponent + iterator)) number += component;
+                            component *= 2.00L;
+                        }
+                    }
 
-                    else {
-                        // [Binary]
-                        for ((iterator = 0u, multiplier = 1u); iterator ^ binaryCharacteristicsLength; ++iterator) multiplier *= 2u;
-                        for ((iterator = 0u, multiplier /= 2u); iterator ^ binaryCharacteristicsLength; (++iterator, multiplier /= 2u)) number += multiplier * (*(binaryCharacteristics + iterator) == '1');
+                    if (numberBinaryMantissaLength) {
+                        component = 1.00L;
+                        for (char *iterator = numberBinaryMantissaComponent + (numberBinaryMantissaLength - 1u); '0' == *iterator; --iterator) --numberBinaryMantissaLength;
+                        for (unsigned short iterator = 0u; iterator ^ numberBinaryMantissaLength; ++iterator) {
+                            component /= 2.00L;
+                            if ('1' == *(numberBinaryMantissaComponent + iterator)) number += component;
+                        }
+                    }
 
-                        for ((iterator = 0u, multiplier = 2u); iterator ^ binaryMantissaLength; (++iterator, multiplier *= 2u)) number += ((float) (*(binaryMantissa + iterator) == '1')) / (float) multiplier;
+                    if (numberDecimalCharacteristicsLength) {
+                        multiplier = 1.00L;
 
-                        // [Decimal]
-                        for ((iterator = 0u, multiplier = 1u); iterator ^ decimalCharacteristicsLength; ++iterator) multiplier *= 10u;
-                        for ((iterator = 0u, multiplier /= 10u); iterator ^ decimalCharacteristicsLength; (++iterator, multiplier /= 10u)) number += multiplier * string_to_number(*(decimalCharacteristics + iterator));
+                        for (int iterator = numberDecimalCharacteristicsLength - 1u; ~iterator; --iterator) {
+                            component = string_to_number(*(numberDecimalCharacteristicsComponent + iterator)) * multiplier;
+                            multiplier *= 10.00L;
+                            number += component;
+                        }
+                    }
 
-                        for ((iterator = 0u, multiplier = 10u); iterator ^ decimalMantissaLength; (++iterator, multiplier *= 10u)) number += string_to_number(*(decimalMantissa + iterator)) / (long double) multiplier;
+                    if (numberDecimalMantissaLength) {
+                        multiplier = 1.00L;
 
-                        // [Hexadecimal]
-                        for ((iterator = 0u, multiplier = 1u); iterator ^ hexadecimalCharacteristicsLength; ++iterator) multiplier *= 16u;
-                        for ((iterator = 0u, multiplier /= 16u); iterator ^ hexadecimalCharacteristicsLength; (++iterator, multiplier /= 16u)) {
-                            switch (*(hexadecimalCharacteristics + iterator)) {
-                                case 'A': case 'a': number += multiplier * 10u; break;
-                                case 'B': case 'b': number += multiplier * 11u; break;
-                                case 'C': case 'c': number += multiplier * 12u; break;
-                                case 'D': case 'd': number += multiplier * 13u; break;
-                                case 'E': case 'e': number += multiplier * 14u; break;
-                                case 'F': case 'f': number += multiplier * 15u; break;
-                                case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': number += multiplier * string_to_number(*(hexadecimalCharacteristics + iterator)); break;
+                        for (char *iterator = numberDecimalMantissaComponent + (numberDecimalMantissaLength - 1u); '0' == *iterator; --iterator) --numberDecimalMantissaLength;
+                        for (unsigned short iterator = 0u; iterator ^ numberDecimalMantissaLength; ++iterator) {
+                            multiplier /= 10.00L;
+                            component = string_to_number(*(numberDecimalMantissaComponent + iterator)) * multiplier;
+                            number += component;
+                        }
+                    }
+
+                    if (numberHexadecimalCharacteristicsLength) {
+                        multiplier = 1.00L;
+
+                        for (int iterator = numberHexadecimalCharacteristicsLength - 1u; ~iterator; --iterator) {
+                            switch (*(numberHexadecimalCharacteristicsComponent + iterator)) {
+                                case 'A': case 'a': component = 10.00L; break;
+                                case 'B': case 'b': component = 11.00L; break;
+                                case 'C': case 'c': component = 12.00L; break;
+                                case 'D': case 'd': component = 13.00L; break;
+                                case 'E': case 'e': component = 14.00L; break;
+                                case 'F': case 'f': component = 15.00L; break;
+                                default: component = string_to_number(*(numberHexadecimalCharacteristicsComponent + iterator)); break;
                             }
+                            component *= multiplier;
+                            multiplier *= 16.00L;
+                            number += component;
                         }
+                    }
 
-                        for ((iterator = 0u, multiplier = 16u); iterator ^ hexadecimalMantissaLength; (++iterator, multiplier *= 16u)) {
-                            switch (*(hexadecimalMantissa + iterator)) {
-                                case 'A': case 'a': number += 10.00 / (long double) multiplier; break;
-                                case 'B': case 'b': number += 11.00 / (long double) multiplier; break;
-                                case 'C': case 'c': number += 12.00 / (long double) multiplier; break;
-                                case 'D': case 'd': number += 13.00 / (long double) multiplier; break;
-                                case 'E': case 'e': number += 14.00 / (long double) multiplier; break;
-                                case 'F': case 'f': number += 15.00 / (long double) multiplier; break;
-                                case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': number += string_to_number(*(hexadecimalMantissa + iterator)) / (long double) multiplier; break;
+                    if (numberHexadecimalMantissaLength) {
+                        multiplier = 1.00L;
+
+                        for (char *iterator = numberHexadecimalMantissaComponent + (numberHexadecimalMantissaLength - 1u); '0' == *iterator; --iterator) --numberHexadecimalMantissaLength;
+                        for (unsigned short iterator = 0u; iterator ^ numberHexadecimalMantissaLength; ++iterator) {
+                            multiplier /= 16.00L;
+                            switch (*(numberHexadecimalMantissaComponent + iterator)) {
+                                case 'A': case 'a': component = 10.00L; break;
+                                case 'B': case 'b': component = 11.00L; break;
+                                case 'C': case 'c': component = 12.00L; break;
+                                case 'D': case 'd': component = 13.00L; break;
+                                case 'E': case 'e': component = 14.00L; break;
+                                case 'F': case 'f': component = 15.00L; break;
+                                default: component = string_to_number(*(numberHexadecimalMantissaComponent + iterator)); break;
                             }
+                            component *= multiplier;
+                            number += component;
+                        }
+                    }
+
+                    if (numberOctalCharacteristicsLength) {
+                        multiplier = 1.00L;
+
+                        for (int iterator = numberOctalCharacteristicsLength - 1u; ~iterator; --iterator) {
+                            component = string_to_number(*(numberOctalCharacteristicsComponent + iterator)) * multiplier;
+                            multiplier *= 8.00L;
+                            number += component;
+                        }
+                    }
+
+                    if (numberOctalMantissaLength) {
+                        multiplier = 1.00L;
+
+                        for (char *iterator = numberOctalMantissaComponent + (numberOctalMantissaLength - 1u); '0' == *iterator; --iterator) --numberOctalMantissaLength;
+                        for (unsigned short iterator = 0u; iterator ^ numberOctalMantissaLength; ++iterator) {
+                            multiplier /= 8.00L;
+                            component = string_to_number(*(numberOctalMantissaComponent + iterator)) * multiplier;
+                            number += component;
+                        }
+                    }
+
+                    if (numberScientificExponentLength) {
+                        unsigned short exponent = 0u;
+                        bool exponentSignedness = false;
+
+                        multiplier = 1.00L;
+
+                        if ('-' == *numberScientificExponentComponent) {
+                            exponentSignedness = true;
+                            ++numberScientificExponentComponent;
+                            --numberScientificExponentLength;
                         }
 
-                        // [Octal]
-                        for ((iterator = 0u, multiplier = 1u); iterator ^ octalCharacteristicsLength; ++iterator) multiplier *= 8u;
-                        for ((iterator = 0u, multiplier /= 8u); iterator ^ octalCharacteristicsLength; (++iterator, multiplier /= 8u)) number += multiplier * string_to_number(*(octalCharacteristics + iterator));
-
-                        for ((iterator = 0u, multiplier = 8u); iterator ^ octalMantissaLength; (++iterator, multiplier *= 8u)) number += string_to_number(*(octalMantissa + iterator)) / (long double) multiplier;
-
-                        // [Exponent]
-                        if (exponentCharacteristicsLength) {
-                            size_t exponent = 0u;
-
-                            for ((iterator = ('-' == *exponentCharacteristics), multiplier = 1u); iterator ^ exponentCharacteristicsLength; ++iterator) multiplier *= 10u;
-                            for ((iterator = ('-' == *exponentCharacteristics), multiplier /= 10u); iterator ^ exponentCharacteristicsLength; (++iterator, multiplier /= 10u)) exponent += multiplier * string_to_number(*(exponentCharacteristics + iterator));
-
-                            if ('-' == *exponentCharacteristics) for (iterator = 0u; iterator ^ exponent; ++iterator) number /= 10.00;
-                            else for (iterator = 0u; iterator ^ exponent; ++iterator) number *= 10.00;
+                        for (int iterator = numberScientificExponentLength - 1u; ~iterator; --iterator) {
+                            component = string_to_number(*(numberScientificExponentComponent + iterator)) * multiplier;
+                            multiplier *= 10.00L;
+                            exponent += component;
                         }
+
+                        if (exponentSignedness) for (unsigned short iterator = 0u; exponent ^ iterator; ++iterator) number /= 10.00;
+                        else for (unsigned short iterator = 0u; exponent ^ iterator; ++iterator) number *= 10.00;
+                    }
+
+                    if (numberSignedness) number = -number;
+
+                    switch (numberSuffixLength) {
+                        case 1u:
+                            if ('F' == *numberSuffixComponent || 'f' == *numberSuffixComponent) number = (float) number;
+                            else if ('U' == *numberSuffixComponent || 'u' == *numberSuffixComponent) number = (unsigned int) number;
+                            else if ('n' == *numberSuffixComponent) ::modf(number, &number);
+                            else if ('L' == *numberSuffixComponent || 'l' == *numberSuffixComponent) if (0u == numberBinaryMantissaLength + numberDecimalMantissaLength + numberHexadecimalMantissaLength + numberOctalMantissaLength) number = (signed long) number;
+                        break;
+                        case 2u:
+                            if (0 == ::strncmp(numberSuffixComponent, "LL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ll", numberSuffixLength)) number = (signed long long) number;
+                            else if (
+                                0 == ::strncmp(numberSuffixComponent, "UL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "Ul", numberSuffixLength) ||
+                                0 == ::strncmp(numberSuffixComponent, "uL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ul", numberSuffixLength)
+                            ) number = (unsigned long) number;
+                        break;
+                        case 3u:
+                            if (
+                                0 == ::strncmp(numberSuffixComponent, "ULL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "Ull", numberSuffixLength) ||
+                                0 == ::strncmp(numberSuffixComponent, "uLL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ull", numberSuffixLength)
+                            ) number = (unsigned long long) number;
+                        break;
                     }
                 }
 
@@ -293,6 +388,7 @@
             }
         } else return NAN;
     }
+    long double string_to_number(char const* const string) noexcept { return string_to_number((char*) string); }
 
 /* Main */
 int main(int const argc, char const* argv[]) {
@@ -300,18 +396,19 @@ int main(int const argc, char const* argv[]) {
     println("[PROGRAM INITIATED]");
 
     // ...
-    println("    [Number: ", -20.25, ", Integer: \"", number_to_integer(-20.25), "\"]");
-    println("    [Number: ", 22.00 / 7.00, ", Integer: \"", number_to_integer(22.00 / 7.00), "\"]");
-    println("    [Number: ", M_PI, ", Integer: \"", number_to_integer(M_PI), "\"]");
-    println("    [Number: ", INFINITY, ", Integer: \"", number_to_integer(INFINITY), "\"]");
-    println("    [Number: ", NAN, ", Integer: \"", number_to_integer(NAN), "\"]");
-    println();
-
-    println("    [Number: ", 0u, ", String: \"", number_to_string(0u), "\"]");
-    println("    [Number: ", 2025u, ", String: \"", number_to_string(2025u), "\"]");
-    println("    [Number: ", -2025, ", String: \"", number_to_string(-2025), "\"]");
+    println("    [Number: ", 2508u, ", String: \"", number_to_string(2508u), "\"]");
+    println("    [Number: ", -2508, ", String: \"", number_to_string(-2508), "\"]");
     println("    [Number: ", -1u, ", String: \"", number_to_string(-1u), "\"]");
-    println("    [Number: ", -20.25, ", String: \"", number_to_string(-20.25), "\"]");
+    println("    [Number: ", -25.08f, ", String: \"", number_to_string(-25.08f), "\"]");
+    println("    [Number: ", .01, ", String: \"", number_to_string(.01), "\"]");
+    println("    [Number: ", .012, ", String: \"", number_to_string(.012), "\"]");
+    println("    [Number: ", .0123, ", String: \"", number_to_string(.0123), "\"]");
+    println("    [Number: ", .01234, ", String: \"", number_to_string(.01234), "\"]");
+    println("    [Number: ", .012345, ", String: \"", number_to_string(.012345), "\"]");
+    println("    [Number: ", .0123456, ", String: \"", number_to_string(.0123456), "\"]");
+    println("    [Number: ", .01234567, ", String: \"", number_to_string(.01234567), "\"]");
+    println("    [Number: ", .012345678, ", String: \"", number_to_string(.012345678), "\"]");
+    println("    [Number: ", .0123456789, ", String: \"", number_to_string(.0123456789), "\"]");
     println("    [Number: ", 22.00 / 7.00, ", String: \"", number_to_string(22.00 / 7.00), "\"]");
     println("    [Number: ", M_PI, ", String: \"", number_to_string(M_PI), "\"]");
     println("    [Number: ", INFINITY, ", String: \"", number_to_string(INFINITY), "\"]");
@@ -328,36 +425,67 @@ int main(int const argc, char const* argv[]) {
     println("    [String: '", '.', "', Number: ", string_to_number('.'), "]");
     println("    [String: '", '0', "', Number: ", string_to_number('0'), "]");
     println("    [String: '", '1', "', Number: ", string_to_number('1'), "]");
+    println("    [String: \"", "0", "\", Number: ", string_to_number("0"), "]");
+    println("    [String: \"", "1", "\", Number: ", string_to_number("1"), "]");
     println("    [String: \"", ".e1", "\", Number: ", string_to_number(".e1"), "]");
     println("    [String: \"", ".f", "\", Number: ", string_to_number(".f"), "]");
     println("    [String: \"", "-1", "\", Number: ", string_to_number("-1"), "]");
     println("    [String: \"", "-1f", "\", Number: ", string_to_number("-1f"), "]");
+    println("    [String: \"", "12.5u", "\", Number: ", string_to_number("12.5u"), "]");
+    println("    [String: \"", "-12u", "\", Number: ", string_to_number("-12u"), "]");
     println("    [String: \"", "--12u", "\", Number: ", string_to_number("--12u"), "]");
+    println("    [String: \"", "-12uLLL", "\", Number: ", string_to_number("12uLLL"), "]");
+    println("    [String: \"", "------------------------------------------------1", "\", Number: ", string_to_number("------------------------------------------------1"), "]");
+    println("    [String: \"", "-------------------------------------------------1", "\", Number: ", string_to_number("-------------------------------------------------1"), "]");
     println("    [String: \"", ".3", "\", Number: ", string_to_number(".3"), "]");
     println("    [String: \"", ".5f", "\", Number: ", string_to_number(".5f"), "]");
+    println("    [String: \"", ".55", "\", Number: ", string_to_number(".55"), "]");
+    println("    [String: \"", ".555", "\", Number: ", string_to_number(".555"), "]");
+    println("    [String: \"", "-25.08f", "\", Number: ", string_to_number("-25.08f"), "]");
     println("    [String: \"", "3.141592653589793", "\", Number: ", string_to_number("3.141592653589793"), "]");
     println("    [String: \"", "3.142857142857143f", "\", Number: ", string_to_number("3.142857142857143f"), "]");
     println("    [String: \"", "-.4f", "\", Number: ", string_to_number("-.4f"), "]");
     println("    [String: \"", "0b0", "\", Number: ", string_to_number("0b0"), "]");
     println("    [String: \"", "b0", "\", Number: ", string_to_number("b0"), "]");
+    println("    [String: \"", "1b1", "\", Number: ", string_to_number("1b1"), "]");
     println("    [String: \"", "0b2", "\", Number: ", string_to_number("0b2"), "]");
+    println("    [String: \"", "0b1", "\", Number: ", string_to_number("0b1"), "]");
+    println("    [String: \"", "0b.101", "\", Number: ", string_to_number("0b.101"), "]");
+    println("    [String: \"", "0be4", "\", Number: ", string_to_number("0be4"), "]");
     println("    [String: \"", "0b10", "\", Number: ", string_to_number("0b10"), "]");
     println("    [String: \"", "0b1e3", "\", Number: ", string_to_number("0b1e3"), "]");
+    println("    [String: \"", "0b101.101", "\", Number: ", string_to_number("0b101.101"), "]");
+    println("    [String: \"", "0b101.101e3", "\", Number: ", string_to_number("0b101.101e3"), "]");
+    println("    [String: \"", "0b101.101LL", "\", Number: ", string_to_number("0b101.101LL"), "]");
     println("    [String: \"", "0b1001001", "\", Number: ", string_to_number("0b1001001"), "]");
     println("    [String: \"", "0b1001001f", "\", Number: ", string_to_number("0b1001001f"), "]");
+    println("    [String: \"", "10b101", "\", Number: ", string_to_number("10b101"), "]");
     println("    [String: \"", "0x0", "\", Number: ", string_to_number("0x0"), "]");
     println("    [String: \"", "0x", "\", Number: ", string_to_number("0x"), "]");
     println("    [String: \"", "-0xDEADBEEF", "\", Number: ", string_to_number("-0xDEADBEEF"), "]");
     println("    [String: \"", "0xLaP1S", "\", Number: ", string_to_number("0xLaP1S"), "]");
     println("    [String: \"", "0x37f", "\", Number: ", string_to_number("0x37f"), "]");
-    println("    [String: \"", "0x37.0f", "\", Number: ", string_to_number("0x37.0f"), "]");
+    println("    [String: \"", "0x37.3f", "\", Number: ", string_to_number("0x37.3f"), "]");
     println("    [String: \"", "0x37e3", "\", Number: ", string_to_number("0x37e3"), "]");
     println("    [String: \"", "0x00000001", "\", Number: ", string_to_number("0x00000001"), "]");
+    println("    [String: \"", "20x01", "\", Number: ", string_to_number("20x01"), "]");
     println("    [String: \"", ".2e3", "\", Number: ", string_to_number(".2e3"), "]");
     println("    [String: \"", "2e2", "\", Number: ", string_to_number("2e2"), "]");
+    println("    [String: \"", "200000e-3", "\", Number: ", string_to_number("200000e-3"), "]");
+    println("    [String: \"", "2e-", "\", Number: ", string_to_number("2e-"), "]");
+    println("    [String: \"", "-.000002058e0011", "\", Number: ", string_to_number("-.000002058e0011"), "]");
+    println("    [String: \"", "200000e-e-3", "\", Number: ", string_to_number("200000e-e-3"), "]");
     println("    [String: \"", "25", "\", Number: ", string_to_number("25"), "]");
     println("    [String: \"", "025", "\", Number: ", string_to_number("025"), "]");
     println("    [String: \"", "0025", "\", Number: ", string_to_number("0025"), "]");
+    println("    [String: \"", "- - 41", "\", Number: ", string_to_number("- - 41"), "]");
+    println("    [String: \"", "+ + 41", "\", Number: ", string_to_number("+ + 41"), "]");
+    println("    [String: \"", "41fe3", "\", Number: ", string_to_number("41fe3"), "]");
+    println("    [String: \"", "41e3f", "\", Number: ", string_to_number("41e3f"), "]");
+    println("    [String: \"", "000000000000000001", "\", Number: ", string_to_number("000000000000000001"), "]");
+    println("    [String: \"", "100000000000000001", "\", Number: ", string_to_number("100000000000000001"), "]");
+    println("    [String: \"", "3n", "\", Number: ", string_to_number("3n"), "]");
+    println("    [String: \"", "5.9n", "\", Number: ", string_to_number("5.9n"), "]");
     println("    [String: \"", "Infinity", "\", Number: ", string_to_number("Infinity"), "]");
     println("    [String: \"", "NaN", "\", Number: ", string_to_number("NaN"), "]");
 
