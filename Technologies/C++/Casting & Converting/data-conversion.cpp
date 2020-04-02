@@ -60,39 +60,24 @@
     template <typename type> void println(type* const) noexcept;
 
 /* Function --- MINIFY (Lapys) -> Minified due to the numerous amounts of overloads. */
-    // Number to String
+    // Number to String --- NOTE (Lapys) -> Parses the number to its fixed notation.
     inline char const* number_to_string(double const number) noexcept { return number_to_string((long double) number); }
     inline char const* number_to_string(float const number) noexcept { return number_to_string((long double) number); }
     inline char const* number_to_string(int const number) noexcept { return number_to_string((long) number); }
     inline char const* number_to_string(long const number) noexcept { static char string[21] {0}; ::strncpy(string + (number < 0L), number_to_string((unsigned long) (number < 0L ? -number : number)), sizeof(string)); if (number < 0L) *string = '-'; return (char const*) string; }
     inline char const* number_to_string(long double const number) noexcept {
-        static char string[LDBL_DIG + 28] {0};
-        ::memset(string, '\0', sizeof(string));
-        if (::isinf(number)) ::strncpy(string, "-Infinity" + (number >= 0.00), 8u + (number < 0.00));
-        else if (::isnan(number)) ::strncpy(string, "NaN", 3u);
-        else if (number && false == ::isnormal(number)) ::strncpy(string, "Denormalized", 12u);
+        if (::isinf(number)) return number < 0.00 ? "-Infinity" : "Infinity";
+        else if (::isnan(number)) return "NaN";
+        else if (number && false == ::isnormal(number)) return "Denormalized";
         else {
-            long double characteristics;
-            unsigned char index = 0u;
-            long double const mantissa = ::modf(number < 0.00 ? -number : number, &characteristics);
+            long double const characteristics = ::trunc(number < 0.00L ? -number : number);
+            long double const mantissa = (number < 0.00L ? -number : number) - characteristics;
+            static char string[LDBL_DIG + 28] {0};
 
-            if (number < 0.00 && (characteristics || mantissa)) *(string + index++) = '-';
+            ::memset(string, '\0', sizeof(string));
 
-            if (1.00 > characteristics) *(string + index++) = '0';
-            else {
-                for (long double digit, iterator = characteristics; iterator >= 1.00; iterator /= 10.00) { ::modf(::fmod(iterator, 10.00), &digit); *(string + index++) = *("0123456789" + (unsigned char) digit); }
-                for (unsigned char iterator = number < 0.00, length = index - 1u; iterator < length; (++iterator, --length)) { *(string + length) ^= *(string + iterator); *(string + iterator) ^= *(string + length); *(string + length) ^= *(string + iterator); }
-            }
-
-            if (mantissa) {
-                *(string + index++) = '.';
-                for (long double digit, iterator = mantissa * 10.00; ::modf(iterator, &digit) || '.' == *(string + (index - 1u)); iterator *= 10.00) {
-                    *(string + index++) = *("0123456789" + (unsigned char) (digit < 10.00 ? digit : ::fmod(digit, 10.00)));
-                }
-            }
+            return (char const*) string;
         }
-
-        return (char const*) string;
     }
     inline char const* number_to_string(short const number) noexcept { return number_to_string((long) number); }
     inline char const* number_to_string(unsigned int const number) noexcept { return number_to_string((unsigned long) number); }
@@ -134,260 +119,16 @@
     template <typename type> inline void println(type* const message) noexcept { if (message) { ::write(STDOUT_FILENO, "0x", 2u); for (unsigned int iterator = (int) message; iterator; iterator >>= 4u) print(' '); for (unsigned int iterator = (int) message; iterator; iterator >>= 4u) { print('\b'); print(*("0123456789ABCDEF" + (iterator % 16u))); print('\b'); } } else ::write(STDOUT_FILENO, "NULL", 4u); println(); }
     template <typename... types> inline void println(types... messages) noexcept { print(messages...); println(); }
 
-    // String to Number --- NOTE (Lapys) -> Return type of `long double` for consistency (evaluates the number in fixed notation).
+    /* String to Number
+            --- NOTE ---
+                #Lapys:
+                    - Evaluates the exponent (in its standard form) with a natural base.
+                    - Floating-point non-natural-base numbers are allowed e.g.: `2EF.F8`.
+                    - Returns the type of `long double` for consistency.
+                    - Suffices apply to all base forms.
+    */
     constexpr inline long double string_to_number(char const string) noexcept { switch (string) { case '0': return 0.00; case '1': return 1.00; case '2': return 2.00; case '3': return 3.00; case '4': return 4.00; case '5': return 5.00; case '6': return 6.00; case '7': return 7.00; case '8': return 8.00; case '9': return 9.00; } return NAN; }
-    inline long double string_to_number(char* string) noexcept {
-        if (string && '\0' ^ *string) {
-            if ('\0' == *string || 0 == ::strncmp(string, "nan", 4u) || 0 == ::strncmp(string, "NaN", 4u) || 0 == ::strncmp(string, "NAN", 4u)) return NAN;
-            else if (0 == ::strncmp(string, "inf", 4u) || 0 == ::strncmp(string, "infinity", 9u) || 0 == ::strncmp(string, "Infinity", 9u) || 0 == ::strncmp(string, "INFINITY", 9u)) return INFINITY;
-            else {
-                char character = *string;
-                long double number = 0.00L;
-                char *numberBinaryCharacteristicsComponent = NULL, *numberBinaryMantissaComponent = NULL; unsigned short numberBinaryCharacteristicsLength = 0u, numberBinaryMantissaLength = 0u;
-                static char numberComponents[SHRT_MAX] {0};
-                char *numberDecimalCharacteristicsComponent = NULL, *numberDecimalMantissaComponent = NULL; unsigned short numberDecimalCharacteristicsLength = 0u, numberDecimalMantissaLength = 0u;
-                char *numberHexadecimalCharacteristicsComponent = NULL, *numberHexadecimalMantissaComponent = NULL; unsigned short numberHexadecimalCharacteristicsLength = 0u, numberHexadecimalMantissaLength = 0u;
-                char *numberOctalCharacteristicsComponent = NULL, *numberOctalMantissaComponent = NULL; unsigned short numberOctalCharacteristicsLength = 0u, numberOctalMantissaLength = 0u;
-                char *numberScientificExponentComponent = NULL; unsigned char numberScientificExponentLength = 0u;
-                bool numberSignedness = false;
-                static char numberSuffixComponent[3] {0}; unsigned char numberSuffixLength = 0u;
-                bool parseContinue = true;
-                enum {binary_characteristics, binary_mantissa, decimal_characteristics, decimal_mantissa, hexadecimal_characteristics, hexadecimal_mantissa, octal_characteristics, octal_mantissa, scientific_exponent, suffix, trailing} parseState = trailing;
-
-                for (size_t iterator = 0u; parseContinue && ('\0' ^ character); character = *(string + ++iterator))
-                switch (parseState) {
-                    case binary_characteristics: switch (character) {
-                        case '.': numberBinaryMantissaComponent = numberBinaryCharacteristicsComponent + (numberBinaryCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = binary_mantissa; (string += iterator, iterator = 0u); break;
-                        case 'E': case 'e': numberScientificExponentComponent = numberBinaryCharacteristicsComponent + (numberBinaryCharacteristicsLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
-                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break;
-                        case '0': case '1': *(numberBinaryCharacteristicsComponent + numberBinaryCharacteristicsLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case binary_mantissa: switch (character) {
-                        case 'E': case 'e': numberScientificExponentComponent = numberBinaryMantissaComponent + (numberBinaryMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
-                        case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
-                        case '0': case '1': *(numberBinaryMantissaComponent + numberBinaryMantissaLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case decimal_characteristics: switch (character) {
-                        case '.': numberDecimalMantissaComponent = numberDecimalCharacteristicsComponent + (numberDecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = decimal_mantissa; (string += iterator, iterator = 0u); break;
-                        case 'B': case 'b': numberDecimalCharacteristicsLength = 0u; numberBinaryCharacteristicsComponent = numberComponents; parseContinue = 1u == iterator && '0' == *string && ('\0' ^ *(string + (iterator + 1u))); parseState = binary_characteristics; (string += iterator, iterator = 0u); break;
-                        case 'E': case 'e': numberScientificExponentComponent = numberDecimalCharacteristicsComponent + (numberDecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
-                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseState = suffix; break;
-                        case 'X': case 'x': numberDecimalCharacteristicsLength = 0u; numberHexadecimalCharacteristicsComponent = numberComponents; parseContinue = 1u == iterator && '0' == *string && ('\0' ^ *(string + (iterator + 1u))); parseState = hexadecimal_characteristics; (string += iterator, iterator = 0u); break;
-                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': if ('0' == *string) { numberDecimalCharacteristicsLength = 0u; numberOctalCharacteristicsComponent = numberComponents; parseState = octal_characteristics; (string += iterator - 1u, iterator = 0u); } else *(numberDecimalCharacteristicsComponent + numberDecimalCharacteristicsLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case decimal_mantissa: switch (character) {
-                        case 'E': case 'e': numberScientificExponentComponent = numberDecimalMantissaComponent + (numberDecimalMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
-                        case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
-                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(numberDecimalMantissaComponent + numberDecimalMantissaLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case hexadecimal_characteristics: switch (character) {
-                        case '.': numberHexadecimalMantissaComponent = numberHexadecimalCharacteristicsComponent + (numberHexadecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = hexadecimal_mantissa; (string += iterator, iterator = 0u); break;
-                        case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break;
-                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(numberHexadecimalCharacteristicsComponent + numberHexadecimalCharacteristicsLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case hexadecimal_mantissa: switch (character) {
-                        case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
-                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(numberHexadecimalMantissaComponent + numberHexadecimalMantissaLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case octal_characteristics: switch (character) {
-                        case '.': numberOctalMantissaComponent = numberOctalCharacteristicsComponent + (numberOctalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = octal_mantissa; (string += iterator, iterator = 0u); break;
-                        case 'E': case 'e': numberScientificExponentComponent = numberOctalCharacteristicsComponent + (numberOctalCharacteristicsLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
-                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break;
-                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': *(numberOctalCharacteristicsComponent + numberOctalCharacteristicsLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case octal_mantissa: switch (character) {
-                        case 'E': case 'e': numberScientificExponentComponent = numberOctalMantissaComponent + (numberOctalMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break;
-                        case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break;
-                        case '0': case '1': *(numberOctalMantissaComponent + numberOctalMantissaLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case scientific_exponent: switch (character) {
-                        case '-': parseContinue = 1u == iterator; *(numberScientificExponentComponent + numberScientificExponentLength++) = character; break;
-                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(numberScientificExponentComponent + numberScientificExponentLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case suffix: switch (character) {
-                        case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': parseContinue = numberSuffixLength ^ (sizeof(numberSuffixComponent) / sizeof(char)); *(numberSuffixComponent + numberSuffixLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                    case trailing: switch (character) {
-                        case '-': numberSignedness = !numberSignedness; break;
-                        case '.': numberDecimalMantissaComponent = numberComponents; parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = decimal_mantissa; (string += iterator, iterator = 0u); break;
-                        case '+': case ' ': case '\b': case '\n': case '\r': case '\t': case '\v': break;
-                        case '0': parseState = decimal_characteristics; (string += iterator, iterator = 0u); *((numberDecimalCharacteristicsComponent = numberComponents) + numberDecimalCharacteristicsLength++) = character; break;
-                        case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': parseState = decimal_characteristics; *((numberDecimalCharacteristicsComponent = numberComponents) + numberDecimalCharacteristicsLength++) = character; break;
-                        default: parseContinue = false; break;
-                    } break;
-                }
-
-                if (false == parseContinue || (1u == numberScientificExponentLength && '-' == *numberScientificExponentComponent) || (numberSuffixLength && (
-                    (numberBinaryMantissaLength || numberDecimalMantissaLength || numberHexadecimalMantissaLength || numberOctalMantissaLength) && (
-                        0 == ::strncmp(numberSuffixComponent, "LL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ll", numberSuffixLength) ||
-                        0 == ::strncmp(numberSuffixComponent, "n", numberSuffixLength) ||
-                        0 == ::strncmp(numberSuffixComponent, "u", 1u)
-                    )
-                ))) number = NAN;
-
-                else {
-                    long double component;
-                    long double multiplier;
-
-                    if (numberBinaryCharacteristicsLength) {
-                        component = 1.00L;
-                        for (int iterator = numberBinaryCharacteristicsLength - 1u; ~iterator; --iterator) {
-                            if ('1' == *(numberBinaryCharacteristicsComponent + iterator)) number += component;
-                            component *= 2.00L;
-                        }
-                    }
-
-                    if (numberBinaryMantissaLength) {
-                        component = 1.00L;
-                        for (char *iterator = numberBinaryMantissaComponent + (numberBinaryMantissaLength - 1u); '0' == *iterator; --iterator) --numberBinaryMantissaLength;
-                        for (unsigned short iterator = 0u; iterator ^ numberBinaryMantissaLength; ++iterator) {
-                            component /= 2.00L;
-                            if ('1' == *(numberBinaryMantissaComponent + iterator)) number += component;
-                        }
-                    }
-
-                    if (numberDecimalCharacteristicsLength) {
-                        multiplier = 1.00L;
-
-                        for (int iterator = numberDecimalCharacteristicsLength - 1u; ~iterator; --iterator) {
-                            component = string_to_number(*(numberDecimalCharacteristicsComponent + iterator)) * multiplier;
-                            multiplier *= 10.00L;
-                            number += component;
-                        }
-                    }
-
-                    if (numberDecimalMantissaLength) {
-                        multiplier = 1.00L;
-
-                        for (char *iterator = numberDecimalMantissaComponent + (numberDecimalMantissaLength - 1u); '0' == *iterator; --iterator) --numberDecimalMantissaLength;
-                        for (unsigned short iterator = 0u; iterator ^ numberDecimalMantissaLength; ++iterator) {
-                            multiplier /= 10.00L;
-                            component = string_to_number(*(numberDecimalMantissaComponent + iterator)) * multiplier;
-                            number += component;
-                        }
-                    }
-
-                    if (numberHexadecimalCharacteristicsLength) {
-                        multiplier = 1.00L;
-
-                        for (int iterator = numberHexadecimalCharacteristicsLength - 1u; ~iterator; --iterator) {
-                            switch (*(numberHexadecimalCharacteristicsComponent + iterator)) {
-                                case 'A': case 'a': component = 10.00L; break;
-                                case 'B': case 'b': component = 11.00L; break;
-                                case 'C': case 'c': component = 12.00L; break;
-                                case 'D': case 'd': component = 13.00L; break;
-                                case 'E': case 'e': component = 14.00L; break;
-                                case 'F': case 'f': component = 15.00L; break;
-                                default: component = string_to_number(*(numberHexadecimalCharacteristicsComponent + iterator)); break;
-                            }
-                            component *= multiplier;
-                            multiplier *= 16.00L;
-                            number += component;
-                        }
-                    }
-
-                    if (numberHexadecimalMantissaLength) {
-                        multiplier = 1.00L;
-
-                        for (char *iterator = numberHexadecimalMantissaComponent + (numberHexadecimalMantissaLength - 1u); '0' == *iterator; --iterator) --numberHexadecimalMantissaLength;
-                        for (unsigned short iterator = 0u; iterator ^ numberHexadecimalMantissaLength; ++iterator) {
-                            multiplier /= 16.00L;
-                            switch (*(numberHexadecimalMantissaComponent + iterator)) {
-                                case 'A': case 'a': component = 10.00L; break;
-                                case 'B': case 'b': component = 11.00L; break;
-                                case 'C': case 'c': component = 12.00L; break;
-                                case 'D': case 'd': component = 13.00L; break;
-                                case 'E': case 'e': component = 14.00L; break;
-                                case 'F': case 'f': component = 15.00L; break;
-                                default: component = string_to_number(*(numberHexadecimalMantissaComponent + iterator)); break;
-                            }
-                            component *= multiplier;
-                            number += component;
-                        }
-                    }
-
-                    if (numberOctalCharacteristicsLength) {
-                        multiplier = 1.00L;
-
-                        for (int iterator = numberOctalCharacteristicsLength - 1u; ~iterator; --iterator) {
-                            component = string_to_number(*(numberOctalCharacteristicsComponent + iterator)) * multiplier;
-                            multiplier *= 8.00L;
-                            number += component;
-                        }
-                    }
-
-                    if (numberOctalMantissaLength) {
-                        multiplier = 1.00L;
-
-                        for (char *iterator = numberOctalMantissaComponent + (numberOctalMantissaLength - 1u); '0' == *iterator; --iterator) --numberOctalMantissaLength;
-                        for (unsigned short iterator = 0u; iterator ^ numberOctalMantissaLength; ++iterator) {
-                            multiplier /= 8.00L;
-                            component = string_to_number(*(numberOctalMantissaComponent + iterator)) * multiplier;
-                            number += component;
-                        }
-                    }
-
-                    if (numberScientificExponentLength) {
-                        unsigned short exponent = 0u;
-                        bool exponentSignedness = false;
-
-                        multiplier = 1.00L;
-
-                        if ('-' == *numberScientificExponentComponent) {
-                            exponentSignedness = true;
-                            ++numberScientificExponentComponent;
-                            --numberScientificExponentLength;
-                        }
-
-                        for (int iterator = numberScientificExponentLength - 1u; ~iterator; --iterator) {
-                            component = string_to_number(*(numberScientificExponentComponent + iterator)) * multiplier;
-                            multiplier *= 10.00L;
-                            exponent += component;
-                        }
-
-                        if (exponentSignedness) for (unsigned short iterator = 0u; exponent ^ iterator; ++iterator) number /= 10.00;
-                        else for (unsigned short iterator = 0u; exponent ^ iterator; ++iterator) number *= 10.00;
-                    }
-
-                    if (numberSignedness) number = -number;
-
-                    switch (numberSuffixLength) {
-                        case 1u:
-                            if ('F' == *numberSuffixComponent || 'f' == *numberSuffixComponent) number = (float) number;
-                            else if ('U' == *numberSuffixComponent || 'u' == *numberSuffixComponent) number = (unsigned int) number;
-                            else if ('n' == *numberSuffixComponent) ::modf(number, &number);
-                            else if ('L' == *numberSuffixComponent || 'l' == *numberSuffixComponent) if (0u == numberBinaryMantissaLength + numberDecimalMantissaLength + numberHexadecimalMantissaLength + numberOctalMantissaLength) number = (signed long) number;
-                        break;
-                        case 2u:
-                            if (0 == ::strncmp(numberSuffixComponent, "LL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ll", numberSuffixLength)) number = (signed long long) number;
-                            else if (
-                                0 == ::strncmp(numberSuffixComponent, "UL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "Ul", numberSuffixLength) ||
-                                0 == ::strncmp(numberSuffixComponent, "uL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ul", numberSuffixLength)
-                            ) number = (unsigned long) number;
-                        break;
-                        case 3u:
-                            if (
-                                0 == ::strncmp(numberSuffixComponent, "ULL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "Ull", numberSuffixLength) ||
-                                0 == ::strncmp(numberSuffixComponent, "uLL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ull", numberSuffixLength)
-                            ) number = (unsigned long long) number;
-                        break;
-                    }
-                }
-
-                return number;
-            }
-        } else return NAN;
-    }
+    inline long double string_to_number(char* string) noexcept { if (string && '\0' ^ *string) { if ('\0' == *string || 0 == ::strncmp(string, "nan", 4u) || 0 == ::strncmp(string, "NaN", 4u) || 0 == ::strncmp(string, "NAN", 4u)) return NAN; else if (0 == ::strncmp(string, "inf", 4u) || 0 == ::strncmp(string, "infinity", 9u) || 0 == ::strncmp(string, "Infinity", 9u) || 0 == ::strncmp(string, "INFINITY", 9u)) return INFINITY; else { char character = *string; long double number = 0.00L; char *numberBinaryCharacteristicsComponent = NULL, *numberBinaryMantissaComponent = NULL; unsigned short numberBinaryCharacteristicsLength = 0u, numberBinaryMantissaLength = 0u; static char numberComponents[SHRT_MAX] {0}; char *numberDecimalCharacteristicsComponent = NULL, *numberDecimalMantissaComponent = NULL; unsigned short numberDecimalCharacteristicsLength = 0u, numberDecimalMantissaLength = 0u; char *numberHexadecimalCharacteristicsComponent = NULL, *numberHexadecimalMantissaComponent = NULL; unsigned short numberHexadecimalCharacteristicsLength = 0u, numberHexadecimalMantissaLength = 0u; char *numberOctalCharacteristicsComponent = NULL, *numberOctalMantissaComponent = NULL; unsigned short numberOctalCharacteristicsLength = 0u, numberOctalMantissaLength = 0u; char *numberScientificExponentComponent = NULL; unsigned char numberScientificExponentLength = 0u; bool numberSignedness = false; static char numberSuffixComponent[3] {0}; unsigned char numberSuffixLength = 0u; bool parseContinue = true; enum {binary_characteristics, binary_mantissa, decimal_characteristics, decimal_mantissa, hexadecimal_characteristics, hexadecimal_mantissa, octal_characteristics, octal_mantissa, scientific_exponent, suffix, trailing} parseState = trailing; for (size_t iterator = 0u; parseContinue && ('\0' ^ character); character = *(string + ++iterator)) switch (parseState) { case binary_characteristics: switch (character) { case '.': numberBinaryMantissaComponent = numberBinaryCharacteristicsComponent + (numberBinaryCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = binary_mantissa; (string += iterator, iterator = 0u); break; case 'E': case 'e': numberScientificExponentComponent = numberBinaryCharacteristicsComponent + (numberBinaryCharacteristicsLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break; case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break; case '0': case '1': *(numberBinaryCharacteristicsComponent + numberBinaryCharacteristicsLength++) = character; break; default: parseContinue = false; break; } break; case binary_mantissa: switch (character) { case 'E': case 'e': numberScientificExponentComponent = numberBinaryMantissaComponent + (numberBinaryMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break; case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break; case '0': case '1': *(numberBinaryMantissaComponent + numberBinaryMantissaLength++) = character; break; default: parseContinue = false; break; } break; case decimal_characteristics: switch (character) { case '.': numberDecimalMantissaComponent = numberDecimalCharacteristicsComponent + (numberDecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = decimal_mantissa; (string += iterator, iterator = 0u); break; case 'B': case 'b': numberDecimalCharacteristicsLength = 0u; numberBinaryCharacteristicsComponent = numberComponents; parseContinue = 1u == iterator && '0' == *string && ('\0' ^ *(string + (iterator + 1u))); parseState = binary_characteristics; (string += iterator, iterator = 0u); break; case 'E': case 'e': numberScientificExponentComponent = numberDecimalCharacteristicsComponent + (numberDecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = scientific_exponent; (string += iterator, iterator = 0u); break; case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseState = suffix; break; case 'X': case 'x': numberDecimalCharacteristicsLength = 0u; numberHexadecimalCharacteristicsComponent = numberComponents; parseContinue = 1u == iterator && '0' == *string && ('\0' ^ *(string + (iterator + 1u))); parseState = hexadecimal_characteristics; (string += iterator, iterator = 0u); break; case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': if ('0' == *string) { numberDecimalCharacteristicsLength = 0u; numberOctalCharacteristicsComponent = numberComponents; parseState = octal_characteristics; (string += iterator - 1u, iterator = 0u); } else *(numberDecimalCharacteristicsComponent + numberDecimalCharacteristicsLength++) = character; break; default: parseContinue = false; break; } break; case decimal_mantissa: switch (character) { case 'E': case 'e': numberScientificExponentComponent = numberDecimalMantissaComponent + (numberDecimalMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break; case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break; case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(numberDecimalMantissaComponent + numberDecimalMantissaLength++) = character; break; default: parseContinue = false; break; } break; case hexadecimal_characteristics: switch (character) { case '.': numberHexadecimalMantissaComponent = numberHexadecimalCharacteristicsComponent + (numberHexadecimalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = hexadecimal_mantissa; (string += iterator, iterator = 0u); break; case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break; case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(numberHexadecimalCharacteristicsComponent + numberHexadecimalCharacteristicsLength++) = character; break; default: parseContinue = false; break; } break; case hexadecimal_mantissa: switch (character) { case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break; case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case 'A': case 'a': case 'B': case 'b': case 'C': case 'c': case 'D': case 'd': case 'E': case 'e': case 'F': case 'f': *(numberHexadecimalMantissaComponent + numberHexadecimalMantissaLength++) = character; break; default: parseContinue = false; break; } break; case octal_characteristics: switch (character) { case '.': numberOctalMantissaComponent = numberOctalCharacteristicsComponent + (numberOctalCharacteristicsLength + 1u); parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = octal_mantissa; (string += iterator, iterator = 0u); break; case 'E': case 'e': numberScientificExponentComponent = numberOctalCharacteristicsComponent + (numberOctalCharacteristicsLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break; case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': --iterator; parseContinue = 1u ^ iterator; parseState = suffix; break; case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': *(numberOctalCharacteristicsComponent + numberOctalCharacteristicsLength++) = character; break; default: parseContinue = false; break; } break; case octal_mantissa: switch (character) { case 'E': case 'e': numberScientificExponentComponent = numberOctalMantissaComponent + (numberOctalMantissaLength + 1u); parseContinue = (1u ^ iterator) && ('\0' ^ *(string + (iterator + 1u))); parseState = scientific_exponent; (string += iterator, iterator = 0u); break; case 'F': case 'f': case 'L': case 'l': parseContinue = 1u ^ iterator--; parseState = suffix; break; case '0': case '1': *(numberOctalMantissaComponent + numberOctalMantissaLength++) = character; break; default: parseContinue = false; break; } break; case scientific_exponent: switch (character) { case '-': parseContinue = 1u == iterator; *(numberScientificExponentComponent + numberScientificExponentLength++) = character; break; case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': *(numberScientificExponentComponent + numberScientificExponentLength++) = character; break; default: parseContinue = false; break; } break; case suffix: switch (character) { case 'F': case 'f': case 'L': case 'l': case 'n': case 'U': case 'u': parseContinue = numberSuffixLength ^ (sizeof(numberSuffixComponent) / sizeof(char)); *(numberSuffixComponent + numberSuffixLength++) = character; break; default: parseContinue = false; break; } break; case trailing: switch (character) { case '-': numberSignedness = !numberSignedness; break; case '.': numberDecimalMantissaComponent = numberComponents; parseContinue = '\0' ^ *(string + (iterator + 1u)); parseState = decimal_mantissa; (string += iterator, iterator = 0u); break; case '+': case ' ': case '\b': case '\n': case '\r': case '\t': case '\v': break; case '0': parseState = decimal_characteristics; (string += iterator, iterator = 0u); *((numberDecimalCharacteristicsComponent = numberComponents) + numberDecimalCharacteristicsLength++) = character; break; case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': parseState = decimal_characteristics; *((numberDecimalCharacteristicsComponent = numberComponents) + numberDecimalCharacteristicsLength++) = character; break; default: parseContinue = false; break; } break; } if (false == parseContinue || (1u == numberScientificExponentLength && '-' == *numberScientificExponentComponent) || (numberSuffixLength && ((numberBinaryMantissaLength || numberDecimalMantissaLength || numberHexadecimalMantissaLength || numberOctalMantissaLength) && (0 == ::strncmp(numberSuffixComponent, "LL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ll", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "n", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "u", 1u))))) number = NAN; else { long double component; long double multiplier; if (numberBinaryCharacteristicsLength) { component = 1.00L; for (int iterator = numberBinaryCharacteristicsLength - 1u; ~iterator; --iterator) { if ('1' == *(numberBinaryCharacteristicsComponent + iterator)) number += component; component *= 2.00L; } } if (numberBinaryMantissaLength) { component = 1.00L; for (char *iterator = numberBinaryMantissaComponent + (numberBinaryMantissaLength - 1u); '0' == *iterator; --iterator) --numberBinaryMantissaLength; for (unsigned short iterator = 0u; iterator ^ numberBinaryMantissaLength; ++iterator) { component /= 2.00L; if ('1' == *(numberBinaryMantissaComponent + iterator)) number += component; } } if (numberDecimalCharacteristicsLength) { multiplier = 1.00L; for (int iterator = numberDecimalCharacteristicsLength - 1u; ~iterator; --iterator) { component = string_to_number(*(numberDecimalCharacteristicsComponent + iterator)) * multiplier; multiplier *= 10.00L; number += component; } } if (numberDecimalMantissaLength) { multiplier = 1.00L; for (char *iterator = numberDecimalMantissaComponent + (numberDecimalMantissaLength - 1u); '0' == *iterator; --iterator) --numberDecimalMantissaLength; for (unsigned short iterator = 0u; iterator ^ numberDecimalMantissaLength; ++iterator) { multiplier /= 10.00L; component = string_to_number(*(numberDecimalMantissaComponent + iterator)) * multiplier; number += component; } } if (numberHexadecimalCharacteristicsLength) { multiplier = 1.00L; for (int iterator = numberHexadecimalCharacteristicsLength - 1u; ~iterator; --iterator) { switch (*(numberHexadecimalCharacteristicsComponent + iterator)) { case 'A': case 'a': component = 10.00L; break; case 'B': case 'b': component = 11.00L; break; case 'C': case 'c': component = 12.00L; break; case 'D': case 'd': component = 13.00L; break; case 'E': case 'e': component = 14.00L; break; case 'F': case 'f': component = 15.00L; break; default: component = string_to_number(*(numberHexadecimalCharacteristicsComponent + iterator)); break; } component *= multiplier; multiplier *= 16.00L; number += component; } } if (numberHexadecimalMantissaLength) { multiplier = 1.00L; for (char *iterator = numberHexadecimalMantissaComponent + (numberHexadecimalMantissaLength - 1u); '0' == *iterator; --iterator) --numberHexadecimalMantissaLength; for (unsigned short iterator = 0u; iterator ^ numberHexadecimalMantissaLength; ++iterator) { multiplier /= 16.00L; switch (*(numberHexadecimalMantissaComponent + iterator)) { case 'A': case 'a': component = 10.00L; break; case 'B': case 'b': component = 11.00L; break; case 'C': case 'c': component = 12.00L; break; case 'D': case 'd': component = 13.00L; break; case 'E': case 'e': component = 14.00L; break; case 'F': case 'f': component = 15.00L; break; default: component = string_to_number(*(numberHexadecimalMantissaComponent + iterator)); break; } component *= multiplier; number += component; } } if (numberOctalCharacteristicsLength) { multiplier = 1.00L; for (int iterator = numberOctalCharacteristicsLength - 1u; ~iterator; --iterator) { component = string_to_number(*(numberOctalCharacteristicsComponent + iterator)) * multiplier; multiplier *= 8.00L; number += component; } } if (numberOctalMantissaLength) { multiplier = 1.00L; for (char *iterator = numberOctalMantissaComponent + (numberOctalMantissaLength - 1u); '0' == *iterator; --iterator) --numberOctalMantissaLength; for (unsigned short iterator = 0u; iterator ^ numberOctalMantissaLength; ++iterator) { multiplier /= 8.00L; component = string_to_number(*(numberOctalMantissaComponent + iterator)) * multiplier; number += component; } } if (numberScientificExponentLength) { unsigned short exponent = 0u; bool exponentSignedness = false; multiplier = 1.00L; if ('-' == *numberScientificExponentComponent) { exponentSignedness = true; ++numberScientificExponentComponent; --numberScientificExponentLength; } for (int iterator = numberScientificExponentLength - 1u; ~iterator; --iterator) { component = string_to_number(*(numberScientificExponentComponent + iterator)) * multiplier; multiplier *= 10.00L; exponent += component; } if (exponentSignedness) for (unsigned short iterator = 0u; exponent ^ iterator; ++iterator) number /= 10.00; else for (unsigned short iterator = 0u; exponent ^ iterator; ++iterator) number *= 10.00; } if (numberSignedness) number = -number; switch (numberSuffixLength) { case 1u: if ('F' == *numberSuffixComponent || 'f' == *numberSuffixComponent) number = (float) number; else if ('U' == *numberSuffixComponent || 'u' == *numberSuffixComponent) number = (unsigned int) number; else if ('n' == *numberSuffixComponent) number = ::trunc(number); else if ('L' == *numberSuffixComponent || 'l' == *numberSuffixComponent) if (0u == numberBinaryMantissaLength + numberDecimalMantissaLength + numberHexadecimalMantissaLength + numberOctalMantissaLength) number = (signed long) number; break; case 2u: if (0 == ::strncmp(numberSuffixComponent, "LL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ll", numberSuffixLength)) number = (signed long long) number; else if (0 == ::strncmp(numberSuffixComponent, "UL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "Ul", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "uL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ul", numberSuffixLength)) number = (unsigned long) number; break; case 3u: if (0 == ::strncmp(numberSuffixComponent, "ULL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "Ull", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "uLL", numberSuffixLength) || 0 == ::strncmp(numberSuffixComponent, "ull", numberSuffixLength)) number = (unsigned long long) number; break; } } return number; } } else return NAN; }
     long double string_to_number(char const* const string) noexcept { return string_to_number((char*) string); }
 
 /* Main */
@@ -411,6 +152,9 @@ int main(int const argc, char const* argv[]) {
     println("    [Number: ", .0123456789, ", String: \"", number_to_string(.0123456789), "\"]");
     println("    [Number: ", 22.00 / 7.00, ", String: \"", number_to_string(22.00 / 7.00), "\"]");
     println("    [Number: ", M_PI, ", String: \"", number_to_string(M_PI), "\"]");
+    println("    [Number: ", FLT_MAX, ", String: \"", number_to_string(FLT_MAX), "\"]");
+    println("    [Number: ", DBL_MAX, ", String: \"", number_to_string(DBL_MAX), "\"]");
+    println("    [Number: ", LDBL_MAX, ", String: \"", number_to_string(LDBL_MAX), "\"]");
     println("    [Number: ", INFINITY, ", String: \"", number_to_string(INFINITY), "\"]");
     println("    [Number: ", NAN, ", String: \"", number_to_string(NAN), "\"]");
     println();
