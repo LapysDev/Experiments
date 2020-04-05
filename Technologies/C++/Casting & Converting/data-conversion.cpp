@@ -7,8 +7,6 @@
 #include <stdlib.h> // Standard Library --- NOTE (Lapys) -> Output.
 #include <string.h> // String --- NOTE (Lapys) -> Textual conversion.
 
-#include <iostream>
-
 /* Polyfill > ... */
 #if !defined(INFINITY) && defined(HUGE_VAL)
 #  define INFINITY HUGE_VAL
@@ -60,25 +58,15 @@
     template <typename type> void println(type* const) noexcept;
 
 /* Function --- MINIFY (Lapys) -> Minified due to the numerous amounts of overloads. */
-    // Number to String --- NOTE (Lapys) -> Parses the number to its fixed notation.
+    /* Number to String
+            --- NOTE (Lapys) -> Parses the number to its fixed notation.
+            --- WARN (Lapys) -> Formatting is terrible; Maximum of 18 digits of precision.
+    */
     inline char const* number_to_string(double const number) noexcept { return number_to_string((long double) number); }
     inline char const* number_to_string(float const number) noexcept { return number_to_string((long double) number); }
     inline char const* number_to_string(int const number) noexcept { return number_to_string((long) number); }
     inline char const* number_to_string(long const number) noexcept { static char string[21] {0}; ::strncpy(string + (number < 0L), number_to_string((unsigned long) (number < 0L ? -number : number)), sizeof(string)); if (number < 0L) *string = '-'; return (char const*) string; }
-    inline char const* number_to_string(long double const number) noexcept {
-        if (::isinf(number)) return number < 0.00 ? "-Infinity" : "Infinity";
-        else if (::isnan(number)) return "NaN";
-        else if (number && false == ::isnormal(number)) return "Denormalized";
-        else {
-            long double const characteristics = ::trunc(number < 0.00L ? -number : number);
-            long double const mantissa = (number < 0.00L ? -number : number) - characteristics;
-            static char string[LDBL_DIG + 28] {0};
-
-            ::memset(string, '\0', sizeof(string));
-
-            return (char const*) string;
-        }
-    }
+    inline char const* number_to_string(long double const number) noexcept { if (::isinf(number)) return number < 0.00L ? "-Infinity" : "Infinity"; else if (::isnan(number)) return "NaN"; else if (number && false == ::isnormal(number)) return "Denormalized"; else { long double characteristics; char *iterator; long double mantissa; static char string[LDBL_DIG + 28] {0}; ::memset(string, '\0', sizeof(string)); if (number < 0.00L) { iterator = string + 1; mantissa = ::modf(-number, &characteristics); *string = '-'; *(string + 1) = '0'; } else { iterator = string; mantissa = ::modf(number, &characteristics); *string = '0'; } if (characteristics) { for (long double digit; characteristics && (string - iterator) <= LDBL_DIG; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) digit = ::modf((characteristics /= 10.00L), &characteristics) * 10.00L; ::strrev(string + (number < 0.00L)); } else ++iterator; if (mantissa) { *iterator++ = '.'; for (long double digit; mantissa >= LDBL_EPSILON; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) mantissa = ::modf((mantissa *= 10.00L), &digit); } return (char const*) string; } }
     inline char const* number_to_string(short const number) noexcept { return number_to_string((long) number); }
     inline char const* number_to_string(unsigned int const number) noexcept { return number_to_string((unsigned long) number); }
     inline char const* number_to_string(unsigned long const number) noexcept { static char string[21] {0}; ::memset(string, '\0', sizeof(string)); *string = '0'; for (unsigned long index = 0u, iterator = number; iterator; iterator /= 10u) { *(string + index++) = *("0123456789" + (iterator % 10u)); if (iterator < 10u) for ((--index, iterator = 0u); iterator < index; (--index, ++iterator)) { *(string + index) ^= *(string + iterator); *(string + iterator) ^= *(string + index); *(string + index) ^= *(string + iterator); } } return (char const*) string; }
@@ -152,11 +140,11 @@ int main(int const argc, char const* argv[]) {
     println("    [Number: ", .0123456789, ", String: \"", number_to_string(.0123456789), "\"]");
     println("    [Number: ", 22.00 / 7.00, ", String: \"", number_to_string(22.00 / 7.00), "\"]");
     println("    [Number: ", M_PI, ", String: \"", number_to_string(M_PI), "\"]");
+    println("    [Number: ", INFINITY, ", String: \"", number_to_string(INFINITY), "\"]");
+    println("    [Number: ", NAN, ", String: \"", number_to_string(NAN), "\"]");
     println("    [Number: ", FLT_MAX, ", String: \"", number_to_string(FLT_MAX), "\"]");
     println("    [Number: ", DBL_MAX, ", String: \"", number_to_string(DBL_MAX), "\"]");
     println("    [Number: ", LDBL_MAX, ", String: \"", number_to_string(LDBL_MAX), "\"]");
-    println("    [Number: ", INFINITY, ", String: \"", number_to_string(INFINITY), "\"]");
-    println("    [Number: ", NAN, ", String: \"", number_to_string(NAN), "\"]");
     println();
 
     println("    [Pointer: ", &argc, ", String: \"", pointer_to_string(&argc), "\"]");
