@@ -1,452 +1,467 @@
 /* Import */
-#include <stdarg.h> // Standard Arguments
 #include <stdlib.h> // Standard Library
 #include <string.h> // String
 
 #include <iostream>
 
-/* Definition > ... */
-#define BIG_ARRAY__LIMIT 3u
+/* Class > Big Number */
+class BigNumber {
+    // [...]
+    private:
+        // Definition > (Characteristics ..., Mantissa ..., Signedness, State)
+        char *characteristics; size_t characteristicsLength;
+        char *mantissa; size_t mantissaLength;
+        bool signedness;
+        enum {DENORMALIZED, INFINITE, SAFE, UNCOMPUTABLE} state;
 
-template <typename, size_t = BIG_ARRAY__LIMIT> class BigArray;
-class BigNumber;
+        // Definition > ...
+        void add(BigNumber const&) noexcept;
+        void decrement(void) noexcept;
+        void divide(BigNumber const&) noexcept;
+        void exponentiate(BigNumber const&) noexcept;
+        void increment(void) noexcept;
+        void modulo(BigNumber const&) noexcept;
+        void multiply(BigNumber const&) noexcept;
+        void subtract(BigNumber const&) noexcept;
 
-/* Class */
-    /* Big Array
-            --- NOTE ---
-                #Lapys:
-                    - Maximum size of `limit ** limit`.
-                    - Would have deferred to `BigArray<type, long double>` since `sizeof(long double) >= sizeof(size_t)` but floating-point types are not allowed as non-type template parameters.
+        // Function
+            // Allocate --- NOTE (Lapys) -> Add more memory to the characteristics & mantissa.
+            inline void allocate(void) noexcept {
+                // Initialization > ((Recent) (Characteristics, Mantissa)) Size
+                static size_t characteristicsSize;
+                static size_t mantissaSize;
 
-            --- WARN ---
-                #Lapys: Of course, there are limitations & restrictions to non-linear arrays pretending to be single dimensional (such as more memory required than a linear array of equal length).
-                    This should be inferred as a `LayeredArray` instead which has no prevalent use like those of trees in computing science.
-    */
-    template <typename type, size_t limit>
-    class BigArray {
-        // ...
-        friend BigNumber;
+                size_t recentCharacteristicsSize = characteristicsSize;
+                size_t recentMantissaSize = mantissaSize;
 
-        // [...]
-        private:
-            // Definition > (Depth, Value)
-            size_t depth; // NOTE (Lapys) -> Number of overflows.
-            struct BigArrayObject { // NOTE (Lapys) -> Represents elements in the array; Each object is only surface-deep, gaining depth via child pointer references.
+                // ... Update > (Characteristics, Mantissa) Size --- NOTE (Lapys) -> Uses the Fibonacci sequence to determine allocable memory size.
+                if (this -> characteristicsLength) for (size_t former, iterator = 1u, limit = this -> characteristicsLength, recent = 0u; iterator <= limit; ) { former = iterator; iterator += recent; recent = former; characteristicsSize = iterator; }
+                else characteristicsSize = 1u;
+
+                if (this -> mantissaLength) for (size_t former, iterator = 1u, limit = this -> mantissaLength, recent = 0u; iterator <= limit; ) { former = iterator; iterator += recent; recent = former; mantissaSize = iterator; }
+                else mantissaSize = 1u;
+
+                // Logic
+                if (characteristicsSize > recentCharacteristicsSize) {
+                    // Modification > Target > Characteristics; Update > Recent Characteristics Size
+                    this -> characteristics = (char*) (NULL == this -> characteristics ? ::malloc(characteristicsSize * sizeof(char)) : ::realloc(this -> characteristics, characteristicsSize * sizeof(char)));
+                    recentCharacteristicsSize = characteristicsSize;
+                }
+
+                if (mantissaSize > recentMantissaSize) {
+                    // Modification > Target > Mantissa; Update > Recent Mantissa Size
+                    this -> mantissa = (char*) (NULL == this -> mantissa ? ::malloc(mantissaSize * sizeof(char)) : ::realloc(this -> mantissa, mantissaSize * sizeof(char)));
+                    recentMantissaSize = mantissaSize;
+                }
+            }
+
+            // Copy --- NOTE (Lapys) -> Assignment.
+            inline void copy(BigNumber const& number) noexcept {
+                // Logic
+                if (BigNumber::SAFE == (this -> state = number.state)) {
+                    // Modification > Target > ((Characteristics, Mantissa) ...)
+                    this -> characteristics = (char*) (NULL == this -> characteristics ? ::malloc(number.characteristicsLength * sizeof(char)) : ::realloc(this -> characteristics, number.characteristicsLength * sizeof(char)));
+                    this -> characteristicsLength = number.characteristicsLength;
+
+                    this -> mantissa = (char*) (NULL == this -> mantissa ? ::malloc(number.mantissaLength * sizeof(char)) : ::realloc(this -> mantissa, number.mantissaLength * sizeof(char)));
+                    this -> mantissaLength = number.mantissaLength;
+
+                    ::strncpy(this -> characteristics, number.characteristics, number.characteristicsLength);
+                    ::strncpy(this -> mantissa, number.mantissa, number.mantissaLength);
+                }
+
+                else {
+                    // Modification > Target > ((Characteristics, Mantissa) ...)
+                    ::free(this -> characteristics); this -> characteristics = NULL;
+                    this -> characteristicsLength = 0u;
+
+                    ::free(this -> mantissa); this -> mantissa = NULL;
+                    this -> mantissaLength = 0u;
+                }
+
+                // Modification > Target > Signedness
+                this -> signedness = number.signedness;
+            }
+
+            // Update --- NOTE (Lapys) -> Cleanup: Remove leading/ trailing zeros, correct signedness.
+            inline void update(void) noexcept {
                 // ...
-                friend BigArray;
-                friend BigNumber;
+                BigNumber::allocate();
 
-                // [...]
-                private:
-                    // Definition > (Children, Value)
-                    BigArrayObject *children;
-                    size_t childrenLength, childrenLimit;
-                    BigArrayObject *sibling;
-                    type *value;
+                // Logic --- NOTE (Lapys) -> Clean the characteristics.
+                if (this -> characteristicsLength) {
+                    // Logic
+                    if (1u ^ this -> characteristicsLength) {
+                        // Initialization > Iterator
+                        char *iterator = this -> characteristics;
 
-                // [...]
-                public:
-                    // [Constructor]
-                    constexpr inline BigArrayObject(void) : children{NULL}, childrenLength{0u}, childrenLimit{0u}, sibling{NULL}, value{NULL} {}
+                        // Logic
+                        if ('0' == *iterator) {
+                            // Loop > Update > Iterator
+                            while ('0' == *iterator) ++iterator;
 
-                    // [Destructor] --- NOTE (Lapys) -> Resources are expected to be abandoned.
-                    ~BigArrayObject(void) { delete[] this -> children; }
-
-                    // Function > ...
-                    inline void add(void) noexcept { BigArrayObject::resize(this -> childrenLength + 1u); }
-                    inline void add(type& value) noexcept { BigArrayObject::add(); BigArrayObject::set(this -> childrenLength - 1u, value); }
-                    template <typename... subtypes> inline void add(type& value, subtypes... values) noexcept { BigArrayObject::add(value); BigArrayObject::add(values...); }
-                    inline BigArrayObject& at(size_t const index) const noexcept { return *(this -> children + index); }
-                    inline void resize(size_t const size) noexcept { // NOTE (Lapys) -> Expand memory allocated via Fibonacci sequence.
-                        if (NULL == this -> children) {
-                            this -> children = new BigArrayObject[size] {};
-                            this -> childrenLength = size;
-                            this -> childrenLimit = size;
+                            // Modification > Target > Characteristics (Length)
+                            this -> characteristicsLength -= iterator - this -> characteristics;
+                            ::memmove(this -> characteristics, iterator, this -> characteristicsLength * sizeof(char));
                         }
-
-                        else if (this -> childrenLength ^ size) {
-                            if (size) {
-                                BigArrayObject *evaluation;
-
-                                if (size >= this -> childrenLimit)
-                                for (size_t former, iterator = 1u, recent = 0u; iterator <= size; ) {
-                                    former = iterator;
-                                    iterator += recent;
-                                    recent = former;
-                                    this -> childrenLimit = iterator;
-                                }
-
-                                if (this -> childrenLimit > limit) this -> childrenLimit = limit;
-
-                                evaluation = new BigArrayObject[this -> childrenLimit] {};
-
-                                for (size_t iterator = 0u, length = this -> childrenLength > size ? size : this -> childrenLength; iterator ^ length; ++iterator) {
-                                    ::memcpy(evaluation + iterator, this -> children + iterator, sizeof(BigArrayObject));
-                                    if ((iterator + 1u) ^ length) (evaluation + iterator) -> sibling = evaluation + (iterator + 1u);
-                                }
-
-                                delete[] this -> children;
-
-                                this -> children = evaluation;
-                                this -> childrenLength = size;
-                            }
-
-                            else {
-                                delete[] this -> children;
-
-                                this -> children = NULL;
-                                this -> childrenLength = 0u;
-                                this -> childrenLimit = 0u;
-                            }
-                        }
-                    }
-                    inline void set(type& value) noexcept { this -> value = &value; }
-                    inline void set(size_t const index, type& value) noexcept { BigArrayObject::at(index).set(value); }
-            } value; // NOTE (Lapys) -> Tree of values.
-
-            // Definition > ...
-            constexpr inline void add(void) const noexcept;
-            inline type& at(size_t const) const noexcept; // WARN (Lapys) -> Maximum input index of `SIZE_MAX`.
-            inline type* in(size_t const, size_t...) const noexcept; // NOTE (Lapys) -> Multi-layered indexer of `BigArray::at`.
-            constexpr inline void remove(void) const noexcept;
-            inline void set(type, size_t const) noexcept;
-
-        // [...]
-        public:
-            // Definition > (Length, Size)
-            struct BigArrayInteger { // NOTE (Lapys) -> `size_t` object with full private and limited public access.
-                /* ... */
-                friend BigArray;
-
-                // [...]
-                private:
-                    // Definition > Value
-                    size_t value;
-
-                    // [Constructor]
-                    inline BigArrayInteger(size_t const value) : value{value} {}
-                    inline BigArrayInteger(void) : value{} {}
-
-                    // [Operator] > ...
-                    inline size_t& operator =(size_t const value) noexcept { return (this -> value = value); }
-                    inline size_t& operator +=(size_t const value) noexcept { return (this -> value += value); }
-                    inline size_t& operator -=(size_t const value) noexcept { return (this -> value -= value); }
-                    inline size_t& operator *=(size_t const value) noexcept { return (this -> value *= value); }
-                    inline size_t& operator /=(size_t const value) noexcept { return (this -> value /= value); }
-                    inline size_t& operator %=(size_t const value) noexcept { return (this -> value %= value); }
-                    inline size_t& operator ^=(size_t const value) noexcept { return (this -> value ^= value); }
-                    inline size_t& operator &=(size_t const value) noexcept { return (this -> value &= value); }
-                    inline size_t& operator |=(size_t const value) noexcept { return (this -> value |= value); }
-                    inline size_t& operator <<=(size_t const value) noexcept { return (this -> value <<= value); }
-                    inline size_t& operator >>=(size_t const value) noexcept { return (this -> value >>= value); }
-                    inline size_t operator ++(int const) noexcept { return this -> value++; }
-                    inline size_t& operator ++(void) noexcept { return ++(this -> value); }
-                    inline size_t operator --(int const) noexcept { return this -> value--; }
-                    inline size_t& operator --(void) noexcept { return --(this -> value); }
-
-                // [...]
-                public:
-                    // [Operator] > [...]
-                    inline operator size_t(void) const noexcept { return this -> value; }
-            } length, size; // NOTE (Lapys) -> Length: Index of last element on level based on depth; Size: Total number of accessible, indexed elements.
-
-            // [Constructor]
-            inline BigArray(void) : depth{1u}, value{}, length{0u}, size{0u} {}
-            inline BigArray(BigArray& array) : depth{1u}, value{}, length{0u}, size{0u} { BigArray::copy(array); }
-            inline BigArray(BigArray&& array) : depth{1u}, value{}, length{0u}, size{0u} { BigArray::copy(array); }
-            inline BigArray(BigArray const& array) : depth{1u}, value{}, length{0u}, size{0u} { BigArray::copy(array); }
-            inline BigArray(BigArray const&& array) : depth{1u}, value{}, length{0u}, size{0u} { BigArray::copy(array); }
-            template <typename... types> inline BigArray(types... values) : depth{1u}, value{}, length{0u}, size{0u} { BigArray::add(values...); }
-
-            // [Destructor]
-            inline ~BigArray(void) { BigArray::free(); }
-
-            // (Definition, Function) > ...
-            inline void add(type&) noexcept;
-            inline void add(type&&) noexcept;
-            template <typename subtype, typename... subtypes> inline void add(subtype, subtypes...) noexcept;
-            inline void copy(BigArray const&) noexcept;
-            template <typename subtype> inline void foreach(subtype (&)(type&, size_t const)) const noexcept;
-            inline void free(void) noexcept;
-            inline bool includesFromEnd(type&) const noexcept;
-            inline bool includesFromEnd(type&&) const noexcept;
-            inline bool includesFromStart(type&) const noexcept;
-            inline bool includesFromStart(type&&) const noexcept;
-            inline size_t indexFromEnd(type&) const noexcept;
-            inline size_t indexFromEnd(type&&) const noexcept;
-            inline size_t indexFromStart(type&) const noexcept;
-            inline size_t indexFromStart(type&&) const noexcept;
-            inline void pop(void) noexcept;
-            inline void remove(type&) noexcept;
-            inline void remove(type&&) noexcept;
-            template <typename subtype, typename... subtypes> inline void remove(subtype, subtypes...) noexcept;
-            inline void resize(size_t const) noexcept;
-            inline void resize(BigNumber const) noexcept;
-            inline char const* toString(void) const noexcept {
-                char *string;
-
-                return (char const*) string;
-            }
-
-            constexpr inline static bool isEmpty(BigArray const& array) noexcept;
-            constexpr inline static bool isEmpty(BigArray&& array) noexcept;
-
-            // [Operator] > ...
-            inline BigArray& operator =(BigArray& array) { BigArray::copy(array); return *this; }
-            inline BigArray& operator =(BigArray&& array) { BigArray::copy(array); return *this; }
-            inline BigArray& operator =(BigArray const& array) { BigArray::copy(array); return *this; }
-            inline BigArray& operator =(BigArray const&& array) { BigArray::copy(array); return *this; }
-            inline type& operator [](size_t const index) const noexcept { return BigArray::at(index); }
-            inline operator bool(void) const noexcept { return 0u ^ this -> length.value; }
-    };
-
-    /* Big Number --- NOTE (Lapys) -> Does not interact with numeric primitive types. */
-    class BigNumber {
-        // ...
-        template <typename subtype, size_t limit>
-        friend class BigArray;
-
-        // [...]
-        private:
-            // Definition > (Characteristic, Mantissa, Type)
-            typedef char type;
-
-            BigArray<type> characteristic;
-            BigArray<type> mantissa;
-            enum {DENORMALIZED, INFINITE, SAFE, UNCOMPUTABLE} state;
-
-            // (Definition, Function) > ...
-            inline void add(BigNumber&) noexcept;
-            inline void decrement(void) noexcept;
-            inline void divide(BigNumber&) noexcept;
-            inline void exponentiate(BigNumber&) noexcept;
-            inline void increment(void) noexcept;
-            inline void modulo(BigNumber&) noexcept;
-            inline void multiply(BigNumber&) noexcept;
-            inline void subtract(BigNumber&) noexcept;
-
-            inline static BigNumber fromNumber(long double const) noexcept;
-            inline bool hasSignificantCharacteristic(void) const noexcept { return this -> characteristic.size == 1u && '0' == *(this -> characteristic.value.at(0).value); }
-            inline bool hasSignificantMantissa(void) const noexcept { return this -> mantissa.size == 1u && '0' == *(this -> characteristic.value.at(0).value); }
-
-        // [...]
-        public:
-            // [Constructor]
-            inline BigNumber(void) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} {}
-            inline BigNumber(double const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(float const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(int const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(long const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(long double const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber(number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(short const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(unsigned int const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(unsigned long const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(unsigned short const number) : characteristic{'0'}, mantissa{'0'}, state{BigNumber::SAFE} { BigNumber const evaluation = BigNumber::fromNumber((long double) number); this -> characteristic = evaluation.characteristic; this -> mantissa = evaluation.mantissa; }
-            inline BigNumber(BigNumber& number) : characteristic{number.characteristic}, mantissa{number.mantissa}, state{BigNumber::SAFE} {}
-            inline BigNumber(BigNumber&& number) : characteristic{number.characteristic}, mantissa{number.mantissa}, state{BigNumber::SAFE} {}
-            inline BigNumber(BigNumber const& number) : characteristic{number.characteristic}, mantissa{number.mantissa}, state{BigNumber::SAFE} {}
-            inline BigNumber(BigNumber const&& number) : characteristic{number.characteristic}, mantissa{number.mantissa}, state{BigNumber::SAFE} {}
-
-            // [Operator] > ...
-            friend inline BigNumber operator +(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation += numberA; evaluation += numberB; return evaluation; }
-            friend inline BigNumber operator +(BigNumber const& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation += numberA; evaluation += numberB; return evaluation; }
-            friend inline BigNumber operator +(BigNumber&& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation += numberA; evaluation += numberB; return evaluation; }
-            friend inline BigNumber operator +(BigNumber&& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation += numberA; evaluation += numberB; return evaluation; }
-            friend inline BigNumber operator -(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation -= numberA; evaluation -= numberB; return evaluation; }
-            friend inline BigNumber operator -(BigNumber const& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation -= numberA; evaluation -= numberB; return evaluation; }
-            friend inline BigNumber operator -(BigNumber&& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation -= numberA; evaluation -= numberB; return evaluation; }
-            friend inline BigNumber operator -(BigNumber&& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation -= numberA; evaluation -= numberB; return evaluation; }
-            friend inline BigNumber operator *(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation *= numberA; evaluation *= numberB; return evaluation; }
-            friend inline BigNumber operator *(BigNumber const& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation *= numberA; evaluation *= numberB; return evaluation; }
-            friend inline BigNumber operator *(BigNumber&& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation *= numberA; evaluation *= numberB; return evaluation; }
-            friend inline BigNumber operator *(BigNumber&& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation *= numberA; evaluation *= numberB; return evaluation; }
-            friend inline BigNumber operator /(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation /= numberA; evaluation /= numberB; return evaluation; }
-            friend inline BigNumber operator /(BigNumber const& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation /= numberA; evaluation /= numberB; return evaluation; }
-            friend inline BigNumber operator /(BigNumber&& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation /= numberA; evaluation /= numberB; return evaluation; }
-            friend inline BigNumber operator /(BigNumber&& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation /= numberA; evaluation /= numberB; return evaluation; }
-            friend inline BigNumber operator %(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation %= numberA; evaluation %= numberB; return evaluation; }
-            friend inline BigNumber operator %(BigNumber const& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation %= numberA; evaluation %= numberB; return evaluation; }
-            friend inline BigNumber operator %(BigNumber&& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation; evaluation %= numberA; evaluation %= numberB; return evaluation; }
-            friend inline BigNumber operator %(BigNumber&& numberA, BigNumber&& numberB) noexcept { BigNumber evaluation; evaluation %= numberA; evaluation %= numberB; return evaluation; }
-            inline BigNumber& operator =(BigNumber const& number) noexcept { this -> characteristic = number.characteristic; this -> mantissa = number.mantissa; return *this; }
-            inline BigNumber& operator =(BigNumber&& number) noexcept { this -> characteristic = number.characteristic; this -> mantissa = number.mantissa; return *this; }
-            inline BigNumber& operator +=(BigNumber const& number) noexcept { BigNumber::add((BigNumber&) number); return *this; }
-            inline BigNumber& operator +=(BigNumber&& number) noexcept { return BigNumber::operator +=((BigNumber const&) number); }
-            inline BigNumber& operator -=(BigNumber const& number) noexcept { BigNumber::subtract((BigNumber&) number); return *this; }
-            inline BigNumber& operator -=(BigNumber&& number) noexcept { return BigNumber::operator -=((BigNumber const&) number); }
-            inline BigNumber& operator *=(BigNumber const& number) noexcept { BigNumber::multiply((BigNumber&) number); return *this; }
-            inline BigNumber& operator *=(BigNumber&& number) noexcept { return BigNumber::operator *=((BigNumber const&) number); }
-            inline BigNumber& operator /=(BigNumber const& number) noexcept { BigNumber::divide((BigNumber&) number); return *this; }
-            inline BigNumber& operator /=(BigNumber&& number) noexcept { return BigNumber::operator /=((BigNumber const&) number); }
-            inline BigNumber& operator %=(BigNumber const& number) noexcept { BigNumber::modulo((BigNumber&) number); return *this; }
-            inline BigNumber& operator %=(BigNumber&& number) noexcept { return BigNumber::operator %=((BigNumber const&) number); }
-            inline bool operator ==(BigNumber const&) const noexcept { return false; } // CHECKPOINT (Lapys)
-            inline bool operator ==(BigNumber&& number) const noexcept { return BigNumber::operator ==((BigNumber const&) number); }
-            inline bool operator !=(BigNumber const& number) const noexcept { return false == BigNumber::operator ==(number); }
-            inline bool operator !=(BigNumber&& number) const noexcept { return false == BigNumber::operator ==(number); }
-            inline BigNumber operator ++(int const) noexcept { BigNumber evaluation = *this; BigNumber::increment(); return evaluation; }
-            inline BigNumber& operator ++(void) noexcept { BigNumber::increment(); return *this; }
-            inline BigNumber operator --(int const) noexcept { BigNumber evaluation = *this; BigNumber::decrement(); return evaluation; }
-            inline BigNumber& operator --(void) noexcept { BigNumber::increment(); return *this; }
-
-            template <typename subtype, size_t limit>
-            inline operator bool(void) const noexcept { return BigNumber::hasSignificantCharacteristic() && BigNumber::hasSignificantMantissa(); }
-    };
-
-/* Modification */
-    /* Big Array */
-        // Add
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::add(type& argument) noexcept {
-            if (this -> length == limit) {
-                ++(this -> depth);
-                this -> length = 0u;
-            }
-
-            if (this -> depth == 1u) {
-                ++(this -> length);
-                ++(this -> size);
-
-                (this -> value).add(argument);
-            }
-
-            else if (this -> size) {
-                BigArrayObject *value = &(this -> value);
-                for (size_t level = 2u; this -> depth ^ level; ++level) value = &(value -> at(0u));
-
-                for (size_t iterator = 0u; value -> childrenLength ^ iterator; ++iterator) {
-                    BigArrayObject& subvalue = value -> at(iterator);
-
-                    if (subvalue.childrenLength ^ limit) {
-                        ++(this -> length);
-                        ++(this -> size);
-
-                        subvalue.add(argument);
-                        if (subvalue.childrenLength == limit) this -> length = 0u;
-
-                        break;
                     }
                 }
+
+                else {
+                    // Modification > Target > Characteristics (Length)
+                    *(this -> characteristics) = '0';
+                    ++(this -> characteristicsLength);
+                }
+
+                // : Logic > Loop > Modification > Target > Mantissa Length --- NOTE (Lapys) -> Trim the mantissa.
+                // : Logic > Modification > Target > Signedness --- NOTE (Lapys) -> Negative zero does not compute.
+                if (this -> mantissaLength) for (char *iterator = this -> mantissa + (this -> mantissaLength - 1u); this -> mantissaLength && '0' == *iterator; --iterator) --(this -> mantissaLength);
+                if (BigNumber::isZero()) this -> signedness = false;
+
+                // ...
+                BigNumber::allocate();
+            }
+
+    // [...]
+    public:
+        // [Constructor]
+        constexpr inline BigNumber(void) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} {}
+        inline BigNumber(double const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(float const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(int const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(long const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(long double const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(short const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(unsigned int const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(unsigned long const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(unsigned short const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
+        inline BigNumber(BigNumber const& number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(number); }
+        inline BigNumber(BigNumber&& number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(number); }
+
+        // [Destructor]
+        ~BigNumber(void) { ::free(this -> characteristics); ::free(this -> mantissa); }
+
+        // (Definition, Function) > ...
+        static BigNumber const fromNumber(long double const) noexcept;
+
+        inline bool isComputable(void) const noexcept { return BigNumber::isComputable(*this); }
+        static bool isComputable(BigNumber const&) noexcept;
+
+        inline bool isEqual(BigNumber& number) noexcept { return BigNumber::isEqual(*this, number); }
+        static bool isEqual(BigNumber&, BigNumber&) noexcept;
+
+        inline bool isFinite(void) const noexcept { return BigNumber::isFinite(*this); }
+        static bool isFinite(BigNumber const&) noexcept;
+
+        inline bool isGreater(BigNumber& number) noexcept { return BigNumber::isGreater(*this, number); }
+        static bool isGreater(BigNumber&, BigNumber&) noexcept;
+
+        inline bool isInfinite(void) const noexcept { return BigNumber::isInfinite(*this); }
+        static bool isInfinite(BigNumber const&) noexcept;
+
+        inline bool isIntegral(void) const noexcept { return BigNumber::isIntegral(*this); }
+        static bool isIntegral(BigNumber const&) noexcept;
+
+        inline bool isLesser(BigNumber& number) noexcept { return BigNumber::isLesser(*this, number); }
+        static bool isLesser(BigNumber&, BigNumber&) noexcept;
+
+        inline bool isNaN(void) const noexcept { return BigNumber::isNaN(*this); }
+        static bool isNaN(BigNumber const&) noexcept;
+
+        inline bool isNormal(void) const noexcept { return BigNumber::isNormal(*this); }
+        static bool isNormal(BigNumber const&) noexcept;
+
+        inline bool isNegative(void) const noexcept { return BigNumber::isNegative(*this); }
+        static bool isNegative(BigNumber const&) noexcept;
+
+        inline bool isPositive(void) const noexcept { return BigNumber::isPositive(*this); }
+        static bool isPositive(BigNumber const&) noexcept;
+
+        inline bool isSafe(void) const noexcept { return BigNumber::isSafe(*this); }
+        static bool isSafe(BigNumber const&) noexcept;
+
+        inline bool isZero(void) const noexcept { return BigNumber::isZero(*this); }
+        static bool isZero(BigNumber const&) noexcept;
+
+        inline void sign(void) noexcept { this -> signedness = !(this -> signedness); }
+
+        inline char const* toString(void) noexcept {
+            // Evaluation > Evaluation
+            static char *evaluation = NULL;
+
+            // Deletion
+            ::free(evaluation);
+
+            // Logic
+            switch (this -> state) {
+                // [Denormalized]
+                case BigNumber::DENORMALIZED: {
+                    // Update > Evaluation
+                    evaluation = (char*) ::malloc(13u * sizeof(char));
+                    ::strncpy(evaluation, "Denormalized", 13u);
+                } break;
+
+                // [Infinite]
+                case BigNumber::INFINITE: {
+                    // Update > Evaluation
+                    evaluation = (char*) ::malloc(10u * sizeof(char));
+                    ::strncpy(evaluation, "-Infinity" + (false == this -> signedness), 9u + (this -> signedness));
+                } break;
+
+                // [Safe]
+                case BigNumber::SAFE: {
+                    // Initialization > Iterator
+                    char *iterator;
+
+                    // Update
+                    this -> update();
+
+                    // Update > (Evaluation, Iterator)
+                    evaluation = (char*) ::malloc((1u + this -> characteristicsLength + (this -> mantissaLength + 1u)) * sizeof(char));
+                    iterator = evaluation;
+
+                    // Logic > Update > Iterator --- MINIFY (Lapys)
+                    if (this -> signedness) *iterator++ = '-';
+                    ::strncpy(iterator, this -> characteristics, this -> characteristicsLength); iterator += this -> characteristicsLength;
+                    if (this -> mantissaLength) { *iterator++ = '.'; ::strncpy(evaluation + (this -> characteristicsLength + this -> signedness), this -> mantissa, this -> mantissaLength); iterator += this -> mantissaLength; }
+
+                    // Update > Iterator
+                    *iterator++ = '\0';
+                } break;
+
+                // [Uncomputable]
+                case BigNumber::UNCOMPUTABLE: {
+                    // Update > Evaluation
+                    evaluation = (char*) ::malloc(4u * sizeof(char));
+                    ::strncpy(evaluation, "NaN", 4u);
+                } break;
+            }
+
+            // Return
+            return (char const*) evaluation;
+        }
+
+        static long double toNumber(BigNumber&);
+        static long double toNumber(BigNumber&&);
+
+        inline void unsign(void) noexcept { this -> signedness = false; }
+
+        // [Operator] > ...
+        inline BigNumber operator +(void) const noexcept { return BigNumber{*this}; }
+        inline BigNumber operator +(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.add(number); return evaluation; }
+        inline BigNumber operator +(BigNumber&& number) const noexcept { return BigNumber::operator +(number); }
+        inline BigNumber operator -(void) const noexcept { BigNumber evaluation {*this}; evaluation.signedness = !evaluation.signedness; return evaluation; }
+        inline BigNumber operator -(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.subtract(number); return evaluation; }
+        inline BigNumber operator -(BigNumber&& number) const noexcept { return BigNumber::operator -(number); }
+        inline BigNumber operator *(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.multiply(number); return evaluation; }
+        inline BigNumber operator *(BigNumber&& number) const noexcept { return BigNumber::operator *(number); }
+        inline BigNumber operator /(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.divide(number); return evaluation; }
+        inline BigNumber operator /(BigNumber&& number) const noexcept { return BigNumber::operator /(number); }
+        inline BigNumber operator %(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.modulo(number); return evaluation; }
+        inline BigNumber operator %(BigNumber&& number) const noexcept { return BigNumber::operator %(number); }
+        inline BigNumber& operator =(BigNumber const& number) noexcept { BigNumber::copy(number); return *this; }
+        inline BigNumber& operator =(BigNumber&& number) noexcept { return BigNumber::operator =(number); }
+        inline BigNumber& operator +=(BigNumber const& number) noexcept { BigNumber::add(number); return *this; }
+        inline BigNumber& operator +=(BigNumber&& number) noexcept { return BigNumber::operator +=(number); }
+        inline BigNumber& operator -=(BigNumber const& number) noexcept { BigNumber::subtract(number); return *this; }
+        inline BigNumber& operator -=(BigNumber&& number) noexcept { return BigNumber::operator -=(number); }
+        inline BigNumber& operator *=(BigNumber const& number) noexcept { BigNumber::multiply(number); return *this; }
+        inline BigNumber& operator *=(BigNumber&& number) noexcept { return BigNumber::operator *=(number); }
+        inline BigNumber& operator /=(BigNumber const& number) noexcept { BigNumber::divide(number); return *this; }
+        inline BigNumber& operator /=(BigNumber&& number) noexcept { return BigNumber::operator /=(number); }
+        inline BigNumber& operator %=(BigNumber const& number) noexcept { BigNumber::modulo(number); return *this; }
+        inline BigNumber& operator %=(BigNumber&& number) noexcept { return BigNumber::operator %=(number); }
+        inline bool operator ==(BigNumber& number) noexcept { return BigNumber::isEqual(*this, number); }
+        inline bool operator ==(BigNumber&& number) noexcept { return BigNumber::operator ==(number); }
+        inline bool operator !=(BigNumber& number) noexcept { return false == BigNumber::operator ==(number); }
+        inline bool operator !=(BigNumber&& number) noexcept { return false == BigNumber::operator ==(number); }
+        inline bool operator <(BigNumber& number) noexcept { return BigNumber::isLesser(*this, number); }
+        inline bool operator <(BigNumber&& number) noexcept { return BigNumber::operator <(number); }
+        inline bool operator >(BigNumber& number) noexcept { return BigNumber::isGreater(*this, number); }
+        inline bool operator >(BigNumber&& number) noexcept { return BigNumber::operator >(number); }
+        inline bool operator <=(BigNumber& number) noexcept { return BigNumber::operator ==(number) || BigNumber::operator <(number); }
+        inline bool operator <=(BigNumber&& number) noexcept { return BigNumber::operator <=(number); }
+        inline bool operator >=(BigNumber& number) noexcept { return BigNumber::operator ==(number) || BigNumber::operator >(number); }
+        inline bool operator >=(BigNumber&& number) noexcept { return BigNumber::operator >=(number); }
+        inline BigNumber operator ++(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::increment(); return evaluation; }
+        inline BigNumber& operator ++(void) noexcept { BigNumber::increment(); return *this; }
+        inline BigNumber operator --(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::decrement(); return evaluation; }
+        inline BigNumber& operator --(void) noexcept { BigNumber::decrement(); return *this; }
+
+        inline operator char const*(void) noexcept { return BigNumber::toString(); }
+};
+
+/* Modification > Big Number */
+    // Add --- CHECKPOINT (Lapys)
+    inline void BigNumber::add(BigNumber const& number) noexcept {
+        // ...
+        this -> update();
+
+        (void) number;
+    }
+
+    // Decrement
+    inline void BigNumber::decrement(void) noexcept {
+        // ...
+        this -> update();
+
+        // Logic > ... --- MINIFY (Lapys)
+        if (1u == this -> characteristicsLength && '0' == *(this -> characteristics)) { *(this -> characteristics) = '1'; this -> signedness = true; }
+        else if (BigNumber::isNegative()) { this -> signedness = false; BigNumber::increment(); this -> signedness = true; }
+        else { this -> signedness = true; BigNumber::increment(); this -> signedness = false; }
+
+        // ...
+        this -> update();
+    }
+
+    // Divide
+    inline void BigNumber::divide(BigNumber const& number) noexcept {
+        this -> update();
+        (void) number;
+    }
+
+    // Exponentiate
+    inline void BigNumber::exponentiate(BigNumber const& number) noexcept {
+        this -> update();
+        (void) number;
+    }
+
+    // From Number
+    inline BigNumber const BigNumber::fromNumber(long double const number) noexcept { (void) number; return BigNumber{}; }
+
+    // Increment
+    inline void BigNumber::increment(void) noexcept {
+        // ...
+        this -> update();
+
+        // Logic
+        if (1u == this -> characteristicsLength && '0' == *(this -> characteristics))
+            // Modification > Target > Characteristics
+            *(this -> characteristics) = '1';
+
+        else {
+            // Initialization > Iterator
+            char *iterator = this -> characteristics + (this -> characteristicsLength - 1u);
+
+            // Logic
+            if (BigNumber::isNegative()) {
+                // Loop > Update > Iterator
+                // : Logic > Update > Iterator
+                while (iterator != this -> characteristics && '0' == *iterator) { *iterator = '9'; --iterator; }
+                switch (*iterator) { case '1': *iterator = '0'; break; case '2': *iterator = '1'; break; case '3': *iterator = '2'; break; case '4': *iterator = '3'; break; case '5': *iterator = '4'; break; case '6': *iterator = '5'; break; case '7': *iterator = '6'; break; case '8': *iterator = '7'; break; case '9': *iterator = '8'; break; }
+            }
+
+            else {
+                // Loop > Update > Iterator
+                while (iterator != this -> characteristics - 1 && '9' == *iterator) { *iterator = '0'; --iterator; }
+
+                // Logic
+                if (iterator == this -> characteristics - 1) {
+                    // Modification > Target > Characteristics (Length)
+                    this -> characteristics = (char*) ::realloc(this -> characteristics, (this -> characteristicsLength + 1u) * sizeof(char));
+                    ::memmove(this -> characteristics + 1, this -> characteristics, this -> characteristicsLength * sizeof(char));
+                    *(this -> characteristics) = '1';
+
+                    ++(this -> characteristicsLength);
+                }
+
+                else
+                    // Logic > Update > Iterator
+                    switch (*iterator) { case '0': *iterator = '1'; break; case '1': *iterator = '2'; break; case '2': *iterator = '3'; break; case '3': *iterator = '4'; break; case '4': *iterator = '5'; break; case '5': *iterator = '6'; break; case '6': *iterator = '7'; break; case '7': *iterator = '8'; break; case '8': *iterator = '9'; break; }
             }
         }
 
-        template <typename type, size_t limit> constexpr inline void BigArray<type, limit>::add(void) const noexcept {}
-        template <typename type, size_t limit> inline void BigArray<type, limit>::add(type&& value) noexcept { BigArray::add((type&) value); }
-        template <typename type, size_t limit> template <typename subtype, typename... subtypes> inline void BigArray<type, limit>::add(subtype value, subtypes... values) noexcept { BigArray::add(value); BigArray::add(values...); }
+        // ...
+        this -> update();
+    }
 
-        // At
-        template <typename type, size_t limit>
-        inline type& BigArray<type, limit>::at(size_t const index) const noexcept {}
+    // Is Computable
+    inline bool BigNumber::isComputable(BigNumber const& number) noexcept { return BigNumber::UNCOMPUTABLE != number.state; }
 
-        // Copy
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::copy(BigArray<type, limit> const&) noexcept {}
+    // Is Equal
+    inline bool BigNumber::isEqual(BigNumber& numberA, BigNumber& numberB) noexcept {
+        numberA.update();
+        numberB.update();
 
-        // For Each
-        template <typename type, size_t limit>
-        template <typename subtype>
-        inline void BigArray<type, limit>::foreach(subtype (&handler)(type&, size_t const)) const noexcept {}
+        return false;
+    }
 
-        // Free
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::free(void) noexcept {}
+    // Is Finite
+    inline bool BigNumber::isFinite(BigNumber const& number) noexcept { return BigNumber::INFINITE != number.state; }
 
-        // Includes From End
-        template <typename type, size_t limit>
-        inline bool BigArray<type, limit>::includesFromEnd(type& value) const noexcept { return false; }
+    // Is Greater
+    inline bool BigNumber::isGreater(BigNumber& numberA, BigNumber& numberB) noexcept {
+        numberA.update();
+        numberB.update();
 
-        template <typename type, size_t limit>
-        inline bool BigArray<type, limit>::includesFromEnd(type&& value) const noexcept { return false; }
+        return false;
+    }
 
-        // Includes From Start
-        template <typename type, size_t limit>
-        inline bool BigArray<type, limit>::includesFromStart(type& value) const noexcept { return false; }
+    // Is Infinite
+    inline bool BigNumber::isInfinite(BigNumber const& number) noexcept { return BigNumber::INFINITE == number.state; }
 
-        template <typename type, size_t limit>
-        inline bool BigArray<type, limit>::includesFromStart(type&& value) const noexcept { return false; }
+    // Is Integral
+    inline bool BigNumber::isIntegral(BigNumber const& number) noexcept { return 0u == number.mantissaLength; }
 
-        // In
-        template <typename type, size_t limit>
-        inline type* BigArray<type, limit>::in(size_t const index, size_t indices...) const noexcept {}
+    // Is Lesser
+    inline bool BigNumber::isLesser(BigNumber& numberA, BigNumber& numberB) noexcept {
+        numberA.update();
+        numberB.update();
 
-        // Index From End
-        template <typename type, size_t limit>
-        inline size_t BigArray<type, limit>::indexFromEnd(type& value) const noexcept { return 0u; }
+        return false;
+    }
 
-        template <typename type, size_t limit>
-        inline size_t BigArray<type, limit>::indexFromEnd(type&& value) const noexcept { return 0u; }
+    // Is Not-A-Number
+    inline bool BigNumber::isNaN(BigNumber const& number) noexcept { return BigNumber::UNCOMPUTABLE == number.state; }
 
-        // Index From Start
-        template <typename type, size_t limit>
-        inline size_t BigArray<type, limit>::indexFromStart(type& value) const noexcept { return 0u; }
+    // Is Negative
+    inline bool BigNumber::isNegative(BigNumber const& number) noexcept { return number.signedness; }
 
-        template <typename type, size_t limit>
-        inline size_t BigArray<type, limit>::indexFromStart(type&& value) const noexcept { return 0u; }
+    // Is Normal
+    inline bool BigNumber::isNormal(BigNumber const& number) noexcept { return BigNumber::DENORMALIZED != number.state; }
 
-        // Is Empty --- MINIFY (Lapys)
-        template <typename type, size_t limit> constexpr inline bool BigArray<type, limit>::isEmpty(BigArray const& array) noexcept { return 0u == array.size; }
-        template <typename type, size_t limit> constexpr inline bool BigArray<type, limit>::isEmpty(BigArray&& array) noexcept { return BigArray::isEmpty((BigArray const&) array); }
+    // Is Positive
+    inline bool BigNumber::isPositive(BigNumber const& number) noexcept { return false == number.signedness; }
 
-        // Pop
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::pop(void) noexcept {}
+    // Is Safe
+    inline bool BigNumber::isSafe(BigNumber const& number) noexcept { return BigNumber::isComputable(number) && BigNumber::isFinite(number) && BigNumber::isNormal(number); }
 
-        // Remove
-        template <typename type, size_t limit>
-        constexpr inline void BigArray<type, limit>::remove(void) const noexcept {}
+    // Is Zero
+    inline bool BigNumber::isZero(BigNumber const& number) noexcept { return BigNumber::isIntegral(number) && (number.characteristicsLength == 1u && '0' == *(number.characteristics)); }
 
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::remove(type& value) noexcept {}
+    // Modulo
+    inline void BigNumber::modulo(BigNumber const& number) noexcept {
+        this -> update();
+        (void) number;
+    }
 
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::remove(type&& value) noexcept {}
+    // Multiply
+    inline void BigNumber::multiply(BigNumber const& number) noexcept {
+        this -> update();
+        (void) number;
+    }
 
-        template <typename type, size_t limit>
-        template <typename subtype, typename... subtypes>
-        inline void BigArray<type, limit>::remove(subtype value, subtypes... values) noexcept { BigArray::remove(value); BigArray::remove(values...); }
+    // Subtract
+    inline void BigNumber::subtract(BigNumber const& number) noexcept {
+        this -> update();
+        (void) number;
+    }
 
-        // Resize
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::resize(size_t const length) noexcept {}
-
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::resize(BigNumber const length) noexcept {}
-
-        // Set
-        template <typename type, size_t limit>
-        inline void BigArray<type, limit>::set(type value, size_t const index) noexcept {}
-
-    /* Big Number */
-        // Add
-        inline void BigNumber::add(BigNumber&) noexcept {}
-
-        // Decrement
-        inline void BigNumber::decrement(void) noexcept {}
-
-        // Divide
-        inline void BigNumber::divide(BigNumber&) noexcept {}
-
-        // Exponentiate
-        inline void BigNumber::exponentiate(BigNumber&) noexcept {}
-
-        // From Number
-        inline BigNumber BigNumber::fromNumber(long double const) noexcept { return BigNumber{}; }
-
-        // Increment
-        inline void BigNumber::increment(void) noexcept {}
-
-        // Modulo
-        inline void BigNumber::modulo(BigNumber&) noexcept {}
-
-        // Multiply
-        inline void BigNumber::multiply(BigNumber&) noexcept {}
-
-        // Subtract
-        inline void BigNumber::subtract(BigNumber&) noexcept {}
+    // To Number
+    inline long double BigNumber::toNumber(BigNumber& number) {
+        number.update();
+        (void) number;
+        return 0.00L;
+    }
+    inline long double BigNumber::toNumber(BigNumber&& number) { return BigNumber::toNumber(number); }
 
 /* Main */
 int main(void) {
-    BigArray array;
+    BigNumber number;
+
+    for (unsigned short iterator = 0u; iterator ^ 256u; ++iterator) std::cout << "[number]: (" << number-- << ", " << -iterator << ')' << std::endl;
+    number.unsign();
+    for (unsigned short iterator = 256u; iterator ^ (unsigned short) -1; --iterator) std::cout << "[number]: (" << number-- << ", " << iterator << ')' << std::endl;
 
     // Return
     return EXIT_SUCCESS;
