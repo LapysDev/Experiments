@@ -1,4 +1,5 @@
 /* Import */
+#include <math.h> // Mathematics
 #include <stdlib.h> // Standard Library
 #include <string.h> // String
 
@@ -8,460 +9,305 @@
 class BigNumber {
     // [...]
     private:
-        // Definition > (Characteristics ..., Mantissa ..., Signedness, State)
-        char *characteristics; size_t characteristicsLength;
-        char *mantissa; size_t mantissaLength;
+        // Definition > ((Characteristics, Mantissa) Length, Signedness, State, Value (Size))
+        size_t characteristicsLength;
+        size_t mantissaLength;
         bool signedness;
         enum {DENORMALIZED, INFINITE, SAFE, UNCOMPUTABLE} state;
+        char *value; // NOTE (Lapys) -> Keep the characteristics and mantissa co-joined in the same field.
 
-        // Definition > ...
-        void add(BigNumber const&) noexcept;
-        void decrement(void) noexcept;
-        void divide(BigNumber const&) noexcept;
-        void exponentiate(BigNumber const&) noexcept;
-        void increment(void) noexcept;
-        void modulo(BigNumber const&) noexcept;
-        void multiply(BigNumber const&) noexcept;
-        void subtract(BigNumber const&) noexcept;
-
-        // Function
-            // Allocate --- NOTE (Lapys) -> Add more memory to the characteristics & mantissa.
-            inline void allocate(void) noexcept {
-                // Initialization > ((Recent) (Characteristics, Mantissa)) Size
-                static size_t characteristicsSize;
-                static size_t mantissaSize;
-
-                size_t recentCharacteristicsSize = characteristicsSize;
-                size_t recentMantissaSize = mantissaSize;
-
-                // ... Update > (Characteristics, Mantissa) Size --- NOTE (Lapys) -> Uses the Fibonacci sequence to determine allocable memory size.
-                if (this -> characteristicsLength) for (size_t former, iterator = 1u, limit = this -> characteristicsLength, recent = 0u; iterator <= limit; ) { former = iterator; iterator += recent; recent = former; characteristicsSize = iterator; }
-                else characteristicsSize = 1u;
-
-                if (this -> mantissaLength) for (size_t former, iterator = 1u, limit = this -> mantissaLength, recent = 0u; iterator <= limit; ) { former = iterator; iterator += recent; recent = former; mantissaSize = iterator; }
-                else mantissaSize = 1u;
-
-                // Logic
-                if (characteristicsSize > recentCharacteristicsSize) {
-                    // Modification > Target > Characteristics; Update > Recent Characteristics Size
-                    this -> characteristics = (char*) (NULL == this -> characteristics ? ::malloc(characteristicsSize * sizeof(char)) : ::realloc(this -> characteristics, characteristicsSize * sizeof(char)));
-                    recentCharacteristicsSize = characteristicsSize;
-                }
-
-                if (mantissaSize > recentMantissaSize) {
-                    // Modification > Target > Mantissa; Update > Recent Mantissa Size
-                    this -> mantissa = (char*) (NULL == this -> mantissa ? ::malloc(mantissaSize * sizeof(char)) : ::realloc(this -> mantissa, mantissaSize * sizeof(char)));
-                    recentMantissaSize = mantissaSize;
-                }
-            }
-
-            // Copy --- NOTE (Lapys) -> Assignment.
-            inline void copy(BigNumber const& number) noexcept {
-                // Logic
-                if (BigNumber::SAFE == (this -> state = number.state)) {
-                    // Modification > Target > ((Characteristics, Mantissa) ...)
-                    this -> characteristics = (char*) (NULL == this -> characteristics ? ::malloc(number.characteristicsLength * sizeof(char)) : ::realloc(this -> characteristics, number.characteristicsLength * sizeof(char)));
-                    this -> characteristicsLength = number.characteristicsLength;
-
-                    this -> mantissa = (char*) (NULL == this -> mantissa ? ::malloc(number.mantissaLength * sizeof(char)) : ::realloc(this -> mantissa, number.mantissaLength * sizeof(char)));
-                    this -> mantissaLength = number.mantissaLength;
-
-                    ::strncpy(this -> characteristics, number.characteristics, number.characteristicsLength);
-                    ::strncpy(this -> mantissa, number.mantissa, number.mantissaLength);
-                }
-
-                else {
-                    // Modification > Target > ((Characteristics, Mantissa) ...)
-                    ::free(this -> characteristics); this -> characteristics = NULL;
-                    this -> characteristicsLength = 0u;
-
-                    ::free(this -> mantissa); this -> mantissa = NULL;
-                    this -> mantissaLength = 0u;
-                }
-
-                // Modification > Target > Signedness
-                this -> signedness = number.signedness;
-            }
-
-            // Update --- NOTE (Lapys) -> Cleanup: Remove leading/ trailing zeros, correct signedness.
-            inline void update(void) noexcept {
-                // ...
-                BigNumber::allocate();
-
-                // Logic --- NOTE (Lapys) -> Clean the characteristics.
-                if (this -> characteristicsLength) {
-                    // Logic
-                    if (1u ^ this -> characteristicsLength) {
-                        // Initialization > Iterator
-                        char *iterator = this -> characteristics;
-
-                        // Logic
-                        if ('0' == *iterator) {
-                            // Loop > Update > Iterator
-                            while ('0' == *iterator) ++iterator;
-
-                            // Modification > Target > Characteristics (Length)
-                            this -> characteristicsLength -= iterator - this -> characteristics;
-                            ::memmove(this -> characteristics, iterator, this -> characteristicsLength * sizeof(char));
-                        }
-                    }
-                }
-
-                else {
-                    // Modification > Target > Characteristics (Length)
-                    *(this -> characteristics) = '0';
-                    ++(this -> characteristicsLength);
-                }
-
-                // : Logic > Loop > Modification > Target > Mantissa Length --- NOTE (Lapys) -> Trim the mantissa.
-                // : Logic > Modification > Target > Signedness --- NOTE (Lapys) -> Negative zero does not compute.
-                if (this -> mantissaLength) for (char *iterator = this -> mantissa + (this -> mantissaLength - 1u); this -> mantissaLength && '0' == *iterator; --iterator) --(this -> mantissaLength);
-                if (BigNumber::isZero()) this -> signedness = false;
-
-                // ...
-                BigNumber::allocate();
-            }
+        // Function > (Copy, Size)
+        inline void copy(BigNumber const& number) noexcept { if (BigNumber::SAFE == (this -> state = number.state)) { this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> signedness = number.signedness; this -> value = (char*) ::malloc(BigNumber::size(number.characteristicsLength + number.mantissaLength) * sizeof(char)); ::strncpy(this -> value, number.value, number.characteristicsLength + number.mantissaLength); } }
+        inline void copy(BigNumber&& number) noexcept { if (BigNumber::SAFE == (this -> state = number.state)) { number.value = NULL; this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> signedness = number.signedness; this -> value = number.value; } }
+        inline size_t size(void) noexcept { return BigNumber::size(this -> characteristicsLength + this -> mantissaLength); }
+        inline size_t size(size_t const size) noexcept { size_t evaluation; for (size_t former, iterator = 1u, recent = 0u; iterator <= size; ) { former = iterator; iterator += recent; recent = former; evaluation = iterator; } return evaluation; }
 
     // [...]
     public:
         // [Constructor]
-        constexpr inline BigNumber(void) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} {}
-        inline BigNumber(double const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(float const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(int const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(long const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(long double const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(short const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(unsigned int const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(unsigned long const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(unsigned short const number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(BigNumber::fromNumber((long double) number)); }
-        inline BigNumber(BigNumber const& number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(number); }
-        inline BigNumber(BigNumber&& number) : characteristics{NULL}, characteristicsLength{0u}, mantissa{NULL}, mantissaLength{0u}, signedness{false}, state{BigNumber::SAFE} { BigNumber::copy(number); }
+        constexpr inline BigNumber(void) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} {}
+        inline BigNumber(double const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(float const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(int const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(long const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(long double const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(short const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(unsigned int const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(unsigned long const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(unsigned short const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(BigNumber const& number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(number); }
+        inline BigNumber(BigNumber&& number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(number); }
 
         // [Destructor]
-        ~BigNumber(void) { ::free(this -> characteristics); ::free(this -> mantissa); }
+        inline ~BigNumber(void) { ::free(this -> value); }
 
-        // (Definition, Function) > ...
+        // (Definition, Function) > (Add, Decrement, Divide, Exponentiate, From Number, Get ..., Has ..., Increment, Is ..., Modulo, Multiply, Sign, Subtract, To ..., Unsign)
+        BigNumber& add(BigNumber const&) noexcept;
+        inline static BigNumber const add(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation {numberA}; evaluation.add(numberB); return evaluation; }
+        inline static BigNumber const add(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::add(numberA, numberB); }
+        inline static BigNumber const add(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::add(numberA, numberB); }
+        inline static BigNumber const add(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::add(numberA, numberB); }
+
+        BigNumber& decrement(void) noexcept;
+        inline static BigNumber& decrement(BigNumber& number) noexcept { return number.decrement(); }
+        inline static BigNumber& decrement(BigNumber&& number) noexcept { return BigNumber::decrement(number); }
+
+        BigNumber& divide(BigNumber const&) noexcept;
+        inline static BigNumber const divide(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation {numberA}; evaluation.divide(numberB); return evaluation; }
+        inline static BigNumber const divide(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::divide(numberA, numberB); }
+        inline static BigNumber const divide(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::divide(numberA, numberB); }
+        inline static BigNumber const divide(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::divide(numberA, numberB); }
+
+        BigNumber& exponentiate(BigNumber const&) noexcept;
+        inline static BigNumber const exponentiate(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation {numberA}; evaluation.exponentiate(numberB); return evaluation; }
+        inline static BigNumber const exponentiate(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::exponentiate(numberA, numberB); }
+        inline static BigNumber const exponentiate(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::exponentiate(numberA, numberB); }
+        inline static BigNumber const exponentiate(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::exponentiate(numberA, numberB); }
+
+        inline static BigNumber const fromNumber(double const number) noexcept { return BigNumber::fromNumber((long double) number); }
+        inline static BigNumber const fromNumber(float const number) noexcept { return BigNumber::fromNumber((long double) number); }
+        inline static BigNumber const fromNumber(int const number) noexcept { return BigNumber::fromNumber((long) number); }
+        static BigNumber const fromNumber(long const) noexcept;
         static BigNumber const fromNumber(long double const) noexcept;
+        inline static BigNumber const fromNumber(short const number) noexcept { return BigNumber::fromNumber((long) number); }
+        inline static BigNumber const fromNumber(unsigned int const number) noexcept { return BigNumber::fromNumber((unsigned long) number); }
+        static BigNumber const fromNumber(unsigned long const) noexcept;
+        inline static BigNumber const fromNumber(unsigned short const number) noexcept { return BigNumber::fromNumber((unsigned long) number); }
 
-        inline bool isComputable(void) const noexcept { return BigNumber::isComputable(*this); }
-        static bool isComputable(BigNumber const&) noexcept;
+        long double getCharacteristics(void) const;
+        inline static long double getCharacteristics(BigNumber const& number) { return number.getCharacteristics(); }
+        inline static long double getCharacteristics(BigNumber&& number) { return BigNumber::getCharacteristics(number); }
 
-        inline bool isEqual(BigNumber& number) noexcept { return BigNumber::isEqual(*this, number); }
-        static bool isEqual(BigNumber&, BigNumber&) noexcept;
+        long double getMantissa(void) const;
+        inline static long double getMantissa(BigNumber const& number) { return number.getMantissa(); }
+        inline static long double getMantissa(BigNumber&& number) { return BigNumber::getMantissa(number); }
 
-        inline bool isFinite(void) const noexcept { return BigNumber::isFinite(*this); }
-        static bool isFinite(BigNumber const&) noexcept;
+        bool hasSignificantCharacteristics(void) const noexcept;
+        inline static bool hasSignificantCharacteristics(BigNumber const& number) noexcept { return number.hasSignificantCharacteristics(); }
+        inline static bool hasSignificantCharacteristics(BigNumber&& number) noexcept { return BigNumber::hasSignificantCharacteristics(number); }
 
-        inline bool isGreater(BigNumber& number) noexcept { return BigNumber::isGreater(*this, number); }
-        static bool isGreater(BigNumber&, BigNumber&) noexcept;
+        bool hasSignificantMantissa(void) const noexcept;
+        inline static bool hasSignificantMantissa(BigNumber const& number) noexcept { return number.hasSignificantMantissa(); }
+        inline static bool hasSignificantMantissa(BigNumber&& number) noexcept { return BigNumber::hasSignificantMantissa(number); }
 
-        inline bool isInfinite(void) const noexcept { return BigNumber::isInfinite(*this); }
-        static bool isInfinite(BigNumber const&) noexcept;
+        BigNumber& increment(void) noexcept;
+        inline static BigNumber& increment(BigNumber& number) noexcept { number.increment(); return number; }
+        inline static BigNumber& increment(BigNumber&& number) noexcept { return BigNumber::increment(number); }
 
-        inline bool isIntegral(void) const noexcept { return BigNumber::isIntegral(*this); }
-        static bool isIntegral(BigNumber const&) noexcept;
+        bool isComputable(void) const noexcept;
+        inline static bool isComputable(BigNumber const& number) noexcept { return number.isComputable(); }
+        inline static bool isComputable(BigNumber&& number) noexcept { return BigNumber::isComputable(number); }
 
-        inline bool isLesser(BigNumber& number) noexcept { return BigNumber::isLesser(*this, number); }
-        static bool isLesser(BigNumber&, BigNumber&) noexcept;
+        inline bool isEqual(BigNumber const& number) const noexcept { return BigNumber::isEqual(*this, number); }
+        inline bool isEqual(BigNumber&& number) const noexcept { return BigNumber::isEqual(number); }
+        static bool isEqual(BigNumber const&, BigNumber const&) noexcept;
+        static bool isEqual(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::isEqual(numberA, numberB); }
+        static bool isEqual(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::isEqual(numberA, numberB); }
+        static bool isEqual(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::isEqual(numberA, numberB); }
 
-        inline bool isNaN(void) const noexcept { return BigNumber::isNaN(*this); }
-        static bool isNaN(BigNumber const&) noexcept;
+        bool isFinite(void) const noexcept;
+        inline static bool isFinite(BigNumber const& number) noexcept { return number.isFinite(); }
+        inline static bool isFinite(BigNumber&& number) noexcept { return BigNumber::isFinite(number); }
 
-        inline bool isNormal(void) const noexcept { return BigNumber::isNormal(*this); }
-        static bool isNormal(BigNumber const&) noexcept;
+        inline bool isGreater(BigNumber const& number) const noexcept { return BigNumber::isGreater(*this, number); }
+        inline bool isGreater(BigNumber&& number) const noexcept { return BigNumber::isGreater(number); }
+        static bool isGreater(BigNumber const&, BigNumber const&) noexcept;
+        static bool isGreater(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::isGreater(numberA, numberB); }
+        static bool isGreater(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::isGreater(numberA, numberB); }
+        static bool isGreater(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::isGreater(numberA, numberB); }
 
-        inline bool isNegative(void) const noexcept { return BigNumber::isNegative(*this); }
-        static bool isNegative(BigNumber const&) noexcept;
+        bool isInfinite(void) const noexcept;
+        inline static bool isInfinite(BigNumber const& number) noexcept { return number.isInfinite(); }
+        inline static bool isInfinite(BigNumber&& number) noexcept { return BigNumber::isInfinite(number); }
 
-        inline bool isPositive(void) const noexcept { return BigNumber::isPositive(*this); }
-        static bool isPositive(BigNumber const&) noexcept;
+        bool isIntegral(void) const noexcept;
+        inline static bool isIntegral(BigNumber const& number) noexcept { return number.isIntegral(); }
+        inline static bool isIntegral(BigNumber&& number) noexcept { return BigNumber::isIntegral(number); }
 
-        inline bool isSafe(void) const noexcept { return BigNumber::isSafe(*this); }
-        static bool isSafe(BigNumber const&) noexcept;
+        inline bool isLesser(BigNumber const& number) const noexcept { return BigNumber::isLesser(*this, number); }
+        inline bool isLesser(BigNumber&& number) const noexcept { return BigNumber::isLesser(number); }
+        static bool isLesser(BigNumber const&, BigNumber const&) noexcept;
+        static bool isLesser(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::isLesser(numberA, numberB); }
+        static bool isLesser(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::isLesser(numberA, numberB); }
+        static bool isLesser(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::isLesser(numberA, numberB); }
 
-        inline bool isZero(void) const noexcept { return BigNumber::isZero(*this); }
-        static bool isZero(BigNumber const&) noexcept;
+        bool isNormal(void) const noexcept;
+        inline static bool isNormal(BigNumber const& number) noexcept { return number.isNormal(); }
+        inline static bool isNormal(BigNumber&& number) noexcept { return BigNumber::isNormal(number); }
 
-        inline void sign(void) noexcept { this -> signedness = !(this -> signedness); }
+        bool isSafe(void) const noexcept;
+        inline static bool isSafe(BigNumber const& number) noexcept { return number.isSafe(); }
+        inline static bool isSafe(BigNumber&& number) noexcept { return BigNumber::isSafe(number); }
 
-        inline char const* toString(void) noexcept {
-            // Evaluation > Evaluation
-            static char *evaluation = NULL;
+        bool isZero(void) const noexcept;
+        inline static bool isZero(BigNumber const& number) noexcept { return number.isZero(); }
+        inline static bool isZero(BigNumber&& number) noexcept { return BigNumber::isZero(number); }
 
-            // Deletion
-            ::free(evaluation);
+        BigNumber& modulo(BigNumber const&) noexcept;
+        inline static BigNumber const modulo(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation {numberA}; evaluation.modulo(numberB); return evaluation; }
+        inline static BigNumber const modulo(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::modulo(numberA, numberB); }
+        inline static BigNumber const modulo(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::modulo(numberA, numberB); }
+        inline static BigNumber const modulo(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::modulo(numberA, numberB); }
 
-            // Logic
-            switch (this -> state) {
-                // [Denormalized]
-                case BigNumber::DENORMALIZED: {
-                    // Update > Evaluation
-                    evaluation = (char*) ::malloc(13u * sizeof(char));
-                    ::strncpy(evaluation, "Denormalized", 13u);
-                } break;
+        BigNumber& multiply(BigNumber const&) noexcept;
+        inline static BigNumber const multiply(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation {numberA}; evaluation.multiply(numberB); return evaluation; }
+        inline static BigNumber const multiply(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::multiply(numberA, numberB); }
+        inline static BigNumber const multiply(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::multiply(numberA, numberB); }
+        inline static BigNumber const multiply(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::multiply(numberA, numberB); }
 
-                // [Infinite]
-                case BigNumber::INFINITE: {
-                    // Update > Evaluation
-                    evaluation = (char*) ::malloc(10u * sizeof(char));
-                    ::strncpy(evaluation, "-Infinity" + (false == this -> signedness), 9u + (this -> signedness));
-                } break;
+        void sign(void) noexcept;
+        inline static BigNumber const sign(BigNumber const& number) noexcept { BigNumber evaluation {number}; evaluation.sign(); return evaluation; }
 
-                // [Safe]
-                case BigNumber::SAFE: {
-                    // Initialization > Iterator
-                    char *iterator;
+        BigNumber& subtract(BigNumber const&) noexcept;
+        inline static BigNumber const subtract(BigNumber const& numberA, BigNumber const& numberB) noexcept { BigNumber evaluation {numberA}; evaluation.subtract(numberB); return evaluation; }
+        inline static BigNumber const subtract(BigNumber const& numberA, BigNumber&& numberB) noexcept { return BigNumber::subtract(numberA, numberB); }
+        inline static BigNumber const subtract(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::subtract(numberA, numberB); }
+        inline static BigNumber const subtract(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::subtract(numberA, numberB); }
 
-                    // Update
-                    this -> update();
+        static long double toNumber(BigNumber const&);
+        static long double toNumber(BigNumber&& number) { return BigNumber::toNumber(number); }
 
-                    // Update > (Evaluation, Iterator)
-                    evaluation = (char*) ::malloc((1u + this -> characteristicsLength + (this -> mantissaLength + 1u)) * sizeof(char));
-                    iterator = evaluation;
+        char const* toString(void) const noexcept;
 
-                    // Logic > Update > Iterator --- MINIFY (Lapys)
-                    if (this -> signedness) *iterator++ = '-';
-                    ::strncpy(iterator, this -> characteristics, this -> characteristicsLength); iterator += this -> characteristicsLength;
-                    if (this -> mantissaLength) { *iterator++ = '.'; ::strncpy(evaluation + (this -> characteristicsLength + this -> signedness), this -> mantissa, this -> mantissaLength); iterator += this -> mantissaLength; }
-
-                    // Update > Iterator
-                    *iterator++ = '\0';
-                } break;
-
-                // [Uncomputable]
-                case BigNumber::UNCOMPUTABLE: {
-                    // Update > Evaluation
-                    evaluation = (char*) ::malloc(4u * sizeof(char));
-                    ::strncpy(evaluation, "NaN", 4u);
-                } break;
-            }
-
-            // Return
-            return (char const*) evaluation;
-        }
-
-        static long double toNumber(BigNumber&);
-        static long double toNumber(BigNumber&&);
-
-        inline void unsign(void) noexcept { this -> signedness = false; }
+        void unsign(void) noexcept;
+        inline static BigNumber const unsign(BigNumber const& number) noexcept { BigNumber evaluation {number}; evaluation.unsign(); return evaluation; }
 
         // [Operator] > ...
-        inline BigNumber operator +(void) const noexcept { return BigNumber{*this}; }
-        inline BigNumber operator +(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.add(number); return evaluation; }
-        inline BigNumber operator +(BigNumber&& number) const noexcept { return BigNumber::operator +(number); }
-        inline BigNumber operator -(void) const noexcept { BigNumber evaluation {*this}; evaluation.signedness = !evaluation.signedness; return evaluation; }
-        inline BigNumber operator -(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.subtract(number); return evaluation; }
-        inline BigNumber operator -(BigNumber&& number) const noexcept { return BigNumber::operator -(number); }
-        inline BigNumber operator *(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.multiply(number); return evaluation; }
-        inline BigNumber operator *(BigNumber&& number) const noexcept { return BigNumber::operator *(number); }
-        inline BigNumber operator /(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.divide(number); return evaluation; }
-        inline BigNumber operator /(BigNumber&& number) const noexcept { return BigNumber::operator /(number); }
-        inline BigNumber operator %(BigNumber const& number) const noexcept { BigNumber evaluation {*this}; evaluation.modulo(number); return evaluation; }
-        inline BigNumber operator %(BigNumber&& number) const noexcept { return BigNumber::operator %(number); }
+        inline BigNumber const operator +(void) const noexcept { return BigNumber {*this}; }
+        inline BigNumber const operator +(BigNumber const& number) const noexcept { return BigNumber::add(*this, number); }
+        inline BigNumber const operator +(BigNumber&& number) const noexcept { return BigNumber::operator +(number); }
+        inline BigNumber const operator -(void) const noexcept { return BigNumber::sign(*this); }
+        inline BigNumber const operator -(BigNumber const& number) const noexcept { return BigNumber::subtract(*this, number); }
+        inline BigNumber const operator -(BigNumber&& number) const noexcept { return BigNumber::operator -(number); }
+        inline BigNumber const operator *(BigNumber const& number) const noexcept { return BigNumber::multiply(*this, number); }
+        inline BigNumber const operator *(BigNumber&& number) const noexcept { return BigNumber::operator *(number); }
+        inline BigNumber const operator /(BigNumber const& number) const noexcept { return BigNumber::divide(*this, number); }
+        inline BigNumber const operator /(BigNumber&& number) const noexcept { return BigNumber::operator /(number); }
+        inline BigNumber const operator %(BigNumber const& number) const noexcept { return BigNumber::modulo(*this, number); }
+        inline BigNumber const operator %(BigNumber&& number) const noexcept { return BigNumber::operator %(number); }
         inline BigNumber& operator =(BigNumber const& number) noexcept { BigNumber::copy(number); return *this; }
         inline BigNumber& operator =(BigNumber&& number) noexcept { return BigNumber::operator =(number); }
-        inline BigNumber& operator +=(BigNumber const& number) noexcept { BigNumber::add(number); return *this; }
+        inline BigNumber& operator +=(BigNumber const& number) noexcept { return BigNumber::add(number); }
         inline BigNumber& operator +=(BigNumber&& number) noexcept { return BigNumber::operator +=(number); }
-        inline BigNumber& operator -=(BigNumber const& number) noexcept { BigNumber::subtract(number); return *this; }
+        inline BigNumber& operator -=(BigNumber const& number) noexcept { return BigNumber::subtract(number); }
         inline BigNumber& operator -=(BigNumber&& number) noexcept { return BigNumber::operator -=(number); }
-        inline BigNumber& operator *=(BigNumber const& number) noexcept { BigNumber::multiply(number); return *this; }
+        inline BigNumber& operator *=(BigNumber const& number) noexcept { return BigNumber::multiply(number); }
         inline BigNumber& operator *=(BigNumber&& number) noexcept { return BigNumber::operator *=(number); }
-        inline BigNumber& operator /=(BigNumber const& number) noexcept { BigNumber::divide(number); return *this; }
+        inline BigNumber& operator /=(BigNumber const& number) noexcept { return BigNumber::divide(number); }
         inline BigNumber& operator /=(BigNumber&& number) noexcept { return BigNumber::operator /=(number); }
-        inline BigNumber& operator %=(BigNumber const& number) noexcept { BigNumber::modulo(number); return *this; }
+        inline BigNumber& operator %=(BigNumber const& number) noexcept { return BigNumber::modulo(number); }
         inline BigNumber& operator %=(BigNumber&& number) noexcept { return BigNumber::operator %=(number); }
-        inline bool operator ==(BigNumber& number) noexcept { return BigNumber::isEqual(*this, number); }
+        inline bool operator ==(BigNumber& number) noexcept { return BigNumber::isEqual(number); }
         inline bool operator ==(BigNumber&& number) noexcept { return BigNumber::operator ==(number); }
         inline bool operator !=(BigNumber& number) noexcept { return false == BigNumber::operator ==(number); }
         inline bool operator !=(BigNumber&& number) noexcept { return false == BigNumber::operator ==(number); }
-        inline bool operator <(BigNumber& number) noexcept { return BigNumber::isLesser(*this, number); }
+        inline bool operator <(BigNumber& number) noexcept { return BigNumber::isLesser(number); }
         inline bool operator <(BigNumber&& number) noexcept { return BigNumber::operator <(number); }
-        inline bool operator >(BigNumber& number) noexcept { return BigNumber::isGreater(*this, number); }
+        inline bool operator >(BigNumber& number) noexcept { return BigNumber::isGreater(number); }
         inline bool operator >(BigNumber&& number) noexcept { return BigNumber::operator >(number); }
         inline bool operator <=(BigNumber& number) noexcept { return BigNumber::operator ==(number) || BigNumber::operator <(number); }
         inline bool operator <=(BigNumber&& number) noexcept { return BigNumber::operator <=(number); }
         inline bool operator >=(BigNumber& number) noexcept { return BigNumber::operator ==(number) || BigNumber::operator >(number); }
         inline bool operator >=(BigNumber&& number) noexcept { return BigNumber::operator >=(number); }
-        inline BigNumber operator ++(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::increment(); return evaluation; }
+        inline BigNumber operator ++(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::operator ++(); return evaluation; }
         inline BigNumber& operator ++(void) noexcept { BigNumber::increment(); return *this; }
-        inline BigNumber operator --(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::decrement(); return evaluation; }
+        inline BigNumber operator --(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::operator --(); return evaluation; }
         inline BigNumber& operator --(void) noexcept { BigNumber::decrement(); return *this; }
 
         inline operator char const*(void) noexcept { return BigNumber::toString(); }
 };
 
 /* Modification > Big Number */
-    // Add --- CHECKPOINT (Lapys)
-    inline void BigNumber::add(BigNumber const& number) noexcept {
-        // ...
-        this -> update();
-
-        (void) number;
-    }
+    // Add
+    BigNumber& BigNumber::add(BigNumber const& number) noexcept { (void) number; return *this; }
 
     // Decrement
-    inline void BigNumber::decrement(void) noexcept {
-        // ...
-        this -> update();
-
-        // Logic > ... --- MINIFY (Lapys)
-        if (1u == this -> characteristicsLength && '0' == *(this -> characteristics)) { *(this -> characteristics) = '1'; this -> signedness = true; }
-        else if (BigNumber::isNegative()) { this -> signedness = false; BigNumber::increment(); this -> signedness = true; }
-        else { this -> signedness = true; BigNumber::increment(); this -> signedness = false; }
-
-        // ...
-        this -> update();
-    }
+    BigNumber& BigNumber::decrement(void) noexcept { return *this; }
 
     // Divide
-    inline void BigNumber::divide(BigNumber const& number) noexcept {
-        this -> update();
-        (void) number;
-    }
+    BigNumber& BigNumber::divide(BigNumber const& number) noexcept { (void) number; return *this; }
 
     // Exponentiate
-    inline void BigNumber::exponentiate(BigNumber const& number) noexcept {
-        this -> update();
-        (void) number;
-    }
+    BigNumber& BigNumber::exponentiate(BigNumber const& number) noexcept { (void) number; return *this; }
 
     // From Number
-    inline BigNumber const BigNumber::fromNumber(long double const number) noexcept { (void) number; return BigNumber{}; }
+    BigNumber const BigNumber::fromNumber(long const number) noexcept { (void) number; return BigNumber {}; }
+    BigNumber const BigNumber::fromNumber(long double const number) noexcept { (void) number; return BigNumber {}; }
+    BigNumber const BigNumber::fromNumber(unsigned long const number) noexcept { (void) number; return BigNumber {}; }
+
+    // Get Characteristics
+    long double BigNumber::getCharacteristics(void) const { return 0.00L; }
+
+    // Get Mantissa
+    long double BigNumber::getMantissa(void) const { return 0.00L; }
+
+    // Has Significant Characteristics
+    bool BigNumber::hasSignificantCharacteristics(void) const noexcept { return false; }
+
+    // Has Significant Mantissa
+    bool BigNumber::hasSignificantMantissa(void) const noexcept { return false; }
 
     // Increment
-    inline void BigNumber::increment(void) noexcept {
-        // ...
-        this -> update();
-
-        // Logic
-        if (1u == this -> characteristicsLength && '0' == *(this -> characteristics))
-            // Modification > Target > Characteristics
-            *(this -> characteristics) = '1';
-
-        else {
-            // Initialization > Iterator
-            char *iterator = this -> characteristics + (this -> characteristicsLength - 1u);
-
-            // Logic
-            if (BigNumber::isNegative()) {
-                // Loop > Update > Iterator
-                // : Logic > Update > Iterator
-                while (iterator != this -> characteristics && '0' == *iterator) { *iterator = '9'; --iterator; }
-                switch (*iterator) { case '1': *iterator = '0'; break; case '2': *iterator = '1'; break; case '3': *iterator = '2'; break; case '4': *iterator = '3'; break; case '5': *iterator = '4'; break; case '6': *iterator = '5'; break; case '7': *iterator = '6'; break; case '8': *iterator = '7'; break; case '9': *iterator = '8'; break; }
-            }
-
-            else {
-                // Loop > Update > Iterator
-                while (iterator != this -> characteristics - 1 && '9' == *iterator) { *iterator = '0'; --iterator; }
-
-                // Logic
-                if (iterator == this -> characteristics - 1) {
-                    // Modification > Target > Characteristics (Length)
-                    this -> characteristics = (char*) ::realloc(this -> characteristics, (this -> characteristicsLength + 1u) * sizeof(char));
-                    ::memmove(this -> characteristics + 1, this -> characteristics, this -> characteristicsLength * sizeof(char));
-                    *(this -> characteristics) = '1';
-
-                    ++(this -> characteristicsLength);
-                }
-
-                else
-                    // Logic > Update > Iterator
-                    switch (*iterator) { case '0': *iterator = '1'; break; case '1': *iterator = '2'; break; case '2': *iterator = '3'; break; case '3': *iterator = '4'; break; case '4': *iterator = '5'; break; case '5': *iterator = '6'; break; case '6': *iterator = '7'; break; case '7': *iterator = '8'; break; case '8': *iterator = '9'; break; }
-            }
-        }
-
-        // ...
-        this -> update();
-    }
+    BigNumber& BigNumber::increment(void) noexcept { return *this; }
 
     // Is Computable
-    inline bool BigNumber::isComputable(BigNumber const& number) noexcept { return BigNumber::UNCOMPUTABLE != number.state; }
+    bool BigNumber::isComputable(void) const noexcept { return false; }
 
     // Is Equal
-    inline bool BigNumber::isEqual(BigNumber& numberA, BigNumber& numberB) noexcept {
-        numberA.update();
-        numberB.update();
-
-        return false;
-    }
+    bool BigNumber::isEqual(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
 
     // Is Finite
-    inline bool BigNumber::isFinite(BigNumber const& number) noexcept { return BigNumber::INFINITE != number.state; }
+    bool BigNumber::isFinite(void) const noexcept { return false; }
 
     // Is Greater
-    inline bool BigNumber::isGreater(BigNumber& numberA, BigNumber& numberB) noexcept {
-        numberA.update();
-        numberB.update();
-
-        return false;
-    }
+    bool BigNumber::isGreater(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
 
     // Is Infinite
-    inline bool BigNumber::isInfinite(BigNumber const& number) noexcept { return BigNumber::INFINITE == number.state; }
+    bool BigNumber::isInfinite(void) const noexcept { return false; }
 
     // Is Integral
-    inline bool BigNumber::isIntegral(BigNumber const& number) noexcept { return 0u == number.mantissaLength; }
+    bool BigNumber::isIntegral(void) const noexcept { return false; }
 
     // Is Lesser
-    inline bool BigNumber::isLesser(BigNumber& numberA, BigNumber& numberB) noexcept {
-        numberA.update();
-        numberB.update();
-
-        return false;
-    }
-
-    // Is Not-A-Number
-    inline bool BigNumber::isNaN(BigNumber const& number) noexcept { return BigNumber::UNCOMPUTABLE == number.state; }
-
-    // Is Negative
-    inline bool BigNumber::isNegative(BigNumber const& number) noexcept { return number.signedness; }
+    bool BigNumber::isLesser(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
 
     // Is Normal
-    inline bool BigNumber::isNormal(BigNumber const& number) noexcept { return BigNumber::DENORMALIZED != number.state; }
-
-    // Is Positive
-    inline bool BigNumber::isPositive(BigNumber const& number) noexcept { return false == number.signedness; }
+    bool BigNumber::isNormal(void) const noexcept { return false; }
 
     // Is Safe
-    inline bool BigNumber::isSafe(BigNumber const& number) noexcept { return BigNumber::isComputable(number) && BigNumber::isFinite(number) && BigNumber::isNormal(number); }
+    bool BigNumber::isSafe(void) const noexcept { return false; }
 
     // Is Zero
-    inline bool BigNumber::isZero(BigNumber const& number) noexcept { return BigNumber::isIntegral(number) && (number.characteristicsLength == 1u && '0' == *(number.characteristics)); }
+    bool BigNumber::isZero(void) const noexcept { return false; }
 
     // Modulo
-    inline void BigNumber::modulo(BigNumber const& number) noexcept {
-        this -> update();
-        (void) number;
-    }
+    BigNumber& BigNumber::modulo(BigNumber const& number) noexcept { (void) number; return *this; }
 
     // Multiply
-    inline void BigNumber::multiply(BigNumber const& number) noexcept {
-        this -> update();
-        (void) number;
-    }
+    BigNumber& BigNumber::multiply(BigNumber const& number) noexcept { (void) number; return *this; }
+
+    // Sign
+    void BigNumber::sign(void) noexcept {}
 
     // Subtract
-    inline void BigNumber::subtract(BigNumber const& number) noexcept {
-        this -> update();
-        (void) number;
-    }
+    BigNumber& BigNumber::subtract(BigNumber const& number) noexcept { (void) number; return *this; }
 
     // To Number
-    inline long double BigNumber::toNumber(BigNumber& number) {
-        number.update();
-        (void) number;
-        return 0.00L;
-    }
-    inline long double BigNumber::toNumber(BigNumber&& number) { return BigNumber::toNumber(number); }
+    long double BigNumber::toNumber(BigNumber const& number) { (void) number; return 0.00L; }
+
+    // To String
+    char const* BigNumber::toString(void) const noexcept { return NULL; }
+
+    // Unsign
+    void BigNumber::unsign(void) noexcept {}
 
 /* Main */
 int main(void) {
-    BigNumber number;
+    /* [Initiate] ... */
+    std::cout << "[PROGRAM INITIATED]" << std::endl;
 
-    for (unsigned short iterator = 0u; iterator ^ 256u; ++iterator) std::cout << "[number]: (" << number-- << ", " << -iterator << ')' << std::endl;
-    number.unsign();
-    for (unsigned short iterator = 256u; iterator ^ (unsigned short) -1; --iterator) std::cout << "[number]: (" << number-- << ", " << iterator << ')' << std::endl;
+    /* [Terminate] ... */
+    std::cout << "[PROGRAM TERMINATED]" << std::flush;
 
     // Return
     return EXIT_SUCCESS;
