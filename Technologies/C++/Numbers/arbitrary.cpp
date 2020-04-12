@@ -1,8 +1,10 @@
 /* Import */
+#include <float.h> // Floating-Point
 #include <math.h> // Mathematics
 #include <stdlib.h> // Standard Library
 #include <string.h> // String
 
+#include <time.h>
 #include <iostream>
 
 /* Class > Big Number */
@@ -15,28 +17,35 @@ class BigNumber {
         bool signedness;
         enum {DENORMALIZED, INFINITE, SAFE, UNCOMPUTABLE} state;
         char *value; // NOTE (Lapys) -> Keep the characteristics and mantissa co-joined in the same field.
+        size_t valueSize;
 
-        // Function > (Copy, Size)
-        inline void copy(BigNumber const& number) noexcept { if (BigNumber::SAFE == (this -> state = number.state)) { this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> signedness = number.signedness; this -> value = (char*) ::malloc(BigNumber::size(number.characteristicsLength + number.mantissaLength) * sizeof(char)); ::strncpy(this -> value, number.value, number.characteristicsLength + number.mantissaLength); } }
-        inline void copy(BigNumber&& number) noexcept { if (BigNumber::SAFE == (this -> state = number.state)) { number.value = NULL; this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> signedness = number.signedness; this -> value = number.value; } }
+        // Function > (Allocate, Copy, Size, [Digit Manipulation] ...) --- MINIFY (Lapys)
+        inline void allocate(void) noexcept { BigNumber::allocate(this -> characteristicsLength + this -> mantissaLength); }
+        inline void allocate(size_t size) noexcept { size = BigNumber::size(size + 1u); size += (size & 1u); if (size ^ this -> valueSize) { this -> valueSize = size; this -> value = (char*) (NULL == this -> value ? ::malloc(size * sizeof(char)) : ::realloc(this -> value, size * sizeof(char))); } }
+        inline void copy(BigNumber const& number) noexcept { this -> signedness = number.signedness; if (BigNumber::SAFE == (this -> state = number.state)) { this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> value = (char*) ::malloc(BigNumber::size(number.characteristicsLength + number.mantissaLength) * sizeof(char)); ::strncpy(this -> value, number.value, number.characteristicsLength + number.mantissaLength); this -> valueSize = number.valueSize; } }
+        inline void copy(BigNumber&& number) noexcept { this -> signedness = number.signedness; if (BigNumber::SAFE == (this -> state = number.state)) { number.value = NULL; this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> value = number.value; this -> valueSize = number.valueSize; } }
         inline size_t size(void) noexcept { return BigNumber::size(this -> characteristicsLength + this -> mantissaLength); }
         inline size_t size(size_t const size) noexcept { size_t evaluation; for (size_t former, iterator = 1u, recent = 0u; iterator <= size; ) { former = iterator; iterator += recent; recent = former; evaluation = iterator; } return evaluation; }
+
+        inline char const* add(char const digitA, char const digitB) const noexcept { static char evaluation[3] {0}; if ('0' == digitA) { *evaluation = digitB; *(evaluation + 1) = '\0'; } else if ('0' == digitB) { *evaluation = digitA; *(evaluation + 1) = '\0'; } else switch (digitA) { case '1': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '0'; *(evaluation + 1) = '0'; break; } break; case '2': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '1'; break; } break; case '3': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '2'; break; } break; case '4': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '3'; break; } break; case '5': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '4'; break; } break; case '6': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '5'; break; } break; case '7': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '6'; break; } break; case '8': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '7'; break; } break; case '9': switch (digitB) { case '1': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '7'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '8'; break; } break; } return (char const*) evaluation; }
+        inline char const* decrement(char const digit) const noexcept { static char evaluation[3] {0}; switch (digit) { case '0': *evaluation = '-'; *(evaluation + 1) = '1'; break; case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '8'; *(evaluation + 1) = '\0'; break; } return (char*) evaluation; }
+        inline char const* increment(char const digit) const noexcept { static char evaluation[3] {0}; switch (digit) { case '0': *evaluation = '1'; *(evaluation + 1) = '\0'; break; case '1': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '0'; break; } return (char*) evaluation; }
 
     // [...]
     public:
         // [Constructor]
-        constexpr inline BigNumber(void) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} {}
-        inline BigNumber(double const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(float const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(int const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(long const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(long double const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(short const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(unsigned int const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(unsigned long const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(unsigned short const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(BigNumber::fromNumber(number)); }
-        inline BigNumber(BigNumber const& number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(number); }
-        inline BigNumber(BigNumber&& number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL} { BigNumber::copy(number); }
+        constexpr inline BigNumber(void) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} {}
+        inline BigNumber(double const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(float const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(int const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(long const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(long double const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(short const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(unsigned int const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(unsigned long const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(unsigned short const number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(BigNumber::fromNumber(number)); }
+        inline BigNumber(BigNumber const& number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(number); }
+        inline BigNumber(BigNumber&& number) : characteristicsLength{0u}, mantissaLength{0u}, signedness{false}, state{SAFE}, value{NULL}, valueSize{1u} { BigNumber::copy(number); }
 
         // [Destructor]
         inline ~BigNumber(void) { ::free(this -> value); }
@@ -131,9 +140,21 @@ class BigNumber {
         static bool isLesser(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::isLesser(numberA, numberB); }
         static bool isLesser(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::isLesser(numberA, numberB); }
 
+        bool isNaN(void) const noexcept;
+        inline static bool isNaN(BigNumber const& number) noexcept { return number.isNaN(); }
+        inline static bool isNaN(BigNumber&& number) noexcept { return BigNumber::isNaN(number); }
+
+        bool isNegative(void) const noexcept;
+        inline static bool isNegative(BigNumber const& number) noexcept { return number.isNegative(); }
+        inline static bool isNegative(BigNumber&& number) noexcept { return BigNumber::isNegative(number); }
+
         bool isNormal(void) const noexcept;
         inline static bool isNormal(BigNumber const& number) noexcept { return number.isNormal(); }
         inline static bool isNormal(BigNumber&& number) noexcept { return BigNumber::isNormal(number); }
+
+        bool isPositive(void) const noexcept;
+        inline static bool isPositive(BigNumber const& number) noexcept { return number.isPositive(); }
+        inline static bool isPositive(BigNumber&& number) noexcept { return BigNumber::isPositive(number); }
 
         bool isSafe(void) const noexcept;
         inline static bool isSafe(BigNumber const& number) noexcept { return number.isSafe(); }
@@ -155,7 +176,7 @@ class BigNumber {
         inline static BigNumber const multiply(BigNumber&& numberA, BigNumber const& numberB) noexcept { return BigNumber::multiply(numberA, numberB); }
         inline static BigNumber const multiply(BigNumber&& numberA, BigNumber&& numberB) noexcept { return BigNumber::multiply(numberA, numberB); }
 
-        void sign(void) noexcept;
+        void sign(bool const = false) noexcept;
         inline static BigNumber const sign(BigNumber const& number) noexcept { BigNumber evaluation {number}; evaluation.sign(); return evaluation; }
 
         BigNumber& subtract(BigNumber const&) noexcept;
@@ -219,10 +240,157 @@ class BigNumber {
 
 /* Modification > Big Number */
     // Add
-    BigNumber& BigNumber::add(BigNumber const& number) noexcept { (void) number; return *this; }
+    BigNumber& BigNumber::add(BigNumber const& number) noexcept {
+        // Logic
+        if (false == BigNumber::isSafe(number)) BigNumber::copy(number);
+        else if (false == BigNumber::isZero(number)) {
+            // Logic > ...
+            if (BigNumber::isNegative() && BigNumber::isPositive(number)) BigNumber::copy(BigNumber::subtract(number, *this));
+            else if (BigNumber::isPositive() && BigNumber::isNegative(number)) BigNumber::subtract(number);
+            else {
+                // Initialization > (Carry, Iterator ...)
+                bool carry = false;
+
+                size_t iterator;
+                char *iteratorA, *iteratorB;
+
+                // ...
+                BigNumber::allocate((this -> characteristicsLength < number.characteristicsLength ? number.characteristicsLength : this -> characteristicsLength) + (this -> mantissaLength < number.mantissaLength ? number.mantissaLength : this -> mantissaLength) + 1u);
+
+                // Logic
+                if (number.mantissaLength) {
+                    // Logic
+                    if (0u == this -> mantissaLength) {
+                        // Modification > Target > (Mantissa Length, Value)
+                        ::strncpy(this -> value + this -> characteristicsLength, number.value + number.characteristicsLength, number.mantissaLength);
+                        this -> mantissaLength = number.mantissaLength;
+                    }
+
+                    else {
+                        // Logic
+                        if (this -> mantissaLength < number.mantissaLength) {
+                            // Modification > Target > (Mantissa Length, Value)
+                            ::memset(this -> value + this -> characteristicsLength + this -> mantissaLength, '0', (number.mantissaLength - this -> mantissaLength) * sizeof(char));
+                            this -> mantissaLength = number.mantissaLength;
+                        }
+
+                        // Update > Iterator ...
+                        iteratorA = this -> value + (this -> characteristicsLength + this -> mantissaLength);
+                        iteratorB = number.value + (number.characteristicsLength + number.mantissaLength);
+
+                        // Loop --- NOTE (Lapys) -> Add the digits of the mantissa.
+                        for (iterator = 0u; iterator ^ number.mantissaLength; ++iterator) {
+                            // Initialization > Evaluation
+                            char *evaluation = (char*) BigNumber::add(*--iteratorA, *--iteratorB);
+
+                            // Logic > ...
+                            if ('\0' == *(evaluation + 1)) { if (carry) evaluation = (char*) BigNumber::increment(*evaluation); carry = '\0' ^ *(evaluation + 1); *iteratorA = carry ? *(evaluation + 1) : *evaluation; }
+                            else { if (carry) *(evaluation + 1) = *BigNumber::increment(*(evaluation + 1)); carry = true; *iteratorA = *(evaluation + 1); }
+                        }
+                    }
+                }
+
+                // Logic > ...
+                if (carry) { BigNumber::increment(); carry = false; }
+
+                if (number.characteristicsLength) {
+                    // Logic
+                    if (0u == this -> characteristicsLength) {
+                        // Modification > Target > (Characteristics Length, Value)
+                        ::memmove(this -> value + number.characteristicsLength, this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+                        ::strncpy(this -> value, number.value, number.characteristicsLength);
+
+                        this -> characteristicsLength = number.characteristicsLength;
+                    }
+
+                    else {
+                        // Logic
+                        if (this -> characteristicsLength < number.characteristicsLength) {
+                            // Modification > Target > (Characteristics Length, Value)
+                            ::memmove(this -> value + (number.characteristicsLength - this -> characteristicsLength), this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+                            ::memset(this -> value, '0', (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+
+                            this -> characteristicsLength = number.characteristicsLength;
+                        }
+
+                        // Update > Iterator ...
+                        iteratorA = this -> value + this -> characteristicsLength;
+                        iteratorB = number.value + number.characteristicsLength;
+
+                        // Loop --- NOTE (Lapys) -> Add the digits of the characteristics.
+                        for (iterator = 0u; iterator ^ number.characteristicsLength; ++iterator) {
+                            // Initialization > Evaluation
+                            char *evaluation = (char*) BigNumber::add(*--iteratorA, *--iteratorB);
+
+                            // Logic > ...
+                            if ('\0' == *(evaluation + 1)) { if (carry) evaluation = (char*) BigNumber::increment(*evaluation); carry = '\0' ^ *(evaluation + 1); *iteratorA = carry ? *(evaluation + 1) : *evaluation; }
+                            else { if (carry) *(evaluation + 1) = *BigNumber::increment(*(evaluation + 1)); carry = true; *iteratorA = *(evaluation + 1); }
+                        }
+                    }
+                }
+
+                // Logic
+                if (carry) {
+                    // Modification > Target > (Characteristics Length, Value)
+                    ::memmove(this -> value + 1, this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+
+                    ++(this -> characteristicsLength);
+                    *(this -> value) = '1';
+                }
+            }
+        }
+
+        // Return
+        return *this;
+    }
 
     // Decrement
-    BigNumber& BigNumber::decrement(void) noexcept { return *this; }
+    BigNumber& BigNumber::decrement(void) noexcept {
+        // Logic
+        if (BigNumber::SAFE == this -> state) {
+            // ...
+            BigNumber::allocate();
+
+            // Logic
+            if (false == BigNumber::hasSignificantCharacteristics() || (this -> characteristicsLength == 1u && '0' == *(this -> value))) { // NOTE (Lapys) -> Is zero?
+                // ...
+                BigNumber::sign(true);
+
+                // Modification > Target > (Characteristics Length)
+                this -> characteristicsLength = 1u;
+                *(this -> value) = '1';
+            }
+
+            else if (BigNumber::isNegative()) { // NOTE (Lapys) -> Increment characteristics when number is negative.
+                // ...
+                BigNumber::unsign();
+                BigNumber::increment();
+                BigNumber::sign();
+            }
+
+            else { // Decrement characteristics.
+                // Initialization > Iterator
+                char *iterator = this -> value + this -> characteristicsLength;
+
+                // Loop > Update > Iterator
+                while ('0' == *--iterator) *iterator = '9';
+
+                // Logic
+                if (*iterator == '1' && iterator == this -> value) {
+                    // Modification > Target > (Characteristics Length)
+                    --(this -> characteristicsLength);
+                    ::memmove(this -> value, this -> value + 1, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+                }
+
+                else
+                    // Update > Iterator
+                    *iterator = *BigNumber::decrement(*iterator);
+            }
+        }
+
+        // Return
+        return *this;
+    }
 
     // Divide
     BigNumber& BigNumber::divide(BigNumber const& number) noexcept { (void) number; return *this; }
@@ -230,10 +398,97 @@ class BigNumber {
     // Exponentiate
     BigNumber& BigNumber::exponentiate(BigNumber const& number) noexcept { (void) number; return *this; }
 
-    // From Number
-    BigNumber const BigNumber::fromNumber(long const number) noexcept { (void) number; return BigNumber {}; }
-    BigNumber const BigNumber::fromNumber(long double const number) noexcept { (void) number; return BigNumber {}; }
-    BigNumber const BigNumber::fromNumber(unsigned long const number) noexcept { (void) number; return BigNumber {}; }
+    // From Number --- NOTE (Lapys) -> Convert the number to string and emplace within the returned `BigNumber` object.
+    BigNumber const BigNumber::fromNumber(long const number) noexcept { return number < 0L ? -BigNumber::fromNumber((unsigned long) -number) : BigNumber::fromNumber((unsigned long) number); }
+    BigNumber const BigNumber::fromNumber(long double const number) noexcept {
+        // Evaluation > Evaluation
+        BigNumber evaluation;
+
+        // Logic
+        if (::isinf(number)) {
+            // ...; Modification > Evaluation > State
+            if (number < 0.00L) evaluation.sign();
+            evaluation.state = BigNumber::INFINITE;
+        }
+
+        else if (::isnan(number))
+            // Modification > Evaluation > State
+            evaluation.state = BigNumber::UNCOMPUTABLE;
+
+        else if (number && false == ::isnormal(number))
+            // Modification > Evaluation > State
+            evaluation.state = BigNumber::DENORMALIZED;
+
+        else if (number) {
+            // Initialization > (Characteristics, Mantissa)
+            long double characteristics, mantissa = ::modf(number < 0.00L ? -number : number, &characteristics);
+
+            // ...
+            evaluation.allocate((characteristics ? LDBL_DIG : 0u) + (mantissa ? LDBL_MANT_DIG : 0u));
+
+            // Logic > ...
+            if (number < 0.00L) evaluation.sign();
+
+            // Logic
+            if (characteristics) {
+                // Initialization > Iterator
+                char *iterator = evaluation.value;
+
+                // Loop > ...
+                // : Modification > Evaluation > Characteristics Length
+                for (long double digit; characteristics && (iterator - evaluation.value) <= LDBL_DIG; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) digit = ::modf((characteristics /= 10.00L), &characteristics) * 10.00L;
+                evaluation.characteristicsLength = iterator-- - evaluation.value;
+
+                for (char *subiterator = evaluation.value; iterator > subiterator; (--iterator, ++subiterator)) { *iterator ^= *subiterator; *subiterator ^= *iterator; *iterator ^= *subiterator; }
+            }
+
+            // Logic
+            if (mantissa) {
+                // Initialization > Iterator
+                char *iterator = evaluation.value + evaluation.characteristicsLength;
+
+                // Loop > ...
+                // : Modification > Evaluation > Mantissa Length
+                for (long double digit; mantissa >= LDBL_EPSILON && (iterator - (evaluation.value + evaluation.characteristicsLength)) <= LDBL_MANT_DIG; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) mantissa = ::modf((mantissa *= 10.00L), &digit);
+                evaluation.mantissaLength = iterator - (evaluation.value + evaluation.characteristicsLength);
+            }
+        }
+
+        // Return
+        return evaluation;
+    }
+    BigNumber const BigNumber::fromNumber(unsigned long const number) noexcept {
+        // Evaluation > Evaluation
+        BigNumber evaluation;
+
+        // Logic
+        if (number) {
+            // ...
+            evaluation.allocate(20u);
+
+            // Loop
+            for (unsigned long index = 0u, iterator = number; iterator; iterator /= 10u) {
+                // Modification > Evaluation > Value
+                *(evaluation.value + index++) = *("0123456789" + (iterator % 10u));
+
+                // Logic
+                if (iterator < 10u) {
+                    // Modification > Evaluation > Characteristics Length
+                    evaluation.characteristicsLength = index;
+
+                    // Loop > ...
+                    for ((--index, iterator = 0u); iterator < index; (--index, ++iterator)) {
+                        *(evaluation.value + index) ^= *(evaluation.value + iterator);
+                        *(evaluation.value + iterator) ^= *(evaluation.value + index);
+                        *(evaluation.value + index) ^= *(evaluation.value + iterator);
+                    }
+                }
+            }
+        }
+
+        // Return
+        return evaluation;
+    }
 
     // Get Characteristics
     long double BigNumber::getCharacteristics(void) const { return 0.00L; }
@@ -242,43 +497,98 @@ class BigNumber {
     long double BigNumber::getMantissa(void) const { return 0.00L; }
 
     // Has Significant Characteristics
-    bool BigNumber::hasSignificantCharacteristics(void) const noexcept { return false; }
+    inline bool BigNumber::hasSignificantCharacteristics(void) const noexcept { return this -> characteristicsLength; }
 
     // Has Significant Mantissa
-    bool BigNumber::hasSignificantMantissa(void) const noexcept { return false; }
+    inline bool BigNumber::hasSignificantMantissa(void) const noexcept { return this -> mantissaLength; }
 
     // Increment
-    BigNumber& BigNumber::increment(void) noexcept { return *this; }
+    BigNumber& BigNumber::increment(void) noexcept {
+        // Logic
+        if (BigNumber::SAFE == this -> state) {
+            // ...
+            BigNumber::allocate();
+
+            // Logic
+            if (false == BigNumber::hasSignificantCharacteristics() || (this -> characteristicsLength == 1u && '0' == *(this -> value))) { // NOTE (Lapys) -> Is zero?
+                // Modification > Target > (Characteristics Length, Value)
+                this -> characteristicsLength = 1u;
+                *(this -> value) = '1';
+            }
+
+            else if (BigNumber::isNegative()) { // NOTE (Lapys) -> Decrement characteristics when number is negative.
+                // ...
+                BigNumber::unsign();
+                BigNumber::decrement();
+                BigNumber::sign();
+            }
+
+            else { // NOTE (Lapys) -> Increment characteristics.
+                // Initialization > Iterator
+                char *iterator = this -> value + this -> characteristicsLength;
+
+                // Loop > Update > Iterator
+                while ('9' == *--iterator) *iterator = '0';
+
+                // Logic
+                if (iterator == this -> value - 1) {
+                    // ...
+                    BigNumber::allocate(this -> characteristicsLength + this -> mantissaLength + 1u);
+
+                    // Modification > Target > (Characteristics Length, Value)
+                    ::memmove(this -> value + 1, this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+                    ++(this -> characteristicsLength);
+                    *(this -> value) = '1';
+                }
+
+                else
+                    // Update > Iterator
+                    *iterator = *BigNumber::increment(*iterator);
+            }
+        }
+
+        // Return
+        return *this;
+    }
 
     // Is Computable
-    bool BigNumber::isComputable(void) const noexcept { return false; }
+    bool BigNumber::isComputable(void) const noexcept { return BigNumber::UNCOMPUTABLE != this -> state; }
 
     // Is Equal
     bool BigNumber::isEqual(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
 
     // Is Finite
-    bool BigNumber::isFinite(void) const noexcept { return false; }
+    bool BigNumber::isFinite(void) const noexcept { return BigNumber::INFINITE != this -> state; }
 
     // Is Greater
     bool BigNumber::isGreater(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
 
     // Is Infinite
-    bool BigNumber::isInfinite(void) const noexcept { return false; }
+    bool BigNumber::isInfinite(void) const noexcept { return BigNumber::INFINITE == this -> state; }
 
     // Is Integral
-    bool BigNumber::isIntegral(void) const noexcept { return false; }
+    inline bool BigNumber::isIntegral(void) const noexcept { return 0u == this -> mantissaLength; }
 
     // Is Lesser
     bool BigNumber::isLesser(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
 
+    // Is Not-A-Number
+    bool BigNumber::isNaN(void) const noexcept { return BigNumber::UNCOMPUTABLE == this -> state; }
+
+    // Is Negative
+    inline bool BigNumber::isNegative(void) const noexcept { return this -> signedness; }
+
     // Is Normal
-    bool BigNumber::isNormal(void) const noexcept { return false; }
+    inline bool BigNumber::isNormal(void) const noexcept { return BigNumber::DENORMALIZED != this -> state; }
+
+    // Is Positive
+    inline bool BigNumber::isPositive(void) const noexcept { return false == this -> signedness; }
 
     // Is Safe
-    bool BigNumber::isSafe(void) const noexcept { return false; }
+    inline bool BigNumber::isSafe(void) const noexcept { return BigNumber::isComputable() && BigNumber::isFinite() && BigNumber::isNormal(); }
 
     // Is Zero
-    bool BigNumber::isZero(void) const noexcept { return false; }
+    inline bool BigNumber::isZero(void) const noexcept { return BigNumber::isIntegral() && (this -> characteristicsLength ? this -> characteristicsLength : 1u) == 1u && '0' == *(NULL == this -> value ? (char*) "0" : this -> value); }
 
     // Modulo
     BigNumber& BigNumber::modulo(BigNumber const& number) noexcept { (void) number; return *this; }
@@ -287,7 +597,7 @@ class BigNumber {
     BigNumber& BigNumber::multiply(BigNumber const& number) noexcept { (void) number; return *this; }
 
     // Sign
-    void BigNumber::sign(void) noexcept {}
+    inline void BigNumber::sign(bool const strict) noexcept { this -> signedness = strict || !(this -> signedness); }
 
     // Subtract
     BigNumber& BigNumber::subtract(BigNumber const& number) noexcept { (void) number; return *this; }
@@ -296,15 +606,86 @@ class BigNumber {
     long double BigNumber::toNumber(BigNumber const& number) { (void) number; return 0.00L; }
 
     // To String
-    char const* BigNumber::toString(void) const noexcept { return NULL; }
+    inline char const* BigNumber::toString(void) const noexcept {
+        // Evaluation > Evaluation
+        char *evaluation;
+
+        // Logic
+        switch (this -> state) {
+            // [Denormalized]
+            case BigNumber::DENORMALIZED: {
+                // Update > Evaluation
+                evaluation = (char*) ::malloc(13u * sizeof(char));
+                ::strncpy(evaluation, "Denormalized", 13u);
+            } break;
+
+            // [Infinite]
+            case BigNumber::INFINITE: {
+                // Update > Evaluation
+                evaluation = (char*) ::malloc(10u * sizeof(char));
+                ::strncpy(evaluation, "-Infinity" + (false == this -> signedness), 9u + (this -> signedness));
+            } break;
+
+            // [Safe]
+            case BigNumber::SAFE: {
+                // Initialization > Iterator
+                char *iterator;
+
+                // Update > (Evaluation, ...)
+                evaluation = (char*) ::malloc((this -> characteristicsLength + this -> mantissaLength + 3u) * sizeof(char));
+                iterator = evaluation;
+
+                // Logic
+                if (this -> characteristicsLength) {
+                    // (Logic, Loop) > Update > Iterator
+                    if (BigNumber::isNegative()) *iterator++ = '-';
+                    for (size_t subiterator = 0u; subiterator ^ (this -> characteristicsLength); ++subiterator) *iterator++ = *(this -> value + subiterator);
+                } else {
+                    // (Logic > )Update > Iterator
+                    if (BigNumber::isNegative() && this -> mantissaLength) *iterator++ = '-';
+                    *iterator++ = '0';
+                }
+
+                // Logic
+                if (this -> mantissaLength) {
+                    // (Loop > )Update > (Iterator)
+                    *iterator++ = '.';
+                    for (size_t subiterator = 0u; subiterator ^ (this -> mantissaLength); ++subiterator) *iterator++ = *(this -> value + (this -> characteristicsLength + subiterator));
+                }
+
+                // Update > Iterator
+                *iterator = '\0';
+            } break;
+
+            // [Uncomputable]
+            case BigNumber::UNCOMPUTABLE: {
+                // Update > Evaluation
+                evaluation = (char*) ::malloc(4u * sizeof(char));
+                ::strncpy(evaluation, "NaN", 4u);
+            } break;
+        }
+
+        // Return
+        return (char const*) evaluation;
+    }
 
     // Unsign
-    void BigNumber::unsign(void) noexcept {}
+    inline void BigNumber::unsign(void) noexcept { this -> signedness = false; }
 
 /* Main */
 int main(void) {
     /* [Initiate] ... */
     std::cout << "[PROGRAM INITIATED]" << std::endl;
+
+    ::srand(::time(NULL));
+    long double numberA = ((long double) (::rand() % 3000) / (long double) (::rand() % 3000)) * (::rand() % 10 >= 5 ? 1 : -1);
+    long double numberB = (long double) (::rand() % 3000) / (long double) (::rand() % 3000) * (numberA <= 0.00L ? -1 : 1);
+
+    std::cout << "[Number A]: " << numberA << std::endl;
+    std::cout << "[Number B]: " << numberB << std::endl;
+
+    std::cout << "[Number A + Number B]: " << numberA + numberB << std::endl;
+    std::cout << "[Number A + Number B]: " << (BigNumber(numberA) + BigNumber(numberB)).toString() << std::endl;
 
     /* [Terminate] ... */
     std::cout << "[PROGRAM TERMINATED]" << std::flush;
