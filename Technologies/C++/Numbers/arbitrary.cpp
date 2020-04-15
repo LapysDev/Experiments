@@ -7,8 +7,11 @@
 #include <time.h>
 #include <iostream>
 
-/* Class > Big Number */
+/* Class > Big Number --- NOTE (Lapys) -> Arbitrary-precision natural-base numbers; code still applies for other bases. */
 class BigNumber {
+    // ...
+    friend int main(void);
+
     // [...]
     private:
         // Definition > ((Characteristics, Mantissa) Length, Signedness, State, Value (Size))
@@ -21,13 +24,12 @@ class BigNumber {
 
         // Function > (Allocate, Copy, Size, [Digit Manipulation] ...) --- MINIFY (Lapys)
         inline void allocate(void) noexcept { BigNumber::allocate(this -> characteristicsLength + this -> mantissaLength); }
-        inline void allocate(size_t size) noexcept { size = BigNumber::size(size + 1u); size += (size & 1u); if (size ^ this -> valueSize) { this -> valueSize = size; this -> value = (char*) (NULL == this -> value ? ::malloc(size * sizeof(char)) : ::realloc(this -> value, size * sizeof(char))); } }
-        inline void copy(BigNumber const& number) noexcept { this -> signedness = number.signedness; if (BigNumber::SAFE == (this -> state = number.state)) { this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> value = (char*) ::malloc(BigNumber::size(number.characteristicsLength + number.mantissaLength) * sizeof(char)); ::strncpy(this -> value, number.value, number.characteristicsLength + number.mantissaLength); this -> valueSize = number.valueSize; } }
-        inline void copy(BigNumber&& number) noexcept { this -> signedness = number.signedness; if (BigNumber::SAFE == (this -> state = number.state)) { number.value = NULL; this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> value = number.value; this -> valueSize = number.valueSize; } }
+        inline void allocate(size_t size) noexcept { size = BigNumber::size(size + 1u); size += (size & 1u); if (size > this -> valueSize) { this -> value = (char*) (NULL == this -> value ? ::malloc(size * sizeof(char)) : ::realloc(this -> value, size * sizeof(char))); this -> valueSize = size; } }
+        inline void copy(BigNumber const& number) noexcept { this -> signedness = number.signedness; this -> state = number.state; if (BigNumber::SAFE == number.state) { this -> characteristicsLength = number.characteristicsLength; this -> mantissaLength = number.mantissaLength; this -> value = (char*) (NULL == this -> value ? ::malloc(number.valueSize * sizeof(char)) : ::realloc(this -> value, number.valueSize * sizeof(char))); ::strncpy(this -> value, number.value, number.characteristicsLength + number.mantissaLength); this -> valueSize = number.valueSize; } }
         inline size_t size(void) noexcept { return BigNumber::size(this -> characteristicsLength + this -> mantissaLength); }
         inline size_t size(size_t const size) noexcept { size_t evaluation; for (size_t former, iterator = 1u, recent = 0u; iterator <= size; ) { former = iterator; iterator += recent; recent = former; evaluation = iterator; } return evaluation; }
 
-        inline char const* add(char const digitA, char const digitB) const noexcept { static char evaluation[3] {0}; if ('0' == digitA) { *evaluation = digitB; *(evaluation + 1) = '\0'; } else if ('0' == digitB) { *evaluation = digitA; *(evaluation + 1) = '\0'; } else switch (digitA) { case '1': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '0'; *(evaluation + 1) = '0'; break; } break; case '2': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '1'; break; } break; case '3': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '2'; break; } break; case '4': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '3'; break; } break; case '5': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '4'; break; } break; case '6': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '5'; break; } break; case '7': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '6'; break; } break; case '8': switch (digitB) { case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '7'; break; } break; case '9': switch (digitB) { case '1': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '7'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '8'; break; } break; } return (char const*) evaluation; }
+        inline char const* add(char const digitA, char const digitB) const noexcept { static char evaluation[3] {0}; if ('0' == digitA) { *evaluation = digitB; *(evaluation + 1) = '\0'; } else if ('0' == digitB) { *evaluation = digitA; *(evaluation + 1) = '\0'; } else switch (digitA) { case '1': switch (digitB) { case '1': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '0'; break; } break; case '2': switch (digitB) { case '1': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '1'; break; } break; case '3': switch (digitB) { case '1': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '2'; break; } break; case '4': switch (digitB) { case '1': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '3'; break; } break; case '5': switch (digitB) { case '1': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '4'; break; } break; case '6': switch (digitB) { case '1': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '5'; break; } break; case '7': switch (digitB) { case '1': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '6'; break; } break; case '8': switch (digitB) { case '1': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '7'; break; } break; case '9': switch (digitB) { case '1': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '7'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '8'; break; } break; } return (char const*) evaluation; }
         inline char const* decrement(char const digit) const noexcept { static char evaluation[3] {0}; switch (digit) { case '0': *evaluation = '-'; *(evaluation + 1) = '1'; break; case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '8'; *(evaluation + 1) = '\0'; break; } return (char*) evaluation; }
         inline char const* increment(char const digit) const noexcept { static char evaluation[3] {0}; switch (digit) { case '0': *evaluation = '1'; *(evaluation + 1) = '\0'; break; case '1': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '0'; break; } return (char*) evaluation; }
 
@@ -250,23 +252,15 @@ class BigNumber {
             else {
                 // Initialization > (Carry, Iterator ...)
                 bool carry = false;
-
-                size_t iterator;
                 char *iteratorA, *iteratorB;
 
                 // ...
                 BigNumber::allocate((this -> characteristicsLength < number.characteristicsLength ? number.characteristicsLength : this -> characteristicsLength) + (this -> mantissaLength < number.mantissaLength ? number.mantissaLength : this -> mantissaLength) + 1u);
 
                 // Logic
-                if (number.mantissaLength) {
+                if (number.hasSignificantMantissa()) {
                     // Logic
-                    if (0u == this -> mantissaLength) {
-                        // Modification > Target > (Mantissa Length, Value)
-                        ::strncpy(this -> value + this -> characteristicsLength, number.value + number.characteristicsLength, number.mantissaLength);
-                        this -> mantissaLength = number.mantissaLength;
-                    }
-
-                    else {
+                    if (BigNumber::hasSignificantMantissa()) {
                         // Logic
                         if (this -> mantissaLength < number.mantissaLength) {
                             // Modification > Target > (Mantissa Length, Value)
@@ -279,36 +273,35 @@ class BigNumber {
                         iteratorB = number.value + (number.characteristicsLength + number.mantissaLength);
 
                         // Loop --- NOTE (Lapys) -> Add the digits of the mantissa.
-                        for (iterator = 0u; iterator ^ number.mantissaLength; ++iterator) {
+                        for (size_t iterator = 0u, length = this -> mantissaLength - number.mantissaLength; iterator ^ (this -> mantissaLength); ++iterator) {
                             // Initialization > Evaluation
-                            char *evaluation = (char*) BigNumber::add(*--iteratorA, *--iteratorB);
+                            char *evaluation = (char*) BigNumber::add(*--iteratorA, iterator < length ? '0' : *--iteratorB);
 
                             // Logic > ...
                             if ('\0' == *(evaluation + 1)) { if (carry) evaluation = (char*) BigNumber::increment(*evaluation); carry = '\0' ^ *(evaluation + 1); *iteratorA = carry ? *(evaluation + 1) : *evaluation; }
                             else { if (carry) *(evaluation + 1) = *BigNumber::increment(*(evaluation + 1)); carry = true; *iteratorA = *(evaluation + 1); }
                         }
                     }
+
+                    else {
+                        // Modification > Target > (Mantissa Length, Value)
+                        ::strncpy(this -> value + this -> characteristicsLength, number.value + number.characteristicsLength, number.mantissaLength);
+                        this -> mantissaLength = number.mantissaLength;
+                    }
                 }
 
                 // Logic > ...
-                if (carry) { BigNumber::increment(); carry = false; }
+                if (carry) { BigNumber::isNegative() ? BigNumber::decrement() : BigNumber::increment(); carry = false; }
 
-                if (number.characteristicsLength) {
+                // Logic
+                if (number.hasSignificantCharacteristics()) {
                     // Logic
-                    if (0u == this -> characteristicsLength) {
-                        // Modification > Target > (Characteristics Length, Value)
-                        ::memmove(this -> value + number.characteristicsLength, this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
-                        ::strncpy(this -> value, number.value, number.characteristicsLength);
-
-                        this -> characteristicsLength = number.characteristicsLength;
-                    }
-
-                    else {
+                    if (BigNumber::hasSignificantCharacteristics()) {
                         // Logic
                         if (this -> characteristicsLength < number.characteristicsLength) {
                             // Modification > Target > (Characteristics Length, Value)
                             ::memmove(this -> value + (number.characteristicsLength - this -> characteristicsLength), this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
-                            ::memset(this -> value, '0', (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+                            ::memset(this -> value, '0', (number.characteristicsLength - this -> characteristicsLength) * sizeof(char));
 
                             this -> characteristicsLength = number.characteristicsLength;
                         }
@@ -318,14 +311,22 @@ class BigNumber {
                         iteratorB = number.value + number.characteristicsLength;
 
                         // Loop --- NOTE (Lapys) -> Add the digits of the characteristics.
-                        for (iterator = 0u; iterator ^ number.characteristicsLength; ++iterator) {
+                        for (size_t iterator = 0u; iterator ^ (this -> characteristicsLength); ++iterator) {
                             // Initialization > Evaluation
-                            char *evaluation = (char*) BigNumber::add(*--iteratorA, *--iteratorB);
+                            char *evaluation = (char*) BigNumber::add(*--iteratorA, '0' == *(this -> value) ? *--iteratorB : (iterator < number.characteristicsLength ? *--iteratorB : '0'));
 
                             // Logic > ...
                             if ('\0' == *(evaluation + 1)) { if (carry) evaluation = (char*) BigNumber::increment(*evaluation); carry = '\0' ^ *(evaluation + 1); *iteratorA = carry ? *(evaluation + 1) : *evaluation; }
                             else { if (carry) *(evaluation + 1) = *BigNumber::increment(*(evaluation + 1)); carry = true; *iteratorA = *(evaluation + 1); }
                         }
+                    }
+
+                    else {
+                        // Modification > Target > (Characteristics Length, Value)
+                        ::memmove(this -> value + number.characteristicsLength, this -> value, (this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
+                        ::strncpy(this -> value, number.value, number.characteristicsLength);
+
+                        this -> characteristicsLength = number.characteristicsLength;
                     }
                 }
 
@@ -353,6 +354,13 @@ class BigNumber {
 
             // Logic
             if (false == BigNumber::hasSignificantCharacteristics() || (this -> characteristicsLength == 1u && '0' == *(this -> value))) { // NOTE (Lapys) -> Is zero?
+                // Logic
+                if (BigNumber::hasSignificantMantissa()) {
+                    // ...; Modification > Target > Value
+                    BigNumber::allocate(this -> characteristicsLength + this -> mantissaLength + 1u);
+                    ::memmove(this -> value + (this -> characteristicsLength + 1u), this -> value + this -> characteristicsLength, this -> mantissaLength * sizeof(char));
+                }
+
                 // ...
                 BigNumber::sign(true);
 
@@ -449,7 +457,11 @@ class BigNumber {
 
                 // Loop > ...
                 // : Modification > Evaluation > Mantissa Length
-                for (long double digit; mantissa >= LDBL_EPSILON && (iterator - (evaluation.value + evaluation.characteristicsLength)) <= LDBL_MANT_DIG; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) mantissa = ::modf((mantissa *= 10.00L), &digit);
+                for (
+                    long double digit;
+                    mantissa >= LDBL_EPSILON && (iterator - (evaluation.value + evaluation.characteristicsLength)) <= LDBL_MANT_DIG;
+                    *iterator++ = *("0123456789" + (unsigned char) ::round(digit))
+                ) mantissa = ::modf((mantissa *= 10.00L), &digit);
                 evaluation.mantissaLength = iterator - (evaluation.value + evaluation.characteristicsLength);
             }
         }
@@ -511,6 +523,13 @@ class BigNumber {
 
             // Logic
             if (false == BigNumber::hasSignificantCharacteristics() || (this -> characteristicsLength == 1u && '0' == *(this -> value))) { // NOTE (Lapys) -> Is zero?
+                // Logic
+                if (BigNumber::hasSignificantMantissa()) {
+                    // ...; Modification > Target > Value
+                    BigNumber::allocate(this -> characteristicsLength + this -> mantissaLength + 1u);
+                    ::memmove(this -> value + (this -> characteristicsLength + 1u), this -> value + this -> characteristicsLength, this -> mantissaLength * sizeof(char));
+                }
+
                 // Modification > Target > (Characteristics Length, Value)
                 this -> characteristicsLength = 1u;
                 *(this -> value) = '1';
@@ -593,8 +612,14 @@ class BigNumber {
     // Modulo
     BigNumber& BigNumber::modulo(BigNumber const& number) noexcept { (void) number; return *this; }
 
-    // Multiply
-    BigNumber& BigNumber::multiply(BigNumber const& number) noexcept { (void) number; return *this; }
+    // Multiply --- CHECKPOINT (Lapys)
+    BigNumber& BigNumber::multiply(BigNumber const& number) noexcept {
+        // ...
+        (void) number;
+
+        // Return
+        return *this;
+    }
 
     // Sign
     inline void BigNumber::sign(bool const strict) noexcept { this -> signedness = strict || !(this -> signedness); }
@@ -608,7 +633,7 @@ class BigNumber {
     // To String
     inline char const* BigNumber::toString(void) const noexcept {
         // Evaluation > Evaluation
-        char *evaluation;
+        char *evaluation = (char*) "";
 
         // Logic
         switch (this -> state) {
@@ -632,7 +657,7 @@ class BigNumber {
                 char *iterator;
 
                 // Update > (Evaluation, ...)
-                evaluation = (char*) ::malloc((this -> characteristicsLength + this -> mantissaLength + 3u) * sizeof(char));
+                evaluation = (char*) ::malloc(((BigNumber::hasSignificantCharacteristics() ? this -> characteristicsLength : 1u) + (BigNumber::hasSignificantMantissa() ? this -> mantissaLength + 1u : 0u) + (BigNumber::isNegative() && (BigNumber::hasSignificantCharacteristics() || BigNumber::hasSignificantMantissa())) + 1u) * sizeof(char));
                 iterator = evaluation;
 
                 // Logic
@@ -640,7 +665,9 @@ class BigNumber {
                     // (Logic, Loop) > Update > Iterator
                     if (BigNumber::isNegative()) *iterator++ = '-';
                     for (size_t subiterator = 0u; subiterator ^ (this -> characteristicsLength); ++subiterator) *iterator++ = *(this -> value + subiterator);
-                } else {
+                }
+
+                else {
                     // (Logic > )Update > Iterator
                     if (BigNumber::isNegative() && this -> mantissaLength) *iterator++ = '-';
                     *iterator++ = '0';
@@ -677,15 +704,7 @@ int main(void) {
     /* [Initiate] ... */
     std::cout << "[PROGRAM INITIATED]" << std::endl;
 
-    ::srand(::time(NULL));
-    long double numberA = ((long double) (::rand() % 3000) / (long double) (::rand() % 3000)) * (::rand() % 10 >= 5 ? 1 : -1);
-    long double numberB = (long double) (::rand() % 3000) / (long double) (::rand() % 3000) * (numberA <= 0.00L ? -1 : 1);
-
-    std::cout << "[Number A]: " << numberA << std::endl;
-    std::cout << "[Number B]: " << numberB << std::endl;
-
-    std::cout << "[Number A + Number B]: " << numberA + numberB << std::endl;
-    std::cout << "[Number A + Number B]: " << (BigNumber(numberA) + BigNumber(numberB)).toString() << std::endl;
+    std::cout << "[DEBUG]: " << (BigNumber(2020) + BigNumber(290)).toString() << std::endl;
 
     /* [Terminate] ... */
     std::cout << "[PROGRAM TERMINATED]" << std::flush;
