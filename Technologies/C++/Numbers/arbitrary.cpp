@@ -281,7 +281,7 @@ class BigNumber {
                                 char *evaluation = (char*) BigNumber::add(*--iteratorA, iterator < length ? '0' : *--iteratorB);
 
                                 // Logic > ...
-                                if ('\0' == *(evaluation + 1)) { if (carry) evaluation = (char*) BigNumber::increment(*evaluation); carry = '\0' ^ *(evaluation + 1); *iteratorA = carry ? *(evaluation + 1) : *evaluation; }
+                                if ('\0' == *(evaluation + 1)) { if (carry) { evaluation = (char*) BigNumber::increment(*evaluation); carry = '\0' ^ *(evaluation + 1); } *iteratorA = carry ? *(evaluation + 1) : *evaluation; }
                                 else { if (carry) *(evaluation + 1) = *BigNumber::increment(*(evaluation + 1)); carry = true; *iteratorA = *(evaluation + 1); }
                             }
                         }
@@ -641,12 +641,101 @@ class BigNumber {
             }
 
             else {
-                // Logic > ...
-                if (BigNumber::isNegative(number)) BigNumber::sign();
+                // Initialization > ... --- NOTE (Lapys) -> Store a persistent copy of the current value in variables to add the iterative results of long multiplication into the target (`this`) object.
+                size_t characteristicsLength = this -> characteristicsLength;
+                size_t mantissaLength = this -> mantissaLength;
+                bool const signedness = BigNumber::isNegative();
+                char *value = (char*) ::malloc((this -> characteristicsLength + this -> mantissaLength) * sizeof(char));
 
-                // CHECKPOINT (Lapys)
-                if (BigNumber::hasSignificantMantissa(number)) {}
-                if (BigNumber::hasSignificantCharacteristics(number)) {}
+                // : Logic > ...
+                // : Update > ...
+                BigNumber::unsign();
+                ::strncpy(value, this -> value, this -> characteristicsLength + this -> mantissaLength);
+
+                // ...
+                BigNumber::allocate((this -> characteristicsLength + number.characteristicsLength) + (this -> mantissaLength + number.mantissaLength) + 1u);
+                this -> characteristicsLength = (this -> characteristicsLength + this -> mantissaLength) + (number.characteristicsLength + number.mantissaLength);
+                this -> mantissaLength = (this -> mantissaLength > number.mantissaLength ? this -> mantissaLength : number.mantissaLength) * 2u;
+                this -> characteristicsLength -= this -> mantissaLength;
+
+                // Logic
+                if (BigNumber::hasSignificantCharacteristics(number) || BigNumber::hasSignificantMantissa(number)) {
+                    char carry = '0';
+                    char *iteratorA;
+                    char *iteratorB;
+                    BigNumber *products = new BigNumber[number.characteristicsLength + number.mantissaLength] {};
+
+                    // Logic
+                    if (mantissaLength < number.mantissaLength) {
+                        ::memset(value + (characteristicsLength + mantissaLength), '0', number.mantissaLength - mantissaLength);
+                        mantissaLength = number.mantissaLength;
+                    }
+
+                    for (size_t index, iterator = 0u, length = number.characteristicsLength + number.mantissaLength; iterator ^ length; ++iterator) {
+                        carry = '0';
+                        index = 0u;
+                        iteratorA = value + (characteristicsLength + mantissaLength);
+                        iteratorB = number.value + (length - iterator - 1u);
+
+                        char *evaluation;
+                        BigNumber& product = *(products + iterator);
+                        char const multiplier = *iteratorB;
+
+                        for (size_t subiterator = 0u, sublength = characteristicsLength + mantissaLength; subiterator ^ sublength; (++index, ++subiterator)) {
+                            evaluation = (char*) BigNumber::multiply(*--iteratorA, multiplier);
+
+                            if ('\0' == *(evaluation + 1)) {
+                                if ('0' ^ carry) { evaluation = (char*) BigNumber::add(carry, *evaluation); carry = '\0' == *(evaluation + 1) ? '0' : *evaluation; }
+                                *(this -> value + index) = '0' == carry ? *evaluation : *(evaluation + 1);
+                            }
+
+                            else {
+                                while ('0' ^ carry) {
+                                    carry = *BigNumber::decrement(carry);
+
+                                    if ('9' == *(evaluation + 1)) { *evaluation = *BigNumber::increment(*evaluation); *(evaluation + 1) = '0'; }
+                                    else *(evaluation + 1) = *BigNumber::increment(*(evaluation + 1));
+                                }
+
+                                carry = *evaluation;
+                                *(this -> value + index) = *(evaluation + 1);
+                            }
+                        }
+
+                        if ('0' ^ carry) *(this -> value + index++) = *evaluation;
+
+                        product.characteristicsLength = index + iterator;
+                        product.valueSize = index + iterator;
+                        product.value = (char*) ::malloc(index * sizeof(char));
+                        ::strncpy(product.value, this -> value, index);
+                        ::memset(product.value + index, '0', iterator * sizeof(char));
+
+                        --index;
+                        for (size_t subindex = 0u; subindex < index; (--index, ++subindex)) {
+                            *(product.value + index) ^= *(product.value + subindex);
+                            *(product.value + subindex) ^= *(product.value + index);
+                            *(product.value + index) ^= *(product.value + subindex);
+                        }
+                    }
+
+                    characteristicsLength = this -> characteristicsLength;
+                    mantissaLength = this -> mantissaLength;
+                    this -> characteristicsLength = 0u;
+                    this -> mantissaLength = 0u;
+
+                    for (size_t iterator = 0u, length = number.characteristicsLength + number.mantissaLength; iterator ^ length; ++iterator)
+                    BigNumber::add(*(products + iterator));
+
+                    if (signedness) BigNumber::sign();
+                    if (BigNumber::isNegative(number)) BigNumber::sign();
+                    this -> characteristicsLength = characteristicsLength;
+                    this -> mantissaLength = mantissaLength;
+
+                    delete[] products;
+                }
+
+                // Deletion
+                ::free(value);
             }
         }
 
@@ -736,6 +825,23 @@ class BigNumber {
 int main(void) {
     /* [Initiate] ... */
     std::cout << "[PROGRAM INITIATED]" << std::endl;
+
+    long double const numberA = 248.07L;
+    long double const numberB = 212.35L;
+    // long double const numberA = ((long double) ((::srand(::time(NULL)), ::rand()) % 100000)) / 100.00L;
+    // long double const numberB = ((long double) (::rand() % 100000)) / 100.00L;
+
+    BigNumber bigNumberA = numberA;
+    BigNumber bigNumberB = numberB;
+
+    std::cout << "[Number A]: " << numberA << std::endl;
+    std::cout << "[Number B]: " << numberB << std::endl;
+    std::cout << "[Number A * B]: " << numberA * numberB << std::endl;
+    std::endl(std::cout);
+
+    std::cout << "[Big Number A]: " << bigNumberA.toString() << std::endl;
+    std::cout << "[Big Number B]: " << bigNumberB.toString() << std::endl;
+    std::cout << "[Big Number A * B]: " << (bigNumberA * numberB).toString() << std::endl;
 
     /* [Terminate] ... */
     std::cout << "[PROGRAM TERMINATED]" << std::flush;
