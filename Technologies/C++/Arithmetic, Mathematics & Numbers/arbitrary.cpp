@@ -14,7 +14,7 @@ class BigNumber {
 
     // [...]
     private:
-        // Definition > ((Characteristics, Mantissa) Length, Signedness, State, Value (Size))
+        // Definition > ((Characteristics, Mantissa) Length, Signedness, State, Value (Size)) --- NOTE (Lapys) -> Keep track of temporary objects?
         size_t characteristicsLength;
         size_t mantissaLength;
         bool signedness;
@@ -35,6 +35,9 @@ class BigNumber {
         inline static char const* add(char const digitA, char const digitB) noexcept { static char evaluation[3] {0}; if ('0' == digitA) { *evaluation = digitB; *(evaluation + 1) = '\0'; } else if ('0' == digitB) { *evaluation = digitA; *(evaluation + 1) = '\0'; } else switch (digitA) { case '1': switch (digitB) { case '1': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '0'; break; } break; case '2': switch (digitB) { case '1': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '1'; break; } break; case '3': switch (digitB) { case '1': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '2'; break; } break; case '4': switch (digitB) { case '1': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '3'; break; } break; case '5': switch (digitB) { case '1': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '4'; break; } break; case '6': switch (digitB) { case '1': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '5'; break; } break; case '7': switch (digitB) { case '1': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '6'; break; } break; case '8': switch (digitB) { case '1': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '7'; break; } break; case '9': switch (digitB) { case '1': *evaluation = '1'; *(evaluation + 1) = '0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '1'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '2'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '3'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '4'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '5'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '6'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '7'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '8'; break; } break; } return (char const*) evaluation; }
         inline static char const* decrement(char const digit) noexcept { static char evaluation[3] {0}; switch (digit) { case '0': *evaluation = '-'; *(evaluation + 1) = '1'; break; case '1': *evaluation = '0'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '1'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '8'; *(evaluation + 1) = '\0'; break; } return (char const*) evaluation; }
         inline static char const* increment(char const digit) noexcept { static char evaluation[3] {0}; switch (digit) { case '0': *evaluation = '1'; *(evaluation + 1) = '\0'; break; case '1': *evaluation = '2'; *(evaluation + 1) = '\0'; break; case '2': *evaluation = '3'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '5'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '6': *evaluation = '7'; *(evaluation + 1) = '\0'; break; case '7': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '8': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '0'; break; } return (char const*) evaluation; }
+        inline static bool isEqual(char const digitA, char const digitB) noexcept { return digitA == digitB; }
+        inline static bool isGreater(char const digitA, char const digitB) noexcept { bool evaluation = false; switch (digitA) { case '1': evaluation = '0' == digitB; break; case '2': evaluation = '0' == digitB || '1' == digitB; break; case '3': evaluation = '0' == digitB || '1' == digitB || '2' == digitB; break; case '4': evaluation = '0' == digitB || '1' == digitB || '2' == digitB || '3' == digitB; break; case '5': evaluation = '0' == digitB || '1' == digitB || '2' == digitB || '3' == digitB || '4' == digitB; break; case '6': evaluation = '0' == digitB || '1' == digitB || '2' == digitB || '3' == digitB || '4' == digitB || '5' == digitB; break; case '7': evaluation = '0' == digitB || '1' == digitB || '2' == digitB || '3' == digitB || '4' == digitB || '5' == digitB || '6' == digitB; break; case '8': evaluation = '0' == digitB || '1' == digitB || '2' == digitB || '3' == digitB || '4' == digitB || '5' == digitB || '6' == digitB || '7' == digitB; break; case '9': evaluation = digitA ^ digitB; break; } return evaluation; }
+        inline static bool isLesser(char const digitA, char const digitB) noexcept { bool evaluation = false; switch (digitA) { case '0': evaluation = digitA ^ digitB; break; case '1': evaluation = '2' == digitB || '3' == digitB || '4' == digitB || '5' == digitB || '6' == digitB || '7' == digitB || '8' == digitB || '9' == digitB; break; case '2': evaluation = '3' == digitB || '4' == digitB || '5' == digitB || '6' == digitB || '7' == digitB || '8' == digitB || '9' == digitB; break; case '3': evaluation = '4' == digitB || '5' == digitB || '6' == digitB || '7' == digitB || '8' == digitB || '9' == digitB; break; case '4': evaluation = '5' == digitB || '6' == digitB || '7' == digitB || '8' == digitB || '9' == digitB; break; case '5': evaluation = '6' == digitB || '7' == digitB || '8' == digitB || '9' == digitB; break; case '6': evaluation = '7' == digitB || '8' == digitB || '9' == digitB; break; case '7': evaluation = '8' == digitB || '9' == digitB; break; case '8': evaluation = '9' == digitB; break; } return evaluation; }
         inline static char const* multiply(char const digitA, char const digitB) noexcept { static char evaluation[3] {0}; if ('0' == digitA || '0' == digitB) { *evaluation = '0'; *(evaluation + 1) = '\0'; } else if ('1' == digitA) { *evaluation = digitB; *(evaluation + 1) = '\0'; } else if ('1' == digitB) { *evaluation = digitA; *(evaluation + 1) = '\0'; } else switch (digitA) { case '2': switch (digitB) { case '2': *evaluation = '4'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '1'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '1'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '1'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; } break; case '3': switch (digitB) { case '2': *evaluation = '6'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '9'; *(evaluation + 1) = '\0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '1'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '1'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '2'; *(evaluation + 1) = '1'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '2'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '2'; *(evaluation + 1) = '7'; *(evaluation + 2) = '\0'; break; } break; case '4': switch (digitB) { case '2': *evaluation = '8'; *(evaluation + 1) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '4': *evaluation = '1'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '2'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '2'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '2'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '3'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '3'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; } break; case '5': switch (digitB) { case '2': *evaluation = '1'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; case '4': *evaluation = '2'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '2'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '3'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '3'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '4'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '4'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; } break; case '6': switch (digitB) { case '2': *evaluation = '1'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '3': *evaluation = '1'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '4': *evaluation = '2'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '3'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '3'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '4'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '4'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '5'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; } break; case '7': switch (digitB) { case '2': *evaluation = '1'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '3': *evaluation = '2'; *(evaluation + 1) = '1'; *(evaluation + 2) = '\0'; break; case '4': *evaluation = '2'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '3'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '4'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '4'; *(evaluation + 1) = '9'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '5'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '6'; *(evaluation + 1) = '3'; *(evaluation + 2) = '\0'; break; } break; case '8': switch (digitB) { case '2': *evaluation = '1'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '3': *evaluation = '2'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '4': *evaluation = '3'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '4'; *(evaluation + 1) = '0'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '4'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '5'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '6'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '7'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; } break; case '9': switch (digitB) { case '2': *evaluation = '1'; *(evaluation + 1) = '8'; *(evaluation + 2) = '\0'; break; case '3': *evaluation = '2'; *(evaluation + 1) = '7'; *(evaluation + 2) = '\0'; break; case '4': *evaluation = '3'; *(evaluation + 1) = '6'; *(evaluation + 2) = '\0'; break; case '5': *evaluation = '4'; *(evaluation + 1) = '5'; *(evaluation + 2) = '\0'; break; case '6': *evaluation = '5'; *(evaluation + 1) = '4'; *(evaluation + 2) = '\0'; break; case '7': *evaluation = '6'; *(evaluation + 1) = '3'; *(evaluation + 2) = '\0'; break; case '8': *evaluation = '7'; *(evaluation + 1) = '2'; *(evaluation + 2) = '\0'; break; case '9': *evaluation = '8'; *(evaluation + 1) = '1'; *(evaluation + 2) = '\0'; break; } break; } return (char const*) evaluation; }
 
     // [...]
@@ -213,10 +216,12 @@ class BigNumber {
         inline static BigNumber const unsign(BigNumber const& number) noexcept { BigNumber evaluation {number}; evaluation.unsign(); return evaluation; }
 
         // [Operator] > ...
-        inline BigNumber const operator +(void) const noexcept { return BigNumber {*this}; }
+        inline BigNumber const operator +(void) const& noexcept { return BigNumber {*this}; }
+        inline BigNumber& operator +(void)&& noexcept { return *this; }
         inline BigNumber const operator +(BigNumber const& number) const noexcept { return BigNumber::add(*this, number); }
         inline BigNumber const operator +(BigNumber&& number) const noexcept { return BigNumber::operator +(number); }
-        inline BigNumber const operator -(void) const noexcept { return BigNumber::sign(*this); }
+        inline BigNumber const operator -(void) const& noexcept { return BigNumber::sign(*this); }
+        inline BigNumber& operator -(void)&& noexcept { BigNumber::sign(); return *this; }
         inline BigNumber const operator -(BigNumber const& number) const noexcept { return BigNumber::subtract(*this, number); }
         inline BigNumber const operator -(BigNumber&& number) const noexcept { return BigNumber::operator -(number); }
         inline BigNumber const operator *(BigNumber const& number) const noexcept { return BigNumber::multiply(*this, number); }
@@ -225,18 +230,18 @@ class BigNumber {
         inline BigNumber const operator /(BigNumber&& number) const noexcept { return BigNumber::operator /(number); }
         inline BigNumber const operator %(BigNumber const& number) const noexcept { return BigNumber::modulo(*this, number); }
         inline BigNumber const operator %(BigNumber&& number) const noexcept { return BigNumber::operator %(number); }
-        inline BigNumber& operator =(BigNumber const& number) noexcept { BigNumber::copy(number); return *this; }
-        inline BigNumber& operator =(BigNumber&& number) noexcept { return BigNumber::operator =(number); }
-        inline BigNumber& operator +=(BigNumber const& number) noexcept { return BigNumber::add(number); }
-        inline BigNumber& operator +=(BigNumber&& number) noexcept { return BigNumber::operator +=(number); }
-        inline BigNumber& operator -=(BigNumber const& number) noexcept { return BigNumber::subtract(number); }
-        inline BigNumber& operator -=(BigNumber&& number) noexcept { return BigNumber::operator -=(number); }
-        inline BigNumber& operator *=(BigNumber const& number) noexcept { return BigNumber::multiply(number); }
-        inline BigNumber& operator *=(BigNumber&& number) noexcept { return BigNumber::operator *=(number); }
-        inline BigNumber& operator /=(BigNumber const& number) noexcept { return BigNumber::divide(number); }
-        inline BigNumber& operator /=(BigNumber&& number) noexcept { return BigNumber::operator /=(number); }
-        inline BigNumber& operator %=(BigNumber const& number) noexcept { return BigNumber::modulo(number); }
-        inline BigNumber& operator %=(BigNumber&& number) noexcept { return BigNumber::operator %=(number); }
+        inline BigNumber& operator =(BigNumber const& number)& noexcept { BigNumber::copy(number); return *this; }
+        inline BigNumber& operator =(BigNumber&& number)& noexcept { return BigNumber::operator =(number); }
+        inline BigNumber& operator +=(BigNumber const& number)& noexcept { return BigNumber::add(number); }
+        inline BigNumber& operator +=(BigNumber&& number)& noexcept { return BigNumber::operator +=(number); }
+        inline BigNumber& operator -=(BigNumber const& number)& noexcept { return BigNumber::subtract(number); }
+        inline BigNumber& operator -=(BigNumber&& number)& noexcept { return BigNumber::operator -=(number); }
+        inline BigNumber& operator *=(BigNumber const& number)& noexcept { return BigNumber::multiply(number); }
+        inline BigNumber& operator *=(BigNumber&& number)& noexcept { return BigNumber::operator *=(number); }
+        inline BigNumber& operator /=(BigNumber const& number)& noexcept { return BigNumber::divide(number); }
+        inline BigNumber& operator /=(BigNumber&& number)& noexcept { return BigNumber::operator /=(number); }
+        inline BigNumber& operator %=(BigNumber const& number)& noexcept { return BigNumber::modulo(number); }
+        inline BigNumber& operator %=(BigNumber&& number)& noexcept { return BigNumber::operator %=(number); }
         inline bool operator ==(BigNumber& number) noexcept { return BigNumber::isEqual(number); }
         inline bool operator ==(BigNumber&& number) noexcept { return BigNumber::operator ==(number); }
         inline bool operator !=(BigNumber& number) noexcept { return false == BigNumber::operator ==(number); }
@@ -249,12 +254,14 @@ class BigNumber {
         inline bool operator <=(BigNumber&& number) noexcept { return BigNumber::operator <=(number); }
         inline bool operator >=(BigNumber& number) noexcept { return BigNumber::operator ==(number) || BigNumber::operator >(number); }
         inline bool operator >=(BigNumber&& number) noexcept { return BigNumber::operator >=(number); }
-        inline BigNumber operator ++(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::operator ++(); return evaluation; }
+        inline BigNumber operator ++(int const)& noexcept { BigNumber const evaluation {*this}; BigNumber::operator ++(); return evaluation; }
+        inline BigNumber& operator ++(int const)&& noexcept { return BigNumber::operator ++(); }
         inline BigNumber& operator ++(void) noexcept { BigNumber::increment(); return *this; }
-        inline BigNumber operator --(int const) noexcept { BigNumber const evaluation {*this}; BigNumber::operator --(); return evaluation; }
+        inline BigNumber operator --(int const)& noexcept { BigNumber const evaluation {*this}; BigNumber::operator --(); return evaluation; }
+        inline BigNumber& operator --(int const)&& noexcept { return BigNumber::operator --(); }
         inline BigNumber& operator --(void) noexcept { BigNumber::decrement(); return *this; }
 
-        inline operator char const*(void) noexcept { return BigNumber::toString(); }
+        inline operator char const*(void) const noexcept { return BigNumber::toString(); }
 };
 
 /* Modification > Big Number */
@@ -720,26 +727,6 @@ class BigNumber {
         // Evaluation > Evaluation
         bool evaluation = true;
 
-        // Logic
-        if (BigNumber::isSafe(numberA) && BigNumber::isSafe(numberB)) {
-            // Logic > ...
-            if (BigNumber::isZero(numberA)) evaluation = BigNumber::isZero(numberB);
-            else if (BigNumber::isZero(numberB)) evaluation = BigNumber::isZero(numberA);
-            else if (
-                ((numberA.characteristicsLength ^ numberB.characteristicsLength) || (numberA.mantissaLength ^ numberB.mantissaLength)) ||
-                (numberA.signedness != numberB.signedness)
-            ) evaluation = false;
-            else {
-                // Loop > Logic > ...
-                for (size_t iterator = 0u, length = numberA.characteristicsLength + numberA.mantissaLength; iterator ^ length; ++iterator)
-                if (*(numberA.value + iterator) ^ *(numberB.value + iterator)) { evaluation = false; iterator = length - 1u; }
-            }
-        }
-
-        else
-            // Update > Evaluation
-            evaluation = false;
-
         // Return
         return evaluation;
     }
@@ -750,31 +737,7 @@ class BigNumber {
     // Is Greater
     bool BigNumber::isGreater(BigNumber const& numberA, BigNumber const& numberB) noexcept {
         // Evaluation > Evaluation
-        bool evaluation = true;
-
-        // Logic
-        if (BigNumber::isSafe(numberA) && BigNumber::isSafe(numberB)) {
-            // Logic > ...
-            if (BigNumber::isZero(numberA)) evaluation = BigNumber::isNegative(numberB) && false == BigNumber::isZero(numberB);
-            else if (BigNumber::isZero(numberB)) evaluation = BigNumber::isPositive(numberA) && false == BigNumber::isZero(numberA);
-            else if (BigNumber::isNegative(numberA)) {
-                if (BigNumber::isPositive(numberB)) evaluation = false;
-                else {
-                    /* -A > -B */
-                }
-            }
-            else if (BigNumber::isNegative(numberB)) {
-                if (BigNumber::isNegative(numberA)) {
-                    /* -A > -B */
-                }
-            }
-            else if (numberB.characteristicsLength > numberA.characteristicsLength) evaluation = false;
-            else { /* A > B */ }
-        }
-
-        else
-            // Update > Evaluation
-            evaluation = false;
+        bool evaluation = false;
 
         // Return
         return evaluation;
@@ -787,7 +750,13 @@ class BigNumber {
     inline bool BigNumber::isIntegral(void) const noexcept { return 0u == this -> mantissaLength; }
 
     // Is Lesser
-    bool BigNumber::isLesser(BigNumber const& numberA, BigNumber const& numberB) noexcept { (void) numberA; (void) numberB; return false; }
+    bool BigNumber::isLesser(BigNumber const& numberA, BigNumber const& numberB) noexcept {
+        // Evaluation > Evaluation
+        bool evaluation = false;
+
+        // Return
+        return evaluation;
+    }
 
     // Is Not-A-Number
     bool BigNumber::isNaN(void) const noexcept { return BigNumber::UNCOMPUTABLE == this -> state; }
@@ -1052,6 +1021,14 @@ BigNumber const& NaN = BigNumber::NaN;
 int main(void) {
     /* [Initiate] ... */
     std::cout << "[PROGRAM INITIATED]" << std::endl;
+
+    BigNumber numberA = 5.123L;
+    BigNumber numberB = 5.11L;
+
+    std::cout << "[Number A]: " << numberA << std::endl;
+    std::cout << "[Number B]: " << numberB << std::endl;
+    std::endl(std::cout);
+    std::cout << "[EVAL]: " << (numberA > numberB ? "true" : "false") << std::endl;
 
     /* [Terminate] ... */
     std::cout << "[PROGRAM TERMINATED]" << std::flush;
