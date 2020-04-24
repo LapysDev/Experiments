@@ -779,7 +779,7 @@ class BigNumber {
     // Has Significant Mantissa --> x.a where a is not 0.
     inline bool BigNumber::hasSignificantMantissa(void) const noexcept { return this -> mantissaLength; }
 
-    // Increment --- NOTE (Lapys) -> `f(x) = x + 1`.
+    // Increment --> `f(x) = x + 1`.
     BigNumber& BigNumber::increment(void) noexcept {
         // Logic
         if (BigNumber::isSafe()) {
@@ -841,7 +841,7 @@ class BigNumber {
     // Is Computable
     bool BigNumber::isComputable(void) const noexcept { return BigNumber::UNCOMPUTABLE != this -> state; }
 
-    // Is Equal --- NOTE (Lapys) -> `x = y`.
+    // Is Equal --> `x = y`.
     bool BigNumber::isEqual(BigNumber const& numberA, BigNumber const& numberB) noexcept {
         // Evaluation > Evaluation
         bool evaluation = true;
@@ -1084,13 +1084,13 @@ class BigNumber {
     // Is Zero
     inline bool BigNumber::isZero(void) const noexcept { return BigNumber::isInteger() && false == BigNumber::hasSignificantCharacteristics(); }
 
-    // Logarithmize --- CHECKPOINT (Lapys) --- NOTE (Lapys) -> `log(x)`.
+    // Logarithmize --- CHECKPOINT (Lapys) --> `log(x)`.
     BigNumber& BigNumber::logarithmize(BigNumber const& number) noexcept { (void) number; return *this; }
 
-    // Modulo --- CHECKPOINT (Lapys) --- NOTE (Lapys) -> `x mod y`.
+    // Modulo --- CHECKPOINT (Lapys) --> `x mod y`.
     BigNumber& BigNumber::modulo(BigNumber const& number) noexcept { (void) number; return *this; }
 
-    // Multiply --- NOTE (Lapys) -> Oddly enough, fractional multiplication (e.g.: `x * 0.5 -> x / 2`) can still be covered by long multiplication i.e.: `x × y`.
+    // Multiply --> x × y
     BigNumber& BigNumber::multiply(BigNumber const& number) noexcept {
         // Logic
         if (BigNumber::isInfinite()) {
@@ -1236,7 +1236,7 @@ class BigNumber {
         return *this;
     }
 
-    // Reciprocate --- NOTE (Lapys) -> Return the multiplicative inverse of the number i.e.: `1 ÷ x`.
+    // Reciprocate --- NOTE (Lapys) -> Return the multiplicative inverse of the number -> 1 ÷ x.
     inline void BigNumber::reciprocate(void) noexcept {
         // Logic
         if (BigNumber::isComputable() || BigNumber::isFinite()) {
@@ -1247,10 +1247,10 @@ class BigNumber {
         }
     }
 
-    // Sign --- NOTE (Lapys) -> `-x`.
+    // Sign --> -x.
     inline void BigNumber::sign(bool const strict) noexcept { this -> signedness = strict || !(this -> signedness); }
 
-    // Subtract --- NOTE (Lapys) -> `x - y`.
+    // Subtract --> x - y.
     BigNumber& BigNumber::subtract(BigNumber const& number) noexcept {
         // Logic
         if (BigNumber::isSafe()) {
@@ -1408,7 +1408,7 @@ class BigNumber {
         return (char const*) evaluation;
     }
 
-    // Unsign --- NOTE (Lapys) -> `|x|`.
+    // Unsign --> |x|.
     inline void BigNumber::unsign(void) noexcept { this -> signedness = false; }
 
 /* Constant > ... */
