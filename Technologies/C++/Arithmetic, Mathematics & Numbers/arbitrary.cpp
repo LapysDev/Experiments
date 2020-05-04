@@ -49,31 +49,30 @@ template <size_t length, class type> inline typename std::enable_if<std::is_same
 template <size_t length, class type> inline typename std::enable_if<std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value, void>::type print(type* const argument) noexcept { if (NULL == argument) print<6u>("[null]"); else std::wcout.write(argument, length); }
 template <class type> inline void print(type* const argument) noexcept { if (NULL == argument) print<6u>("[null]"); else if (std::is_same<type, char>::value || std::is_same<type, char const>::value) std::cout << argument; else if (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value) std::wcout << argument; else { std::stringstream stream; stream << argument; char *string = (char*) stream.str().c_str(), *iterator = string; while ('\0' ^ *iterator) { if ('x' ^ *iterator) *iterator = std::toupper(*iterator); ++iterator; } print(string); } }
 template <class type, class... types> inline void print(type argument, types... arguments) noexcept { print(argument); print(arguments...); }
-
 inline void printfl(void) noexcept { std::flush(std::cout); }
 template <size_t length, class type> inline void printfl(type argument) noexcept { print<length>(argument); printfl(); }
 template <class... types> inline void printfl(types... arguments) noexcept { print(arguments...); printfl(); }
-
 inline void println(void) noexcept { std::endl(std::cout); }
 template <size_t count = 1u> inline void println(void) noexcept { if (count) { char const buffer[count + 1u] {'\n'}; print<count - 1u>(buffer); println(); } }
 template <size_t count = 1u, size_t length, class type> inline void println(type argument) noexcept { print<length>(argument); println<count>(); }
 template <size_t count = 1u, class... types> inline void println(types... arguments) noexcept { print(arguments...); println<count>(); }
-
 constexpr inline void printp(void) noexcept {}
-template <class type> constexpr inline void printp(type argument) noexcept { if ((std::is_same<type, char>::value || std::is_same<type, char const>::value) || (std::is_same<type, signed char>::value || std::is_same<type, signed char const>::value)) { print('\''); print(argument); print('\''); } else if ((std::is_same<type, double>::value || std::is_same<type, double const>::value) || (std::is_same<type, int>::value || std::is_same<type, int const>::value) || (std::is_same<type, short>::value || std::is_same<type, short const>::value)) print(argument); else if (std::is_same<type, float>::value || std::is_same<type, float const>::value) { print(argument); print('f'); } else if ((std::is_same<type, long>::value || std::is_same<type, long const>::value) || (std::is_same<type, long double>::value || std::is_same<type, long double const>::value)) { print(argument); print('L'); } else if (std::is_same<type, unsigned char>::value || std::is_same<type, unsigned char const>::value) { print('\''); print(argument); print<2u>("'u"); } else if ((std::is_same<type, unsigned int>::value || std::is_same<type, unsigned int const>::value) || (std::is_same<type, unsigned short>::value || std::is_same<type, unsigned short const>::value)) { print(argument); print('u'); } else if (std::is_same<type, unsigned long>::value || std::is_same<type, unsigned long const>::value) { print(argument); print<2u>("uL"); } else if (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value) { print<2u>("L'"); print(argument); print('\''); } else print<8u>("[object]"); }
+template <class type> constexpr inline void printp(type argument) noexcept { if ((std::is_same<type, char>::value || std::is_same<type, char const>::value) || (std::is_same<type, signed char>::value || std::is_same<type, signed char const>::value)) { print('\''); print(argument); print('\''); } else if ((std::is_same<type, bool>::value || std::is_same<type, bool const>::value) || (std::is_same<type, double>::value || std::is_same<type, double const>::value) || (std::is_same<type, int>::value || std::is_same<type, int const>::value) || (std::is_same<type, short>::value || std::is_same<type, short const>::value)) print(argument); else if (std::is_same<type, float>::value || std::is_same<type, float const>::value) { print(argument); print('f'); } else if ((std::is_same<type, long>::value || std::is_same<type, long const>::value) || (std::is_same<type, long double>::value || std::is_same<type, long double const>::value)) { print(argument); print('L'); } else if (std::is_same<type, unsigned char>::value || std::is_same<type, unsigned char const>::value) { print('\''); print(argument); print<2u>("'u"); } else if ((std::is_same<type, unsigned int>::value || std::is_same<type, unsigned int const>::value) || (std::is_same<type, unsigned short>::value || std::is_same<type, unsigned short const>::value)) { print(argument); print('u'); } else if (std::is_same<type, unsigned long>::value || std::is_same<type, unsigned long const>::value) { print(argument); print<2u>("uL"); } else if (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value) { print<2u>("L'"); print(argument); print('\''); } else print<8u>("[object]"); }
 template <bool obfuscate = false, size_t length, class type> inline typename std::enable_if<std::is_same<type, char>::value || std::is_same<type, char const>::value, void>::type printp(type* const argument) noexcept { if (obfuscate) print<8u>("[string]"); else { print('"'); print(argument); print('"'); } }
 template <bool obfuscate = false, size_t length, class type> inline typename std::enable_if<std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value, void>::type printp(type* const argument) noexcept { if (obfuscate) print<8u>("[string]"); else { print<2u>("\"L"); print(argument); print('"'); } }
-
-
+template <bool obfuscate = false, class type> inline void printp(type* const argument) noexcept { if (std::is_same<type, char>::value || std::is_same<type, char const>::value) { if (obfuscate) print<8u>("[string]"); else { print('"'); print(argument); print('"'); } } else if (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value) { if (obfuscate) print<8u>("[string]"); else { print<2u>("\"L"); print(argument); print('"'); } } else print(argument); }
 template <bool obfuscate = false, size_t length, size_t size, class type> inline typename std::enable_if<true == ((std::is_same<type, char>::value || std::is_same<type, char const>::value) || (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value)), void>::type printp(type (&argument)[size]) noexcept { obfuscate ? print<8u>("[string]") : printp<length>(argument); }
-
-// template <bool obfuscate = false, class type> inline void printp(type* const argument) noexcept { if (std::is_same<type, char>::value || std::is_same<type, char const>::value) { if (obfuscate) print<8u>("[string]"); else { print('"'); print(argument); print('"'); } } else if (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value) { if (obfuscate) print<8u>("[string]"); else { print<2u>("\"L"); print(argument); print('"'); } } else print(argument); }
-template <bool obfuscate = false, size_t size, class type> inline typename std::enable_if<false == ((std::is_same<type, char>::value || std::is_same<type, char const>::value) || (std::is_same<type, wchar_t>::value || std::is_same<type, wchar_t const>::value)), void>::type printp(type (&argument)[size]) noexcept { if (obfuscate) print<7u>("[array]"); else { print('['); for (size_t iterator = 0u; iterator ^ size; ++iterator) { printp(*(argument + iterator)); if (iterator ^ (size - 1u)) print<2u>(", "); } print(']'); } }
-
 template <class type> inline void printp(type (&)(...)) noexcept { print<10u>("[function]"); }
 template <class type, class... types> inline void printp(type (&)(types...)) noexcept { print<10u>("[function]"); }
 template <class type, class... types> inline void printp(type (&)(types..., ...)) noexcept { print<10u>("[function]"); }
 template <class type, class... types> inline void printp(type argument, types... arguments) noexcept { printp(argument); printp(arguments...); }
+inline void printflp(void) noexcept { printfl(); }
+template <size_t length, class type> inline void printflp(type argument) noexcept { printp<length>(argument); printflp(); }
+template <class... types> inline void printflp(types... arguments) noexcept { printp(arguments...); printflp(); }
+inline void printlnp(void) noexcept { println(); }
+template <size_t count = 1u> inline void printlnp(void) noexcept { if (count) { char const buffer[count + 1u] {'\n'}; print<count - 1u>(buffer); printlnp(); } }
+template <size_t count = 1u, size_t length, class type> inline void printlnp(type argument) noexcept { printp<length>(argument); printlnp<count>(); }
+template <size_t count = 1u, class... types> inline void printlnp(types... arguments) noexcept { printp(arguments...); printlnp<count>(); }
 
 
 inline bool randbool(void) noexcept { static std::uniform_int_distribution<std::mt19937::result_type> distribution {0, 1}; static std::mt19937 randomizer {(unsigned long) std::chrono::system_clock::now().time_since_epoch().count()}; return distribution(randomizer); }
@@ -180,8 +179,12 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
             constexpr void copy(BigFloat<radix>&&);
             constexpr void copy(BigSignedInteger<radix> const&) noexcept;
             constexpr void copy(BigSignedInteger<radix>&&) noexcept;
+
             constexpr inline void copy(BigUnsignedInteger<radix> const& number) noexcept { if (&number != this) { BigUnsignedInteger::allocate((this -> length = number.length)); ::memcpy(this -> value, number.value, number.length * sizeof(Digit)); } }
             constexpr inline void copy(BigUnsignedInteger<radix>&& number) noexcept { this -> length = number.length; number.length = 0u; ::free(this -> value); this -> value = number.value; }
+
+            template <size_t base> constexpr inline void copy(BigUnsignedInteger<base> const& number) noexcept { base == radix ? BigUnsignedInteger::copy(number) : BigUnsignedInteger::copy(BigUnsignedInteger::toBase<radix>(number)); }
+            template <size_t base> constexpr inline void copy(BigUnsignedInteger<base>&& number) noexcept { base == radix ? BigUnsignedInteger::copy((BigUnsignedInteger<radix>&&) number) : BigUnsignedInteger::copy(BigUnsignedInteger::toBase<radix>(number)); }
 
         // [...]
         private:
@@ -200,8 +203,8 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
             constexpr inline BigUnsignedInteger(BigFloat<radix>&&);
             constexpr inline BigUnsignedInteger(BigSignedInteger<radix> const&);
             constexpr inline BigUnsignedInteger(BigSignedInteger<radix>&&);
-            constexpr inline BigUnsignedInteger(BigUnsignedInteger<radix> const& number) : length{0u}, value{NULL} { BigUnsignedInteger::copy((BigUnsignedInteger<radix> const&) number); }
-            constexpr inline BigUnsignedInteger(BigUnsignedInteger<radix>&& number) : length{0u}, value{NULL} { BigUnsignedInteger::copy((BigUnsignedInteger<radix>&&) number); }
+            template <size_t base> constexpr inline BigUnsignedInteger(BigUnsignedInteger<base> const& number) : length{0u}, value{NULL} { BigUnsignedInteger::copy((BigUnsignedInteger<base> const&) number); }
+            template <size_t base> constexpr inline BigUnsignedInteger(BigUnsignedInteger<base>&& number) : length{0u}, value{NULL} { BigUnsignedInteger::copy((BigUnsignedInteger<base>&&) number); }
 
             // [Destructor]
             inline ~BigUnsignedInteger(void) { BigUnsignedInteger::zero(); }
@@ -254,7 +257,19 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
                 inline static BigUnsignedInteger<radix>& decrement(BigUnsignedInteger<radix>& number) noexcept { number.decrement(); return number; }
 
                 void divide(...) const;
-                void exponentiate(...) const noexcept;
+
+                inline BigUnsignedInteger<radix>& exponentiate(unsigned int const number) noexcept { return BigUnsignedInteger::exponentiate((unsigned long) number); }
+                inline BigUnsignedInteger<radix>& exponentiate(unsigned long const number) noexcept { if (number ^ 1uL) { if (number) BigUnsignedInteger::exponentiate(BigUnsignedInteger<radix> {number}); else { this -> length = 1u; *(this -> value) = 1u; } } return *this; }
+                inline BigUnsignedInteger<radix>& exponentiate(unsigned short const number) noexcept { return BigUnsignedInteger::exponentiate((unsigned long) number); }
+                BigUnsignedInteger<radix>& exponentiate(BigUnsignedInteger<radix> const&) noexcept;
+                inline static BigUnsignedInteger<radix> const exponentiate(BigUnsignedInteger<radix> const& numberA, unsigned int const numberB) noexcept { return BigUnsignedInteger::exponentiate(numberA, (unsigned long) numberB); }
+                inline static BigUnsignedInteger<radix> const exponentiate(BigUnsignedInteger<radix> const& numberA, unsigned long const numberB) noexcept { BigUnsignedInteger<radix> evaluation {numberA}; evaluation.exponentiate(numberB); return evaluation; }
+                inline static BigUnsignedInteger<radix> const exponentiate(BigUnsignedInteger<radix> const& numberA, unsigned short const numberB) noexcept { return BigUnsignedInteger::exponentiate(numberA, (unsigned long) numberB); }
+                inline static BigUnsignedInteger<radix> const exponentiate(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) noexcept { BigUnsignedInteger<radix> evaluation {numberA}; evaluation.exponentiate(numberB); return evaluation; }
+                inline static BigUnsignedInteger<radix>& exponentiate(BigUnsignedInteger<radix>&& numberA, unsigned int const numberB) noexcept { return BigUnsignedInteger::exponentiate((BigUnsignedInteger<radix>&&) numberA, (unsigned long) numberB); }
+                inline static BigUnsignedInteger<radix>& exponentiate(BigUnsignedInteger<radix>&& numberA, unsigned long const numberB) noexcept { numberA.exponentiate(numberB); return numberA; }
+                inline static BigUnsignedInteger<radix>& exponentiate(BigUnsignedInteger<radix>&& numberA, unsigned short const numberB) noexcept { return BigUnsignedInteger::exponentiate((BigUnsignedInteger<radix>&&) numberA, (unsigned long) numberB); }
+                inline static BigUnsignedInteger<radix>& exponentiate(BigUnsignedInteger<radix>&& numberA, BigUnsignedInteger<radix> const& numberB) noexcept { numberA.exponentiate(numberB); return numberA; }
 
                 constexpr inline static BigUnsignedInteger<radix> const fromInteger(unsigned int const number) noexcept { return BigUnsignedInteger::fromInteger((unsigned long) number); }
                 constexpr static BigUnsignedInteger<radix> const fromInteger(unsigned long const) noexcept;
@@ -276,9 +291,9 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
                 inline static BigUnsignedInteger<radix>& modulo(BigUnsignedInteger<radix>&& numberA, unsigned long const numberB) { numberA.modulo(numberB); return numberA; }
                 inline static BigUnsignedInteger<radix>& modulo(BigUnsignedInteger<radix>&& numberA, unsigned short const numberB) { return BigUnsignedInteger::modulo((BigUnsignedInteger<radix>&&) numberA, (unsigned long) numberB); }
 
-                BigUnsignedInteger<radix>& multiply(unsigned int const number) noexcept { BigUnsignedInteger::multiply((unsigned long) number); }
+                BigUnsignedInteger<radix>& multiply(unsigned int const number) noexcept { return BigUnsignedInteger::multiply((unsigned long) number); }
                 BigUnsignedInteger<radix>& multiply(unsigned long const number) noexcept { if (number) { if (number ^ 1uL) BigUnsignedInteger::multiply(BigUnsignedInteger<radix> {number}); } else BigUnsignedInteger::zero(); return *this; }
-                BigUnsignedInteger<radix>& multiply(unsigned short const number) noexcept { BigUnsignedInteger::multiply((unsigned long) number); }
+                BigUnsignedInteger<radix>& multiply(unsigned short const number) noexcept { return BigUnsignedInteger::multiply((unsigned long) number); }
                 BigUnsignedInteger<radix>& multiply(BigUnsignedInteger<radix> const&) noexcept;
                 inline static BigUnsignedInteger<radix> const multiply(BigUnsignedInteger<radix> const& numberA, unsigned int const numberB) noexcept { return BigUnsignedInteger::multiply(numberA, (unsigned long) numberB); }
                 inline static BigUnsignedInteger<radix> const multiply(BigUnsignedInteger<radix> const& numberA, unsigned long const numberB) noexcept { BigUnsignedInteger<radix> evaluation {numberA}; evaluation.multiply(numberB); return evaluation; }
@@ -373,8 +388,8 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
             inline BigUnsignedInteger<radix>& operator =(BigFloat<radix>&& number) noexcept { BigUnsignedInteger::copy((BigFloat<radix>&&) number); return *this; }
             inline BigUnsignedInteger<radix>& operator =(BigSignedInteger<radix> const& number) noexcept { BigUnsignedInteger::copy((BigSignedInteger<radix> const&) number); return *this; }
             inline BigUnsignedInteger<radix>& operator =(BigSignedInteger<radix>&& number) noexcept { BigUnsignedInteger::copy((BigSignedInteger<radix>&&) number); return *this; }
-            inline BigUnsignedInteger<radix>& operator =(BigUnsignedInteger<radix> const& number) noexcept { BigUnsignedInteger::copy((BigUnsignedInteger<radix> const&) number); return *this; }
-            inline BigUnsignedInteger<radix>& operator =(BigUnsignedInteger<radix>&& number) noexcept { BigUnsignedInteger::copy((BigUnsignedInteger<radix>&&) number); return *this; }
+            template <size_t base> inline BigUnsignedInteger<radix>& operator =(BigUnsignedInteger<base> const& number) noexcept { BigUnsignedInteger::copy((BigUnsignedInteger<base> const&) number); return *this; }
+            template <size_t base> inline BigUnsignedInteger<radix>& operator =(BigUnsignedInteger<base>&& number) noexcept { BigUnsignedInteger::copy((BigUnsignedInteger<base>&&) number); return *this; }
             inline BigUnsignedInteger<radix>& operator +=(BigUnsignedInteger<radix> const& number) noexcept { return BigUnsignedInteger::add(number); }
             inline BigUnsignedInteger<radix>& operator -=(BigUnsignedInteger<radix> const& number) noexcept { return BigUnsignedInteger::subtract(number); }
             inline BigUnsignedInteger<radix>& operator *=(BigUnsignedInteger<radix> const&) noexcept;
@@ -409,8 +424,6 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
             inline BigUnsignedInteger<radix> const operator --(int const)& noexcept { BigUnsignedInteger<radix> const evaluation {*this}; BigUnsignedInteger::operator --(); return evaluation; }
             inline BigUnsignedInteger<radix>& operator --(int const)&& noexcept { return BigUnsignedInteger::operator --(); }
             inline BigUnsignedInteger<radix>& operator --(void) noexcept { BigUnsignedInteger::decrement(); return *this; }
-
-            inline operator char const*(void) const noexcept { return BigUnsignedInteger::toString(); }
     };
 
     /* Big Signed Integer */
@@ -497,7 +510,6 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
 
             // [Operator] > ...
             inline BigSignedInteger<radix> const operator -(void) const noexcept { BigSignedInteger<radix> evaluation {*this}; BigSignedInteger::sign(evaluation); return evaluation; }
-            inline operator char const*(void) const noexcept { return BigSignedInteger::toString(); }
     };
 
     /* Big Float */
@@ -638,9 +650,6 @@ class Digit { template <size_t> friend class BigFloat; template <size_t> friend 
                 inline static BigFloat<radix>& unsign(BigFloat<radix>&& number) noexcept { return BigFloat::unsign(number); }
 
                 constexpr inline void zero(void) noexcept { if (this -> getCharacteristicsLength() || this -> getMantissaLength()) { BigFloat::unsign(); this -> setCharacteristicsLength(0u); this -> setMantissaLength(0u); this -> state = BigFloat::SAFE; std::free(this -> value); this -> value = NULL; } }
-
-            // [Operator] > ...
-            inline operator char const*(void) const noexcept { return BigFloat::toString(); }
     };
 
 /* Modification > ... */
@@ -665,12 +674,12 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
     template <size_t radix> inline Digit const* Digit::add(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; if (Digit::isLowestRank<radix>(digitA)) { *evaluation = 0u; *(evaluation + 1) = digitB; } else if (Digit::isLowestRank<radix>(digitB)) { *evaluation = 0u; *(evaluation + 1) = digitA; } else if (Digit::isMeanRank<radix>(digitA) && Digit::isMeanRank<radix>(digitB)) { *evaluation = 1u; *(evaluation + 1) = 0u; } else if (Digit::isUpperRank<radix>(digitA)) { if (radix - digitA > digitB) { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } else { *evaluation = 1u; *(evaluation + 1) = digitB - (radix - digitA); } } else if (Digit::isUpperRank<radix>(digitB)) { if (radix - digitB > digitA) { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } else { *evaluation = 1u; *(evaluation + 1) = digitA - (radix - digitB); } } else { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } return &*evaluation; }
     template <size_t radix> inline Digit const* Digit::decrement(Digit const digit) noexcept { static Digit evaluation[2] {0}; if (Digit::isLowestRank<radix>(digit)) { *evaluation = 1u; *(evaluation + 1) = 1u; } else { *evaluation = 0u; *(evaluation + 1) = digit - 1u; } return &*evaluation; }
     template <size_t radix> inline Digit const* Digit::increment(Digit const digit) noexcept { static Digit evaluation[2] {0}; if (Digit::isHighestRank<radix>(digit)) { *evaluation = 1u; *(evaluation + 1) = 0u; } else { *evaluation = 0u; *(evaluation + 1) = digit + 1u; } return &*evaluation; }
-    template <size_t radix> inline Digit const* Digit::multiply(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; ::memset(evaluation, 0u, sizeof(evaluation)); for (digit_t iterator = digitB.value; false == Digit::isLowestRank<radix>(iterator); --iterator) for (digit_t subiterator = digitA.value; false == Digit::isLowestRank<radix>(subiterator); --subiterator) { if (radix == *(evaluation + 1)) { ++*evaluation; *(evaluation + 1) = 0u; } else ++*(evaluation + 1); } return &*evaluation; }
+    template <size_t radix> inline Digit const* Digit::multiply(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; ::memset(evaluation, 0u, sizeof(evaluation)); for (digit_t iterator = digitB.value; false == Digit::isLowestRank<radix>(iterator); --iterator) for (digit_t subiterator = digitA.value; false == Digit::isLowestRank<radix>(subiterator); --subiterator) { if (Digit::isHighestRank<radix>(*(evaluation + 1))) { ++*evaluation; *(evaluation + 1) = 0u; } else ++*(evaluation + 1); } return &*evaluation; }
     template <size_t radix> inline Digit const* Digit::subtract(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; if (digitA == digitB) { *evaluation = 0u; *(evaluation + 1) = 0u; } else if (digitA < digitB) { *evaluation = 1u; *(evaluation + 1) = digitB - digitA; } else { *evaluation = 0u; *(evaluation + 1) = digitA - digitB; } return &*evaluation; }
 
     // To ...
     constexpr inline Digit::digit_t Digit::toNumber(Digit const digit) noexcept { return digit.value; }
-    inline char const* Digit::toString(void) const noexcept { static char evaluation[20] {0}; char *iterator = evaluation, *subiterator = evaluation - 1; for (digit_t value = this -> value; value; value /= 10u) *iterator++ = *("0123456789" + (value % 10u)); *iterator = '\0'; while (--iterator > ++subiterator) { *iterator ^= *subiterator; *subiterator ^= *iterator; *iterator ^= *subiterator; } return &*evaluation; }
+    inline char const* Digit::toString(void) const noexcept { static char evaluation[20] {0}; if (this -> value) { char *iterator = evaluation, *subiterator = evaluation - 1; for (digit_t value = this -> value; value; value /= 10u) *iterator++ = *("0123456789" + (value % 10u)); *iterator = '\0'; while (--iterator > ++subiterator) { *iterator ^= *subiterator; *subiterator ^= *iterator; *iterator ^= *subiterator; } } else { *evaluation = '0'; *(evaluation + 1) = '\0'; } return &*evaluation; }
 
 /* Modification */
     /* Big Float */
@@ -1029,6 +1038,128 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
             return *this;
         }
 
+        // Exponentiate --- CHECKPOINT (Lapys)
+        template <size_t radix>
+        BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::exponentiate(BigUnsignedInteger<radix> const& number) noexcept {
+            // ...
+            (void) number;
+            // function decompose(number) {
+            //     var iterator = 1;
+            //     var precision = 1e7;
+            //     var sum = 0;
+            //     var summand;
+
+            //     number = Math.abs(number);
+            //     number = number - Number.parseInt(number);
+
+            //     console.clear();
+            //     console.group("[number]:", number);
+
+            //     while (sum < number) {
+            //         summand = iterator;
+            //         while (
+            //             summand < precision &&
+            //             (1 / summand > number || sum + (1 / summand) > number)
+            //         ) ++summand;
+            //         if (iterator == summand) break;
+            //         iterator = summand;
+            //         sum += 1 / summand;
+
+            //         console.log("[summand]:", iterator);
+            //     }
+
+            //     console.groupEnd();
+            //     console.log("[sum]:", sum)
+            // }
+
+            // function pow(base, exponent) {
+            //     var evaluation;
+
+            //     if (exponent < 0)
+            //         evaluation = 1 / pow(base, -exponent);
+
+            //     else if (Math.abs(exponent) != exponent) {
+            //         var exponentCharacteristics = Number.parseInt(exponent);
+            //         var exponentMantissa = exponent - exponentCharacteristics;
+
+            //         evaluation = pow(base, exponentCharacteristics);
+
+            //         for (var rootExponent in decompose(exponentMantissa))
+            //         evaluation *= root(base, rootExponent);
+            //     }
+
+            //     else {
+            //         evaluation = base;
+
+            //         for (var iterator = exponent; iterator ? --iterator : 0; )
+            //         evaluation *= base
+            //     }
+
+            //     return evaluation
+            // }
+
+            // function root(base, exponent) {
+            //     var baseFunction = function(number) { return pow(number, exponent) - base };
+            //     var baseFunctionDerivative = function(number) { return exponent * pow(number, exponent - 1) };
+            //     var evaluation = 1;
+            //     var limit = 0.00000000000001;
+            //     var precision = 0.0000001;
+            //     var solutionFound = false;
+
+            //     for (var iterator = 1, length = 20; iterator ^ length; ++iterator) {
+            //         var approximation;
+            //         var denominator = baseFunction(evaluation);
+            //         var derivativeDenominator = baseFunctionDerivative(evaluation);
+
+            //         if (Math.abs(derivativeDenominator) < limit) iterator = length - 1;
+            //         else {
+            //             approximation = evaluation - (denominator / derivativeDenominator);
+            //             if (Math.abs(approximation - evaluation) <= precision) solutionFound = true;
+            //             evaluation = approximation
+            //         }
+            //     }
+
+            //     if (solutionFound) return evaluation;
+            //     else return null
+            // }
+
+
+            // x0 = 1  # The initial guess
+            // f(x) = x^2 - 2  # The function whose root we are trying to find
+            // fprime(x) = 2 * x  # The derivative of the function
+            // tolerance = 10^(-7)  # 7 digit accuracy is desired
+            // epsilon = 10^(-14)  # Do not divide by a number smaller than this
+            // maxIterations = 20  # Do not allow the iterations to continue indefinitely
+            // solutionFound = false  # Have not converged to a solution yet
+
+            // for i = 1:maxIterations
+            //   y = f(x0)
+            //   yprime = fprime(x0)
+
+            //   if abs(yprime) < epsilon  # Stop if the denominator is too small
+            //     break
+            //   end
+
+            //   global x1 = x0 - y/yprime  # Do Newton's computation
+
+            //   if abs(x1 - x0) <= tolerance  # Stop when the result is within the desired tolerance
+            //     global solutionFound = true
+            //     break
+            //   end
+
+            //   global x0 = x1  # Update x0 to start the process again
+            // end
+
+            // if solutionFound
+            //   println("Solution: ", x1)  # x1 is a solution within tolerance and maximum number of iterations
+            // else
+            //   println("Did not converge")  # Newton's method did not converge
+            // end
+
+            // Return
+            return *this;
+        }
+
         // From Integer
         template <size_t radix>
         constexpr inline BigUnsignedInteger<radix> const BigUnsignedInteger<radix>::fromInteger(unsigned long const number) noexcept {
@@ -1102,31 +1233,22 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
             return *this;
         }
 
-        // Is Base Factor --- CHECKPOINT (Lapys)
+        // Is Base Factor --- NOTE (Lapys) -> Not multiplicative factors, but rather exponential factors (of the radix).
         template <size_t radix>
         inline bool BigUnsignedInteger<radix>::isBaseFactor(void) const noexcept {
+            // Evaluation > Evaluation
             bool evaluation = true;
 
-            if (radix == 2u) {
-                evaluation = this -> length;
-                if (evaluation) switch (*(this -> value + (this -> length - 1u))) {
-                    case 0u: case 2u: case 4u: case 6u: case 8u: break;
-                    default: evaluation = false; break;
-                }
+            // Update > Evaluation
+            evaluation = this -> length > 1u && 1u == *(this -> value);
+
+            // Logic > ...
+            if (evaluation) {
+                for (size_t iterator = 1u; evaluation && (iterator ^ (this -> length)); ++iterator)
+                if (false == Digit::isLowestRank<radix>(*(this -> value + iterator))) evaluation = false;
             }
 
-            else if (radix == 10u) {
-                evaluation = this -> length > 1u && 1u == *(this -> value);
-                if (evaluation) {
-                    for (size_t iterator = 0u; evaluation && (iterator ^ (this -> length)); ++iterator)
-                    if (false == Digit::isLowestRank(*(this -> value + iterator))) evaluation = false;
-                }
-            }
-
-            else {
-                static Digit **factors = NULL;
-            }
-
+            // Return
             return evaluation;
         }
 
@@ -1156,6 +1278,10 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
                     if (numberB) evaluation = false;
                 }
             }
+
+            else
+                // Update > Evaluation
+                evaluation = BigUnsignedInteger::isZero(numberA) && 0u == numberB;
 
             // Return
             return evaluation;
@@ -1285,54 +1411,95 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
             return *this;
         }
 
-        // Multiply --- CHECKPOINT (Lapys)
+        // Multiply
         template <size_t radix>
         BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigUnsignedInteger<radix> const& number) noexcept {
             // Logic
             if (BigUnsignedInteger::isSignificant() && false == BigUnsignedInteger::isEqual(number, 1uL)) {
                 // Logic
-                if (BigUnsignedInteger::isZero(number)) BigUnsignedInteger::zero();
-                else if (BigUnsignedInteger::isEqual(1uL)) BigUnsignedInteger::copy(number);
+                if (BigUnsignedInteger::isZero(number))
+                    // ...
+                    BigUnsignedInteger::zero();
+
+                else if (BigUnsignedInteger::isEqual(1uL))
+                    // ...
+                    BigUnsignedInteger::copy(number);
+
+                else if (BigUnsignedInteger::isBaseFactor()) {
+                    // Constant > Length
+                    size_t const length = this -> length;
+
+                    // ...; Loop > ...
+                    BigUnsignedInteger::copy(number);
+                    BigUnsignedInteger::shiftLeft(length - 1u);
+                }
+
+                else if (BigUnsignedInteger::isBaseFactor(number))
+                    // ...
+                    BigUnsignedInteger::shiftLeft(number.length - 1u);
+
                 else {
-                    BigUnsignedInteger<radix> product;
+                    // Initialization > (Product ..., Sum)
+                    BigUnsignedInteger<radix> product; Digit* productValue; // NOTE (Lapys) -> For proper de-allocation afterwards.
                     BigUnsignedInteger<radix> sum;
 
+                    // Modification > Product > (Length, Value); ...
                     product.length = number.length + (this -> length > number.length ? this -> length : number.length) + 1u;
                     product.allocate(product.length);
+                    productValue = product.value;
+                    product.value += product.length;
 
-                    (void) product;
-                    (void) sum;
-
-                    println<2u>("[DEBUG]: ", this -> toString(), " * ", number.toString());
-
-                    for (size_t iterator = 0u; iterator ^ number.length; ++iterator) {
+                    // Loop > Logic --- NOTE (Lapys) -> Ignore multiplying by zeroes.
+                    for (size_t iterator = 0u; iterator ^ number.length; ++iterator)
+                    if (*(number.value + (number.length - iterator - 1u))) {
+                        // Initialization > Carry
                         Digit carry = 0u;
 
-                        (void) carry;
-
+                        // Loop --- NOTE (Lapys) -> There are potential redundancies in multiplying digits with `0` value.
                         for (size_t subiterator = 0u; subiterator ^ (this -> length); ++subiterator) {
-                            Digit const *evaluation = Digit::multiply<radix>((number.value + (number.length - iterator - 1u)) -> value, (this -> value + (this -> length - subiterator - 1u)) -> value);
+                            // Initialization > Evaluation
+                            Digit *evaluation = (Digit*) Digit::multiply<radix>(*(number.value + (number.length - iterator - 1u)), *(this -> value + (this -> length - subiterator - 1u)));
 
-                            (void) evaluation;
+                            // Logic --- NOTE (Lapys) -> Add to the carry
+                            if (carry) {
+                                // Initialization > Sub-Evaluation
+                                Digit const *subevaluation = Digit::add<radix>(carry, *(evaluation + 1));
 
-                            println("[DEBUG]: {", (number.value + (number.length - iterator - 1u)) -> value, ", ", (this -> value + (this -> length - subiterator - 1u)) -> value, '}');
+                                // Update > (Evaluation, ...)
+                                *(evaluation + 1) = *(subevaluation + 1);
+                                if (Digit::isEqual(*subevaluation, 1u)) ++*evaluation;
 
-                            // if (carry) {
-                            //     Digit const *subevaluation = Digit::add(carry, *(evaluation + 1));
+                                carry = 0u;
+                            }
 
-                            //     *(evaluation + 1) = *(subevaluation + 1);
-                            //     if (Digit::isEqual(*subevaluation, 1u)) ++*evaluation;
-
-                            //     carry = 0u;
-                            // }
-
-                            // *(product.value + (product.length - iterator - 1u)) = *(evaluation + 1);
-                            // if (false == Digit::isEqual(*evaluation, 0u)) carry = *evaluation;
+                            // Modification > Product > Value; ...
+                            *product.value-- = *(evaluation + 1);
+                            if (false == Digit::isEqual(*evaluation, 0u)) carry = *evaluation;
                         }
 
-                        // if (carry)
+                        // Logic
+                        if (carry) {
+                            // Modification > Product > (Length, Value)
+                            product.length = this -> length + 1u;
+                            *product.value-- = carry;
+                        }
+
+                        else
+                            // Modification > Product > Length
+                            product.length = this -> length;
+
+                        // Modification > Product > (Length, Value)
+                        ++product.value;
+                        ::memmove(product.value - iterator, product.value, product.length * sizeof(Digit)); product.value -= iterator;
+                        ::memset(product.value + (product.length), 0u, iterator * sizeof(Digit)); product.length += iterator;
+
+                        // Update > Sum; Modification > Product > Value
+                        sum.add(product);
+                        product.value += product.length - 1u;
                     }
 
+                    // Modification > Product > Value; ...
+                    product.value = productValue;
                     BigUnsignedInteger::copy(sum);
                 }
             }
@@ -1493,9 +1660,29 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
             // Logic
             if (BigUnsignedInteger::isSignificant(number)) {
                 // Logic
-                if (base == radix) {}
-                else if (base > radix) {}
-                else {}
+                if (base == radix)
+                    // Update > Evaluation
+                    evaluation = number;
+
+                else if (base > radix) {
+
+                }
+
+                else {
+                    // 64, 78, 127
+
+                    // EXP
+                    // 2 * 2 * 2 * 2 * 2 * 2 -> 64
+                    // 2 * 2 * 2 * 2 * 2 * 2 * 2 -> 128
+
+                    // MUL
+                    // 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 -> 126
+                    // 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 -> 128
+
+                    // ADD
+                    // 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 -> 127
+                    // 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 -> 128
+                }
             }
 
             // Return
@@ -1633,15 +1820,7 @@ int main(void) {
     ::println("[PROGRAM INITIATED]");
 
     /* [Update] ... */ {
-        // int value;
-        int values[10] {::randint(10), ::randint(10), ::randint(10), ::randint(10), ::randint(10), ::randint(10), ::randint(10), ::randint(10), ::randint(10), ::randint(10)};
-        ::print("[EVAL]: "); ::printp(values); println(); // Also check with strings
-        // ::printp("[EVAL]: `", ::randint(), "` is a primitive value unlike `", ::randbool(), "` or `", &value, '`');
-
-        // ::println("[EVAL]: ", BigUnsignedInteger<10u>(2345u) * BigUnsignedInteger<10u>(21u));
-        // ::println("[EVAL]: ", BigUnsignedInteger<10u>(21u) * BigUnsignedInteger<10u>(2345u));
-
-        // ::println("[EVAL]: ", BigUnsignedInteger<10u>::toBase<2u>(BigUnsignedInteger<10u> {64u}));
+        ::println("[EVAL]: ", BigUnsignedInteger<10u>::toBase<2u>(BigUnsignedInteger<10u> {127u}).toString());
     }
 
     /* [Terminate] ... */
