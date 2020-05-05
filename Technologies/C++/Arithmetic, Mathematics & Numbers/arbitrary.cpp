@@ -1669,7 +1669,22 @@ template <size_t radix> BigFloat<radix> const BigFloat<radix>::NaN {BigFloatStat
                 }
 
                 else {
-                    // 64, 78, 127
+                    size_t count = 0u;
+                    BigUnsignedInteger<radix> exponent {base};
+
+                    while (BigUnsignedInteger::isLesser(exponent, number)) {
+                        ++count;
+                        exponent.multiply(base);
+                    }
+
+                    if (BigUnsignedInteger::isEqual(exponent, number)) {
+                        evaluation.length = 1u;
+                        *evaluation.value = 1u;
+
+                        for (size_t iterator = 0u; count ^ iterator; ++iterator) evaluation.shiftLeft();
+                    }
+
+                    // 64, 78, 127 with ADD, MULTIPLY & SUBTRACT
 
                     // EXP
                     // 2 * 2 * 2 * 2 * 2 * 2 -> 64

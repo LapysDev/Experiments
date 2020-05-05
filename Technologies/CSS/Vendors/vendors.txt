@@ -1,0 +1,9 @@
+Prefix	Organisation
+-atsc-	Advanced Television Standards Committee
+-khtml-	Konqueror browser
+-ms-	Microsoft
+mso-	Microsoft Office
+-moz-	Mozilla Foundation (Gecko-based browsers)
+-o-	Opera Software
+-webkit-	Safari (and other WebKit-based browsers)
+-wap-	The WAP Forum
