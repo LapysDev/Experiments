@@ -26,7 +26,7 @@ inline long double const* to_fraction(long double const number) {
         long double& numerator = *fraction;
 
         // Initialization > (Characteristics, Mantissa)
-        long double characteristics;
+        long double characteristics = ::truncf(number);
         long double mantissa = ::modf(number, &characteristics);
 
         // ... --- CHECKPOINT (Lapys)
