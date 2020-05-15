@@ -18,7 +18,7 @@ template <size_t> class BigFloat;
 template <size_t> class BigSignedInteger;
 template <size_t> class BigUnsignedInteger;
 
-/* Class > Digit --- NOTE (Lapys) -> Digits are stored as denary values. --- REDACT (Lapys) */
+/* Class > Digit --- REDACT (Lapys) -> Digits are stored as denary values. */
 class Digit { typedef size_t digit_t;
     private: digit_t value;
     public:
@@ -52,7 +52,14 @@ class Digit { typedef size_t digit_t;
         constexpr inline operator digit_t(void) const noexcept { return this -> value; }
 };
 
-/* Class > Big ... */
+/* Class > Big ...
+        --- NOTE ---
+            #Lapys:
+                - Add, Decrement, Divide, Exponentiate, Increment, Multiply, Shift [Left, Right], Sign, Subtract, Unsign
+                - From Number, To [Base, Number, String], Zero
+                - Is [Big, Computable, Denormalized, Equal, Finite, Fraction, Greater, Infinite, Integer, Lesser, Negative, Non-Computable, Normalized, Positive, Safe, Significant, Zero]
+*/
+
 template <size_t radix>
 class BigUnsignedInteger { typedef unsigned long primitive_t;
     // [...]
@@ -255,6 +262,7 @@ class BigSignedInteger : BigUnsignedInteger<radix> { typedef signed long primiti
 
             // [Miscellaneous]
             constexpr inline static BigSignedInteger fromNumber(primitive_t const);
+            template <size_t base> constexpr inline static BigSignedInteger<base> toBase(BigSignedInteger const& number) { return BigUnsignedInteger<radix>::toBase<base>((BigUnsignedInteger<radix> const&) number); }
             constexpr static primitive_t toNumber(BigSignedInteger const&);
             constexpr inline char* toString(void) noexcept;
 
@@ -289,11 +297,15 @@ class BigSignedInteger : BigUnsignedInteger<radix> { typedef signed long primiti
             constexpr inline static BigSignedInteger& multiply(BigSignedInteger const& numberA, BigSignedInteger&& numberB) { return BigSignedInteger::multiply((BigSignedInteger&&) numberB, (BigSignedInteger&&) numberA); }
             constexpr inline static BigSignedInteger& multiply(BigSignedInteger&& numberA, BigSignedInteger&& numberB) { return numberA.multiply(numberB); }
 
-            template <size_t radix> constexpr inline static BigSignedInteger<radix>& BigSignedInteger<radix>::shiftLeft(BigSignedInteger<radix>& number, primitive_t const exponent) { return number.shiftLeft(exponent); }
-            template <size_t radix> template <size_t base> constexpr inline static BigSignedInteger<radix>& BigSignedInteger<radix>::shiftLeft(BigSignedInteger<radix>& number, BigUnsignedInteger<base> const& exponent) { return number.shiftLeft(exponent); }
+            BigSignedInteger& shiftLeft(typename BigUnsignedInteger<radix>::primitive_t const);
+            template <size_t base> inline BigSignedInteger& shiftLeft(BigUnsignedInteger<base> const& number) { if (BigUnsignedInteger<base>::isBig(number)) { ::puts("\rUnable to logically shift arbitrary-precision number leftward, not enough memory available"); ::abort(); } else BigUnsignedInteger<radix>::shiftLeft(BigUnsignedInteger<base>::toNumber(number)); return *this; }
+            inline static BigSignedInteger& shiftLeft(BigSignedInteger& number, primitive_t const exponent) { return number.shiftLeft(exponent); }
+            template <size_t base> inline static BigSignedInteger& shiftLeft(BigSignedInteger& number, BigUnsignedInteger<base> const& exponent) { return number.shiftLeft(exponent); }
 
-            template <size_t radix> constexpr inline static BigSignedInteger<radix>& BigSignedInteger<radix>::shiftRight(BigSignedInteger<radix>& number, primitive_t const exponent) noexcept { return number.shiftRight(exponent); }
-            template <size_t radix> template <size_t base> constexpr inline static BigSignedInteger<radix>& BigSignedInteger<radix>::shiftRight(BigSignedInteger<radix>& number, BigUnsignedInteger<base> const& exponent) noexcept { return number.shiftRight(exponent); }
+            BigSignedInteger& shiftRight(typename BigUnsignedInteger<radix>::primitive_t const) noexcept;
+            template <size_t base> inline BigSignedInteger& shiftRight(BigUnsignedInteger<base> const& number) noexcept { if (BigUnsignedInteger<base>::isBig(number)) BigUnsignedInteger<radix>::zero(); else BigUnsignedInteger<radix>::shiftRight(BigUnsignedInteger<base>::toNumber(number)); return *this; }
+            inline static BigSignedInteger& shiftRight(BigSignedInteger& number, primitive_t const exponent) noexcept { return number.shiftRight(exponent); }
+            template <size_t base> inline static BigSignedInteger& shiftRight(BigSignedInteger& number, BigUnsignedInteger<base> const& exponent) noexcept { return number.shiftRight(exponent); }
 
             constexpr BigSignedInteger& sign(void);
             constexpr inline static BigSignedInteger& sign(BigSignedInteger& number) { return number.sign(); }
@@ -405,6 +417,9 @@ class BigFloat : BigSignedInteger<radix> { typedef long double primitive_t;
             constexpr inline static BigFloat& add(BigFloat const& numberA, BigFloat&& numberB) { return BigFloat::add((BigFloat&&) numberB, (BigFloat&&) numberA); }
             constexpr inline static BigFloat& add(BigFloat&& numberA, BigFloat&& numberB) { return numberA.add(numberB); }
 
+            constexpr BigFloat& decrement(void) noexcept;
+            constexpr inline static BigFloat& decrement(BigFloat& number) noexcept { return number.decrement(); }
+
             template <size_t base> constexpr BigFloat& divide(BigFloat<base> const&);
             constexpr inline static BigFloat divide(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {numberA}; return evaluation.divide(numberB); }
             constexpr inline static BigFloat& divide(BigFloat&& numberA, BigFloat const& numberB) { return BigFloat::divide((BigFloat&&) numberA, (BigFloat&&) numberB); }
@@ -417,27 +432,36 @@ class BigFloat : BigSignedInteger<radix> { typedef long double primitive_t;
             constexpr inline static BigFloat& exponentiate(BigFloat const& numberA, BigFloat&& numberB) { return BigFloat::exponentiate((BigFloat const&) numberA, (BigFloat const&) numberB); }
             constexpr inline static BigFloat& exponentiate(BigFloat&& numberA, BigFloat&& numberB) { return numberA.exponentiate(numberB); }
 
+            constexpr BigFloat& increment(void) noexcept;
+            constexpr inline static BigFloat& increment(BigFloat& number) noexcept { return number.increment(); }
+
             template <size_t base> constexpr BigFloat& multiply(BigFloat<base> const&);
             constexpr inline static BigFloat multiply(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {numberA}; return evaluation.multiply(numberB); }
             constexpr inline static BigFloat& multiply(BigFloat&& numberA, BigFloat const& numberB) { return BigFloat::multiply((BigFloat&&) numberA, (BigFloat&&) numberB); }
             constexpr inline static BigFloat& multiply(BigFloat const& numberA, BigFloat&& numberB) { return BigFloat::multiply((BigFloat&&) numberB, (BigFloat&&) numberA); }
             constexpr inline static BigFloat& multiply(BigFloat&& numberA, BigFloat&& numberB) { return numberA.multiply(numberB); }
 
-            constexpr BigFloat& shiftLeft(BigUnsignedInteger<radix>::primitive_t const);
-            template <size_t base> constexpr inline BigFloat& shiftLeft(BigUnsignedInteger<base> const& number) { if (BigUnsignedInteger<base>::isBig(number)) { ::puts("\rUnable to logically shift arbitrary-precision number leftward, not enough memory available"); ::abort(); } else BigUnsignedInteger::shiftLeft(BigUnsignedInteger<base>::toNumber(number)); return *this; }
-            constexpr inline static BigFloat& shiftLeft(BigUnsignedInteger& number, primitive_t const exponent) { return number.shiftLeft(exponent); }
-            template <size_t base> constexpr inline static BigFloat& shiftLeft(BigUnsignedInteger& number, BigUnsignedInteger<base> const& exponent) { return number.shiftLeft(exponent); }
+            BigFloat& shiftLeft(typename BigUnsignedInteger<radix>::primitive_t const);
+            template <size_t base> inline BigFloat& shiftLeft(BigUnsignedInteger<base> const& number) { if (BigUnsignedInteger<base>::isBig(number)) { ::puts("\rUnable to logically shift arbitrary-precision number leftward, not enough memory available"); ::abort(); } else BigUnsignedInteger<radix>::shiftLeft(BigUnsignedInteger<base>::toNumber(number)); return *this; }
+            inline static BigFloat& shiftLeft(BigFloat& number, primitive_t const exponent) { return number.shiftLeft(exponent); }
+            template <size_t base> inline static BigFloat& shiftLeft(BigFloat& number, BigUnsignedInteger<base> const& exponent) { return number.shiftLeft(exponent); }
 
-            constexpr BigFloat& shiftRight(BigUnsignedInteger<radix>::primitive_t const) noexcept;
-            template <size_t base> constexpr inline BigFloat& shiftRight(BigUnsignedInteger<base> const& number) noexcept { if (BigUnsignedInteger<base>::isBig(number)) BigUnsignedInteger::zero(); else BigUnsignedInteger::shiftRight(BigUnsignedInteger<base>::toNumber(number)); return *this; }
-            constexpr inline static BigFloat& shiftRight(BigUnsignedInteger& number, primitive_t const exponent) noexcept { return number.shiftRight(exponent); }
-            template <size_t base> constexpr inline static BigFloat& shiftRight(BigUnsignedInteger& number, BigUnsignedInteger<base> const& exponent) noexcept { return number.shiftRight(exponent); }
+            BigFloat& shiftRight(typename BigUnsignedInteger<radix>::primitive_t const) noexcept;
+            template <size_t base> inline BigFloat& shiftRight(BigUnsignedInteger<base> const& number) noexcept { if (BigUnsignedInteger<base>::isBig(number)) BigUnsignedInteger<radix>::zero(); else BigUnsignedInteger<radix>::shiftRight(BigUnsignedInteger<base>::toNumber(number)); return *this; }
+            inline static BigFloat& shiftRight(BigFloat& number, primitive_t const exponent) noexcept { return number.shiftRight(exponent); }
+            template <size_t base> inline static BigFloat& shiftRight(BigFloat& number, BigUnsignedInteger<base> const& exponent) noexcept { return number.shiftRight(exponent); }
+
+            constexpr BigFloat& sign(void);
+            constexpr inline static BigFloat& sign(BigFloat& number) { return number.sign(); }
 
             template <size_t base> constexpr BigFloat& subtract(BigFloat<base> const&) noexcept;
             constexpr inline static BigFloat subtract(BigFloat const& numberA, BigFloat const& numberB) noexcept { BigFloat evaluation {numberA}; return evaluation.subtract(numberB); }
             constexpr inline static BigFloat& subtract(BigFloat&& numberA, BigFloat const& numberB) noexcept { return BigFloat::subtract((BigFloat&&) numberA, (BigFloat&&) numberB); }
             constexpr inline static BigFloat& subtract(BigFloat const& numberA, BigFloat&& numberB) noexcept { return BigFloat::subtract((BigFloat const&) numberA, (BigFloat const&) numberB); }
             constexpr inline static BigFloat& subtract(BigFloat&& numberA, BigFloat&& numberB) noexcept { return numberA.subtract(numberB); }
+
+            constexpr BigFloat& unsign(void);
+            constexpr inline static BigFloat& unsign(BigFloat& number) { return number.unsign(); }
 
             constexpr inline void zero(void) noexcept { this -> mantissaLength = 0u; this -> state = BigFloat::SAFE; BigSignedInteger<radix>::zero(); }
 
@@ -593,9 +617,29 @@ class BigFloat : BigSignedInteger<radix> { typedef long double primitive_t;
         // template <size_t radix>
         // constexpr inline bool BigUnsignedInteger<radix>::isBig(BigUnsignedInteger<radix> const& number) noexcept;
 
-        // Is Equal --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline bool BigUnsignedInteger<radix>::isEqual(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) noexcept;
+        // Is Equal
+        template <size_t radix>
+        constexpr inline bool BigUnsignedInteger<radix>::isEqual(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) noexcept {
+            // Evaluation > Evaluation
+            bool evaluation;
+
+            // Logic
+            if (BigUnsignedInteger::isSignificant(numberA) && BigUnsignedInteger::isSignificant(numberB)) {
+                // (Loop > Logic > )Update > Evaluation
+                evaluation = numberA.length == numberB.length;
+
+                for (size_t iterator = 0u; evaluation && (iterator ^ numberA.length); ++iterator)
+                if (false == Digit::isEqual(*(numberA.value + iterator), *(numberB.value + iterator)))
+                evaluation = false;
+            }
+
+            else
+                // Update > Evaluation
+                evaluation = BigUnsignedInteger::isZero(numberA) && BigUnsignedInteger::isZero(numberB);
+
+            // Return
+            return evaluation;
+        }
 
         // Is Greater --- CHECKPOINT (Lapys)
         // template <size_t radix>
@@ -616,10 +660,6 @@ class BigFloat : BigSignedInteger<radix> { typedef long double primitive_t;
         // Multiply --- CHECKPOINT (Lapys)
         // template <size_t radix> template <size_t base>
         // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigUnsignedInteger<base> const&);
-
-        // Sign --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::sign(void) const noexcept;
 
         // Subtract --- CHECKPOINT (Lapys)
         // template <size_t radix> template <size_t base>
@@ -656,9 +696,24 @@ class BigFloat : BigSignedInteger<radix> { typedef long double primitive_t;
             }
         }
 
-        // To Number --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigUnsignedInteger<radix>::primitive_t BigUnsignedInteger<radix>::toNumber(BigUnsignedInteger<radix> const& number);
+        // To Number
+        template <size_t radix>
+        constexpr inline typename BigUnsignedInteger<radix>::primitive_t BigUnsignedInteger<radix>::toNumber(BigUnsignedInteger<radix> const& number) {
+            // Evaluation > Evaluation
+            BigUnsignedInteger<radix>::primitive_t evaluation {0uL};
+
+            // Logic > ...
+            if (BigUnsignedInteger::isBig(number)) { ::puts("\rUnable to convert arbitrary-precision number to fixed-width integer"); ::abort(); }
+            else if (BigUnsignedInteger::isSignificant(number)) {
+                // Initialization > Exponent
+                // : Loop > Update > Evaluation
+                BigUnsignedInteger<radix>::primitive_t exponent = 1uL;
+                for (Digit *iterator = number.value + (number.length); iterator-- != number.value; exponent *= 10uL) evaluation += exponent * *iterator;
+            }
+
+            // Return
+            return evaluation;
+        }
 
         // To String
         template <size_t radix>
