@@ -30,6 +30,8 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
                 - Terminate: Unsuccessful program logic encountered.
         */
         constexpr inline void initiate(void) { if (SIZE_MAX == radix || 0u == radix || 1u == radix) { char radixString[20] {'0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'}; for (size_t index = 0u, iterator = radix; iterator; ++index) { *(radixString + index) = *("0123456789" + (iterator % 10u)); if (0u == (iterator /= 10u)) { for (iterator = 0u; iterator < index; (--index, ++iterator)) { *(radixString + index) ^= *(radixString + iterator); *(radixString + iterator) ^= *(radixString + index); *(radixString + index) ^= *(radixString + iterator); } iterator = 0u; } } terminate("[Syntax Error]: Invalid radix `", radixString, "` specified for `BigNumber` object", NULL); } }
+
+        constexpr inline void terminate(void) noexcept { BigUnsignedInteger::zero(); }
         inline void terminate(char const message[], ...) { va_list arguments; BigUnsignedInteger::zero(); ::putchar('\r'); va_start(arguments, message); for (char const *argument = message; NULL != argument; argument = va_arg(arguments, char const*)) for (char const *iterator = argument; '\0' ^ *iterator; ++iterator) ::putchar(*iterator); ::puts(""); va_end(arguments); ::abort(); }
 
         /* Method > (Allocate, Copy, Move, Size) --- NOTE (Lapys) ->
@@ -39,7 +41,7 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
                 - Size: Determines width of `Digit` subclass value.
         */
         constexpr inline void allocate(size_t const length) { if (length > SIZE_MAX /* NOTE (Lapys) -> Maximum allocable byte size per main memory allocation interface function call. */ / sizeof(Digit)) terminate("[Memory Error]: Unable to allocate additional memory for `BigNumber` object; The byte size requested is greater than allowed capable", NULL); else { void *allocation = NULL == this -> value ? ::malloc(length * sizeof(Digit)) : ::realloc(this -> value, length * sizeof(Digit)); if (NULL == allocation) terminate("[Memory Error]: Unable to ", NULL == this -> value ? "allocate additional " : "modify ", "memory for `BigNumber` object", NULL); else this -> value = (Digit*) allocation; } }
-        constexpr inline void copy(BigUnsignedInteger const& number) { if (&number != this) { if ((this -> length = number.length)) { BigUnsignedInteger::allocate(number.length); ::memcpy(this -> value, number.value, number.length * sizeof(Digit)); } else this -> value = NULL; } }
+        constexpr inline void copy(BigUnsignedInteger const& number) { if (&number != this) { if ((this -> length = number.length) && NULL != number.value) { BigUnsignedInteger::allocate(number.length); ::memcpy(this -> value, number.value, number.length * sizeof(Digit)); } else this -> value = NULL; } }
         template <size_t base> constexpr inline void copy(BigUnsignedInteger<base> const& number) { BigUnsignedInteger::move(BigUnsignedInteger::fromBase<base>(number)); }
         constexpr inline void move(BigUnsignedInteger&& number) noexcept { this -> length = number.length; this -> value = number.value; number.length = 0u; number.value = NULL; }
         constexpr inline static size_t size(void) noexcept { size_t size = 0u; for (size_t iterator = radix; iterator; iterator >>= 1u) ++size; return size ? size : 1u; }
@@ -89,9 +91,19 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
     public:
         // [Constructor]
         constexpr inline BigUnsignedInteger(void) : length{0u}, value{NULL} { initiate(); }
-        constexpr inline BigUnsignedInteger(primitive_t const number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy(BigUnsignedInteger::fromNumber(number)); }
-        constexpr inline BigUnsignedInteger(BigFloat<radix> const& number) : length{0u}, value{NULL} { std::cout << "[CONSTRUCTOR]" << std::endl; initiate(); BigUnsignedInteger::copy((BigUnsignedInteger) number); }
-        template <size_t base> constexpr inline BigUnsignedInteger(BigFloat<base> const& number) : length{0u}, value{NULL} { std::cout << "[CONSTRUCTOR <base>]" << std::endl; initiate(); BigUnsignedInteger::copy(BigUnsignedInteger::fromBase((BigUnsignedInteger<radix>) number)); }
+        constexpr inline BigUnsignedInteger(primitive_t const number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromNumber(number)); }
+
+        constexpr inline BigUnsignedInteger(BigFloat<radix> const& number) : length{0u}, value{NULL} { initiate(); BigFloat<radix>::isSafe(number) ? BigUnsignedInteger::copy((BigUnsignedInteger const&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
+        template <size_t base> constexpr inline BigUnsignedInteger(BigFloat<base> const& number) : length{0u}, value{NULL} { initiate(); BigFloat<base>::isSafe(number) ? BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
+        constexpr inline BigUnsignedInteger(BigFloat<radix>&& number) : length{0u}, value{NULL} { initiate(); BigFloat<radix>::isSafe(number) ? BigUnsignedInteger::move((BigUnsignedInteger&&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
+
+        constexpr inline BigUnsignedInteger(BigSignedInteger<radix> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy((BigUnsignedInteger const&) number); }
+        template <size_t base> constexpr inline BigUnsignedInteger(BigSignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)); }
+
+        constexpr inline BigUnsignedInteger(BigUnsignedInteger const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy(number); }
+        template <size_t base> constexpr inline BigUnsignedInteger(BigUnsignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromBase(number)); }
+
+        inline ~BigUnsignedInteger(void) { terminate(); }
 
         // Method > ...
             // [Conditional] Is (Big, Computable, Denormalized, Equal, Finite, Fraction, Greater, Infinite, Integer, Lesser, Negative, Non-Computable, Normalized, Positive, Safe, Significant, Zero)
@@ -183,7 +195,7 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
 };
 
 template <size_t radix>
-class BigSignedInteger : public BigUnsignedInteger<radix> { typedef signed long primitive_t;
+class BigSignedInteger : public BigUnsignedInteger<radix> { typedef signed long primitive_t; friend int main(void);
     /* ... */
     template <size_t> friend class BigFloat;
     template <size_t> friend class BigSignedInteger;
@@ -201,7 +213,7 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { typedef signed long 
 };
 
 template <size_t radix>
-class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_t;
+class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_t; friend int main(void);
     /* ... */
     template <size_t> friend class BigFloat;
     template <size_t> friend class BigSignedInteger;
@@ -283,8 +295,6 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
 
 /* Main */
 int main(void) {
-    std::cout << "[EVAL]: " << BigUnsignedInteger<10>(BigFloat<10>()).length << std::flush;
-
     // Return
     return EXIT_SUCCESS;
 }
