@@ -60,12 +60,12 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
                 constexpr inline static bool isHighestRank(Digit const digit) noexcept { return digit.value == radix - 1u; }
                 constexpr inline static bool isLesser(Digit const digitA, Digit const digitB) noexcept { return digitA.value < digitB.value; }
                 constexpr inline static bool isLowerRank(Digit const digit) noexcept { return digit.value < (radix / 2u); }
-                template <size_t> constexpr inline static bool isLowestRank(Digit const digit) noexcept { return 0u == digit.value; }
+                constexpr inline static bool isLowestRank(Digit const digit) noexcept { return 0u == digit.value; }
                 constexpr inline static bool isMeanRank(Digit const digit) noexcept { return digit.value == radix / 2u || ((radix & 1u) && (digit.value == (radix / 2u) + 1u)); }
                 constexpr inline static bool isUpperRank(Digit const digit) noexcept { return digit.value > (radix / 2u) + (radix & 1u); }
 
-                inline Digit const* add(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; if (Digit::isLowestRank<radix>(digitA)) { *evaluation = 0u; *(evaluation + 1) = digitB; } else if (Digit::isLowestRank<radix>(digitB)) { *evaluation = 0u; *(evaluation + 1) = digitA; } else if (Digit::isMeanRank<radix>(digitA) && Digit::isMeanRank<radix>(digitB)) { *evaluation = 1u; *(evaluation + 1) = 0u; } else if (Digit::isUpperRank<radix>(digitA)) { if (radix - digitA > digitB) { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } else { *evaluation = 1u; *(evaluation + 1) = digitB - (radix - digitA); } } else if (Digit::isUpperRank<radix>(digitB)) { if (radix - digitB > digitA) { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } else { *evaluation = 1u; *(evaluation + 1) = digitA - (radix - digitB); } } else { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } return &*evaluation; }
-                inline Digit const* multiply(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; ::memset(evaluation, 0u, sizeof(evaluation)); for (digit_t iterator = digitB.value; false == Digit::isLowestRank<radix>(iterator); --iterator) for (digit_t subiterator = digitA.value; false == Digit::isLowestRank<radix>(subiterator); --subiterator) { if (Digit::isHighestRank<radix>(*(evaluation + 1))) { ++*evaluation; *(evaluation + 1) = 0u; } else ++*(evaluation + 1); } return &*evaluation; }
+                inline Digit const* add(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; if (Digit::isLowestRank(digitA)) { *evaluation = 0u; *(evaluation + 1) = digitB; } else if (Digit::isLowestRank(digitB)) { *evaluation = 0u; *(evaluation + 1) = digitA; } else if (Digit::isMeanRank<radix>(digitA) && Digit::isMeanRank<radix>(digitB)) { *evaluation = 1u; *(evaluation + 1) = 0u; } else if (Digit::isUpperRank(digitA)) { if (radix - digitA > digitB) { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } else { *evaluation = 1u; *(evaluation + 1) = digitB - (radix - digitA); } } else if (Digit::isUpperRank(digitB)) { if (radix - digitB > digitA) { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } else { *evaluation = 1u; *(evaluation + 1) = digitA - (radix - digitB); } } else { *evaluation = 0u; *(evaluation + 1) = digitA + digitB; } return &*evaluation; }
+                inline Digit const* multiply(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; ::memset(evaluation, 0u, sizeof(evaluation)); for (digit_t iterator = digitB.value; false == Digit::isLowestRank(iterator); --iterator) for (digit_t subiterator = digitA.value; false == Digit::isLowestRank(subiterator); --subiterator) { if (Digit::isHighestRank(*(evaluation + 1))) { ++*evaluation; *(evaluation + 1) = 0u; } else ++*(evaluation + 1); } return &*evaluation; }
                 inline Digit const* subtract(Digit const digitA, Digit const digitB) noexcept { static Digit evaluation[2] {0}; if (digitA == digitB) { *evaluation = 0u; *(evaluation + 1) = 0u; } else if (digitA < digitB) { *evaluation = 1u; *(evaluation + 1) = digitB - digitA; } else { *evaluation = 0u; *(evaluation + 1) = digitA - digitB; } return &*evaluation; }
 
                 constexpr inline Digit& operator =(digit_t const value) noexcept { this -> value = value; return *this; }
@@ -92,56 +92,69 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
         // [Constructor]
         constexpr inline BigUnsignedInteger(void) : length{0u}, value{NULL} { initiate(); }
         constexpr inline BigUnsignedInteger(primitive_t const number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromNumber(number)); }
-
         constexpr inline BigUnsignedInteger(BigFloat<radix> const& number) : length{0u}, value{NULL} { initiate(); BigFloat<radix>::isSafe(number) ? BigUnsignedInteger::copy((BigUnsignedInteger const&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
         template <size_t base> constexpr inline BigUnsignedInteger(BigFloat<base> const& number) : length{0u}, value{NULL} { initiate(); BigFloat<base>::isSafe(number) ? BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
         constexpr inline BigUnsignedInteger(BigFloat<radix>&& number) : length{0u}, value{NULL} { initiate(); BigFloat<radix>::isSafe(number) ? BigUnsignedInteger::move((BigUnsignedInteger&&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
-
         constexpr inline BigUnsignedInteger(BigSignedInteger<radix> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy((BigUnsignedInteger const&) number); }
         template <size_t base> constexpr inline BigUnsignedInteger(BigSignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)); }
-
+        constexpr inline BigUnsignedInteger(BigSignedInteger<radix>&& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move((BigUnsignedInteger&&) number); }
         constexpr inline BigUnsignedInteger(BigUnsignedInteger const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy(number); }
-        template <size_t base> constexpr inline BigUnsignedInteger(BigUnsignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromBase(number)); }
+        template <size_t base> constexpr inline BigUnsignedInteger(BigUnsignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move((BigUnsignedInteger&&) BigUnsignedInteger::fromBase(number)); }
+        constexpr inline BigUnsignedInteger(BigUnsignedInteger&& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move((BigUnsignedInteger&&) number); }
 
+        // [Destructor]
         inline ~BigUnsignedInteger(void) { terminate(); }
 
         // Method > ...
-            // [Conditional] Is (Big, Computable, Denormalized, Equal, Finite, Fraction, Greater, Infinite, Integer, Lesser, Negative, Non-Computable, Normalized, Positive, Safe, Significant, Zero)
-            constexpr inline bool isBig(void) const noexcept { return BigUnsignedInteger::isBig(*this); }
-            constexpr static bool isBig(BigUnsignedInteger const&) noexcept;
+            // [Conditional] Is (Base Factor, Big, Computable, Denormalized, Equal, Finite, Fraction, Greater, Infinite, Integer, Lesser, Negative, Non-Computable, Normalized, Positive, Safe, Significant, Zero)
+            constexpr inline bool isBaseFactor(void) const noexcept { return BigUnsignedInteger::isBaseFactor(*this); }
+            constexpr static bool isBaseFactor(BigUnsignedInteger const&) noexcept;
+
+            inline bool isBig(void) const noexcept { return BigUnsignedInteger::isBig(*this); }
+            static bool isBig(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isComputable(void) const noexcept { return BigUnsignedInteger::isComputable(*this); }
             constexpr static bool isComputable(BigUnsignedInteger const&) noexcept;
-            constexpr inline bool isDenormalized(void) const noexcept { return BigUnsignedInteger::isDenormalized(*this); }
-            constexpr static bool isDenormalized(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isEqual(BigUnsignedInteger const& number) const noexcept { return BigUnsignedInteger::isEqual(*this, number); }
             template <size_t base> constexpr inline bool isEqual(BigUnsignedInteger<base> const& number) const noexcept { return BigUnsignedInteger::isEqual(*this, BigUnsignedInteger::fromBase<base>(number)); }
             constexpr static bool isEqual(BigUnsignedInteger const&, BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isFinite(void) const noexcept { return BigUnsignedInteger::isFinite(*this); }
             constexpr static bool isFinite(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isFraction(void) const noexcept { return BigUnsignedInteger::isFraction(*this); }
             constexpr static bool isFraction(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isGreater(BigUnsignedInteger const& number) const noexcept { return BigUnsignedInteger::isGreater(*this, number); }
             template <size_t base> constexpr inline bool isGreater(BigUnsignedInteger<base> const& number) const noexcept { return BigUnsignedInteger::isGreater(*this, BigUnsignedInteger::fromBase<base>(number)); }
             constexpr static bool isGreater(BigUnsignedInteger const&, BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isInfinite(void) const noexcept { return BigUnsignedInteger::isInfinite(*this); }
             constexpr static bool isInfinite(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isInteger(void) const noexcept { return BigUnsignedInteger::isInteger(*this); }
             constexpr static bool isInteger(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isLesser(BigUnsignedInteger const& number) const noexcept { return BigUnsignedInteger::isLesser(*this, number); }
             template <size_t base> constexpr inline bool isLesser(BigUnsignedInteger<base> const& number) const noexcept { return BigUnsignedInteger::isLesser(*this, BigUnsignedInteger::fromBase<base>(number)); }
             constexpr static bool isLesser(BigUnsignedInteger const&, BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isNegative(void) const noexcept { return BigUnsignedInteger::isNegative(*this); }
             constexpr static bool isNegative(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isNonComputable(void) const noexcept { return BigUnsignedInteger::isNonComputable(*this); }
             constexpr static bool isNonComputable(BigUnsignedInteger const&) noexcept;
-            constexpr inline bool isNormalized(void) const noexcept { return BigUnsignedInteger::isNormalized(*this); }
-            constexpr static bool isNormalized(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isPositive(void) const noexcept { return BigUnsignedInteger::isPositive(*this); }
             constexpr static bool isPositive(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isSafe(void) const noexcept { return BigUnsignedInteger::isSafe(*this); }
             constexpr static bool isSafe(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isSignificant(void) const noexcept { return BigUnsignedInteger::isSignificant(*this); }
             constexpr static bool isSignificant(BigUnsignedInteger const&) noexcept;
+
             constexpr inline bool isZero(void) const noexcept { return BigUnsignedInteger::isZero(*this); }
             constexpr static bool isZero(BigUnsignedInteger const&) noexcept;
 
@@ -159,38 +172,48 @@ class BigUnsignedInteger { typedef unsigned long primitive_t; friend int main(vo
             constexpr inline static BigUnsignedInteger add(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.add(numberB); return evaluation; }
             constexpr inline static BigUnsignedInteger& add(BigUnsignedInteger const& numberA, BigUnsignedInteger&& numberB) { numberB.add(numberA); return numberB; }
             constexpr inline static BigUnsignedInteger& add(BigUnsignedInteger&& numberA, BigUnsignedInteger const& numberB) { numberA.add(numberB); return numberA; }
+
             constexpr BigUnsignedInteger& decrement(void);
             constexpr inline BigUnsignedInteger decrement(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.decrement(); return evaluation; }
+
             constexpr BigUnsignedInteger& divide(BigUnsignedInteger const&);
             template <size_t base> constexpr inline BigUnsignedInteger& divide(BigUnsignedInteger<base> const& number) { return BigUnsignedInteger::divide(BigUnsignedInteger::fromBase<base>(number)); }
             constexpr inline static BigUnsignedInteger divide(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.divide(numberB); return evaluation; }
             constexpr inline static BigUnsignedInteger& divide(BigUnsignedInteger&& numberA, BigUnsignedInteger const& numberB) { numberA.divide(numberB); return numberA; }
+
             constexpr BigUnsignedInteger& exponentiate(BigUnsignedInteger const&);
             template <size_t base> constexpr inline BigUnsignedInteger& exponentiate(BigUnsignedInteger<base> const& number) { return BigUnsignedInteger::exponentiate(BigUnsignedInteger::fromBase<base>(number)); }
             constexpr inline static BigUnsignedInteger exponentiate(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.exponentiate(numberB); return evaluation; }
             constexpr inline static BigUnsignedInteger& exponentiate(BigUnsignedInteger&& numberA, BigUnsignedInteger const& numberB) { numberA.exponentiate(numberB); return numberA; }
+
             constexpr BigUnsignedInteger& increment(void);
             constexpr inline BigUnsignedInteger increment(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
+
             constexpr BigUnsignedInteger& multiply(BigUnsignedInteger const&);
             template <size_t base> constexpr inline BigUnsignedInteger& multiply(BigUnsignedInteger<base> const& number) { return BigUnsignedInteger::multiply(BigUnsignedInteger::fromBase<base>(number)); }
             constexpr inline static BigUnsignedInteger multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB); return evaluation; }
             constexpr inline static BigUnsignedInteger& multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger&& numberB) { numberB.multiply(numberA); return numberB; }
             constexpr inline static BigUnsignedInteger& multiply(BigUnsignedInteger&& numberA, BigUnsignedInteger const& numberB) { numberA.multiply(numberB); return numberA; }
+
             constexpr BigUnsignedInteger& shiftLeft(void);
             constexpr BigUnsignedInteger& shiftLeft(primitive_t const);
             constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftLeft(); return evaluation; }
             constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& numberA, primitive_t const numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.shiftLeft(numberB); return evaluation; }
+
             constexpr BigUnsignedInteger& shiftRight(void);
             constexpr BigUnsignedInteger& shiftRight(primitive_t const);
             constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftRight(); return evaluation; }
             constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& numberA, primitive_t const numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.shiftRight(numberB); return evaluation; }
-            constexpr BigUnsignedInteger& sign(void);
+
+            constexpr BigUnsignedInteger& sign(void) const noexcept;
             constexpr BigUnsignedInteger sign(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.sign(); return evaluation; }
+
             constexpr BigUnsignedInteger& subtract(BigUnsignedInteger const&);
             template <size_t base> constexpr inline BigUnsignedInteger& subtract(BigUnsignedInteger<base> const& number) { return BigUnsignedInteger::subtract(BigUnsignedInteger::fromBase<base>(number)); }
             constexpr inline static BigUnsignedInteger subtract(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB); return evaluation; }
             constexpr inline static BigUnsignedInteger& subtract(BigUnsignedInteger&& numberA, BigUnsignedInteger const& numberB) { numberA.subtract(numberB); return numberA; }
-            constexpr BigUnsignedInteger& unsign(void);
+
+            constexpr BigUnsignedInteger& unsign(void) const noexcept;
             constexpr BigUnsignedInteger unsign(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.unsign(); return evaluation; }
 };
 
@@ -201,15 +224,104 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { typedef signed long 
     template <size_t> friend class BigSignedInteger;
     template <size_t> friend class BigUnsignedInteger;
 
+    using BigUnsignedInteger<radix>::initiate;
+    using BigUnsignedInteger<radix>::terminate;
+
     // [...]
     private:
         // Initialization > Signedness
         bool signedness;
 
     // [...]
+    protected:
+        // Method > (Copy, Move)
+        constexpr inline void copy(BigSignedInteger const& number) noexcept { this -> signedness = number.signedness; BigUnsignedInteger<radix>::copy((BigUnsignedInteger<radix> const&) number); }
+        constexpr inline void move(BigSignedInteger& number) noexcept { this -> signedness = number.signedness; BigUnsignedInteger<radix>::move((BigUnsignedInteger<radix>&&) number); }
+
+    // [...]
     public:
         // [Constructor]
         constexpr inline BigSignedInteger(void) : BigUnsignedInteger<radix>(), signedness{false} {}
+        constexpr inline BigSignedInteger(primitive_t const number) : BigUnsignedInteger<radix>(), signedness{false} { BigSignedInteger::move(BigSignedInteger::fromNumber(number)); }
+        constexpr inline BigSignedInteger(BigFloat<radix> const& number) : BigUnsignedInteger<radix>(), signedness{false} { BigFloat<radix>::isSafe(number) ? BigSignedInteger::copy((BigSignedInteger const&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigSignedInteger` object", NULL); }
+        template <size_t base> constexpr inline BigSignedInteger(BigFloat<base> const& number) : BigUnsignedInteger<radix>(), signedness{false} { BigFloat<base>::isSafe(number) ? BigSignedInteger::move(BigSignedInteger::fromBase((BigSignedInteger<base> const&) number)) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigSignedInteger` object", NULL); }
+        constexpr inline BigSignedInteger(BigFloat<radix>&& number) : BigUnsignedInteger<radix>(), signedness{false} { BigFloat<radix>::isSafe(number) ? BigSignedInteger::move((BigSignedInteger&&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigSignedInteger` object", NULL); }
+        constexpr inline BigSignedInteger(BigSignedInteger const& number) : BigUnsignedInteger<radix>(), signedness{false} { BigSignedInteger::copy(number); }
+        template <size_t base> constexpr inline BigSignedInteger(BigSignedInteger<base> const& number) : BigUnsignedInteger<radix>(), signedness{false} { BigSignedInteger::copy(BigSignedInteger::fromBase(number)); }
+        constexpr inline BigSignedInteger(BigSignedInteger&& number) : BigUnsignedInteger<radix>(), signedness{false} { BigSignedInteger::move((BigSignedInteger&&) number); }
+        template <size_t base> constexpr inline BigSignedInteger(BigUnsignedInteger<base> const& number) : BigUnsignedInteger<radix>(number), signedness{false} {}
+        constexpr inline BigSignedInteger(BigUnsignedInteger<radix>&& number) : BigUnsignedInteger<radix>((BigUnsignedInteger<radix>&&) number), signedness{false} {}
+
+        // Method > ...
+            // [Conditional] Is (Big, Equal, Greater, Lesser, Negative, Positive)
+            inline bool isBig(void) const noexcept { return BigSignedInteger::isBig(*this); }
+            static bool isBig(BigSignedInteger const&) noexcept;
+
+            constexpr inline bool isEqual(BigSignedInteger const& number) const noexcept { return BigSignedInteger::isEqual(*this, number); }
+            template <size_t base> constexpr inline bool isEqual(BigSignedInteger<base> const& number) const noexcept { return BigSignedInteger::isEqual(*this, BigSignedInteger::fromBase<base>(number)); }
+            constexpr static bool isEqual(BigSignedInteger const&, BigSignedInteger const&) noexcept;
+
+            constexpr inline bool isGreater(BigSignedInteger const& number) const noexcept { return BigSignedInteger::isGreater(*this, number); }
+            template <size_t base> constexpr inline bool isGreater(BigSignedInteger<base> const& number) const noexcept { return BigSignedInteger::isGreater(*this, BigSignedInteger::fromBase<base>(number)); }
+            constexpr static bool isGreater(BigSignedInteger const&, BigSignedInteger const&) noexcept;
+
+            constexpr inline bool isLesser(BigSignedInteger const& number) const noexcept { return BigSignedInteger::isLesser(*this, number); }
+            template <size_t base> constexpr inline bool isLesser(BigSignedInteger<base> const& number) const noexcept { return BigSignedInteger::isLesser(*this, BigSignedInteger::fromBase<base>(number)); }
+            constexpr static bool isLesser(BigSignedInteger const&, BigSignedInteger const&) noexcept;
+
+            constexpr inline bool isNegative(void) const noexcept { return BigSignedInteger::isNegative(*this); }
+            constexpr static bool isNegative(BigSignedInteger const&) noexcept;
+
+            constexpr inline bool isPositive(void) const noexcept { return BigSignedInteger::isPositive(*this); }
+            constexpr static bool isPositive(BigSignedInteger const&) noexcept;
+
+            // [Miscellaneous] From (Base, Number), To (Base, Number, String), Zero
+            template <size_t base> constexpr static BigSignedInteger fromBase(BigSignedInteger<base> const&);
+            constexpr static BigSignedInteger fromNumber(primitive_t const number);
+            template <size_t base> constexpr static BigSignedInteger<base> toBase(BigSignedInteger const&);
+            constexpr static primitive_t toNumber(BigSignedInteger const&);
+            constexpr char* toString(void) const;
+            constexpr inline void zero(void) noexcept { BigSignedInteger::unsign(); BigUnsignedInteger<radix>::zero(); }
+
+            // [Operational] Add, Decrement, Divide, Exponentiate, Increment, Multiply, Sign, Subtract, Unsign
+            constexpr BigSignedInteger& add(BigSignedInteger const&);
+            template <size_t base> constexpr inline BigSignedInteger& add(BigSignedInteger<base> const& number) { return BigSignedInteger::add(BigSignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigSignedInteger add(BigSignedInteger const& numberA, BigSignedInteger const& numberB) { BigSignedInteger evaluation {}; evaluation.copy(numberA); evaluation.add(numberB); return evaluation; }
+            constexpr inline static BigSignedInteger& add(BigSignedInteger const& numberA, BigSignedInteger&& numberB) { numberB.add(numberA); return numberB; }
+            constexpr inline static BigSignedInteger& add(BigSignedInteger&& numberA, BigSignedInteger const& numberB) { numberA.add(numberB); return numberA; }
+
+            constexpr BigSignedInteger& decrement(void);
+            constexpr inline BigSignedInteger decrement(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.decrement(); return evaluation; }
+
+            constexpr BigSignedInteger& divide(BigSignedInteger const&);
+            template <size_t base> constexpr inline BigSignedInteger& divide(BigSignedInteger<base> const& number) { return BigSignedInteger::divide(BigSignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigSignedInteger divide(BigSignedInteger const& numberA, BigSignedInteger const& numberB) { BigSignedInteger evaluation {}; evaluation.copy(numberA); evaluation.divide(numberB); return evaluation; }
+            constexpr inline static BigSignedInteger& divide(BigSignedInteger&& numberA, BigSignedInteger const& numberB) { numberA.divide(numberB); return numberA; }
+
+            constexpr BigSignedInteger& exponentiate(BigSignedInteger const&);
+            template <size_t base> constexpr inline BigSignedInteger& exponentiate(BigSignedInteger<base> const& number) { return BigSignedInteger::exponentiate(BigSignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigSignedInteger exponentiate(BigSignedInteger const& numberA, BigSignedInteger const& numberB) { BigSignedInteger evaluation {}; evaluation.copy(numberA); evaluation.exponentiate(numberB); return evaluation; }
+            constexpr inline static BigSignedInteger& exponentiate(BigSignedInteger&& numberA, BigSignedInteger const& numberB) { numberA.exponentiate(numberB); return numberA; }
+
+            constexpr BigSignedInteger& increment(void);
+            constexpr inline BigSignedInteger increment(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
+
+            constexpr BigSignedInteger& multiply(BigSignedInteger const&);
+            template <size_t base> constexpr inline BigSignedInteger& multiply(BigSignedInteger<base> const& number) { return BigSignedInteger::multiply(BigSignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigSignedInteger multiply(BigSignedInteger const& numberA, BigSignedInteger const& numberB) { BigSignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB); return evaluation; }
+            constexpr inline static BigSignedInteger& multiply(BigSignedInteger const& numberA, BigSignedInteger&& numberB) { numberB.multiply(numberA); return numberB; }
+            constexpr inline static BigSignedInteger& multiply(BigSignedInteger&& numberA, BigSignedInteger const& numberB) { numberA.multiply(numberB); return numberA; }
+
+            constexpr BigSignedInteger& sign(void) noexcept;
+            constexpr BigSignedInteger sign(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.sign(); return evaluation; }
+
+            constexpr BigSignedInteger& subtract(BigSignedInteger const&);
+            template <size_t base> constexpr inline BigSignedInteger& subtract(BigSignedInteger<base> const& number) { return BigSignedInteger::subtract(BigSignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigSignedInteger subtract(BigSignedInteger const& numberA, BigSignedInteger const& numberB) { BigSignedInteger evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB); return evaluation; }
+            constexpr inline static BigSignedInteger& subtract(BigSignedInteger&& numberA, BigSignedInteger const& numberB) { numberA.subtract(numberB); return numberA; }
+
+            constexpr BigSignedInteger& unsign(void) noexcept;
+            constexpr BigSignedInteger unsign(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.unsign(); return evaluation; }
 };
 
 template <size_t radix>
@@ -219,22 +331,324 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
     template <size_t> friend class BigSignedInteger;
     template <size_t> friend class BigUnsignedInteger;
 
+    using BigSignedInteger<radix>::initiate;
+    using BigSignedInteger<radix>::terminate;
+
     // [...]
     public:
+        // Initialization > (Mantissa Length, State)
         size_t mantissaLength;
-        enum State {INDETERMINABLE, INFINITE, SAFE, UNCOMPUTABLE} state;
+        enum State {INFINITE, SAFE, UNCOMPUTABLE} state;
 
     // [...]
     public:
         // [Constructor]
         constexpr inline BigFloat(void) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { this -> length = 1u; }
+        constexpr inline BigFloat(primitive_t const number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move(BigFloat::fromNumber(number)); }
         constexpr inline BigFloat(State const state) : BigSignedInteger<radix>(), mantissaLength{0u}, state{state} {}
+        constexpr inline BigFloat(BigFloat const& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::copy(number); }
+        template <size_t base> constexpr inline BigFloat(BigFloat<base> const& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move(BigFloat::fromBase(number)); }
+        constexpr inline BigFloat(BigFloat&& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move(number); }
+        template <size_t base> constexpr inline BigFloat(BigSignedInteger<base> const& number) : BigSignedInteger<radix>(number), mantissaLength{0u}, state{State::SAFE} {}
+        constexpr inline BigFloat(BigSignedInteger<radix>&& number) : BigSignedInteger<radix>((BigSignedInteger<radix>&&) number), mantissaLength{0u}, state{State::SAFE} {}
+        template <size_t base> constexpr inline BigFloat(BigUnsignedInteger<base> const& number) : BigUnsignedInteger<radix>(number), BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} {}
+        constexpr inline BigFloat(BigUnsignedInteger<radix>&& number) : BigUnsignedInteger<radix>((BigUnsignedInteger<radix>&&) number), BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} {}
+
+        // Method > ...
+            // [Conditional] Is (Base Factor, Big, Computable, Equal, Finite, Fraction, Greater, Infinite, Integer, Lesser, Non-Computable, Safe, Significant, Zero)
+            constexpr inline bool isBaseFactor(void) const noexcept { return BigFloat::isBaseFactor(*this); }
+            constexpr static bool isBaseFactor(BigFloat const&) noexcept;
+
+            inline bool isBig(void) const noexcept { return BigFloat::isBig(*this); }
+            static bool isBig(BigFloat const&) noexcept;
+
+            constexpr inline bool isComputable(void) const noexcept { return BigFloat::isComputable(*this); }
+            constexpr static bool isComputable(BigFloat const&) noexcept;
+
+            constexpr inline bool isEqual(BigFloat const& number) const noexcept { return BigFloat::isEqual(*this, number); }
+            template <size_t base> constexpr inline bool isEqual(BigFloat<base> const& number) const noexcept { return BigFloat::isEqual(*this, BigFloat::fromBase<base>(number)); }
+            constexpr static bool isEqual(BigFloat const&, BigFloat const&) noexcept;
+
+            constexpr inline bool isFinite(void) const noexcept { return BigFloat::isFinite(*this); }
+            constexpr static bool isFinite(BigFloat const&) noexcept;
+
+            constexpr inline bool isFraction(void) const noexcept { return BigFloat::isFraction(*this); }
+            constexpr static bool isFraction(BigFloat const&) noexcept;
+
+            constexpr inline bool isGreater(BigFloat const& number) const noexcept { return BigFloat::isGreater(*this, number); }
+            template <size_t base> constexpr inline bool isGreater(BigFloat<base> const& number) const noexcept { return BigFloat::isGreater(*this, BigFloat::fromBase<base>(number)); }
+            constexpr static bool isGreater(BigFloat const&, BigFloat const&) noexcept;
+
+            constexpr inline bool isInfinite(void) const noexcept { return BigFloat::isInfinite(*this); }
+            constexpr static bool isInfinite(BigFloat const&) noexcept;
+
+            constexpr inline bool isInteger(void) const noexcept { return BigFloat::isInteger(*this); }
+            constexpr static bool isInteger(BigFloat const&) noexcept;
+
+            constexpr inline bool isLesser(BigFloat const& number) const noexcept { return BigFloat::isLesser(*this, number); }
+            template <size_t base> constexpr inline bool isLesser(BigFloat<base> const& number) const noexcept { return BigFloat::isLesser(*this, BigFloat::fromBase<base>(number)); }
+            constexpr static bool isLesser(BigFloat const&, BigFloat const&) noexcept;
+
+            constexpr inline bool isNonComputable(void) const noexcept { return BigFloat::isNonComputable(*this); }
+            constexpr static bool isNonComputable(BigFloat const&) noexcept;
+
+            constexpr inline bool isSafe(void) const noexcept { return BigFloat::isSafe(*this); }
+            constexpr static bool isSafe(BigFloat const&) noexcept;
+
+            constexpr inline bool isSignificant(void) const noexcept { return BigFloat::isSignificant(*this); }
+            constexpr static bool isSignificant(BigFloat const&) noexcept;
+
+            constexpr inline bool isZero(void) const noexcept { return BigFloat::isZero(*this); }
+            constexpr static bool isZero(BigFloat const&) noexcept;
+
+            // [Miscellaneous]
+            template <size_t base> constexpr static BigFloat fromBase(BigFloat<base> const&);
+            constexpr static BigFloat fromNumber(primitive_t const number);
+            template <size_t base> constexpr static BigFloat<base> toBase(BigFloat const&);
+            constexpr static primitive_t toNumber(BigFloat const&);
+            constexpr char* toString(void) const;
+            constexpr inline void zero(void) noexcept { this -> mantissaLength = 0u; this -> state = State::SAFE; BigSignedInteger<radix>::zero(); }
+
+            // [Operational]
+            constexpr BigFloat& add(BigFloat const&);
+            template <size_t base> constexpr inline BigFloat& add(BigFloat<base> const& number) { return BigFloat::add(BigFloat::fromBase<base>(number)); }
+            constexpr inline static BigFloat add(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.add(numberB); return evaluation; }
+            constexpr inline static BigFloat& add(BigFloat const& numberA, BigFloat&& numberB) { numberB.add(numberA); return numberB; }
+            constexpr inline static BigFloat& add(BigFloat&& numberA, BigFloat const& numberB) { numberA.add(numberB); return numberA; }
+            constexpr BigFloat& decrement(void);
+            constexpr inline BigFloat decrement(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.decrement(); return evaluation; }
+            constexpr BigFloat& divide(BigFloat const&);
+            template <size_t base> constexpr inline BigFloat& divide(BigFloat<base> const& number) { return BigFloat::divide(BigFloat::fromBase<base>(number)); }
+            constexpr inline static BigFloat divide(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.divide(numberB); return evaluation; }
+            constexpr inline static BigFloat& divide(BigFloat&& numberA, BigFloat const& numberB) { numberA.divide(numberB); return numberA; }
+            constexpr BigFloat& exponentiate(BigFloat const&);
+            template <size_t base> constexpr inline BigFloat& exponentiate(BigFloat<base> const& number) { return BigFloat::exponentiate(BigFloat::fromBase<base>(number)); }
+            constexpr inline static BigFloat exponentiate(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.exponentiate(numberB); return evaluation; }
+            constexpr inline static BigFloat& exponentiate(BigFloat&& numberA, BigFloat const& numberB) { numberA.exponentiate(numberB); return numberA; }
+            constexpr BigFloat& increment(void);
+            constexpr inline BigFloat increment(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
+            constexpr BigFloat& multiply(BigFloat const&);
+            template <size_t base> constexpr inline BigFloat& multiply(BigFloat<base> const& number) { return BigFloat::multiply(BigFloat::fromBase<base>(number)); }
+            constexpr inline static BigFloat multiply(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB); return evaluation; }
+            constexpr inline static BigFloat& multiply(BigFloat const& numberA, BigFloat&& numberB) { numberB.multiply(numberA); return numberB; }
+            constexpr inline static BigFloat& multiply(BigFloat&& numberA, BigFloat const& numberB) { numberA.multiply(numberB); return numberA; }
+            constexpr BigFloat& shiftLeft(void);
+            constexpr BigFloat& shiftLeft(typename BigUnsignedInteger<radix>::primitive_t const);
+            constexpr inline static BigFloat shiftLeft(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.shiftLeft(); return evaluation; }
+            constexpr inline static BigFloat shiftLeft(BigFloat const& numberA, primitive_t const numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.shiftLeft(numberB); return evaluation; }
+            constexpr BigFloat& shiftRight(void);
+            constexpr BigFloat& shiftRight(typename BigUnsignedInteger<radix>::primitive_t const);
+            constexpr inline static BigFloat shiftRight(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.shiftRight(); return evaluation; }
+            constexpr inline static BigFloat shiftRight(BigFloat const& numberA, primitive_t const numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.shiftRight(numberB); return evaluation; }
+            constexpr BigFloat& subtract(BigFloat const&);
+            template <size_t base> constexpr inline BigFloat& subtract(BigFloat<base> const& number) { return BigFloat::subtract(BigFloat::fromBase<base>(number)); }
+            constexpr inline static BigFloat subtract(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB); return evaluation; }
+            constexpr inline static BigFloat& subtract(BigFloat&& numberA, BigFloat const& numberB) { numberA.subtract(numberB); return numberA; }
 };
 
 /* Modification */
-    /* Big Float --- CHECKPOINT (Lapys) */
-    /* Big Signed Integer --- CHECKPOINT (Lapys) */
+    /* Big Float */
+        // Add --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::add(BigFloat const& number) {}
+
+        // Decrement --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr BigFloat<radix>& BigFloat<radix>::decrement(void) {}
+
+        // Divide --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::divide(BigFloat const& number) {}
+
+        // Exponentiate --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::exponentiate(BigFloat const& number) {}
+
+        // From Base --- CHECKPOINT (Lapys)
+        // template <size_t radix> template <size_t base>
+        // constexpr inline BigFloat<radix> BigFloat<radix>::fromBase(BigFloat<base> const& number) {}
+
+        // From Number --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix> BigFloat<radix>::fromNumber(primitive_t const number) {}
+
+        // Increment --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::increment(void) {}
+
+        // Is ...
+        template <size_t radix> inline bool BigFloat<radix>::isBig(BigFloat const& number) noexcept { static BigFloat const PRIMITIVE_MAX {LDBL_MAX}; return BigFloat::isGreater(number, PRIMITIVE_MAX); }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isComputable(BigFloat const& number) noexcept { return State::UNCOMPUTABLE != number.state; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isFinite(BigFloat const& number) noexcept { return State::INFINITE != number.state; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isFraction(BigFloat const& number) noexcept { return number.mantissaLength; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isInfinite(BigFloat const& number) noexcept { return State::INFINITE == number.state; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isInteger(BigFloat const& number) noexcept { return 0u == number.mantissaLength; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isNonComputable(BigFloat const& number) noexcept { return State::UNCOMPUTABLE == number.state; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isSafe(BigFloat const& number) noexcept { return BigFloat::isComputable(number) && BigFloat::isFinite(number); }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isSignificant(BigFloat const& number) noexcept { return (number.length || number.mantissaLength) && NULL != number.value; }
+        template <size_t radix> constexpr inline bool BigFloat<radix>::isZero(BigFloat const& number) noexcept { return (0u == number.length && 0u == number.mantissaLength) && NULL == number.value; }
+
+        // Is Base Factor
+        template <size_t radix>
+        constexpr inline bool BigFloat<radix>::isBaseFactor(BigFloat const& number) noexcept { return BigFloat::isInteger() && BigUnsignedInteger<radix>::isBaseFactor(number); }
+
+        // Is Equal --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigFloat<radix>::isEqual(BigFloat const& numberA, BigFloat const& numberB) noexcept {}
+
+        // Is Greater --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigFloat<radix>::isGreater(BigFloat const& numberA, BigFloat const& numberB) noexcept {}
+
+        // Is Lesser --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigFloat<radix>::isLesser(BigFloat const& numberA, BigFloat const& numberB) noexcept {}
+
+        // Multiply --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::multiply(BigFloat const& number) {}
+
+        // Shift Left --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::shiftLeft(void) {}
+
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::shiftLeft(typename BigUnsignedInteger<radix>::primitive_t const number) {}
+
+        // Shift Right --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::shiftRight(void) {}
+
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::shiftRight(typename BigUnsignedInteger<radix>::primitive_t const number) {}
+
+        // Subtract --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::subtract(BigFloat const& number) {}
+
+        // To Base --- CHECKPOINT (Lapys)
+        // template <size_t radix> template <size_t base>
+        // constexpr inline BigFloat<base> BigFloat<radix>::toBase(BigFloat const& number) {}
+
+        // To Number --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline primitive_t BigFloat<radix>::toNumber(BigFloat const& number) {}
+
+        // To String --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline char* BigFloat<radix>::toString(void) const {}
+
+    /* Big Signed Integer */
+        // Add --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::add(BigSignedInteger const& number) {}
+
+        // Decrement --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::decrement(void) {}
+
+        // Divide --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix>& divide(BigSignedInteger const& number) {}
+
+        // Exponentiate --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix>& exponentiate(BigSignedInteger const& number) {}
+
+        // From Base --- CHECKPOINT (Lapys)
+        // template <size_t radix> template <size_t base>
+        // constexpr inline BigSignedInteger<radix> BigSignedInteger<radix>::fromBase(BigSignedInteger<base> const& number) {}
+
+        // From Number --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix> BigSignedInteger<radix>::fromNumber(primitive_t const number) {}
+
+        // Increment --- CHECKPOINT (Lapys)
+        template <size_t radix>
+        constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::increment(void) {}
+
+        // Is ...
+        template <size_t radix> inline bool BigSignedInteger<radix>::isBig(BigSignedInteger const& number) noexcept { static BigSignedInteger const PRIMITIVE_MAX {LONG_MAX}; return BigSignedInteger::isGreater(number, PRIMITIVE_MAX); }
+        template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isNegative(BigSignedInteger const& number) noexcept { return number.signedness; }
+        template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isPositive(BigSignedInteger const& number) noexcept { return false == number.signedness; }
+
+        // Is Equal --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigSignedInteger<radix>::isEqual(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept {}
+
+        // Is Greater --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigSignedInteger<radix>::isGreater(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept {}
+
+        // Is Lesser --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigSignedInteger<radix>::isLesser(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept {}
+
+        // Multiply --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::multiply(BigSignedInteger const& number) {}
+
+        // Subtract --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::subtract(BigSignedInteger const& number) {}
+
+        // To Base --- CHECKPOINT (Lapys)
+        // template <size_t radix> template <size_t base>
+        // constexpr inline BigSignedInteger<base> BigSignedInteger<radix>::toBase(BigSignedInteger const& number) {}
+
+        // To Number --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline primitive_t BigSignedInteger<radix>::toNumber(BigSignedInteger const& number) {}
+
+        // To String --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline char* BigSignedInteger<radix>::toString(void) const {}
+
+        // (Un)Sign
+        template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::sign(void) noexcept { this -> signedness = false == this -> signedness; return *this; }
+        template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::unsign(void) noexcept { this -> signedness = false; return *this; }
+
     /* Big Unsigned Integer */
+        // Add --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::add(BigUnsignedInteger const& number) {}
+
+        // Decrement
+        template <size_t radix>
+        constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::decrement(void) {
+            // Logic
+            if (BigUnsignedInteger::isSignificant()) {
+                // Logic
+                if (this -> length == 1u && Digit::isEqual(*(this -> value), 1u))
+                    // ...
+                    BigUnsignedInteger::zero();
+
+                else {
+                    // Loop
+                    for (Digit *iterator = this -> value + (this -> length); iterator-- != this -> value; ) {
+                        // Logic > Update > Iterator
+                        if (Digit::isLowestRank(*iterator)) *iterator = radix - 1u;
+                        else { --*iterator; iterator = this -> value; }
+                    }
+
+                    // Logic > Modification > Target > Value
+                    if (Digit::isLowestRank(*(this -> value)))
+                    ::memmove(this -> value, this -> value + 1, --(this -> length) * sizeof(Digit));
+                }
+            }
+
+            // Return
+            return *this;
+        }
+
+        // Divide --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::divide(BigUnsignedInteger const& number) {}
+
+        // Exponentiate --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::exponentiate(BigUnsignedInteger const& number) {}
+
         // From Base --- CHECKPOINT (Lapys)
         template <size_t radix> template <size_t base>
         constexpr inline BigUnsignedInteger<radix> BigUnsignedInteger<radix>::fromBase(BigUnsignedInteger<base> const& number) {
@@ -247,37 +661,217 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
             return evaluation;
         }
 
-        // From Number --- CHECKPOINT (Lapys)
+        // From Number
         template <size_t radix>
         constexpr inline BigUnsignedInteger<radix> BigUnsignedInteger<radix>::fromNumber(primitive_t const number) {
             // Evaluation > Evaluation
             BigUnsignedInteger<radix> evaluation {};
 
-            (void) number;
+            // Logic
+            if (number) {
+                // Initialization > Length
+                unsigned char length = 0u;
+
+                // ...
+                evaluation.allocate(20u);
+                for (primitive_t iterator = number; iterator; iterator /= radix) *(evaluation.value + length++) = iterator % radix;
+                for (--length; evaluation.value + length > evaluation.value + evaluation.length; (++evaluation.length, --length)) { *(evaluation.value + evaluation.length) ^= *(evaluation.value + length); *(evaluation.value + length) ^= *(evaluation.value + evaluation.length); *(evaluation.value + evaluation.length) ^= *(evaluation.value + length); }
+                evaluation.allocate((evaluation.length += length + 1u));
+            }
 
             // Return
             return evaluation;
         }
 
-        // To Base --- CHECKPOINT (Lapys)
+        // Increment --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::increment(void) {}
+
+        // Is ...
+        template <size_t radix> inline bool BigUnsignedInteger<radix>::isBig(BigUnsignedInteger const& number) noexcept { static BigUnsignedInteger const PRIMITIVE_MAX {ULONG_MAX}; return BigUnsignedInteger::isGreater(number, PRIMITIVE_MAX); }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isComputable(BigUnsignedInteger const&) noexcept { return true; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isFinite(BigUnsignedInteger const&) noexcept { return true; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isFraction(BigUnsignedInteger const&) noexcept { return false; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isInfinite(BigUnsignedInteger const&) noexcept { return false; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isInteger(BigUnsignedInteger const&) noexcept { return true; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isNegative(BigUnsignedInteger const&) noexcept { return false; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isNonComputable(BigUnsignedInteger const&) noexcept { return false; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isPositive(BigUnsignedInteger const&) noexcept { return true; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSafe(BigUnsignedInteger const&) noexcept { return true; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(BigUnsignedInteger const& number) noexcept { return number.length && NULL != number.value; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(BigUnsignedInteger const& number) noexcept { return 0u == number.length && NULL == number.value; }
+
+        // Is Base Factor
+        template <size_t radix>
+        constexpr inline bool BigUnsignedInteger<radix>::isBaseFactor(BigUnsignedInteger<radix> const& number) noexcept {
+            // Initialization > Evaluation
+            // : Loop > Update > Evaluation
+            size_t evaluation = number.length > 1u && Digit::isEqual(*(number.value), 1u);
+            while (evaluation && evaluation < number.length) evaluation = Digit::isLowestRank(*(number.value + evaluation)) ? evaluation + 1u : 0;
+
+            // Return
+            return (bool) evaluation;
+        }
+
+        // Is Big --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // inline bool BigUnsignedInteger<radix>::isBig(BigUnsignedInteger<radix> const& number) noexcept {}
+
+        // Is Equal ---  CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigUnsignedInteger<radix>::isEqual(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) noexcept {}
+
+        // Is Greater --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline bool BigUnsignedInteger<radix>::isGreater(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) noexcept {}
+
+        // Is Lesser
+        template <size_t radix>
+        constexpr inline bool BigUnsignedInteger<radix>::isLesser(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) noexcept {
+            // Evaluation > Evaluation
+            bool evaluation = false;
+
+            if (BigUnsignedInteger::isZero(numberA)) evaluation = false == BigUnsignedInteger::isZero(numberB);
+            else if (BigUnsignedInteger::isZero(numberB)) evaluation = BigUnsignedInteger::isSignificant(numberA);
+            else if (numberA.length > numberB.length) evaluation = false;
+            else if (numberA.length < numberB.length) evaluation = true;
+            else {
+                // Initialization > Pending
+                bool pending = true;
+
+                // Loop > Logic > Update > Evaluation
+                for (size_t iterator = 0u; pending && (iterator ^ numberA.length); ++iterator)
+                if (Digit::isLesser(*(numberA.value + iterator), *(numberB.value + iterator))) { evaluation = true; pending = false; }
+                else if (false == Digit::isEqual(*(numberA.value + iterator), *(numberB.value + iterator)))  { pending = false; }
+            }
+
+            // Return
+            return evaluation;
+        }
+
+        // Multiply --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigUnsignedInteger const& number) {}
+
+        // Shift Left --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::shiftLeft(void) {}
+
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::shiftLeft(primitive_t const number) {}
+
+        // Shift Right --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::shiftRight(void) {}
+
+        // template <size_t radix>
+        // constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::shiftRight(primitive_t const number) {}
+
+        // Subtract
+        template <size_t radix>
+        constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::subtract(BigUnsignedInteger const& number) {
+            // Logic --- REDACT (Lapys)
+            if (BigUnsignedInteger::isSignificant()) {
+                // Logic > ...
+                if (number.length == 1u && Digit::isEqual(*number.value, 1u)) BigUnsignedInteger::decrement();
+                else if (BigUnsignedInteger::isSignificant(number)) {
+                    // Logic > ...
+                    if (BigUnsignedInteger::isLesser(number)) BigUnsignedInteger::zero();
+                    else if (BigUnsignedInteger::isBaseFactor(number)) {
+                        // Modification > Target > Length
+                        // : Logic > ... --- MINIFY (Lapys)
+                        this -> length -= number.length;
+
+                        if (this -> value == (this -> value + this -> length) && Digit::isEqual(*(this -> value + (this -> length)), 1u)) ::memmove(this -> value, this -> value + 1, (this -> length += number.length - 1u) * sizeof(Digit));
+                        else { size_t const index = ++(this -> length); BigUnsignedInteger::decrement(); ::memmove(this -> value + (this -> length), this -> value + index, (number.length - 1u) * sizeof(Digit)); this -> length += number.length - 1u; }
+                    }
+
+                    else {
+                        // Loop > Logic > ...
+                        for (Digit *digit = number.value + (number.length), *iterator = this -> value + (this -> length - 1u); digit-- != number.value; --iterator)
+                        if (Digit::isGreater(*digit, *iterator)) {
+                            // Loop > Logic > ...; ...
+                            for (Digit *subiterator = iterator; subiterator-- != this -> value; )
+                            if (false == Digit::isLowestRank(*subiterator)) { --*subiterator; subiterator = this -> value; }
+                            else *subiterator = radix - 1u;
+
+                            *iterator += Digit(radix) - *digit;
+                        } else *iterator -= *digit;
+
+                        // Logic --- NOTE (Lapys) -> Remove leading zero, or correct zeroed value.
+                        if (Digit::isLowestRank(*(this -> value))) {
+                            // Initialization > Length
+                            size_t length = 1u;
+
+                            // Loop > Update > Length
+                            // : Logic > ...
+                            while ((length ^ this -> length) && Digit::isLowestRank(*(this -> value + length))) ++length;
+
+                            if (length == this -> length) BigUnsignedInteger::zero();
+                            else ::memmove(this -> value, this -> value + length, (this -> length -= length) * sizeof(Digit));
+                        }
+                    }
+                }
+            }
+
+            // Return
+            return *this;
+        }
+
+        // (Un)Sign
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::sign(void) const noexcept { return *this; }
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::unsign(void) const noexcept { return *this; }
+
+        // To Base
         template <size_t radix> template <size_t base>
         constexpr inline BigUnsignedInteger<base> BigUnsignedInteger<radix>::toBase(BigUnsignedInteger<radix> const& number) {
             // Evaluation > Evaluation
             BigUnsignedInteger<base> evaluation {};
 
-            (void) number;
+            // Logic
+            if (BigUnsignedInteger<base>::isSignificant(number)) {
+                // Initialization > (Incrementor, Iterator)
+                BigUnsignedInteger<base> const incrementor {system};
+                BigUnsignedInteger<base> iterator;
+
+                // Logic > ... --- REDACT (Lapys)
+                if (BigUnsignedInteger<base>::isSignificant(number)) { evaluation.allocate((evaluation.length = 1u)); iterator.allocate((iterator.length = 1u)); *evaluation.value = *iterator.value = 1u; }
+                for (size_t count = 0u; count ^ (SIZE_MAX / sizeof(Digit)); ++count) {
+                    if (BigUnsignedInteger<base>::isLesser(iterator, number)) iterator.multiply(incrementor);
+                    else { evaluation.shiftLeft(count); count = (SIZE_MAX / sizeof(Digit)) - 1u; }
+                }
+
+                // Logic > ... --- REDACT (Lapys)
+                if (BigUnsignedInteger<base>::isGreater(iterator, number)) {
+                    evaluation.shiftRight();
+                    iterator.divide(incrementor);
+
+                    while (BigUnsignedInteger::isLesser(iterator, number)) { evaluation.add(incrementor); iterator.add(incrementor); }
+                    if (BigUnsignedInteger::isGreater(iterator, number)) {
+                        evaluation.subtract(incrementor); iterator.subtract(incrementor);
+                        while (BigUnsignedInteger::isLesser(iterator, number)) { evaluation.increment(); iterator.increment(); }
+                    }
+                }
+            }
 
             // Return
             return evaluation;
         }
 
-        // To Number --- CHECKPOINT (Lapys)
+        // To Number
         template <size_t radix>
         constexpr inline typename BigUnsignedInteger<radix>::primitive_t BigUnsignedInteger<radix>::toNumber(BigUnsignedInteger const& number) {
             // Evaluation > Evaluation
-            primitive_t evaluation {0u};
+            primitive_t evaluation {0uL};
 
-            (void) number;
+            // Logic > ...
+            if (BigUnsignedInteger::isBig(number)) { ::puts("\rUnable to convert arbitrary-precision number to fixed-width integer"); ::abort(); }
+            else if (BigUnsignedInteger::isSignificant(number)) {
+                // Initialization > Exponent
+                // : Loop > Update > Evaluation
+                BigUnsignedInteger<radix>::primitive_t exponent = 1uL;
+                for (Digit *iterator = number.value + (number.length); iterator-- != number.value; exponent *= 10uL) evaluation += exponent * *iterator;
+            }
 
             // Return
             return evaluation;
@@ -287,14 +881,109 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
         template <size_t radix>
         constexpr inline char* BigUnsignedInteger<radix>::toString(void) const {
             // Evaluation > Evaluation
-            char evaluation[] {NULL};
+            char *evaluation = NULL;
+
+            // Logic > ...
+            if (BigUnsignedInteger::isZero()) {
+                // (Logic > )Update > Evaluation
+                evaluation = (char*) ::malloc(2u * sizeof(char));
+                if (NULL != evaluation) { *evaluation = '0'; *(evaluation + 1) = '\0'; }
+            }
+
+            else {
+                // Initialization > (Delimit, (Digit) Length)
+                bool delimit = false;
+                size_t digitLength = 0u;
+                size_t length = 0u;
+
+                // Update > Evaluation
+                evaluation = (char*) ::malloc((this -> length + 1u) * sizeof(char));
+
+                // Logic
+                if (NULL != evaluation) {
+                    // Loop
+                    for (size_t iterator = 0u; iterator ^ this -> length; ++iterator) {
+                        // Initialization > Digit
+                        Digit digit = *(this -> value + iterator);
+
+                        // Logic
+                        if (delimit) {
+                            // [Start] Update > Evaluation
+                            *(evaluation + length++) = '[';
+
+                            // Logic
+                            if (digit) {
+                                // Initialization > (Current Digit Length, Sub-Iterator)
+                                size_t currentDigitLength = 0u;
+                                size_t subiterator = length;
+
+                                // Loop > Update > (Current Digit Length, Evaluation)
+                                for (; digit; digit /= 10u) { ++currentDigitLength; *(evaluation + length++) = *("0123456789" + (digit % 10u)); }
+
+                                // Logic
+                                if (currentDigitLength > digitLength) {
+                                    // Update > (Evaluation, Iterator, Length)
+                                    evaluation = (char*) ::realloc(evaluation, (((currentDigitLength - 1u) * 3u) + 60u + 1u) * sizeof(char));
+                                    iterator = NULL == evaluation ? this -> length - 1u : 0u;
+                                    length = 0u;
+                                }
+
+                                else {
+                                    // Loop > Update > Evaluation
+                                    for (size_t sublength = length - 1u; subiterator < sublength; (++subiterator, ++sublength)) {
+                                        *(evaluation + subiterator) ^= *(evaluation + sublength);
+                                        *(evaluation + sublength) ^= *(evaluation + subiterator);
+                                        *(evaluation + subiterator) ^= *(evaluation + sublength);
+                                    }
+                                }
+                            }
+
+                            else
+                                // Update > Evaluation
+                                *(evaluation + length++) = '0';
+
+                            // [End] Update > Evaluation
+                            *(evaluation + length++) = ']';
+                        }
+
+                        else {
+                            // Logic
+                            if (36u < (size_t) digit) {
+                                // Deletion > Evaluation; Loop > Update > Digit Length
+                                ::free(evaluation);
+                                while (digit) { digit /= 10u; ++digitLength; }
+
+                                // Update > (Delimit, Evaluation, Iterator, Length)
+                                delimit = true;
+                                evaluation = (char*) ::malloc((((digitLength - 1u) * 3u) + 60u + 1u) * sizeof(char));
+                                iterator = NULL == evaluation ? this -> length - 1u : 0u;
+                                length = 0u;
+                            }
+
+                            else
+                                // Update > Evaluation
+                                *(evaluation + length++) = *("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" + digit);
+                        }
+                    }
+
+                    // Logic > Update > Evaluation
+                    if (NULL != evaluation) *(evaluation + length) = '\0';
+                }
+            }
 
             // Return
             return evaluation;
         }
 
-/* Main */
+/* Main --- NOTE (Lapys) -> https://existentialcomics.com/comic/1 */
 int main(void) {
+    BigUnsignedInteger<10> number {2020u};
+
+    std::cout << "[EVAL]: " << number.toString() << std::endl; number.subtract(1u);
+    std::cout << "[EVAL]: " << number.toString() << std::endl; number.subtract(50u);
+    std::cout << "[EVAL]: " << number.toString() << std::endl; number.subtract(19u);
+    std::cout << "[EVAL]: " << number.toString() << std::flush;
+
     // Return
     return EXIT_SUCCESS;
 }

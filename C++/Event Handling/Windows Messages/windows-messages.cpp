@@ -1925,30 +1925,30 @@
             /*case MCIWNDM_VALIDATEMEDIA: break;*/
             case MSG_FTS_JUMP_QWORD /* -> RB_SHOWBAND || TB_GETTOOLTIPS */: break;
             case MSG_FTS_JUMP_VA /* -> TBM_GETBUDDY || TB_AUTOSIZE || TTM_SETTITLEW */: break;
-            case MSG_FTS_WHERE_IS_IT /* -> RB_SETPALETTE || TB_SETPARENT */: break;
-            case MSG_GET_DEFFONT /* -> TB_GETBUTTONTEXTA */: break;
-            case MSG_REINDEX_REQUEST /* -> TB_SETTOOLTIPS */: break;
+            case MSG_FTS_WHERE_IS_IT /* -> RB_SETPALETTE || TB_SETPARENT */: ::printmln(screenConsoleBufferHandle, "..."); break;
+            case MSG_GET_DEFFONT /* -> TB_GETBUTTONTEXTA */: ::printmln(screenConsoleBufferHandle, "Get Default Font"); break;
+            case MSG_REINDEX_REQUEST /* -> TB_SETTOOLTIPS */: ::printmln(screenConsoleBufferHandle, "Re-Index Request"); break;
             /*case NIN_SELECT: break;*/
-            case OCM_CHARTOITEM: break;
-            case OCM_COMMAND: break;
-            case OCM_COMPAREITEM: break;
-            case OCM_CTLCOLOR: break;
-            case OCM_CTLCOLORBTN: break;
-            case OCM_CTLCOLORDLG: break;
-            case OCM_CTLCOLOREDIT: break;
-            case OCM_CTLCOLORLISTBOX: break;
-            case OCM_CTLCOLORMSGBOX: break;
-            case OCM_CTLCOLORSCROLLBAR: break;
-            case OCM_CTLCOLORSTATIC: break;
-            case OCM_DELETEITEM: break;
-            case OCM_DRAWITEM: break;
-            case OCM_HSCROLL: break;
-            case OCM_MEASUREITEM: break;
-            case OCM_NOTIFY: break;
-            case OCM_PARENTNOTIFY: break;
-            case OCM_VKEYTOITEM: break;
-            case OCM_VSCROLL: break;
-            case OCM__BASE: break;
+            case OCM_CHARTOITEM: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Character To Item"); break;
+            case OCM_COMMAND: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Command"); break;
+            case OCM_COMPAREITEM: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Compare Item"); break;
+            case OCM_CTLCOLOR: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color"); break;
+            case OCM_CTLCOLORBTN: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color Button"); break;
+            case OCM_CTLCOLORDLG: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color Dialog"); break;
+            case OCM_CTLCOLOREDIT: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color Edit"); break;
+            case OCM_CTLCOLORLISTBOX: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color List Box"); break;
+            case OCM_CTLCOLORMSGBOX: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color Message Box"); break;
+            case OCM_CTLCOLORSCROLLBAR: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color Scrollbar"); break;
+            case OCM_CTLCOLORSTATIC: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Control Color Static"); break;
+            case OCM_DELETEITEM: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Delete Item"); break;
+            case OCM_DRAWITEM: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Draw Item"); break;
+            case OCM_HSCROLL: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Horizontal Scroll"); break;
+            case OCM_MEASUREITEM: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Measure Item"); break;
+            case OCM_NOTIFY: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Notify"); break;
+            case OCM_PARENTNOTIFY: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Parent Notify"); break;
+            case OCM_VKEYTOITEM: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Virtual Key to Item"); break;
+            case OCM_VSCROLL: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Vertical Scroll"); break;
+            case OCM__BASE: ::printmln(screenConsoleBufferHandle, "Object Linking & Embedding Control -> Base"); break;
             /*case PBM_DELTAPOS: break;*/
             /*case PBM_GETPOS: break;*/
             /*case PBM_GETRANGE: break;*/
@@ -1959,82 +1959,101 @@
             /*case PBM_SETSTEP: break;*/
             /*case PBM_STEPIT: break;*/
             /*case PSM_ADDPAGE: break;*/
-            case PSM_APPLY /* -> UDM_GETBASE */: break;
+            case PSM_APPLY /* -> UDM_GETBASE */: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Apply"); break;
             /*case PSM_CANCELTOCLOSE: break;*/
             /*case PSM_CHANGED: break;*/
             /*case PSM_GETCURRENTPAGEHWND: break;*/
             /*case PSM_GETRESULT: break;*/
-            case PSM_GETTABCONTROL: break;
-            case PSM_HWNDTOINDEX: break;
+            case PSM_GETTABCONTROL: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Get Tab Control"); break;
+            case PSM_HWNDTOINDEX: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Window Handle to Index"); break;
             /*case PSM_IDTOINDEX: break;*/
-            case PSM_INDEXTOHWND: break;
+            case PSM_INDEXTOHWND: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Index To Window Handle"); break;
             /*case PSM_INDEXTOID: break;*/
-            case PSM_INDEXTOPAGE: break;
+            case PSM_INDEXTOPAGE: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Index To Page"); break;
             /*case PSM_INSERTPAGE: break;*/
-            case PSM_ISDIALOGMESSAGE: break;
+            case PSM_ISDIALOGMESSAGE: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Is Dialog Message"); break;
             /*case PSM_PAGETOINDEX: break;*/
-            case PSM_PRESSBUTTON /* -> UDM_SETPOS32 || WM_CAP_DRIVER_GET_VERSIONW */: break;
+            case PSM_PRESSBUTTON /* -> UDM_SETPOS32 || WM_CAP_DRIVER_GET_VERSIONW */: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Press Button"); break;
             /*case PSM_QUERYSIBLINGS: break;*/
             /*case PSM_REBOOTSYSTEM: break;*/
             /*case PSM_RECALCPAGESIZES: break;*/
             /*case PSM_REMOVEPAGE: break;*/
             /*case PSM_RESTARTWINDOWS: break;*/
             /*case PSM_SETCURSEL: break;*/
-            case PSM_SETCURSELID /* -> UDM_GETPOS32 */: break;
-            case PSM_SETFINISHTEXTA: break;
+            case PSM_SETCURSELID /* -> UDM_GETPOS32 */: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Set Current Selection Identity"); break;
+            case PSM_SETFINISHTEXTA: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Set Finish Text"); break;
             /*case PSM_SETFINISHTEXTW: break;*/
             /*case PSM_SETHEADERSUBTITLEA: break;*/
             /*case PSM_SETHEADERSUBTITLEW: break;*/
             /*case PSM_SETHEADERTITLEA: break;*/
             /*case PSM_SETHEADERTITLEW: break;*/
-            case PSM_SETTITLEA /* -> UDM_SETRANGE32 */: break;
+            case PSM_SETTITLEA /* -> UDM_SETRANGE32 */: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Set Title"); break;
             /*case PSM_SETTITLEW: break;*/
-            case PSM_SETWIZBUTTONS /* -> UDM_GETRANGE32 || WM_CAP_DRIVER_GET_NAMEW */: break;
+            case PSM_SETWIZBUTTONS /* -> UDM_GETRANGE32 || WM_CAP_DRIVER_GET_NAMEW */: ::printmln(screenConsoleBufferHandle, "Prop Sheet -> Set Wizard Buttons"); break;
             /*case PSM_UNCHANGED: break;*/
-            case RB_BEGINDRAG /* -> TBM_GETLINESIZE */: break;
+            case RB_BEGINDRAG /* -> TBM_GETLINESIZE */: ::printmln(screenConsoleBufferHandle, "Rebar -> Begin Drag"); break;
             /*case RB_DELETEBAND: break;*/
-            case RB_DRAGMOVE /* -> TBM_GETCHANNELRECT || TB_SAVERESTOREA || TTM_SETMARGIN */: break;
-            case RB_ENDDRAG /* -> TBM_GETTHUMBRECT || TB_COMMANDTOINDEX || TTM_GETMAXTIPWIDTH */: break;
-            case RB_GETBANDBORDERS: break;
+            case RB_DRAGMOVE /* -> TBM_GETCHANNELRECT || TB_SAVERESTOREA || TTM_SETMARGIN */: ::printmln(screenConsoleBufferHandle, "Rebar -> Drag Move"); break;
+            case RB_ENDDRAG /* -> TBM_GETTHUMBRECT || TB_COMMANDTOINDEX || TTM_GETMAXTIPWIDTH */: ::printmln(screenConsoleBufferHandle, "Rebar -> End Drag"); break;
+            case RB_GETBANDBORDERS: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Band Borders"); break;
             /*case RB_GETBANDCOUNT: break;*/
-            case RB_GETBANDINFOA /* -> TBM_SETTOOLTIPS || TB_GETITEMRECT || TTM_UPDATE */: break;
-            case RB_GETBANDINFOW /* -> TBM_GETTHUMBLENGTH || TB_ADDSTRINGA || TTM_POP */: break;
-            case RB_GETBARHEIGHT /* -> TBM_SETTHUMBLENGTH || TB_CUSTOMIZE || TTM_GETMARGIN */: break;
+            case RB_GETBANDINFOA /* -> TBM_SETTOOLTIPS || TB_GETITEMRECT || TTM_UPDATE */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Band Information"); break;
+            case RB_GETBANDINFOW /* -> TBM_GETTHUMBLENGTH || TB_ADDSTRINGA || TTM_POP */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Band Information"); break;
+            case RB_GETBARHEIGHT /* -> TBM_SETTHUMBLENGTH || TB_CUSTOMIZE || TTM_GETMARGIN */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Bar Height"); break;
             /*case RB_GETBARINFO: break;*/
-            case RB_GETBKCOLOR /* -> SB_GETTIPTEXTW || TBM_SETTICFREQ || TB_ADDBUTTONSA || TTM_SETTIPTEXTCOLOR */: break;
-            case RB_GETPALETTE: break;
+            case RB_GETBKCOLOR /* -> SB_GETTIPTEXTW || TBM_SETTICFREQ || TB_ADDBUTTONSA || TTM_SETTIPTEXTCOLOR */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Background Color"); break;
+            case RB_GETPALETTE: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Palette"); break;
             /*case RB_GETRECT: break;*/
             /*case RB_GETROWCOUNT: break;*/
-            case RB_GETROWHEIGHT /* -> SB_ISSIMPLE || TBM_GETPTICS || TB_ISBUTTONHIGHLIGHTED || TTM_ENUMTOOLSA */: break;
-            case RB_GETTEXTCOLOR /* -> TBM_GETPAGESIZE || TB_DELETEBUTTON || TTM_GETTIPBKCOLOR */: break;
-            case RB_GETTOOLTIPS /* -> SB_SETTIPTEXTW || TBM_GETSELSTART || TB_SETSTATE || TTM_TRACKACTIVATE */: break;
+            case RB_GETROWHEIGHT /* -> SB_ISSIMPLE || TBM_GETPTICS || TB_ISBUTTONHIGHLIGHTED || TTM_ENUMTOOLSA */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Row Height"); break;
+            case RB_GETTEXTCOLOR /* -> TBM_GETPAGESIZE || TB_DELETEBUTTON || TTM_GETTIPBKCOLOR */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Text Color"); break;
+            case RB_GETTOOLTIPS /* -> SB_SETTIPTEXTW || TBM_GETSELSTART || TB_SETSTATE || TTM_TRACKACTIVATE */: ::printmln(screenConsoleBufferHandle, "Rebar -> Get Tooltips"); break;
             /*case RB_HITTEST: break;*/
-            case RB_IDTOINDEX /* -> SB_SETTIPTEXTA || TBM_GETNUMTICS || TTM_WINDOWFROMPOINT */: break;
+            case RB_IDTOINDEX /* -> SB_SETTIPTEXTA || TBM_GETNUMTICS || TTM_WINDOWFROMPOINT */: ::printmln(screenConsoleBufferHandle, "Rebar -> Identity to Index"); break;
             /*case RB_INSERTBANDA: break;*/
             /*case RB_INSERTBANDW: break;*/
-            case RB_MAXIMIZEBAND /* -> TBM_SETTIPSIDE || TB_SETBUTTONSIZE || TTM_ADJUSTRECT */: break;
-            case RB_MINIMIZEBAND /* -> TBM_GETTOOLTIPS || TB_BUTTONSTRUCTSIZE || TTM_GETBUBBLESIZE */: break;
-            case RB_MOVEBAND /* -> TB_SETROWS */: break;
-            case RB_PUSHCHEVRON /* -> TB_CHANGEBITMAP */: break;
+            case RB_MAXIMIZEBAND /* -> TBM_SETTIPSIDE || TB_SETBUTTONSIZE || TTM_ADJUSTRECT */: ::printmln(screenConsoleBufferHandle, "Rebar -> Maximize Band"); break;
+            case RB_MINIMIZEBAND /* -> TBM_GETTOOLTIPS || TB_BUTTONSTRUCTSIZE || TTM_GETBUBBLESIZE */: ::printmln(screenConsoleBufferHandle, "Rebar -> Minimize Band"); break;
+            case RB_MOVEBAND /* -> TB_SETROWS */: ::printmln(screenConsoleBufferHandle, "Rebar -> Move Band"); break;
+            case RB_PUSHCHEVRON /* -> TB_CHANGEBITMAP */: ::printmln(screenConsoleBufferHandle, "Rebar -> Push Chevron"); break;
             /*case RB_SETBANDINFOA: break;*/
             /*case RB_SETBANDINFOW: break;*/
             /*case RB_SETBARINFO: break;*/
-            case RB_SETBKCOLOR /* -> TBM_CLEARSEL || TB_ADDBITMAP || TTM_SETTIPBKCOLOR */: break;
+            case RB_SETBKCOLOR /* -> TBM_CLEARSEL || TB_ADDBITMAP || TTM_SETTIPBKCOLOR */: ::printmln(screenConsoleBufferHandle, "Rebar -> Set Background Color"); break;
             /*case RB_SETPALETTE: break;*/
             /*case RB_SETPARENT: break;*/
-            case RB_SETTEXTCOLOR /* -> TBM_SETPAGESIZE || TB_INSERTBUTTONA || TTM_GETDELAYTIME */: break;
-            case RB_SETTOOLTIPS /* -> SB_GETTIPTEXTA || TBM_GETSELEND || TB_GETSTATE || TTM_TRACKPOSITION */: break;
+            case RB_SETTEXTCOLOR /* -> TBM_SETPAGESIZE || TB_INSERTBUTTONA || TTM_GETDELAYTIME */: {
+                ::printh(screenConsoleBufferHandle, SM_GETOPTIONS); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Rebar -> Set Text Color");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case RB_SETTOOLTIPS /* -> SB_GETTIPTEXTA || TBM_GETSELEND || TB_GETSTATE || TTM_TRACKPOSITION */: {
+                ::printh(screenConsoleBufferHandle, SM_GETOPTIONS); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Rebar -> Set Tooltips");
+                    ::printmln(screenConsoleBufferHandle, "    Status Bar -> Get Tip Text");
+                    ::printmln(screenConsoleBufferHandle, "    Toolbar -> Get State");
+                    ::printmln(screenConsoleBufferHandle, "    Tooltip -> Track Position");
+                    ::printmln(screenConsoleBufferHandle, "    Trackbar -> Get Selection End");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
             /*case RB_SHOWBAND: break;*/
-            case RB_SIZETORECT /* -> TBM_SETLINESIZE || TB_GETBUTTON || TTM_GETTIPTEXTCOLOR */: break;
-            case SBM_ENABLE_ARROWS: break;
-            case SBM_GETPOS: break;
-            case SBM_GETRANGE: break;
+            case RB_SIZETORECT /* -> TBM_SETLINESIZE || TB_GETBUTTON || TTM_GETTIPTEXTCOLOR */: {
+                ::printh(screenConsoleBufferHandle, SM_GETOPTIONS); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Rebar -> Size to Rectangle");
+                    ::printmln(screenConsoleBufferHandle, "    Toolbar -> Get Button");
+                    ::printmln(screenConsoleBufferHandle, "    Tooltip -> Get Tip Text Color");
+                    ::printmln(screenConsoleBufferHandle, "    Trackbar -> Set Line Size");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case SBM_ENABLE_ARROWS: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Enable Arrows"); break;
+            case SBM_GETPOS: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Get Position"); break;
+            case SBM_GETRANGE: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Get Range"); break;
             /*case SBM_GETSCROLLBARINFO: break;*/
-            case SBM_GETSCROLLINFO: break;
-            case SBM_SETPOS: break;
-            case SBM_SETRANGE: break;
-            case SBM_SETRANGEREDRAW: break;
-            case SBM_SETSCROLLINFO: break;
+            case SBM_GETSCROLLINFO: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Get Scroll Information"); break;
+            case SBM_SETPOS: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Set Position"); break;
+            case SBM_SETRANGE: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Set Range"); break;
+            case SBM_SETRANGEREDRAW: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Set Range Redraw"); break;
+            case SBM_SETSCROLLINFO: ::printmln(screenConsoleBufferHandle, "Scrollbar -> Set Scroll Information"); break;
             /*case SB_GETBORDERS: break;*/
             /*case SB_GETICON: break;*/
             /*case SB_GETPARTS: break;*/
@@ -2046,7 +2065,13 @@
             /*case SB_GETTIPTEXTA: break;*/
             /*case SB_GETTIPTEXTW: break;*/
             /*case SB_ISSIMPLE: break;*/
-            case SB_SETICON /* -> TBM_GETTICPOS || TTM_GETCURRENTTOOLA */: break;
+            case SB_SETICON /* -> TBM_GETTICPOS || TTM_GETCURRENTTOOLA */: {
+                ::printh(screenConsoleBufferHandle, SB_SETICON); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Status Bar -> Set Icon");
+                    ::printmln(screenConsoleBufferHandle, "    Trackbar -> Get Tick (Mark) Position");
+                    ::printmln(screenConsoleBufferHandle, "    Tooltip -> Get Current Tool");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
             /*case SB_SETMINHEIGHT: break;*/
             /*case SB_SETPARTS: break;*/
             /*case SB_SETTEXTA: break;*/
@@ -2054,12 +2079,44 @@
             /*case SB_SETTIPTEXTA: break;*/
             /*case SB_SETTIPTEXTW: break;*/
             /*case SB_SIMPLE: break;*/
-            case SM_GETCURFOCUSA /* -> UM_GETGROUPSELA */: break;
-            case SM_GETCURFOCUSW /* -> UM_GETGROUPSELW */: break;
-            case SM_GETOPTIONS /* -> UM_GETCURFOCUSA */: break;
-            case SM_GETSELCOUNT /* -> UM_GETSELCOUNT || WM_CPL_LAUNCH */: break;
-            case SM_GETSERVERSELA /* -> UM_GETUSERSELA || WM_CPL_LAUNCHED */: break;
-            case SM_GETSERVERSELW /* -> UM_GETUSERSELW */: break;
+            case SM_GETCURFOCUSA /* -> UM_GETGROUPSELA */: {
+                ::printh(screenConsoleBufferHandle, SM_GETCURFOCUSA); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Storage Management -> Get Current Focus");
+                    ::printmln(screenConsoleBufferHandle, "    User Manager -> Get Group Selection");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case SM_GETCURFOCUSW /* -> UM_GETGROUPSELW */: {
+                ::printh(screenConsoleBufferHandle, SM_GETCURFOCUSW); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Storage Management -> Get Current Focus");
+                    ::printmln(screenConsoleBufferHandle, "    User Manager -> Get Group Selection");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case SM_GETOPTIONS /* -> UM_GETCURFOCUSA */: {
+                ::printh(screenConsoleBufferHandle, SM_GETOPTIONS); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Storage Management -> Get Options");
+                    ::printmln(screenConsoleBufferHandle, "    User Manager -> Get Current Focus");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case SM_GETSELCOUNT /* -> UM_GETSELCOUNT || WM_CPL_LAUNCH */: {
+                ::printh(screenConsoleBufferHandle, SM_GETSELCOUNT); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Storage Management -> Get Selection Count");
+                    ::printmln(screenConsoleBufferHandle, "    User Manager -> Get Selection Count");
+                    ::printmln(screenConsoleBufferHandle, "    Windows -> Control Panel Launched");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case SM_GETSERVERSELA /* -> UM_GETUSERSELA || WM_CPL_LAUNCHED */: {
+                ::printh(screenConsoleBufferHandle, SM_GETSERVERSELA); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Storage Management -> Get Server Selection");
+                    ::printmln(screenConsoleBufferHandle, "    User Manager -> Get User Selection");
+                    ::printmln(screenConsoleBufferHandle, "    Windows -> Control Panel Launched");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
+            case SM_GETSERVERSELW /* -> UM_GETUSERSELW */: {
+                ::printh(screenConsoleBufferHandle, SM_GETSERVERSELW); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Storage Management -> Get Server Selection");
+                    ::printmln(screenConsoleBufferHandle, "    User Manager -> Get User Selection");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
             case TAPI_REPLY: ::printmln(screenConsoleBufferHandle, "Telephony API -> Reply"); break;
             /*case TBM_CLEARSEL: break;*/
             /*case TBM_CLEARTICS: break;*/
@@ -2079,7 +2136,13 @@
             /*case TBM_GETTIC: break;*/
             /*case TBM_GETTICPOS: break;*/
             /*case TBM_GETTOOLTIPS: break;*/
-            case TBM_SETBUDDY /* -> TB_SETBITMAPSIZE || TTM_SETTITLEA */: break;
+            case TBM_SETBUDDY /* -> TB_SETBITMAPSIZE || TTM_SETTITLEA */: {
+                ::printh(screenConsoleBufferHandle, TBM_SETBUDDY); ::printg(screenConsoleBufferHandle, ": [");
+                    ::printmln(screenConsoleBufferHandle, "    Trackbar -> Set Buddy (Window)");
+                    ::printmln(screenConsoleBufferHandle, "    Toolbar -> Set Bitmap Size");
+                    ::printmln(screenConsoleBufferHandle, "    Tooltip -> Set Title");
+                 ::printge(screenConsoleBufferHandle, "]");
+            } break;
             /*case TBM_SETLINESIZE: break;*/
             /*case TBM_SETPAGESIZE: break;*/
             /*case TBM_SETPOS: break;*/
@@ -2109,8 +2172,8 @@
             /*case TB_DELETEBUTTON: break;*/
             /*case TB_ENABLEBUTTON: break;*/
             /*case TB_GETANCHORHIGHLIGHT: break;*/
-            case TB_GETBITMAP: break;
-            case TB_GETBITMAPFLAGS: break;
+            case TB_GETBITMAP: ::printmln(screenConsoleBufferHandle, "Toolbar -> Get Bitmap"); break;
+            case TB_GETBITMAPFLAGS: ::printmln(screenConsoleBufferHandle, "Toolbar -> Get Bitmap Flags"); break;
             /*case TB_GETBUTTON: break;*/
             /*case TB_GETBUTTONINFOA: break;*/
             /*case TB_GETBUTTONINFOW: break;*/
@@ -2121,15 +2184,15 @@
             /*case TB_GETEXTENDEDSTYLE: break;*/
             /*case TB_GETHOTIMAGELIST: break;*/
             /*case TB_GETHOTITEM: break;*/
-            case TB_GETIMAGELIST: break;
+            case TB_GETIMAGELIST: ::printmln(screenConsoleBufferHandle, "Toolbar -> Get Image List"); break;
             /*case TB_GETINSERTMARK: break;*/
             /*case TB_GETINSERTMARKCOLOR: break;*/
             /*case TB_GETITEMRECT: break;*/
-            case TB_GETMAXSIZE: break;
+            case TB_GETMAXSIZE: ::printmln(screenConsoleBufferHandle, "Toolbar -> Get Maximum Size"); break;
             /*case TB_GETOBJECT: break;*/
             /*case TB_GETPADDING: break;*/
             /*case TB_GETRECT: break;*/
-            case TB_GETROWS: break;
+            case TB_GETROWS: ::printmln(screenConsoleBufferHandle, "Toolbar -> Get Rows"); break;
             /*case TB_GETSTATE: break;*/
             /*case TB_GETSTRINGA: break;*/
             /*case TB_GETSTRINGW: break;*/
@@ -2154,7 +2217,7 @@
             /*case TB_MARKBUTTON: break;*/
             /*case TB_MOVEBUTTON: break;*/
             /*case TB_PRESSBUTTON: break;*/
-            case TB_REPLACEBITMAP: break;
+            case TB_REPLACEBITMAP: ::printmln(screenConsoleBufferHandle, "Toolbar -> Replace Bitmap"); break;
             /*case TB_SAVERESTOREA: break;*/
             /*case TB_SAVERESTOREW: break;*/
             /*case TB_SETANCHORHIGHLIGHT: break;*/
@@ -2163,14 +2226,14 @@
             /*case TB_SETBUTTONINFOW: break;*/
             /*case TB_SETBUTTONSIZE: break;*/
             /*case TB_SETBUTTONWIDTH: break;*/
-            case TB_SETCMDID: break;
+            case TB_SETCMDID: ::printmln(screenConsoleBufferHandle, "Toolbar -> Set Command Identifier"); break;
             /*case TB_SETDISABLEDIMAGELIST: break;*/
             /*case TB_SETDRAWTEXTFLAGS: break;*/
             /*case TB_SETEXTENDEDSTYLE: break;*/
             /*case TB_SETHOTIMAGELIST: break;*/
             /*case TB_SETHOTITEM: break;*/
-            case TB_SETIMAGELIST: break;
-            case TB_SETINDENT: break;
+            case TB_SETIMAGELIST: ::printmln(screenConsoleBufferHandle, "Toolbar -> Set Image List"); break;
+            case TB_SETINDENT: ::printmln(screenConsoleBufferHandle, "Toolbar -> Set Indentation"); break;
             /*case TB_SETINSERTMARK: break;*/
             /*case TB_SETINSERTMARKCOLOR: break;*/
             /*case TB_SETMAXTEXTROWS: break;*/
@@ -2237,25 +2300,25 @@
             /*case UDM_SETRANGE: break;*/
             /*case UDM_SETRANGE32: break;*/
             /*case UM_GETCURFOCUSA: break;*/
-            case UM_GETCURFOCUSW: break;
+            case UM_GETCURFOCUSW: ::printmln(screenConsoleBufferHandle, "User Manager -> Get Current Focus"); break;
             /*case UM_GETGROUPSELA: break;*/
             /*case UM_GETGROUPSELW: break;*/
-            case UM_GETOPTIONS: break;
-            case UM_GETOPTIONS2: break;
+            case UM_GETOPTIONS: ::printmln(screenConsoleBufferHandle, "User Manager -> Get Options"); break;
+            case UM_GETOPTIONS2: ::printmln(screenConsoleBufferHandle, "User Manager -> Get Options (Structure)"); break;
             /*case UM_GETSELCOUNT: break;*/
             /*case UM_GETUSERSELA: break;*/
             /*case UM_GETUSERSELW: break;*/
             /*case WIZ_NEXT: break;*/
             /*case WIZ_PREV: break;*/
             /*case WIZ_QUERYNUMPAGES: break;*/
-            case WLX_WM_SAS: ::printmln(screenConsoleBufferHandle, "..."); break;
+            case WLX_WM_SAS: ::printmln(screenConsoleBufferHandle, "Windows Live Sync -> Statistical Analysis Suite Message"); break;
             case WM_ACTIVATE: ::printmln(screenConsoleBufferHandle, "Windows -> Activate"); break;
             case WM_ACTIVATEAPP: ::printmln(screenConsoleBufferHandle, "Windows -> Activate Application"); break;
-            case WM_AFXFIRST: ::printmln(screenConsoleBufferHandle, "..."); break;
-            case WM_AFXLAST: ::printmln(screenConsoleBufferHandle, "..."); break;
+            case WM_AFXFIRST: ::printmln(screenConsoleBufferHandle, "Windows -> Application Framework Extensions FIRST[]"); break;
+            case WM_AFXLAST: ::printmln(screenConsoleBufferHandle, "Windows -> Application Framework Extensions [LAST]"); break;
             case WM_APP: ::printmln(screenConsoleBufferHandle, "Windows -> Application"); break;
             case WM_APPCOMMAND: ::printmln(screenConsoleBufferHandle, "Windows -> Application Command"); break;
-            case WM_ASKCBFORMATNAME: ::printmln(screenConsoleBufferHandle, "..."); break;
+            case WM_ASKCBFORMATNAME: ::printmln(screenConsoleBufferHandle, "Windows -> Ask Clipboard Format Name"); break;
             case WM_CANCELJOURNAL: ::printmln(screenConsoleBufferHandle, "Windows -> Cancel Journal"); break;
             case WM_CANCELMODE: ::printmln(screenConsoleBufferHandle, "Windows -> Cancel Mode"); break;
             case WM_CAPTURECHANGED: ::printmln(screenConsoleBufferHandle, "Windows -> Capture Changed"); break;
@@ -2265,9 +2328,9 @@
             /*case WM_CAP_FILE_SAVEASW: break;*/
             /*case WM_CAP_FILE_SAVEDIBW: break;*/
             /*case WM_CAP_FILE_SET_CAPTURE_FILEW: break;*/
-            case WM_CAP_GET_MCI_DEVICEW: ::printmln(screenConsoleBufferHandle, "..."); break;
-            case WM_CAP_PAL_OPENW: ::printmln(screenConsoleBufferHandle, "..."); break;
-            case WM_CAP_PAL_SAVEW: ::printmln(screenConsoleBufferHandle, "..."); break;
+            case WM_CAP_GET_MCI_DEVICEW: ::printmln(screenConsoleBufferHandle, "Windows -> Capture Get Media Control Interface Device"); break;
+            case WM_CAP_PAL_OPENW: ::printmln(screenConsoleBufferHandle, "Windows -> Capture Palette Open"); break;
+            case WM_CAP_PAL_SAVEW: ::printmln(screenConsoleBufferHandle, "Windows -> Capture Palette Save"); break;
             /*case WM_CAP_SET_CALLBACK_ERRORW: break;*/
             /*case WM_CAP_SET_CALLBACK_STATUSW: break;*/
             /*case WM_CAP_SET_MCI_DEVICEW: break;*/
@@ -2335,20 +2398,20 @@
             case WM_GETOBJECT: ::printmln(screenConsoleBufferHandle, "Windows -> Get Object"); break;
             case WM_GETTEXT: ::printmln(screenConsoleBufferHandle, "Windows -> Get Text"); break;
             case WM_GETTEXTLENGTH: ::printmln(screenConsoleBufferHandle, "Windows -> Get Text Length"); break;
-            case WM_GLOBALRCCHANGE /* -> WM_PENMISCINFO */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_GLOBALRCCHANGE /* -> WM_PENMISCINFO */: {
+                ::printh(screenConsoleBufferHandle, WM_GLOBALRCCHANGE); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Global RC Change");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Pen Miscellaneous Information");
                  ::printge(screenConsoleBufferHandle, "]");
-            break;
+            } break;
             case WM_HANDHELDFIRST: ::printmln(screenConsoleBufferHandle, "Windows -> Hand-Held [FIRST]"); break;
             case WM_HANDHELDLAST: ::printmln(screenConsoleBufferHandle, "Windows -> Hand-Held [LAST]"); break;
-            case WM_HEDITCTL /* -> WM_PENCTL */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_HEDITCTL /* -> WM_PENCTL */: {
+                ::printh(screenConsoleBufferHandle, WM_HEDITCTL); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Hand-Editing Control");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Pen Control");
                  ::printge(screenConsoleBufferHandle, "]");
-            break;
+            } break;
             case WM_HELP: ::printmln(screenConsoleBufferHandle, "Windows -> Help"); break;
             case WM_HOOKRCRESULT: ::printmln(screenConsoleBufferHandle, "Windows -> Hook RC Result"); break;
             case WM_HOTKEY: ::printmln(screenConsoleBufferHandle, "Windows -> Hotkey"); break;
@@ -2358,12 +2421,12 @@
             case WM_IMEKEYDOWN /* -> WM_IME_KEYDOWN */: ::printmln(screenConsoleBufferHandle, "Windows -> IME Key Down"); break;
             case WM_IMEKEYUP /* -> WM_IME_KEYUP */: ::printmln(screenConsoleBufferHandle, "Windows -> IME Key Up"); break;
             case WM_IME_CHAR: ::printmln(screenConsoleBufferHandle, "Windows -> IME Character"); break;
-            case WM_IME_COMPOSITION /* -> WM_IME_KEYLAST */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_IME_COMPOSITION /* -> WM_IME_KEYLAST */: {
+                ::printh(screenConsoleBufferHandle, WM_IME_COMPOSITION); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> IME Composition");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> IME Key [LAST]");
                  ::printge(screenConsoleBufferHandle, "]");
-            break;
+            } break;
             case WM_IME_COMPOSITIONFULL: ::printmln(screenConsoleBufferHandle, "Windows -> IME Composition Full"); break;
             case WM_IME_CONTROL: ::printmln(screenConsoleBufferHandle, "Windows -> IME Control"); break;
             case WM_IME_ENDCOMPOSITION: ::printmln(screenConsoleBufferHandle, "Windows -> IME End Composition"); break;
@@ -2383,8 +2446,8 @@
             case WM_INPUTLANGCHANGE: ::printmln(screenConsoleBufferHandle, "Windows -> Input Language Change"); break;
             case WM_INPUTLANGCHANGEREQUEST: ::printmln(screenConsoleBufferHandle, "Windows -> Input Language Change Request"); break;
             case WM_INTERIM: ::printmln(screenConsoleBufferHandle, "Windows -> Interim"); break;
-            case WM_KEYDOWN /* -> WM_KEYFIRST */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_KEYDOWN /* -> WM_KEYFIRST */: {
+                ::printh(screenConsoleBufferHandle, WM_KEYDOWN); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Key Down");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Key [FIRST]");
                 ::printge(screenConsoleBufferHandle, "]");
@@ -2393,7 +2456,7 @@
                     ::DestroyWindow(windowHandle);
                     ::PostQuitMessage(0);
                 }
-            break;
+            } break;
             /*case WM_KEYFIRST: break;*/
             case WM_KEYLAST: ::printmln(screenConsoleBufferHandle, "Windows -> Key [LAST]"); break;
             case WM_KEYUP: ::printmln(screenConsoleBufferHandle, "Windows -> Key Up"); break;
@@ -2424,19 +2487,19 @@
             case WM_MENURBUTTONUP: ::printmln(screenConsoleBufferHandle, "Windows -> Menu Right (Mouse) Button Up"); break;
             case WM_MENUSELECT: ::printmln(screenConsoleBufferHandle, "Windows -> Menu Select"); break;
             case WM_MOUSEACTIVATE: ::printmln(screenConsoleBufferHandle, "Windows -> Mouse Activate"); break;
-            case WM_MOUSEFIRST /* -> WM_MOUSEMOVE */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_MOUSEFIRST /* -> WM_MOUSEMOVE */: {
+                ::printh(screenConsoleBufferHandle, WM_MOUSEFIRST); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Mouse [FIRST]");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Mouse Move");
                  ::printge(screenConsoleBufferHandle, "]");
-            break;
+            } break;
             case WM_MOUSEHOVER: ::printmln(screenConsoleBufferHandle, "Windows -> Mouse Hover"); break;
-            case WM_MOUSELAST /* -> WM_XBUTTONDBLCLK */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_MOUSELAST /* -> WM_XBUTTONDBLCLK */: {
+                ::printh(screenConsoleBufferHandle, WM_MOUSELAST); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Mouse [LAST]");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Mouse X (Mouse) Button Double-Click");
                  ::printge(screenConsoleBufferHandle, "]");
-            break;
+            } break;
             case WM_MOUSELEAVE: ::printmln(screenConsoleBufferHandle, "Windows -> Mouse Leave"); break;
             /*case WM_MOUSEMOVE: break;*/
             case WM_MOUSEWHEEL: ::printmln(screenConsoleBufferHandle, "Windows -> Mouse Wheel"); break;
@@ -2533,12 +2596,12 @@
             case WM_TIMECHANGE: ::printmln(screenConsoleBufferHandle, "Windows -> Time Change"); break;
             case WM_TIMER: ::printmln(screenConsoleBufferHandle, "Windows -> Timer"); break;
             case WM_UNDO: ::printmln(screenConsoleBufferHandle, "Windows -> Undo"); break;
-            case WM_UNICHAR /* -> WM_WNT_CONVERTREQUESTEX */:
-                ::printh(screenConsoleBufferHandle, ACM_OPENA); ::printg(screenConsoleBufferHandle, ": [");
+            case WM_UNICHAR /* -> WM_WNT_CONVERTREQUESTEX */: {
+                ::printh(screenConsoleBufferHandle, WM_UNICHAR); ::printg(screenConsoleBufferHandle, ": [");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Convert Request");
                     ::printmln(screenConsoleBufferHandle, "    Windows -> Unicode Character");
                  ::printge(screenConsoleBufferHandle, "]");
-            break;
+            } break;
             case WM_UNINITMENUPOPUP: ::printmln(screenConsoleBufferHandle, "Windows -> Uninitiate Menu Pop-Up"); break;
             case WM_UPDATEUISTATE: ::printmln(screenConsoleBufferHandle, "Windows -> Update UI State"); break;
             /*case WM_USER: break;*/
