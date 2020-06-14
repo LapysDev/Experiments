@@ -95,9 +95,9 @@ class BigUnsignedInteger { typedef unsigned long primitive_t;
         constexpr inline BigUnsignedInteger(BigFloat<radix> const& number) : length{0u}, value{NULL} { initiate(); BigFloat<radix>::isSafe(number) ? BigUnsignedInteger::copy((BigUnsignedInteger const&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
         template <size_t base> constexpr inline BigUnsignedInteger(BigFloat<base> const& number) : length{0u}, value{NULL} { initiate(); BigFloat<base>::isSafe(number) ? BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
         constexpr inline BigUnsignedInteger(BigFloat<radix>&& number) : length{0u}, value{NULL} { initiate(); BigFloat<radix>::isSafe(number) ? BigUnsignedInteger::move((BigUnsignedInteger&&) number) : terminate("[Syntax Error]: Unable to represent `BigFloat` as `BigUnsignedInteger` object", NULL); }
-        constexpr inline BigUnsignedInteger(BigSignedInteger<radix> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy((BigUnsignedInteger const&) number); }
-        template <size_t base> constexpr inline BigUnsignedInteger(BigSignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)); }
-        constexpr inline BigUnsignedInteger(BigSignedInteger<radix>&& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move((BigUnsignedInteger&&) number); }
+        constexpr inline BigUnsignedInteger(BigSignedInteger<radix> const& number) : length{0u}, value{NULL} { initiate(); if (BigSignedInteger<radix>::isPositive(number)) BigUnsignedInteger::copy((BigUnsignedInteger const&) number); }
+        template <size_t base> constexpr inline BigUnsignedInteger(BigSignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); if (BigSignedInteger<radix>::isPositive(number)) BigUnsignedInteger::move(BigUnsignedInteger::fromBase((BigUnsignedInteger<base> const&) number)); }
+        constexpr inline BigUnsignedInteger(BigSignedInteger<radix>&& number) : length{0u}, value{NULL} { initiate(); if (BigSignedInteger<radix>::isPositive(number)) BigUnsignedInteger::move((BigUnsignedInteger&&) number); }
         constexpr inline BigUnsignedInteger(BigUnsignedInteger const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::copy(number); }
         template <size_t base> constexpr inline BigUnsignedInteger(BigUnsignedInteger<base> const& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move((BigUnsignedInteger&&) BigUnsignedInteger::fromBase(number)); }
         constexpr inline BigUnsignedInteger(BigUnsignedInteger&& number) : length{0u}, value{NULL} { initiate(); BigUnsignedInteger::move((BigUnsignedInteger&&) number); }
@@ -595,19 +595,11 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
 
         // Is ...
         template <size_t radix> inline bool BigSignedInteger<radix>::isBig(BigSignedInteger const& number) noexcept { static BigSignedInteger const PRIMITIVE_MAX {LONG_MAX}; return BigSignedInteger::isGreater(number, PRIMITIVE_MAX); }
+        template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isEqual(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept { return numberA.signedness == numberB.signedness && BigUnsignedInteger<radix>::isEqual((BigUnsignedInteger<radix> const&) numberA, (BigUnsignedInteger<radix> const&) numberB); }
+        template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isGreater(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept { return numberA.signedness == numberB.signedness ? BigUnsignedInteger<radix>::isGreater((BigUnsignedInteger<radix> const&) numberA, (BigUnsignedInteger<radix> const&) numberB) : (numberA.signedness && false == numberB.signedness); }
+        template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isLesser(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept { return numberA.signedness == numberB.signedness ? BigUnsignedInteger<radix>::isLesser((BigUnsignedInteger<radix> const&) numberA, (BigUnsignedInteger<radix> const&) numberB) : (false == numberA.signedness && numberB.signedness); }
         template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isNegative(BigSignedInteger const& number) noexcept { return number.signedness; }
         template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isPositive(BigSignedInteger const& number) noexcept { return false == number.signedness; }
-
-        // Is Equal
-        template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isEqual(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept { return numberA.signedness == numberB.signedness && BigUnsignedInteger<radix>::isEqual((BigUnsignedInteger<radix> const&) numberA, (BigUnsignedInteger<radix> const&) numberB); }
-
-        // Is Greater --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline bool BigSignedInteger<radix>::isGreater(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept {}
-
-        // Is Lesser --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline bool BigSignedInteger<radix>::isLesser(BigSignedInteger const& numberA, BigSignedInteger const& numberB) noexcept {}
 
         // Multiply --- CHECKPOINT (Lapys)
         // template <size_t radix>
@@ -662,6 +654,9 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
 
     /* Big Unsigned Integer */
         // Add
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::add(BigFloat<radix> const& number) { return BigUnsignedInteger::add(BigUnsignedInteger(number)); }
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::add(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::add(BigUnsignedInteger(number)); }
+
         template <size_t radix>
         constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::add(BigUnsignedInteger const& number) {
             // Logic > ... --- REDACT (Lapys)
@@ -1390,11 +1385,6 @@ class BigFloat : public BigSignedInteger<radix> { typedef long double primitive_
 
 /* Main */
 int main(void) {
-    BigUnsignedInteger<10> const numberA {33u};
-    BigSignedInteger<10> const numberB {33};
-
-    std::cout << "[EVAL]: " << std::boolalpha << numberA.isEqual(numberB) << std::flush;
-
     // Return
     return EXIT_SUCCESS;
 }
