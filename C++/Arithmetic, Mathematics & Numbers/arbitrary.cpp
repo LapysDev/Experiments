@@ -183,7 +183,7 @@ class BigUnsignedInteger { friend int main(void);
             constexpr static BigUnsignedInteger fromNumber(primitive_t const number);
             template <size_t base> constexpr static BigUnsignedInteger<base> toBase(BigUnsignedInteger const&);
             constexpr static primitive_t toNumber(BigUnsignedInteger&);
-            constexpr char* toString(void) const;
+            constexpr char* toString(bool = false) const;
             constexpr inline void zero(void) noexcept { this -> length = 0u; if (NULL != this -> value) { ::free(this -> value); this -> value = NULL; } }
 
             // [Operational] Add, Decrement, Divide, Exponentiate, Increment, Multiply, Shift (Left, Right), Sign, Subtract, Unsign
@@ -261,6 +261,7 @@ template <size_t radix>
 class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void);
     /* ... */
     typedef typename BigUnsignedInteger<radix>::Digit Digit;
+    typedef typename BigUnsignedInteger<radix>::Digit::digit_t digit_t;
     typedef signed long primitive_t;
 
     template <size_t> friend class BigFloat;
@@ -335,7 +336,7 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void
             constexpr static BigSignedInteger fromNumber(primitive_t const number);
             template <size_t base> constexpr static BigSignedInteger<base> toBase(BigSignedInteger const&);
             constexpr static primitive_t toNumber(BigSignedInteger const&);
-            constexpr char* toString(void) const;
+            constexpr char* toString(bool const) const;
             constexpr inline void zero(void) noexcept { BigSignedInteger::unsign(); BigUnsignedInteger<radix>::zero(); }
 
             // [Operational] Add, Decrement, Divide, Exponentiate, Increment, Multiply, Sign, Subtract, Unsign
@@ -384,7 +385,7 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void
             template <size_t base> constexpr inline BigSignedInteger& multiply(BigUnsignedInteger<base> const& number) { return BigSignedInteger::multiply(BigUnsignedInteger<radix>::fromBase<base>(number)); }
 
             constexpr BigSignedInteger& sign(void) noexcept;
-            constexpr BigSignedInteger sign(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.sign(); return evaluation; }
+            constexpr inline BigSignedInteger sign(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.sign(); return evaluation; }
 
             constexpr BigSignedInteger& subtract(BigFloat<radix> const&);
             template <size_t base> constexpr inline BigSignedInteger& subtract(BigFloat<base> const& number) { return BigSignedInteger::subtract(BigFloat<radix>::fromBase<base>(number)); }
@@ -396,14 +397,15 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void
             template <size_t base> constexpr inline BigSignedInteger& subtract(BigUnsignedInteger<base> const& number) { return BigSignedInteger::subtract(BigUnsignedInteger<radix>::fromBase<base>(number)); }
 
             constexpr BigSignedInteger& unsign(void) noexcept;
-            constexpr BigSignedInteger unsign(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.unsign(); return evaluation; }
+            constexpr inline BigSignedInteger unsign(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.unsign(); return evaluation; }
 };
 
 template <size_t radix>
 class BigFloat : public BigSignedInteger<radix> { friend int main(void);
     /* ... */
-    typedef long double primitive_t;
     typedef typename BigSignedInteger<radix>::Digit Digit;
+    typedef typename BigSignedInteger<radix>::Digit::digit_t digit_t;
+    typedef long double primitive_t;
 
     template <size_t> friend class BigFloat;
     template <size_t> friend class BigSignedInteger;
@@ -413,20 +415,26 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
     using BigSignedInteger<radix>::terminate;
 
     // [...]
-    public:
+    private:
         // Initialization > (Mantissa Length, State)
         size_t mantissaLength;
         enum State {INFINITE, SAFE, UNCOMPUTABLE} state : 2;
 
     // [...]
+    protected:
+        // Method > (Copy, Move)
+        constexpr inline void copy(BigFloat const& number) noexcept { if (State::SAFE == (this -> state = number.state)) { this -> mantissaLength = number.mantissaLength; BigSignedInteger<radix>::copy((BigSignedInteger<radix> const&) number); } }
+        constexpr inline void move(BigFloat&& number) noexcept { if (State::SAFE == (this -> state = number.state)) { this -> mantissaLength = number.mantissaLength; BigSignedInteger<radix>::move((BigSignedInteger<radix>&&) number); } }
+
+    // [...]
     public:
         // [Constructor]
-        constexpr inline BigFloat(void) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { this -> length = 1u; }
+        constexpr inline BigFloat(void) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} {}
         constexpr inline BigFloat(primitive_t const number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move(BigFloat::fromNumber(number)); }
         constexpr inline BigFloat(State const state) : BigSignedInteger<radix>(), mantissaLength{0u}, state{state} {}
         constexpr inline BigFloat(BigFloat const& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::copy(number); }
         template <size_t base> constexpr inline BigFloat(BigFloat<base> const& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move(BigFloat::fromBase<base>(number)); }
-        constexpr inline BigFloat(BigFloat&& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move(number); }
+        constexpr inline BigFloat(BigFloat&& number) : BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} { BigFloat::move((BigFloat&&) number); }
         template <size_t base> constexpr inline BigFloat(BigSignedInteger<base> const& number) : BigSignedInteger<radix>(number), mantissaLength{0u}, state{State::SAFE} {}
         constexpr inline BigFloat(BigSignedInteger<radix>&& number) : BigSignedInteger<radix>((BigSignedInteger<radix>&&) number), mantissaLength{0u}, state{State::SAFE} {}
         template <size_t base> constexpr inline BigFloat(BigUnsignedInteger<base> const& number) : BigUnsignedInteger<radix>(number), BigSignedInteger<radix>(), mantissaLength{0u}, state{State::SAFE} {}
@@ -490,7 +498,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             constexpr static BigFloat fromNumber(primitive_t const number);
             template <size_t base> constexpr static BigFloat<base> toBase(BigFloat const&);
             constexpr static primitive_t toNumber(BigFloat const&);
-            constexpr char* toString(void) const;
+            constexpr char* toString(bool const = false) const;
             constexpr inline void zero(void) noexcept { this -> mantissaLength = 0u; this -> state = State::SAFE; BigSignedInteger<radix>::zero(); }
 
             // [Operational]
@@ -532,10 +540,16 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             constexpr inline static BigFloat shiftRight(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.shiftRight(); return evaluation; }
             constexpr inline static BigFloat shiftRight(BigFloat const& numberA, primitive_t const numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.shiftRight(numberB); return evaluation; }
 
+            constexpr BigFloat& sign(void) noexcept;
+            constexpr inline BigFloat sign(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.sign(); return evaluation; }
+
             constexpr BigFloat& subtract(BigFloat const&);
             template <size_t base> constexpr inline BigFloat& subtract(BigFloat<base> const& number) { return BigFloat::subtract(BigFloat::fromBase<base>(number)); }
             constexpr inline static BigFloat subtract(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB); return evaluation; }
             constexpr inline static BigFloat& subtract(BigFloat&& numberA, BigFloat const& numberB) { numberA.subtract(numberB); return numberA; }
+
+            constexpr BigFloat& unsign(void) noexcept;
+            constexpr inline BigFloat unsign(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.unsign(); return evaluation; }
 };
 
 /* Modification */
@@ -560,15 +574,44 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
         // template <size_t radix> template <size_t base>
         // constexpr inline BigFloat<radix> BigFloat<radix>::fromBase(BigFloat<base> const& number) {}
 
-        // From Number --- CHECKPOINT (Lapys)
+        // From Number
         template <size_t radix>
         constexpr inline BigFloat<radix> BigFloat<radix>::fromNumber(primitive_t const number) {
             // Evaluation > Evaluation
             BigFloat evaluation {};
 
-            // Logic
-            if (number) {
-if (::isinf(number)) return number < 0.00L ? "-Infinity" : "Infinity"; else if (::isnan(number)) return "NaN"; else if (number && false == ::isnormal(number)) return "Denormalized"; else { long double characteristics; char *iterator; long double mantissa; static char string[LDBL_DIG + 28] {0}; ::memset(string, '\0', sizeof(string));  if (number < 0.00L) { iterator = string + 1; mantissa = ::modf(-number, &characteristics); *string = '-'; *(string + 1) = '0'; } else { iterator = string; mantissa = ::modf(number, &characteristics); *string = '0'; } if (characteristics) { for (long double digit; characteristics && (string - iterator) <= LDBL_DIG; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) digit = ::modf((characteristics /= 10.00L), &characteristics) * 10.00L; ::strrev(string + (number < 0.00L)); } else ++iterator; if (mantissa) { *iterator++ = '.'; for (long double digit; mantissa >= LDBL_EPSILON; *iterator++ = *("0123456789" + (unsigned char) ::round(digit))) mantissa = ::modf((mantissa *= 10.00L), &digit); } return (char const*) string; }
+            // Logic > ...
+            if (::isinf(number)) { evaluation.signedness = number < 0.00L; evaluation.state = State::INFINITE; }
+            else if (::isnan(number)) evaluation.state = State::UNCOMPUTABLE;
+            else if (number) {
+                // Initialization > (Characteristics, Mantissa)
+                primitive_t characteristics = 0.00L;
+                primitive_t mantissa = 0.00L;
+
+                // Update > (Evaluation, Mantissa)
+                evaluation.allocate(LDBL_MAX_10_EXP + 1u);
+                mantissa = ::modf((evaluation.signedness = number < 0.00L) ? -number : number, &characteristics);
+
+                // Logic
+                if (characteristics) {
+                    // Loop > ...
+                    for (primitive_t digit = 0.00L; characteristics > LDBL_EPSILON; *(evaluation.value + evaluation.length++) = (digit_t) ::round(digit))
+                    digit = ::modf((characteristics /= (primitive_t) radix), &characteristics) * (primitive_t) radix;
+
+                    // Loop > Modification > Evaluation > Value
+                    for (size_t iterator = 0u, subiterator = evaluation.length - 1u; iterator < subiterator; (++iterator, --subiterator)) {
+                        *(evaluation.value + iterator) ^= *(evaluation.value + subiterator);
+                        *(evaluation.value + subiterator) ^= *(evaluation.value + iterator);
+                        *(evaluation.value + iterator) ^= *(evaluation.value + subiterator);
+                    }
+                }
+
+                // Logic
+                if (mantissa) {
+                    // Loop > ...
+                    for (primitive_t digit = 0.00L; mantissa >= LDBL_EPSILON; *(evaluation.value + evaluation.length + evaluation.mantissaLength++) = (digit_t) ::round(digit))
+                    mantissa = ::modf((mantissa *= (primitive_t) radix), &digit);
+                }
             }
 
             // Return
@@ -654,9 +697,65 @@ if (::isinf(number)) return number < 0.00L ? "-Infinity" : "Infinity"; else if (
         // template <size_t radix>
         // constexpr inline primitive_t BigFloat<radix>::toNumber(BigFloat const& number) {}
 
-        // To String --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline char* BigFloat<radix>::toString(void) const {}
+        // To String
+        template <size_t radix>
+        constexpr inline char* BigFloat<radix>::toString(bool const delimit) const {
+            // Evaluation > Evaluation
+            char *evaluation = NULL;
+
+            // Logic
+            if (BigFloat::isInfinite()) {
+                // Update > Evaluation; Logic
+                evaluation = (char*) ::malloc(10u * sizeof(char));
+                if (NULL != evaluation) ::strncpy(evaluation, "-Infinity" + BigFloat::isPositive(), 10u - BigFloat::isPositive());
+            }
+
+            else if (BigFloat::isNonComputable()) {
+                // Update > Evaluation; Logic
+                evaluation = (char*) ::malloc(4u * sizeof(char));
+                if (NULL != evaluation) ::strncpy(evaluation, "NaN", 4u);
+            }
+
+            else {
+                // Update > Evaluation
+                // : Logic
+                evaluation = BigSignedInteger<radix>::toString(delimit);
+                if (NULL != evaluation && this -> mantissaLength) {
+                    // Initialization > (Delimited, Number, Sub-Evaluation)
+                    bool const delimited = '[' == *evaluation;
+                    BigUnsignedInteger<radix> number {};
+                    char *subevaluation = NULL;
+
+                    // Modification > Number > (Length, Value)
+                    number.length = this -> mantissaLength;
+                    number.value = this -> value + (this -> length);
+
+                    // Update > Sub-Evaluation
+                    // : Logic
+                    subevaluation = number.toString(delimited);
+                    if (NULL == subevaluation) {
+                        // Deletion; Update > Evaluation
+                        ::free(evaluation);
+                        evaluation = NULL;
+                    }
+
+                    else {
+                        // Update > Evaluation; Deletion
+                        evaluation = (char*) ::realloc(evaluation, ((::strlen(evaluation)) + ::strlen(subevaluation) + (delimited ? 3u : 1u) + 1u) * sizeof(char));
+                        ::strcat(evaluation, (delimited ? "[.]" : "."));
+                        ::strcat(evaluation, subevaluation);
+
+                        ::free(subevaluation);
+                    }
+
+                    // Modification > Number > (Length, Value)
+                    number.length = 0u;
+                    number.value = NULL;
+                }
+            }
+
+            return evaluation;
+        }
 
     /* Big Signed Integer */
         // Add
@@ -818,31 +917,31 @@ if (::isinf(number)) return number < 0.00L ? "-Infinity" : "Infinity"; else if (
 
         // To String
         template <size_t radix>
-        constexpr inline char* BigSignedInteger<radix>::toString(void) const {
-            // Evaluation > String
-            char *string = BigUnsignedInteger<radix>::toString();
+        constexpr inline char* BigSignedInteger<radix>::toString(bool const delimit) const {
+            // Evaluation > Evaluation
+            char *evaluation = BigUnsignedInteger<radix>::toString(delimit);
 
             // Logic
-            if (NULL != string && this -> signedness) {
+            if (NULL != evaluation && this -> signedness) {
                 // Constant > (Delimited, Length)
-                bool const delimited = '[' == *string;
-                size_t const length = ::strlen(string);
+                bool const delimited = '[' == *evaluation;
+                size_t const length = ::strlen(evaluation);
 
                 // Update > String
-                string = (char*) ::realloc(string, (length + (delimited ? 3u : 1u) + 1u) * sizeof(char));
+                evaluation = (char*) ::realloc(evaluation, (length + (delimited ? 3u : 1u) + 1u) * sizeof(char));
 
                 // Logic
-                if (NULL != string) {
+                if (NULL != evaluation) {
                     // (Logic > )Update > String --- NOTE (Lapys) -> `strncpy` function is not overlap safe.
-                    ::memmove(string + (delimited ? 3 : 1), string, (length + 1u) * sizeof(char));
+                    ::memmove(evaluation + (delimited ? 3 : 1), evaluation, (length + 1u) * sizeof(char));
 
-                    if (delimited) { *string = '['; *(string + 1) = '-'; *(string + 2) = ']'; }
-                    else *string = '-';
+                    if (delimited) { *evaluation = '['; *(evaluation + 1) = '-'; *(evaluation + 2) = ']'; }
+                    else *evaluation = '-';
                 }
             }
 
             // Return
-            return string;
+            return evaluation;
         }
 
         // (Un)Sign
@@ -1502,20 +1601,19 @@ if (::isinf(number)) return number < 0.00L ? "-Infinity" : "Infinity"; else if (
 
         // To String
         template <size_t radix>
-        constexpr inline char* BigUnsignedInteger<radix>::toString(void) const {
+        constexpr inline char* BigUnsignedInteger<radix>::toString(bool delimit) const {
             // Evaluation > Evaluation
             char *evaluation = NULL;
 
             // Logic > ...
             if (BigUnsignedInteger::isZero()) {
                 // (Logic > )Update > Evaluation
-                evaluation = (char*) ::malloc(2u * sizeof(char));
-                if (NULL != evaluation) { *evaluation = '0'; *(evaluation + 1) = '\0'; }
+                evaluation = (char*) ::malloc((delimit ? 4u : 2u) * sizeof(char));
+                if (NULL != evaluation) ::strcpy(evaluation, delimit ? "[0]" : "0");
             }
 
             else {
-                // Initialization > (Delimit, (Digit) Length)
-                bool delimit = false;
+                // Initialization > (Digit) Length
                 size_t digitLength = 0u;
                 size_t length = 0u;
 

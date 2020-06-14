@@ -2024,7 +2024,7 @@
             /*case RB_SETPARENT: break;*/
             case RB_SETTEXTCOLOR /* -> TBM_SETPAGESIZE || TB_INSERTBUTTONA || TTM_GETDELAYTIME */: {
                 ::printh(screenConsoleBufferHandle, SM_GETOPTIONS); ::printg(screenConsoleBufferHandle, ": [");
-                    ::printmln(screenConsoleBufferHandle, "    Rebar -> Set Text Color"); // CHECKPOINT (Lapys)
+                    ::printmln(screenConsoleBufferHandle, "    Rebar -> Set Text Color"); // CHECKPOINT
                  ::printge(screenConsoleBufferHandle, "]");
             } break;
             case RB_SETTOOLTIPS /* -> SB_GETTIPTEXTA || TBM_GETSELEND || TB_GETSTATE || TTM_TRACKPOSITION */: {
