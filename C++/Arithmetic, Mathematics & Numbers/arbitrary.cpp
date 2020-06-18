@@ -53,6 +53,7 @@ class BigUnsignedInteger { friend int main(void);
         // Initialization > (Length, Value)
         size_t length;
         struct Digit { typedef size_t digit_t; // NOTE (Lapys) -> Digits are stored as denary `digit_t` values.
+            template <size_t> friend class BigUnsignedInteger;
             private: digit_t value : BigUnsignedInteger::size();
             public:
                 constexpr inline Digit(digit_t const value) : value{value} {}
@@ -336,7 +337,7 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void
             constexpr static BigSignedInteger fromNumber(primitive_t const number);
             template <size_t base> constexpr static BigSignedInteger<base> toBase(BigSignedInteger const&);
             constexpr static primitive_t toNumber(BigSignedInteger const&);
-            constexpr char* toString(bool const) const;
+            constexpr char* toString(bool const = false) const;
             constexpr inline void zero(void) noexcept { BigSignedInteger::unsign(); BigUnsignedInteger<radix>::zero(); }
 
             // [Operational] Add, Decrement, Divide, Exponentiate, Increment, Multiply, Sign, Subtract, Unsign
@@ -612,6 +613,9 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
                     for (primitive_t digit = 0.00L; mantissa >= LDBL_EPSILON; *(evaluation.value + evaluation.length + evaluation.mantissaLength++) = (digit_t) ::round(digit))
                     mantissa = ::modf((mantissa *= (primitive_t) radix), &digit);
                 }
+
+                // ...
+                evaluation.allocate(evaluation.length + evaluation.mantissaLength);
             }
 
             // Return
@@ -651,25 +655,93 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
                 ::memcpy(&subnumberA, &numberA, sizeof(BigSignedInteger<radix>)); subnumberA.length += numberA.mantissaLength;
                 ::memcpy(&subnumberB, &numberB, sizeof(BigSignedInteger<radix>)); subnumberB.length += numberB.mantissaLength;
 
-
-                return BigSignedInteger<radix>::isEqual(subnumberA, subnumberB);
+                evaluation = BigSignedInteger<radix>::isEqual(subnumberA, subnumberB);
             }
 
             // Return
             return evaluation;
         }
 
-        // Is Greater --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline bool BigFloat<radix>::isGreater(BigFloat const& numberA, BigFloat const& numberB) noexcept {}
+        // Is Greater
+        template <size_t radix>
+        constexpr inline bool BigFloat<radix>::isGreater(BigFloat const& numberA, BigFloat const& numberB) noexcept {
+            // Evaluation > Evaluation
+            bool evaluation = false;
 
-        // Is Lesser --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline bool BigFloat<radix>::isLesser(BigFloat const& numberA, BigFloat const& numberB) noexcept {}
+            // Logic
+            if (BigFloat::isSafe(numberA) && BigFloat::isSafe(numberB)) {
+                BigSignedInteger<radix> subnumberA, subnumberB;
+
+                // Update > (Evaluation, Sub Number (A, B))
+                ::memcpy(&subnumberA, &numberA, sizeof(BigSignedInteger<radix>)); subnumberA.length += numberA.mantissaLength;
+                ::memcpy(&subnumberB, &numberB, sizeof(BigSignedInteger<radix>)); subnumberB.length += numberB.mantissaLength;
+
+                evaluation = BigSignedInteger<radix>::isGreater(subnumberA, subnumberB);
+            }
+
+            // Return
+            return evaluation;
+        }
+
+        // Is Lesser
+        template <size_t radix>
+        constexpr inline bool BigFloat<radix>::isLesser(BigFloat const& numberA, BigFloat const& numberB) noexcept {
+            // Evaluation > Evaluation
+            bool evaluation = false;
+
+            // Logic
+            if (BigFloat::isSafe(numberA) && BigFloat::isSafe(numberB)) {
+                BigSignedInteger<radix> subnumberA, subnumberB;
+
+                // Update > (Evaluation, Sub Number (A, B))
+                ::memcpy(&subnumberA, &numberA, sizeof(BigSignedInteger<radix>)); subnumberA.length += numberA.mantissaLength;
+                ::memcpy(&subnumberB, &numberB, sizeof(BigSignedInteger<radix>)); subnumberB.length += numberB.mantissaLength;
+
+                evaluation = BigSignedInteger<radix>::isLesser(subnumberA, subnumberB);
+            }
+
+            // Return
+            return evaluation;
+        }
 
         // Multiply --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigFloat<radix>& BigFloat<radix>::multiply(BigFloat const& number) {}
+        template <size_t radix>
+        constexpr inline BigFloat<radix>& BigFloat<radix>::multiply(BigFloat const& number) {
+            // Logic
+            if (BigFloat::isInfinite() || BigFloat::isInfinite(number)) {
+                // Logic > ...
+                if (BigFloat::isNegative(number)) BigFloat::sign();
+            }
+
+            else if (BigFloat::isComputable()) {
+                // Initialization > Sub-Number
+                BigFloat subnumber;
+
+                std::cout << "[DEBUG]: {" << this -> length << "L, " << this -> mantissaLength << "L}" << std::endl;
+
+                // Update > ...
+                this -> length += this -> mantissaLength;
+                ::memcpy(&subnumber, &number, sizeof(BigFloat)); subnumber.length += number.mantissaLength;
+
+                std::cout << "[DEBUG]: {"; if (0u == this -> length) std::cout << '0'; else for (size_t iterator = 0u; iterator ^ this -> length; ++iterator) std::cout << this -> value[iterator]; std::cout << ", "; if (0u == subnumber.length) std::cout << '0'; else for (size_t iterator = 0u; iterator ^ subnumber.length; ++iterator) std::cout << subnumber.value[iterator]; std::cout << '}' << std::endl;
+                BigSignedInteger<radix>::multiply((BigSignedInteger<radix> const&) subnumber);
+                std::cout << "[DEBUG]: "; if (0u == this -> length) std::cout << '0'; else for (size_t iterator = 0u; iterator ^ this -> length; ++iterator) std::cout << this -> value[iterator]; std::cout << std::endl;
+
+                // Modification > ...
+                this -> mantissaLength += number.mantissaLength;
+                this -> length -= this -> mantissaLength;
+
+                std::cout << "[DEBUG]: {" << this -> length << "L, " << this -> mantissaLength << "L}" << std::endl;
+                this -> mantissaLength = 0u;
+                this -> length = 0u;
+
+                subnumber.length = 0u;
+                subnumber.value = NULL;
+            }
+
+            // Return
+            return *this;
+        }
 
         // Shift Left --- CHECKPOINT (Lapys)
         // template <size_t radix>
@@ -756,6 +828,10 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
 
             return evaluation;
         }
+
+        // (Un)Sign
+        template <size_t radix> constexpr inline BigFloat<radix>& BigFloat<radix>::sign(void) noexcept { BigSignedInteger<radix>::sign(); return *this; }
+        template <size_t radix> constexpr inline BigFloat<radix>& BigFloat<radix>::unsign(void) noexcept { BigSignedInteger<radix>::unsign(); return *this; }
 
     /* Big Signed Integer */
         // Add
@@ -949,7 +1025,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
         template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::unsign(void) noexcept { this -> signedness = false; return *this; }
 
     /* Big Unsigned Integer */
-        // Add
+        // Add --- CHECKPOINT (Lapys)
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::add(BigFloat<radix> const& number) { return BigUnsignedInteger::add(BigUnsignedInteger(number)); }
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::add(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::add(BigUnsignedInteger(number)); }
 
@@ -961,49 +1037,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             else if (this -> length == 1u && Digit::isEqual(*(this -> value), 1u)) { BigUnsignedInteger::copy(number); BigUnsignedInteger::increment(); }
             else if (this == &number) { BigUnsignedInteger evaluation; evaluation.copy(number); return BigUnsignedInteger::add(evaluation); }
             else if (BigUnsignedInteger::isSignificant(number)) {
-                // Initialization > (Carry, Evaluation)
-                bool carry = false;
-                Digit evaluation[2] {0u, 0u};
-
-                // Logic
-                if (this -> length < number.length) {
-                    // ...; Modification > Target > (Length, Value)
-                    BigUnsignedInteger::allocate(number.length);
-
-                    ::memcpy(this -> value + (number.length - this -> length), this -> value, this -> length * sizeof(Digit));
-                    ::memset(this -> value, 0u, (number.length - this -> length) * sizeof(Digit));
-                    this -> length = number.length;
-                }
-
-                // Loop
-                for (Digit *digit = number.value + (number.length - 1u), *iterator = this -> value + this -> length; iterator-- != (this -> value); --digit) {
-                    // Logic > Update > Evaluation
-                    if ((digit < number.value) || Digit::isLowestRank(*digit)) { *evaluation = 0u; *(evaluation + 1) = *iterator; }
-                    else if (Digit::isLowestRank(*iterator)) { *evaluation = 0u; *(evaluation + 1) = *digit; }
-                    else if (Digit::isMeanRank(*digit) || Digit::isUpperRank(*digit)) *(evaluation + 1) = (*evaluation = false == (radix - *digit > *iterator)) ? *iterator - (radix - *digit) : *iterator + *digit;
-                    else if (Digit::isMeanRank(*iterator) || Digit::isUpperRank(*iterator)) *(evaluation + 1) = (*evaluation = false == (radix - *iterator > *digit)) ? *digit - (radix - *iterator) : *digit + *iterator;
-                    else { *evaluation = 0u; *(evaluation + 1) = *digit + *iterator; }
-
-                    // Logic
-                    if (carry) {
-                        // Logic > Update > Evaluation
-                        if (Digit::isHighestRank(*(evaluation + 1))) { *evaluation = 1u; *(evaluation + 1) = 0u; }
-                        else ++*(evaluation + 1);
-                    }
-
-                    // Update > (Carry, Iterator)
-                    carry = false == Digit::isLowestRank(*evaluation);
-                    *iterator = *(evaluation + 1);
-                }
-
-                // Logic
-                if (carry) {
-                    // ...; Modification > Target > Value
-                    BigUnsignedInteger::allocate(this -> length + 1u);
-
-                    ::memmove(this -> value + 1, this -> value, (this -> length)++ * sizeof(Digit));
-                    *(this -> value) = 1u;
-                }
+                for (Digit *digit = number.value + number.length, *iterator = this -> value + (this -> length - 1u); digit-- != number.value; --iterator) {}
             }
 
             // Return
@@ -1096,7 +1130,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
 
                     // ...
                     BigUnsignedInteger::zero();
-                    BigUnsignedInteger::move((BigUnsignedInteger<radix>&&) quotient);
+                    BigUnsignedInteger::move((BigUnsignedInteger&&) quotient);
                 }
             }
 
@@ -1352,7 +1386,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             return evaluation;
         }
 
-        // Multiply
+        // Multiply --- CHECKPOINT (Lapys)
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigFloat<radix> const& number) { return BigUnsignedInteger::multiply(BigUnsignedInteger(number)); }
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::multiply(BigUnsignedInteger(number)); }
 
@@ -1364,61 +1398,36 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             else if (BigUnsignedInteger::isBaseFactor(number)) BigUnsignedInteger::shiftLeft(number.length - 1u);
             else if (BigUnsignedInteger::isBaseFactor()) { size_t const length = this -> length; BigUnsignedInteger::copy(number); BigUnsignedInteger::shiftLeft(length - 1u); }
             else if (BigUnsignedInteger::isSignificant() && false == (number.length == 1u && Digit::isEqual(*number.value, 1u))) {
-                // Initialization > (Carry, Evaluation, Product, Sum) --- NOTE (Lapys) -> Product is needless for single-digit multiplication.
-                Digit carry = 0u, evaluation[2] {0u, 0u};
-                BigUnsignedInteger<radix> product, sum;
+                Digit carry; // NOTE (Lapys) -> Per-digit and per-subevaluation manipulation.
+                BigUnsignedInteger evaluation;
+                BigUnsignedInteger subevaluation; // NOTE (Lapys) -> Per-digit operation.
 
-                // ...
-                product.allocate((product.length = this -> length + number.length));
+                subevaluation.allocate(this -> length + number.length);
 
-                // Loop > Logic
-                for (size_t iterator = 0u, subiterator; iterator ^ number.length; ++iterator)
-                if (false == Digit::isLowestRank(*(number.value + (number.length - iterator - 1u)))) { // NOTE (Lapys) -> Prevent redundant sub-multiplication by zero.
-                    // ...; Modification > Product > Value
-                    carry = 0u;
-                    ::memset(product.value + (product.length - iterator), 0u, iterator * sizeof(Digit));
+                for (Digit *digit = number.value + number.length, *iterator = this -> value + (this -> length - 1u); digit-- != number.value; --iterator) {
+                    if (false == Digit::isLowestRank(*digit)) {
+                        Digit const *result = Digit::multiply(*iterator, *digit);
 
-                    // Loop
-                    for (subiterator = 0u; subiterator ^ (this -> length); ++subiterator) {
-                        // Update > Evaluation; Loop > Logic > Update > Evaluation --- NOTE (Lapys) -> Iteration count dependent on radix size with the maximum time taken being `radix * radix`.
-                        ::memset(evaluation, 0u, sizeof(evaluation));
-
-                        for (Digit multiplicands[2] {*(this -> value + (this -> length - subiterator - 1u)), 0u}; false == Digit::isLowestRank(*multiplicands); --*multiplicands)
-                        for (*(multiplicands + 1) = *(number.value + (number.length - iterator - 1u)); false == Digit::isLowestRank(*(multiplicands + 1)); --*(multiplicands + 1)) {
-                            if (Digit::isHighestRank(*(evaluation + 1))) { ++*evaluation; *(evaluation + 1) = 0u; }
-                            else ++*(evaluation + 1);
-                        }
-
-                        // Logic > Update > Evaluation
                         if (false == Digit::isLowestRank(carry)) {
-                            if (Digit::isMeanRank(carry) || Digit::isUpperRank(carry)) { if (radix - carry > *(evaluation + 1)) *(evaluation + 1) += carry; else { ++*evaluation; *(evaluation + 1) -= radix - carry; } }
-                            else if (Digit::isMeanRank(*(evaluation + 1)) || Digit::isUpperRank(*(evaluation + 1))) { if (radix - *(evaluation + 1) > carry) *(evaluation + 1) += carry; else { ++*evaluation; *(evaluation + 1) = carry - (radix - *(evaluation + 1)); } }
-                            else *(evaluation + 1) += carry;
+                            Digit const *const subresult = Digit::add(carry, *(result + 1));
+
+                            [2]7 + 02 = 09
+                            [2]7 + 03 = 10
+
+                            [2]7 + 11 = 18
+                            [2]7 + 19 = 26
+
+                            if (Digit::isLowestRank(*subresult)) {}
+                            else {}
                         }
 
-                        // Modification > Product > Value; ...
-                        *(product.value + (product.length - (iterator + subiterator) - 1u)) = *(evaluation + 1);
-                        carry = *evaluation;
+                        *(subevaluation.value + subevaluation.length++) = *(result + 1);
+                        carry = *result;
                     }
-
-                    // Logic
-                    if (false == Digit::isLowestRank(carry)) {
-                        // Modification > Product > Value; Update > Carry
-                        *(product.value + (product.length - (iterator + this -> length) - 1u)) = carry;
-                        carry = true;
-                    }
-
-                    // Modification > Product > (Length, Value); Update > (Sum, ...)
-                    *evaluation = (product.value + (product.length - (this -> length + carry + iterator))) - product.value;
-
-                    product.value += product.length - (this -> length + carry + iterator); product.length -= *evaluation;
-                    sum.add(product);
-                    product.length += *evaluation; product.value -= product.length - (this -> length + carry + iterator);
                 }
 
-                // ...
                 BigUnsignedInteger::zero();
-                BigUnsignedInteger::move((BigUnsignedInteger<radix>&&) sum);
+                BigUnsignedInteger::move((BigUnsignedInteger&&) evaluation);
             }
 
             // Return
@@ -1479,7 +1488,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             return *this;
         }
 
-        // Subtract
+        // Subtract --- CHECKPOINT (Lapys)
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::subtract(BigFloat<radix> const& number) { return BigUnsignedInteger::subtract(BigUnsignedInteger(number)); }
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::subtract(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::subtract(BigUnsignedInteger(number)); }
 
@@ -1503,29 +1512,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
                     }
 
                     else {
-                        // Loop > Logic > ...
-                        for (Digit *digit = number.value + (number.length), *iterator = this -> value + (this -> length - 1u); digit-- != number.value; --iterator)
-                        if (Digit::isGreater(*digit, *iterator)) {
-                            // Loop > Logic > ...; ...
-                            for (Digit *subiterator = iterator; subiterator-- != this -> value; )
-                            if (false == Digit::isLowestRank(*subiterator)) { --*subiterator; subiterator = this -> value; }
-                            else *subiterator = radix - 1u;
-
-                            *iterator += Digit(radix) - *digit;
-                        } else *iterator -= *digit;
-
-                        // Logic --- NOTE (Lapys) -> Remove leading zero, or correct zeroed value.
-                        if (Digit::isLowestRank(*(this -> value))) {
-                            // Initialization > Length
-                            size_t length = 1u;
-
-                            // Loop > Update > Length
-                            // : Logic > ...
-                            while ((length ^ this -> length) && Digit::isLowestRank(*(this -> value + length))) ++length;
-
-                            if (length == this -> length) BigUnsignedInteger::zero();
-                            else ::memmove(this -> value, this -> value + length, (this -> length -= length) * sizeof(Digit));
-                        }
+                        for (Digit *digit = number.value + number.length, *iterator = this -> value + (this -> length - 1u); digit-- != number.value; --iterator)
                     }
                 }
             }
@@ -1613,83 +1600,67 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             }
 
             else {
-                // Initialization > (Digit) Length
-                size_t digitLength = 0u;
-                size_t length = 0u;
+                evaluation = (char*) ::malloc((this -> length + 2u + (19u /* -> SIZE_DIG - 1 */) + 1u) * sizeof(char));
 
-                // Update > Evaluation
-                evaluation = (char*) ::malloc((this -> length + 1u) * sizeof(char));
-
-                // Logic
                 if (NULL != evaluation) {
-                    // Loop
-                    for (size_t iterator = 0u; iterator ^ this -> length; ++iterator) {
-                        // Initialization > Digit
-                        Digit digit = *(this -> value + iterator);
+                    size_t digitLength = 0u;
+                    size_t evaluationLength = 0u;
+                    char const symbol[36] {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 
-                        // Logic
+                    for (size_t iterator = 0u; iterator ^ this -> length; ) {
+                        Digit const& digit = *(this -> value + iterator);
+
                         if (delimit) {
-                            // [Start] Update > Evaluation
-                            *(evaluation + length++) = '[';
+                            size_t index, subindex;
 
-                            // Logic
+                            *(evaluation + evaluationLength++) = '[';
+                            index = evaluationLength;
+
                             if (digit) {
-                                // Initialization > (Current Digit Length, Sub-Iterator)
-                                size_t currentDigitLength = 0u;
-                                size_t subiterator = length;
+                                for (size_t subiterator = 0u, value = digit.value; value; ) {
+                                    if (++subiterator > digitLength) {
+                                        if (0u == (value /= 10u)) {
+                                            digitLength = subiterator;
+                                            evaluation = (char*) ::realloc(evaluation, ((this -> length * digitLength) + (this -> length * 2u) + ((20u /* -> SIZE_DIG */) - digitLength) + 1u) * sizeof(char));
+                                            value = 0u;
 
-                                // Loop > Update > (Current Digit Length, Evaluation)
-                                for (; digit; digit /= 10u) { ++currentDigitLength; *(evaluation + length++) = *("0123456789" + (digit % 10u)); }
+                                            if (NULL != evaluation) { evaluationLength = 0u; iterator = 0u; }
+                                        }
+                                    }
 
-                                // Logic
-                                if (currentDigitLength > digitLength) {
-                                    // Update > (Digit Length, Evaluation, Iterator, Length)
-                                    digitLength = currentDigitLength;
-                                    evaluation = (char*) ::realloc(evaluation, ((digitLength * length) + (this -> length * 2u) + 1u) * sizeof(char));
-                                    iterator = NULL == evaluation ? this -> length - 1u : 0u;
-                                    length = 0u;
-                                }
-
-                                else {
-                                    // Loop > Update > Evaluation
-                                    for (size_t sublength = length - 1u; subiterator < sublength; (++subiterator, --sublength)) {
-                                        *(evaluation + subiterator) ^= *(evaluation + sublength);
-                                        *(evaluation + sublength) ^= *(evaluation + subiterator);
-                                        *(evaluation + subiterator) ^= *(evaluation + sublength);
+                                    else {
+                                        *(evaluation + evaluationLength++) = *(symbol + (value % 10u));
+                                        value /= 10u;
                                     }
                                 }
+                            } else *(evaluation + evaluationLength++) = '0';
+
+                            if (evaluationLength) {
+                                for (subindex = evaluationLength - 1u; index < subindex; (++index, --subindex)) {
+                                    *(evaluation + index) ^= *(evaluation + subindex);
+                                    *(evaluation + subindex) ^= *(evaluation + index);
+                                    *(evaluation + index) ^= *(evaluation + subindex);
+                                }
+
+                                *(evaluation + evaluationLength++) = ']';
+                                ++iterator;
                             }
+                        }
 
-                            else
-                                // Update > Evaluation
-                                *(evaluation + length++) = '0';
+                        else if (sizeof(symbol) < (size_t) digit) {
+                            for (size_t value = digit.value; value; value /= 10u) ++digitLength;
+                            evaluation = (char*) ::realloc(evaluation, ((this -> length * digitLength) + (this -> length * 2u) + ((20u /* -> SIZE_DIG */) - digitLength) + 1u) * sizeof(char));
 
-                            // [End] Update > Evaluation
-                            *(evaluation + length++) = ']';
+                            if (NULL != evaluation) { delimit = true; evaluationLength = 0u; iterator = 0u; }
                         }
 
                         else {
-                            // Logic
-                            if (35u < (size_t) digit) {
-                                // Deletion > Evaluation; Loop > Update > Digit Length
-                                ::free(evaluation);
-                                while (digit) { digit /= 10u; ++digitLength; }
-
-                                // Update > (Delimit, Evaluation, Iterator, Length)
-                                delimit = true;
-                                evaluation = (char*) ::malloc(((digitLength * length) + (this -> length * 2u) + 1u) * sizeof(char));
-                                iterator = NULL == evaluation ? this -> length - 1u : -1u;
-                                length = 0u;
-                            }
-
-                            else
-                                // Update > Evaluation
-                                *(evaluation + length++) = *("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" + digit);
+                            *(evaluation + evaluationLength++) = *(symbol + digit.value);
+                            ++iterator;
                         }
                     }
 
-                    // Logic > Update > Evaluation
-                    if (NULL != evaluation) *(evaluation + length) = '\0';
+                    *(evaluation + evaluationLength) = '\0';
                 }
             }
 
@@ -1697,8 +1668,92 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             return evaluation;
         }
 
+#include <time.h>
+inline bool randbool(void) noexcept { return ::rand() % 10 > 5; }
+
 /* Main */
 int main(void) {
+    std::cout << "[PROGRAM INITIATED]" << std::endl;
+
+    {
+        for (long double index = 1.00L, iterator = 83230000000000000003053113317719180486164987087249755859375.00L, length = iterator, value = 0.00L; iterator <= length && value != LDBL_MAX; (++index, ++iterator)) {
+            BigUnsignedInteger<10> numberA;
+            BigUnsignedInteger<10> numberB;
+
+            if (iterator) {
+                numberA.allocate(LDBL_MAX_10_EXP + 1u);
+                numberB.allocate(LDBL_MAX_10_EXP + 1u);
+
+                for (char *iterator = (char*) "83230000000000000003053113317719180486164987087249755859375"; *iterator; ++iterator) {
+                    *(numberA.value + numberA.length++) = (size_t) (*iterator - '0');
+                    *(numberB.value + numberB.length++) = (size_t) (*iterator - '0');
+                }
+
+                // for (long double subiterator = iterator; subiterator >= 1.00L; subiterator /= 10.00L) {
+                //     size_t const digit = (size_t) ::trunc(::fmod(subiterator, 10.00L));
+
+                //     *(numberA.value + numberA.length++) = digit;
+                //     *(numberB.value + numberB.length++) = digit;
+                // }
+
+                // for (size_t subiterator = 0u, sublength = numberA.length - 1u; subiterator < sublength; (++subiterator, --sublength)) {
+                //     *(numberA.value + subiterator) ^= *(numberA.value + sublength);
+                //     *(numberA.value + sublength) ^= *(numberA.value + subiterator);
+                //     *(numberA.value + subiterator) ^= *(numberA.value + sublength);
+
+                //     *(numberB.value + subiterator) ^= *(numberB.value + sublength);
+                //     *(numberB.value + sublength) ^= *(numberB.value + subiterator);
+                //     *(numberB.value + subiterator) ^= *(numberB.value + sublength);
+                // }
+            }
+
+            std::cout << "[EVAL #" << std::fixed << index << "\b \b\b \b\b \b\b \b\b \b\b \b\b \b]: {" << std::endl; {
+                std::cout << "    [Big Number A]: " << numberA.toString() << std::endl;
+                std::cout << "    [Big Number B]: " << numberB.toString() << std::endl;
+                std::cout << "    [Number]:       " << std::fixed << iterator << "\b \b\b \b\b \b\b \b\b \b\b \b\b \b" << std::endl;
+                std::cout << "    [DEBUG]:        83230000000000000003053113317719180486164987087249755859375" << std::endl;
+                std::cout << std::endl;
+                std::cout << "    [Big Multiplication]: " << BigUnsignedInteger<10>::multiply(numberA, numberB).toString() << std::endl;
+                std::cout << "    [Multiplication]:     " << std::fixed << (iterator * iterator) << "\b \b\b \b\b \b\b \b\b \b\b \b\b \b" << std::endl;
+            } std::cout << '}' << std::endl;
+
+            std::endl(std::cout);
+        }
+    }
+
+    // {
+    //     BigUnsignedInteger<10> numberA {};
+    //     BigUnsignedInteger<10> numberB {};
+
+    //     numberA.allocate((numberA.length = 59u));
+    //     for (char iterator = 0, *string = (char*) "83230000000000000003053113317719180486164987087249755859375"; *string; (++iterator, ++string)) numberA.value[(int) iterator] = *string - '0';
+
+    //     numberB.allocate((numberB.length = 58u));
+    //     for (char iterator = 0, *string = (char*) "1447799999999999999988897769753748434595763683319091796875"; *string; (++iterator, ++string)) numberB.value[(int) iterator] = *string - '0';
+
+    //     std::cout << "[EVAL]: " << numberA.multiply(numberB).toString() << std::endl;
+    // }
+
+    // {
+    //     ::srand(::time(NULL));
+
+    //     for (size_t iterator = 0u; iterator ^ 10u; ++iterator) {
+    //         long double const numberA = (::randbool() ? -1.00L : 1.00L) * (::randbool() ? 0.00L : (((long double) (::randbool() ? ::rand() % 10000000 : ::randbool() ? ::rand() % 1000000 : ::randbool() ? ::rand() % 100000 : ::rand() % 10000)) / 100.00L));
+    //         long double const numberB = ::randbool() && ::randbool() ? numberA : ((::randbool() ? -1.00L : 1.00L) * (::randbool() ? 0.00L : (((long double) (::randbool() ? ::rand() % 10000000 : ::randbool() ? ::rand() % 1000000 : ::randbool() ? ::rand() % 100000 : ::rand() % 10000)) / 100.00L)));
+
+    //         BigFloat<10> bigNumberA {numberA};
+    //         BigFloat<10> bigNumberB {numberB};
+
+    //         std::cout << "[Number A (" << std::fixed << numberA << ")]: " << bigNumberA.toString() << std::endl;
+    //         std::cout << "[Number B (" << std::fixed << numberB << ")]: " << bigNumberB.toString() << std::endl;
+    //         std::cout << "[A * B (" << std::fixed << (numberA * numberB) << ")]: " << bigNumberA.multiply(bigNumberB).toString() << std::endl;
+
+    //         std::endl(std::cout);
+    //     }
+    // }
+
+    std::cout << "\r\n[PROGRAM TERMINATED]" << std::flush;
+
     // Return
     return EXIT_SUCCESS;
 }
