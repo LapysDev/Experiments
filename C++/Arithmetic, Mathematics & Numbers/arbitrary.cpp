@@ -1,9 +1,11 @@
 /* Import */
     // [C Standard Library]
-    #include <float.h> // Floating-Point
+    #include <float.h> // Floating-Points
     #include <limits.h> // Limits
     #include <math.h> // Mathematics
     #include <stdarg.h> // Standard Arguments
+    #include <stdio.h> // Standard Input-Output
+    #include <stdint.h> // Standard Integer
     #include <stdlib.h> // Standard Library
     #include <string.h> // String
 
@@ -34,7 +36,7 @@ class BigUnsignedInteger { friend int main(void);
         constexpr inline void initiate(void) { if (SIZE_MAX == radix || 0u == radix || 1u == radix) { char radixString[20] {'0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'}; for (size_t index = 0u, iterator = radix; iterator; ++index) { *(radixString + index) = *("0123456789" + (iterator % 10u)); if (0u == (iterator /= 10u)) { for (iterator = 0u; iterator < index; (--index, ++iterator)) { *(radixString + index) ^= *(radixString + iterator); *(radixString + iterator) ^= *(radixString + index); *(radixString + index) ^= *(radixString + iterator); } iterator = 0u; } } terminate("[Syntax Error]: Invalid radix `", radixString, "` specified for `BigNumber` object", NULL); } }
 
         constexpr inline void terminate(void) noexcept { BigUnsignedInteger::zero(); }
-        inline void terminate(char const message[], ...) { va_list arguments; BigUnsignedInteger::zero(); ::putchar('\r'); va_start(arguments, message); for (char const *argument = message; NULL != argument; argument = va_arg(arguments, char const*)) for (char const *iterator = argument; '\0' ^ *iterator; ++iterator) ::putchar(*iterator); ::putchar('\n'); va_end(arguments); ::abort(); }
+        inline void terminate(char const message[], ...) { va_list arguments; terminate(); ::putchar('\r'); va_start(arguments, message); for (char const *argument = message; NULL != argument; argument = va_arg(arguments, char const*)) for (char const *iterator = argument; '\0' ^ *iterator; ++iterator) ::putchar(*iterator); ::putchar('\n'); va_end(arguments); ::abort(); }
 
         /* Method > (Allocate, Copy, Move, Size) --- NOTE (Lapys) ->
                 - Allocate: Relinquishes or requests memory used by the `Big` object.
@@ -50,7 +52,7 @@ class BigUnsignedInteger { friend int main(void);
 
     // [...]
     private:
-        // Initialization > (Length, Value)
+        // Definition > (Length, Value)
         size_t length;
         struct Digit { typedef size_t digit_t; // NOTE (Lapys) -> Digits are stored as denary `digit_t` values.
             template <size_t> friend class BigUnsignedInteger;
@@ -109,7 +111,7 @@ class BigUnsignedInteger { friend int main(void);
         inline ~BigUnsignedInteger(void) { terminate(); }
 
         // Method > ...
-            // [Conditional] Is (Base Factor, Big, Computable, Denormalized, Equal, Even, Finite, Fraction, Greater, Infinite, Integer, Lesser, Negative, Non-Computable, Normalized, Odd, Positive, Safe, Significant, Zero)
+            // [Conditional] Is (Base Factor, Big, Computable, Equal, Even, Finite, Fraction, Greater, Infinite, Integer, Lesser, Negative, Non-Computable, Odd, Positive, Safe, Significant, Zero)
             constexpr inline bool isBaseFactor(void) const noexcept { return BigUnsignedInteger::isBaseFactor(*this); }
             constexpr static bool isBaseFactor(BigUnsignedInteger const&) noexcept;
 
@@ -222,6 +224,15 @@ class BigUnsignedInteger { friend int main(void);
             constexpr BigUnsignedInteger& increment(void);
             constexpr inline BigUnsignedInteger increment(BigUnsignedInteger const& number) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
 
+            constexpr BigUnsignedInteger& modulo(BigFloat<radix> const&);
+            template <size_t base> constexpr inline BigUnsignedInteger& modulo(BigFloat<radix> const& number) { return BigUnsignedInteger::modulo(BigFloat<radix>::fromBase<base>(number)); }
+            constexpr BigUnsignedInteger& modulo(BigSignedInteger<radix> const&);
+            template <size_t base> constexpr inline BigUnsignedInteger& modulo(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::modulo(BigSignedInteger<radix>::fromBase<base>(number)); }
+            constexpr BigUnsignedInteger& modulo(BigUnsignedInteger const&);
+            template <size_t base> constexpr inline BigUnsignedInteger& modulo(BigUnsignedInteger<base> const& number) { return BigUnsignedInteger::modulo(BigUnsignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigUnsignedInteger modulo(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.modulo(numberB); return evaluation; }
+            constexpr inline static BigUnsignedInteger& modulo(BigUnsignedInteger&& numberA, BigUnsignedInteger const& numberB) { numberA.modulo(numberB); return numberA; }
+
             constexpr BigUnsignedInteger& multiply(BigFloat<radix> const&);
             template <size_t base> constexpr inline BigUnsignedInteger& multiply(BigFloat<radix> const& number) { return BigUnsignedInteger::multiply(BigFloat<radix>::fromBase<base>(number)); }
             constexpr BigUnsignedInteger& multiply(BigSignedInteger<radix> const&);
@@ -274,7 +285,7 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void
 
     // [...]
     private:
-        // Initialization > Signedness
+        // Definition > Signedness
         bool signedness;
 
     // [...]
@@ -375,6 +386,15 @@ class BigSignedInteger : public BigUnsignedInteger<radix> { friend int main(void
             constexpr BigSignedInteger& increment(void);
             constexpr inline BigSignedInteger increment(BigSignedInteger const& number) { BigSignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
 
+            constexpr BigSignedInteger& modulo(BigFloat<radix> const&);
+            template <size_t base> constexpr inline BigSignedInteger& modulo(BigFloat<base> const& number) { return BigSignedInteger::modulo(BigFloat<radix>::fromBase<base>(number)); }
+            constexpr BigSignedInteger& modulo(BigSignedInteger const&);
+            template <size_t base> constexpr inline BigSignedInteger& modulo(BigSignedInteger<base> const& number) { return BigSignedInteger::modulo(BigSignedInteger::fromBase<base>(number)); }
+            constexpr inline static BigSignedInteger modulo(BigSignedInteger const& numberA, BigSignedInteger const& numberB) { BigSignedInteger evaluation {}; evaluation.copy(numberA); evaluation.modulo(numberB); return evaluation; }
+            constexpr inline static BigSignedInteger& modulo(BigSignedInteger&& numberA, BigSignedInteger const& numberB) { numberA.modulo(numberB); return numberA; }
+            constexpr BigSignedInteger& modulo(BigUnsignedInteger<radix> const&);
+            template <size_t base> constexpr inline BigSignedInteger& modulo(BigUnsignedInteger<base> const& number) { return BigSignedInteger::modulo(BigUnsignedInteger<radix>::fromBase<base>(number)); }
+
             constexpr BigSignedInteger& multiply(BigFloat<radix> const&);
             template <size_t base> constexpr inline BigSignedInteger& multiply(BigFloat<base> const& number) { return BigSignedInteger::multiply(BigFloat<radix>::fromBase<base>(number)); }
             constexpr BigSignedInteger& multiply(BigSignedInteger const&);
@@ -417,7 +437,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
 
     // [...]
     private:
-        // Initialization > (Mantissa Length, State)
+        // Definition > (Mantissa Length, State)
         size_t mantissaLength;
         enum State {INFINITE, SAFE, UNCOMPUTABLE} state : 2;
 
@@ -502,7 +522,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             constexpr char* toString(bool const = false) const;
             constexpr inline void zero(void) noexcept { this -> mantissaLength = 0u; this -> state = State::SAFE; BigSignedInteger<radix>::zero(); }
 
-            // [Operational]
+            // [Operational] --- CHECKPOINT (Lapys)
             constexpr BigFloat& add(BigFloat const&);
             template <size_t base> constexpr inline BigFloat& add(BigFloat<base> const& number) { return BigFloat::add(BigFloat::fromBase<base>(number)); }
             constexpr inline static BigFloat add(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.add(numberB); return evaluation; }
@@ -524,6 +544,11 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
 
             constexpr BigFloat& increment(void);
             constexpr inline BigFloat increment(BigFloat const& number) { BigFloat evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
+
+            constexpr BigFloat& modulo(BigFloat const&);
+            template <size_t base> constexpr inline BigFloat& modulo(BigFloat<base> const& number) { return BigFloat::modulo(BigFloat::fromBase<base>(number)); }
+            constexpr inline static BigFloat modulo(BigFloat const& numberA, BigFloat const& numberB) { BigFloat evaluation {}; evaluation.copy(numberA); evaluation.modulo(numberB); return evaluation; }
+            constexpr inline static BigFloat& modulo(BigFloat&& numberA, BigFloat const& numberB) { numberA.modulo(numberB); return numberA; }
 
             constexpr BigFloat& multiply(BigFloat const&);
             template <size_t base> constexpr inline BigFloat& multiply(BigFloat<base> const& number) { return BigFloat::multiply(BigFloat::fromBase<base>(number)); }
@@ -703,6 +728,10 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             // Return
             return evaluation;
         }
+
+        // Modulo --- CHECKPOINT (Lapys)
+        // template <size_t radix>
+        // constexpr inline BigFloat<radix>& BigFloat<radix>::modulo(BigFloat const& number) {}
 
         // Multiply --- CHECKPOINT (Lapys)
         template <size_t radix>
@@ -938,6 +967,19 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
         template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isNegative(BigSignedInteger const& number) noexcept { return number.signedness; }
         template <size_t radix> constexpr inline bool BigSignedInteger<radix>::isPositive(BigSignedInteger const& number) noexcept { return false == number.signedness; }
 
+        // Modulo --- CHECKPOINT (Lapys)
+        template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::modulo(BigFloat<radix> const& number) { return BigSignedInteger::modulo(BigSignedInteger(number)); }
+        template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::modulo(BigUnsignedInteger<radix> const& number) { return BigSignedInteger::modulo(BigSignedInteger(number)); }
+
+        template <size_t radix>
+        constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::modulo(BigSignedInteger const& number) {
+            // ...
+            (void) number;
+
+            // Return
+            return *this;
+        }
+
         // Multiply
         template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::multiply(BigFloat<radix> const& number) { return BigSignedInteger::multiply(BigSignedInteger(number)); }
         template <size_t radix> constexpr inline BigSignedInteger<radix>& BigSignedInteger<radix>::multiply(BigUnsignedInteger<radix> const& number) { return BigSignedInteger::multiply(BigSignedInteger(number)); }
@@ -984,7 +1026,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             primitive_t evaluation {0L};
 
             // Logic > ...
-            if (BigSignedInteger::isBig(number)) number.terminate("[Arithmetic Overflow Error]: Unable to convert arbitrary-precision number to fixed-width integer");
+            if (BigSignedInteger::isBig(number)) number.terminate("[Arithmetic Error]: Unable to convert arbitrary-precision number to fixed-width integer");
             else if (BigSignedInteger::isSignificant(number)) evaluation = (primitive_t) (BigUnsignedInteger<radix>::toNumber((BigUnsignedInteger<radix> const&) number) * (BigSignedInteger::isNegative() ? -1L : 1L));
 
             // Return
@@ -1386,6 +1428,19 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             return evaluation;
         }
 
+        // Modulo --- CHECKPOINT (Lapys)
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::modulo(BigFloat<radix> const& number) { return BigUnsignedInteger::modulo(BigUnsignedInteger(number)); }
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::modulo(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::modulo(BigUnsignedInteger(number)); }
+
+        template <size_t radix>
+        constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigUnsignedInteger const& number) {
+            // ...
+            (void) number;
+
+            // Return
+            return *this;
+        }
+
         // Multiply --- CHECKPOINT (Lapys)
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigFloat<radix> const& number) { return BigUnsignedInteger::multiply(BigUnsignedInteger(number)); }
         template <size_t radix> constexpr inline BigUnsignedInteger<radix>& BigUnsignedInteger<radix>::multiply(BigSignedInteger<radix> const& number) { return BigUnsignedInteger::multiply(BigUnsignedInteger(number)); }
@@ -1410,15 +1465,6 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
 
                         if (false == Digit::isLowestRank(carry)) {
                             Digit const *const subresult = Digit::add(carry, *(result + 1));
-
-                            [2]7 + 02 = 09
-                            [2]7 + 03 = 10
-
-                            [2]7 + 11 = 18
-                            [2]7 + 19 = 26
-
-                            if (Digit::isLowestRank(*subresult)) {}
-                            else {}
                         }
 
                         *(subevaluation.value + subevaluation.length++) = *(result + 1);
@@ -1574,7 +1620,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             primitive_t evaluation {0uL};
 
             // Logic > ...
-            if (BigUnsignedInteger::isBig(number)) number.terminate("[Arithmetic Overflow Error]: Unable to convert arbitrary-precision number to fixed-width integer");
+            if (BigUnsignedInteger::isBig(number)) number.terminate("[Arithmetic Error]: Unable to convert arbitrary-precision number to fixed-width integer");
             else if (BigUnsignedInteger::isSignificant(number)) {
                 // Initialization > Exponent
                 // : Loop > Update > Evaluation
@@ -1600,7 +1646,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
             }
 
             else {
-                evaluation = (char*) ::malloc((this -> length + 2u + (19u /* -> SIZE_DIG - 1 */) + 1u) * sizeof(char));
+                evaluation = (char*) ::malloc((this -> length + 2u + (19u /* -> SIZE_MAX_10_EXP - 1 */) + 1u) * sizeof(char));
 
                 if (NULL != evaluation) {
                     size_t digitLength = 0u;
@@ -1621,7 +1667,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
                                     if (++subiterator > digitLength) {
                                         if (0u == (value /= 10u)) {
                                             digitLength = subiterator;
-                                            evaluation = (char*) ::realloc(evaluation, ((this -> length * digitLength) + (this -> length * 2u) + ((20u /* -> SIZE_DIG */) - digitLength) + 1u) * sizeof(char));
+                                            evaluation = (char*) ::realloc(evaluation, ((this -> length * digitLength) + (this -> length * 2u) + ((20u /* -> SIZE_MAX_10_EXP */) - digitLength) + 1u) * sizeof(char));
                                             value = 0u;
 
                                             if (NULL != evaluation) { evaluationLength = 0u; iterator = 0u; }
@@ -1649,7 +1695,7 @@ class BigFloat : public BigSignedInteger<radix> { friend int main(void);
 
                         else if (sizeof(symbol) < (size_t) digit) {
                             for (size_t value = digit.value; value; value /= 10u) ++digitLength;
-                            evaluation = (char*) ::realloc(evaluation, ((this -> length * digitLength) + (this -> length * 2u) + ((20u /* -> SIZE_DIG */) - digitLength) + 1u) * sizeof(char));
+                            evaluation = (char*) ::realloc(evaluation, ((this -> length * digitLength) + (this -> length * 2u) + ((20u /* -> SIZE_MAX_10_EXP */) - digitLength) + 1u) * sizeof(char));
 
                             if (NULL != evaluation) { delimit = true; evaluationLength = 0u; iterator = 0u; }
                         }

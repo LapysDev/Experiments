@@ -79,5 +79,5 @@ int APIENTRY WinMain(HINSTANCE instanceHandle, HINSTANCE previousInstanceHandle,
     } else abort();
 
     // Return
-    return EXIT_SUCCESS;
+    return windowProcedureMessage.wParam;
 }
