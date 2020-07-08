@@ -45,6 +45,6 @@ inline void print(char const* const argument) {
     }
 }
 inline void print(int argument) noexcept { if (0 == argument) print("0x0"); else { if (argument < 0) { argument = -argument; print('-'); } print("0x"); for (char output[9] {'0', '0', '0', '0', '0', '0', '0', '0', '\0'}, *iterator = output; argument; ++iterator) { *iterator = *("0123456789ABCDEF" + (argument % 16)); if (0 == (argument /= 16)) { iterator = output + (sizeof(output) - 2u); for (char *subiterator = output; iterator > subiterator; (--iterator, ++subiterator)) { *iterator ^= *subiterator; *subiterator ^= *iterator; *iterator ^= *subiterator; } print((char const*) output); } } } }
-inline void print(print_line const& argument) noexcept { argument.operator()(); }
-inline void print(print_tab const& argument) noexcept { argument.operator()(); }
+inline void print(print_line& argument) noexcept { argument.operator()(); }
+inline void print(print_tab& argument) noexcept { argument.operator()(); }
 template <class type, class... types> inline void print(type argument, types... arguments) { print(argument); print(arguments...); }
