@@ -91,6 +91,8 @@
             constexpr inline static bool isNegative(BigUnsignedInteger const& number) noexcept { return number.isNegative(); }
             constexpr bool isNonComputable(void) const noexcept;
             constexpr inline static bool isNonComputable(BigUnsignedInteger const& number) noexcept { return number.isNonComputable(); }
+            constexpr bool isOne(void) const noexcept;
+            constexpr inline static bool isOne(BigUnsignedInteger const& number) noexcept { return number.isOne(); }
             constexpr bool isPositive(void) const noexcept;
             constexpr inline static bool isPositive(BigUnsignedInteger const& number) noexcept { return number.isPositive(); }
             constexpr bool isSignificant(void) const noexcept;
@@ -156,7 +158,10 @@
             constexpr static unsigned char getSize(size_t) noexcept;
             constexpr static bool isDenary(digit_t) noexcept;
 
-        private: digit_t value : Digit::getSize(radix); // NOTE (Lapys) -> Assumed to be a denary representation of the digit.
+        private:
+            // NOTE (Lapys) -> Assumed to be a denary representation of the digit.
+            digit_t value : Digit::getSize((radix * 2u) - 2u /* NOTE (Lapys) -> For arithmetic shenanigans e.g.: storing `10` inside a single base-10 `Digit`. */);
+
         public:
             constexpr inline Digit(void) : value{0u} {}
             constexpr inline Digit(digit_t const value) : value{Digit::align(value)} {}
@@ -171,7 +176,6 @@
             // WARN (Lapys) -> Returns stack allocated pointer.
             static Digit* add(Digit const&, Digit const&) noexcept;
             static Digit* multiply(Digit const&, Digit const&) noexcept;
-            static Digit* subtract(Digit const&, Digit const&) noexcept;
 
             char* toString(void) const noexcept;
             inline static char* toString(Digit const& digit) noexcept { return digit.toString(); }
@@ -206,12 +210,111 @@
         template <size_t radix> inline BigUnsignedInteger<radix>::~BigUnsignedInteger(void) { ::free(this -> value); }
 
         // Add --- CHECKPOINT (Lapys)
-        // template <size_t radix> template <size_t base>
-        // constexpr inline void BigUnsignedInteger<radix>::add(BigUnsignedInteger<base> const& number) {}
+        template <size_t radix> template <size_t base>
+        constexpr inline void BigUnsignedInteger<radix>::add(BigUnsignedInteger<base> const& number) {
+            // Logic
+            if (base ^ radix) BigUnsignedInteger::add(BigUnsignedInteger::fromBase<base>(number));
+            else if (BigUnsignedInteger::isZero()) BigUnsignedInteger::copy(number);
+            else if (BigUnsignedInteger::isOne()) { BigUnsignedInteger::copy(number); BigUnsignedInteger::increment(); }
+            else if (BigUnsignedInteger::isOne(number)) BigUnsignedInteger::increment();
+            else if (BigUnsignedInteger::isSignificant(number)) {
+                // Initialization > Iterator (A, B) --- NOTE (Lapys) -> Set the "counter" variables.
+                Digit *iteratorA = this -> value + this -> length;
+                Digit const *iteratorB = number.value + number.length;
+
+                // Loop --- NOTE (Lapys) -> The algorithm used in the proceeding `for` loop only has defined behavior if the source number (`this`) has a greater or equal characteristics length to `number`.
+                if (this -> length < number.length) {
+                    // ...
+                    BigUnsignedInteger::allocate(number.length);
+
+                    // ...
+                    iteratorA = this -> value + number.length;
+                    this -> value += (number.length - this -> length);
+
+                    // (Loop > )Update > Iterator A --- NOTE (Lapys) -> Shift all digits rightward.
+                    while (this -> value != iteratorA--) iteratorA -> value = (iteratorA - 1) -> value;
+                    iteratorA = this -> value;
+
+                    // ... --- NOTE (Lapys) -> Zero all leading unreserved digits.
+                    this -> value -= (number.length - this -> length);
+                    while (this -> value != iteratorA) (--iteratorA) -> value = 0u;
+
+                    // Modification > Target > Length
+                    // : Update > Iterator A --- NOTE (Lapys) -> Reset the "counter" variable.
+                    this -> length = number.length;
+                    iteratorA = this -> value + this -> length;
+                }
+
+                // Loop --- NOTE (Lapys) -> Per-digit addition loop.
+                for (Digit carry = 0u, *evaluation = NULL; this -> value != iteratorA-- && --iteratorB; ) {
+                    // Logic
+                    if (number.value - 1 == iteratorB) { // NOTE (Lapys) -> Exhausted `number`'s digits to add.
+                        // Logic --- NOTE (Lapys) -> Round-up addition loop.
+                        if (false == Digit::isLowestRank(carry)) {
+                            // Update > (Evaluation, ...)
+                            evaluation = Digit::add(*iteratorA, carry);
+                            carry.value = 0u;
+                        }
+
+                        // else
+                        //     // Terminate
+                        //     break;
+                    }
+
+                    else {
+                        // Update > Evaluation
+                        evaluation = Digit::add(*iteratorA, *iteratorB);
+
+                        // Logic --- NOTE (Lapys) -> Add the `carry` to the `evaluation`.
+                        if (false == Digit::isLowestRank(carry)) {
+                            /* Update > Iterator A --- NOTE (Lapys) ->
+                                    Due to `evaluation`'s values being static references, we use a dummy variable (`iteratorA` in this case)
+                                    to preserve its contents upon its values being changed through a proceeding call to `Digit::add(...)`.
+                            */
+                            iteratorA -> value = evaluation -> value;
+
+                            /* Update > Evaluation --- NOTE (Lapys) -> Mutates the values of `evaluation` via call to `Digit::add(...)`,
+                                    fortunately the second element in `evaluation` is preserved through unwitting arithmetic
+                                    (and the first element is preserved through a dummy variable).
+                            */
+                            evaluation -> value = iteratorA -> value + (false == Digit::isLowestRank(Digit::add(carry, (evaluation + 1) -> value) -> value));
+
+                            // Update > Carry --- NOTE (Lapys) -> Reset the carry for the next addition.
+                            carry.value = 0u;
+                        }
+                    }
+
+                    // Update > Iterator A
+                    iteratorA -> value = (evaluation + 1) -> value;
+
+                    // Logic --- NOTE (Lapys) -> Handle multi-digit `evaluation`s as the carry and result.
+                    if (false == Digit::isLowestRank(evaluation -> value)) {
+                        /* Update > Carry --- NOTE (Lapys) -> Storing the carry would have been redundant
+                                if the `Digit::add(...)` function was not utilized in the `BigUnsignedInteger::multiply(...)` method and
+                                since the size of `Digit::value` was able to store `0` - `(radix * 2u) - 2u` digits for private arithmetic.
+                        */
+                        carry.value = evaluation -> value;
+
+                        // Logic --- NOTE (Lapys) -> Expand the target number.
+                        if (this -> value == iteratorA) {
+                            // ...
+                            BigUnsignedInteger::allocate(++(this -> length));
+
+                            iteratorA = this -> value + this -> length;
+                            while (this -> value != --iteratorA) iteratorA -> value = (iteratorA - 1) -> value;
+                            iteratorA -> value = carry.value;
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         // Allocate --- NOTE (Lapys) -> Implicitly frees memory if the specified length is zero. --- REDACT (Lapys)
         template <size_t radix>
         inline void BigUnsignedInteger<radix>::allocate(size_t const length) {
+            // Logic ... --- NOTE (Lapys) -> Utilizes C-style dynamic memory allocation because RAII is not a requisite to handling `Digit` objects.
             if (0u == length) { ::free(this -> value); this -> value = NULL; }
             else if (length >= SIZE_MAX / sizeof(Digit)) { ::print("\r[MemoryException]: Attempt to acquire additional memory (", length * sizeof(Digit), " of ", SIZE_MAX, " bytes) than is allocable for a pointer within arbitrary-precision number", '\0'); ::abort(); }
             else {
@@ -261,9 +364,13 @@
 
                 // Logic
                 if (Digit::isLowestRank(this -> value -> value)) {
-                    // ...; Loop > Update > Iterator
+                    // ...
+                    iterator = this -> value;
                     BigUnsignedInteger::allocate(--(this -> length));
-                    for (iterator = this -> value; this -> length ^ (iterator - (this -> value)); ++iterator) iterator -> value = (iterator + 1) -> value;
+
+                    this -> value += this -> length;
+                    while (this -> value != iterator) iterator -> value = (iterator + 1) -> value;
+                    this -> value -= this -> length;
                 }
             }
         }
@@ -346,11 +453,12 @@
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isInfinite(void) const noexcept { return false; }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isNegative(void) const noexcept { return false; }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isNonComputable(void) const noexcept { return false; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isOne(void) const noexcept { return NULL != this -> value && (this -> length == 1u && this -> value -> value == 1u); }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isPositive(void) const noexcept { return true; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(void) const noexcept { return this -> length && NULL != this -> value; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(void) const noexcept { return 0u == this -> length && NULL == this -> value; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(void) const noexcept { return /*0x0 != */this -> length + this -> value; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(void) const noexcept { return 0x0 == this -> length + this -> value; }
 
-        // Is Base Factor --- NOTE (Lapys) -> Assert the number is power of 10.
+        // Is Base Factor --- NOTE (Lapys) -> Assert the number is a power of its radix; For decimals that would be 10, 100, 1000, 10000... and so on.
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isBaseFactor(void) const noexcept {
             // Evaluation > Evaluation
             bool evaluation = true;
@@ -452,13 +560,51 @@
         // template <size_t radix> template <size_t base>
         // constexpr inline void BigUnsignedInteger<radix>::multiply(BigUnsignedInteger<base> const& number) {}
 
-        // Subtract --- CHECKPOINT (Lapys)
+        // Subtract
         template <size_t radix> template <size_t base>
         constexpr inline void BigUnsignedInteger<radix>::subtract(BigUnsignedInteger<base> const& number) {
             // Logic > ...
-            if (base == radix) BigUnsignedInteger::subtract(BigUnsignedInteger::fromBase<base>(number));
-            else if (false == BigUnsignedInteger::isLesser(number)) BigUnsignedInteger::zero();
-            else {}
+            if (base ^ radix) BigUnsignedInteger::subtract(BigUnsignedInteger::fromBase<base>(number));
+            else if (BigUnsignedInteger::isLesser(number)) BigUnsignedInteger::zero();
+            else if (BigUnsignedInteger::isOne(number)) BigUnsignedInteger::decrement();
+            else if (BigUnsignedInteger::isSignificant() && BigUnsignedInteger::isSignificant(number)) {
+                // Initialization > Iterator (A, B)
+                Digit *iteratorA = this -> value + this -> length;
+                Digit /* const */*iteratorB = number.value + number.length;
+
+                // Loop > Logic --- NOTE (Lapys) -> Per-digit subtraction loop.
+                while (this -> value != iteratorA-- && number.value != iteratorB--)
+                if (iteratorB -> value) { // NOTE (Lapys) -> Because carry operations are calculated per iteration, there is no need to iterate over the `0` digits of `number`.
+                    // Logic
+                    if (iteratorA -> value < iteratorB -> value) {
+                        // Initialization > Iterator
+                        Digit *iterator = iteratorA;
+
+                        // (Loop > )Update > Iterator --- NOTE (Lapys) -> Completely calculate carry operations for this sub-operation.
+                        iterator-- -> value += radix; // WARN (Lapys) -> By-passes upper limit set by `radix` value.
+                        while (Digit::isLowestRank(iterator -> value)) iterator-- -> value = radix - 1u;
+                        --(iterator -> value);
+                    }
+
+                    // Update > Iterator A
+                    iteratorA -> value -= iteratorB -> value;
+                }
+
+                // Logic --- NOTE (Lapys) -> Remove leading zeroes.
+                if (Digit::isLowestRank(this -> value -> value)) {
+                    // ... Update > Iterator (A, B) --- NOTE (Lapys) -> Get number of leading zeroes.
+                    iteratorA = this -> value + this -> length;
+                    iteratorB = this -> value;
+                    while (iteratorA != iteratorB && Digit::isLowestRank(iteratorB -> value)) ++iteratorB;
+
+                    // ...
+                    iteratorA = this -> value;
+                    this -> length -= iteratorB - this -> value;
+                    while (this -> length ^ (iteratorA - (this -> value))) iteratorA++ -> value = iteratorB++ -> value;
+
+                    BigUnsignedInteger::allocate(this -> length);
+                }
+            }
         }
 
         // To Base --- CHECKPOINT (Lapys)
@@ -641,17 +787,6 @@
             return evaluation;
         }
 
-        // Subtract --- REDACT (Lapys)
-        template <size_t radix>
-        inline typename BigUnsignedInteger<radix>::Digit* BigUnsignedInteger<radix>::Digit::subtract(Digit const& digitA, Digit const& digitB) noexcept {
-            static Digit evaluation[2] {0u, 0u};
-
-            if (digitA.value < digitB.value) return Digit::subtract(digitB, digitA);
-            else (evaluation + 1) -> value = digitA.value - digitB.value;
-
-            return evaluation;
-        }
-
         // To String --- REDACT (Lapys)
         template <size_t radix>
         inline char* BigUnsignedInteger<radix>::Digit::toString(void) const noexcept {
@@ -684,6 +819,55 @@ int main(void) {
     ::println("[PROGRAM INITIATED]");
 
     /* .... */ {
+        // ::println("[EVAL (999 + 999)]: ", BigUnsignedInteger<10>::add(999u, 999u).toString(), " (", 999u + 999u, ')'); // -> 1998
+        // ::println("[EVAL (999 + 999)]: ", BigUnsignedInteger<10>::add(999u, 999u).toString(), " (", 999u + 999u, ')'); // -> 1998
+        // ::println();
+
+        // ::println("[EVAL (909 + 4321)]: ", BigUnsignedInteger<10>::add(909u, 4321u).toString(), " (", 909u + 4321u, ')'); // -> 5230
+        // ::println("[EVAL (4321 + 909)]: ", BigUnsignedInteger<10>::add(4321u, 909u).toString(), " (", 4321u + 909u, ')'); // -> 5230
+        // ::println();
+
+        // ::println("[EVAL (209 + 4321)]: ", BigUnsignedInteger<10>::add(209u, 4321u).toString(), " (", 209u + 4321u, ')'); // -> 4530
+        // ::println("[EVAL (4321 + 209)]: ", BigUnsignedInteger<10>::add(4321u, 209u).toString(), " (", 4321u + 209u, ')'); // -> 4530
+        // ::println();
+
+        // ::println("[EVAL (1111 + 9999)]: ", BigUnsignedInteger<10>::add(1111u, 9999u).toString(), " (", 1111u + 9999u, ')'); // -> 11110
+        // ::println("[EVAL (9999 + 1111)]: ", BigUnsignedInteger<10>::add(9999u, 1111u).toString(), " (", 9999u + 1111u, ')'); // -> 11110
+        // ::println();
+
+        ::println("[EVAL (22114 + 928)]: ", BigUnsignedInteger<10>::add(22114u, 928u).toString(), " (", 22114u + 928u, ')'); // -> 23042
+        ::println("[EVAL (928 + 22114)]: ", BigUnsignedInteger<10>::add(928u, 22114u).toString(), " (", 928u + 22114u, ')'); // -> 23042
+        ::println();
+
+        ::println("[EVAL (5598 + 97)]: ", BigUnsignedInteger<10>::add(5598u, 97u).toString(), " (", 5598u + 97u, ')'); // -> 5695
+        ::println("[EVAL (97 + 5598)]: ", BigUnsignedInteger<10>::add(97u, 5598u).toString(), " (", 97u + 5598u, ')'); // -> 5695
+        ::println();
+
+        ::println("[EVAL (11819 + 239)]: ", BigUnsignedInteger<10>::add(11819u, 239u).toString(), " (", 11819u + 239u, ')'); // -> 12058
+        ::println("[EVAL (239 + 11819)]: ", BigUnsignedInteger<10>::add(239u, 11819u).toString(), " (", 239u + 11819u, ')'); // -> 12058
+        ::println();
+
+        ::println("[EVAL (22774 + 565)]: ", BigUnsignedInteger<10>::add(22774u, 565u).toString(), " (", 22774u + 565u, ')'); // -> 23339
+        ::println("[EVAL (565 + 22774)]: ", BigUnsignedInteger<10>::add(565u, 22774u).toString(), " (", 565u + 22774u, ')'); // -> 23339
+        ::println();
+
+        ::println("[EVAL (19620 + 968)]: ", BigUnsignedInteger<10>::add(19620u, 968u).toString(), " (", 19620u + 968u, ')'); // -> 20588
+        ::println("[EVAL (968 + 19620)]: ", BigUnsignedInteger<10>::add(968u, 19620u).toString(), " (", 968u + 19620u, ')'); // -> 20588
+        ::println();
+
+        ::println("[EVAL (26814 + 976)]: ", BigUnsignedInteger<10>::add(26814u, 976u).toString(), " (", 26814u + 976u, ')'); // -> 27790
+        ::println("[EVAL (976 + 26814)]: ", BigUnsignedInteger<10>::add(976u, 26814u).toString(), " (", 976u + 26814u, ')'); // -> 27790
+        ::println();
+
+        // for (unsigned char iterator = 0u; iterator ^ 40u; ++iterator) {
+        //     unsigned const numberA = ::randbool() ? 0u : ::randint(1e5);
+        //     unsigned const numberB = ::randbool() && ::randbool() ? numberA : ::randint(1e3);
+
+        //     BigUnsignedInteger<10> const bigNumberA = numberA;
+        //     BigUnsignedInteger<10> const bigNumberB = numberB;
+
+        //     ::println('[', bigNumberA.toString(), " (", numberA, ") + ", bigNumberB.toString(), " (", numberB, ")]: ", BigUnsignedInteger<10>::add(bigNumberA, bigNumberB).toString(), " (", numberA + numberB, ')');
+        // }
     }
 
     /* [End] ... */

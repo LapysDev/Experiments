@@ -25,7 +25,11 @@ void print(wchar_t const* const) noexcept;
 void print(print_line const&) noexcept;
 void print(print_tab const&) noexcept;
 template <class type> void print(type&) noexcept;
+template <class type, class... types> void print(type (&)(types...)) noexcept;
+template <class type, class... types> void print(type (&)(types..., ...)) noexcept;
 template <class type> void print(type* const) noexcept;
+template <class type, class... types> void print(type (*)(types...)) noexcept;
+template <class type, class... types> void print(type (*)(types..., ...)) noexcept;
 template <class type, class... types> void print(type, types...);
 
 /* Constant > Print (Line, Tab) */
@@ -64,5 +68,9 @@ inline void print(wchar_t const* const argument) noexcept { if (NULL != argument
 inline void print(print_line& argument) noexcept { argument.operator()(); }
 inline void print(print_tab& argument) noexcept { argument.operator()(); }
 template <class type> inline void print(type&) noexcept { print("<object>"); }
+template <class type, class... types> inline void print(type (&)(types...)) noexcept { print("<function>"); }
+template <class type, class... types> inline void print(type (&)(types..., ...)) noexcept { print("<function (variadic)>"); }
 template <class type> inline void print(type* const argument) noexcept { int pointer = *(int*) &argument; char string[9] {'0', '0', '0', '0', '0', '0', '0', '0', '\0'}; for (char *iterator = string + 8; iterator-- != string; pointer /= 10) *iterator = *("0123456789ABCDEF" + (pointer % 10)); print("0x", string); }
+template <class type, class... types> inline void print(type (*)(types...)) noexcept { print("<function pointer>"); }
+template <class type, class... types> inline void print(type (*)(types..., ...)) noexcept { print("<function pointer (variadic)>"); }
 template <class type, class... types> inline void print(type argument, types... arguments) { print(argument); print(arguments...); }
