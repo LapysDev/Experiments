@@ -51,7 +51,7 @@ inline void print(bool const argument) noexcept { print(argument ? "true" : "fal
 inline void print(char const argument) noexcept { ::putchar(argument); }
 inline void print(char* const argument) noexcept { print((char const*) argument); }
 inline void print(char const* const argument) noexcept { if (NULL != argument) ::printf("%s", argument); }
-inline void print(double const argument) noexcept { ::printf("%g", argument); }
+inline void print(double const argument) noexcept { ::printf("%e", argument); }
 inline void print(float const argument) noexcept { ::printf("%f", argument); }
 inline void print(int const argument) noexcept { ::printf("%i", argument); }
 inline void print(long const argument) noexcept { ::printf("%ld", argument); }

@@ -29,6 +29,7 @@
         protected:
             // Method > (Assert, ...)
             void assert(void) const;
+            constexpr static size_t getMaximumLength(void) noexcept;
             constexpr static unsigned char getMaximumLengthSize(void) noexcept;
 
         // [...]
@@ -106,7 +107,11 @@
             template <size_t base> constexpr void multiply(BigUnsignedInteger<base> const& number);
             constexpr inline static BigUnsignedInteger multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB); return evaluation; }
 
-            void shiftLeft(length_t const )
+            constexpr void shiftLeft(length_t);
+            constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& number, length_t const length) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftLeft(length); return evaluation; }
+
+            constexpr void shiftRight(length_t const);
+            constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& number, length_t const length) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftRight(length); return evaluation; }
 
             template <size_t base> constexpr void subtract(BigUnsignedInteger<base> const& number);
             constexpr inline static BigUnsignedInteger subtract(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB); return evaluation; }
@@ -404,8 +409,10 @@
             return evaluation;
         }
 
-        // Get Maximum Length Size --- WARN (Lapys) -> Slight code re-use.
-        template <size_t radix> constexpr inline unsigned char BigUnsignedInteger<radix>::getMaximumLengthSize(void) noexcept { unsigned char length = 0u, size = 0u; for (size_t iterator = SIZE_MAX / sizeof(Digit); iterator; iterator /= 10u) ++length; while (length) { length >>= 1u; ++size; } return size ? size : 1u; }
+        // : Get Maximum Length
+        // : Get Maximum Length Size --- WARN (Lapys) -> Code re-used here(?).
+        template <size_t radix> constexpr inline size_t BigUnsignedInteger<radix>::getMaximumLength(void) noexcept { return SIZE_MAX / sizeof(Digit); }
+        template <size_t radix> constexpr inline unsigned char BigUnsignedInteger<radix>::getMaximumLengthSize(void) noexcept { unsigned char size = 0u; for (size_t maximumLength = BigUnsignedInteger::getMaximumLength(); maximumLength; maximumLength >>= 1u) ++size; return size ? size : 1u; }
 
         // Increment
         template <size_t radix>
@@ -547,6 +554,28 @@
         // Multiply --- CHECKPOINT (Lapys)
         // template <size_t radix> template <size_t base>
         // constexpr inline void BigUnsignedInteger<radix>::multiply(BigUnsignedInteger<base> const& number) {}
+
+        // Shift Left
+        template <size_t radix>
+        constexpr inline void BigUnsignedInteger<radix>::shiftLeft(length_t length) {
+            // Logic
+            if (length && BigUnsignedInteger::isSignificant()) {
+                // Update > Length
+                length += this -> length;
+
+                // Logic > ... --- REDACT (Lapys)
+                if (length > BigUnsignedInteger::getMaximumLength() || (0u == length || length < this -> length)) { ::println("\r[ArithmeticException]: Unable to represent arbitrary-precision number after shifting leftward by ", length - this -> length, " unit(s)"); ::abort(); }
+                else {
+                    BigUnsignedInteger::allocate(length);
+                    this -> value += this -> length;
+                    while (this -> length ^ length) { ++(this -> length); (this -> value)++ -> value = 0u; }
+                    this -> value -= this -> length;
+                }
+            }
+        }
+
+        // Shift Right
+        template <size_t radix> constexpr inline void BigUnsignedInteger<radix>::shiftRight(length_t const length) { if (length) length > this -> length ? BigUnsignedInteger::zero() : BigUnsignedInteger::allocate((this -> length -= length)); }
 
         // Subtract
         template <size_t radix> template <size_t base>
