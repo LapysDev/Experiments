@@ -106,6 +106,8 @@
             template <size_t base> constexpr void multiply(BigUnsignedInteger<base> const& number);
             constexpr inline static BigUnsignedInteger multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB); return evaluation; }
 
+            void shiftLeft(length_t const )
+
             template <size_t base> constexpr void subtract(BigUnsignedInteger<base> const& number);
             constexpr inline static BigUnsignedInteger subtract(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB); return evaluation; }
 
@@ -209,7 +211,7 @@
         // [Destructor]
         template <size_t radix> inline BigUnsignedInteger<radix>::~BigUnsignedInteger(void) { ::free(this -> value); }
 
-        // Add --- CHECKPOINT (Lapys)
+        // Add
         template <size_t radix> template <size_t base>
         constexpr inline void BigUnsignedInteger<radix>::add(BigUnsignedInteger<base> const& number) {
             // Logic
@@ -227,17 +229,12 @@
                     // ...
                     BigUnsignedInteger::allocate(number.length);
 
-                    // ...
                     iteratorA = this -> value + number.length;
-                    this -> value += (number.length - this -> length);
+                    this -> value += this -> length;
 
-                    // (Loop > )Update > Iterator A --- NOTE (Lapys) -> Shift all digits rightward.
-                    while (this -> value != iteratorA--) iteratorA -> value = (iteratorA - 1) -> value;
-                    iteratorA = this -> value;
-
-                    // ... --- NOTE (Lapys) -> Zero all leading unreserved digits.
-                    this -> value -= (number.length - this -> length);
-                    while (this -> value != iteratorA) (--iteratorA) -> value = 0u;
+                    // Loop > Update > Iterator --- NOTE (Lapys) -> Shift the source number e.g.: `69 + 420` becomes `069 + 420`
+                    while ((this -> length)--) (--iteratorA) -> value = (--(this -> value)) -> value;
+                    while (this -> value != iteratorA--) iteratorA -> value = 0u;
 
                     // Modification > Target > Length
                     // : Update > Iterator A --- NOTE (Lapys) -> Reset the "counter" variable.
@@ -248,17 +245,13 @@
                 // Loop --- NOTE (Lapys) -> Per-digit addition loop.
                 for (Digit carry = 0u, *evaluation = NULL; this -> value != iteratorA-- && --iteratorB; ) {
                     // Logic
-                    if (number.value - 1 == iteratorB) { // NOTE (Lapys) -> Exhausted `number`'s digits to add.
+                    if (number.value > iteratorB) { // NOTE (Lapys) -> Exhausted `number`'s digits to add.
                         // Logic --- NOTE (Lapys) -> Round-up addition loop.
                         if (false == Digit::isLowestRank(carry)) {
                             // Update > (Evaluation, ...)
                             evaluation = Digit::add(*iteratorA, carry);
                             carry.value = 0u;
-                        }
-
-                        // else
-                        //     // Terminate
-                        //     break;
+                        } else break;
                     }
 
                     else {
@@ -267,20 +260,15 @@
 
                         // Logic --- NOTE (Lapys) -> Add the `carry` to the `evaluation`.
                         if (false == Digit::isLowestRank(carry)) {
-                            /* Update > Iterator A --- NOTE (Lapys) ->
-                                    Due to `evaluation`'s values being static references, we use a dummy variable (`iteratorA` in this case)
-                                    to preserve its contents upon its values being changed through a proceeding call to `Digit::add(...)`.
+                            /* Update > (Carry, Evaluation)
+                                --- NOTE ---
+                                    #Lapys: Mutates the former values of `evaluation` via call to `Digit::add(...)`,
+                                        fortunately the second element in `evaluation` is preserved through unwitting arithmetic
+                                        and the first element is preserved through the initial statically parsed value of `evaluation -> value`.
+                                --- WARN (Lapys) -> `evaluation -> value += ...` evaluates to undefined arithmetic.
                             */
-                            iteratorA -> value = evaluation -> value;
-
-                            /* Update > Evaluation --- NOTE (Lapys) -> Mutates the values of `evaluation` via call to `Digit::add(...)`,
-                                    fortunately the second element in `evaluation` is preserved through unwitting arithmetic
-                                    (and the first element is preserved through a dummy variable).
-                            */
-                            evaluation -> value = iteratorA -> value + (false == Digit::isLowestRank(Digit::add(carry, (evaluation + 1) -> value) -> value));
-
-                            // Update > Carry --- NOTE (Lapys) -> Reset the carry for the next addition.
-                            carry.value = 0u;
+                            evaluation -> value = evaluation -> value + (false == Digit::isLowestRank(Digit::add(carry, (evaluation + 1) -> value) -> value));
+                            carry.value = 0u; // NOTE (Lapys) -> Reset the carry for the next addition.
                         }
                     }
 
@@ -819,46 +807,6 @@ int main(void) {
     ::println("[PROGRAM INITIATED]");
 
     /* .... */ {
-        // ::println("[EVAL (999 + 999)]: ", BigUnsignedInteger<10>::add(999u, 999u).toString(), " (", 999u + 999u, ')'); // -> 1998
-        // ::println("[EVAL (999 + 999)]: ", BigUnsignedInteger<10>::add(999u, 999u).toString(), " (", 999u + 999u, ')'); // -> 1998
-        // ::println();
-
-        // ::println("[EVAL (909 + 4321)]: ", BigUnsignedInteger<10>::add(909u, 4321u).toString(), " (", 909u + 4321u, ')'); // -> 5230
-        // ::println("[EVAL (4321 + 909)]: ", BigUnsignedInteger<10>::add(4321u, 909u).toString(), " (", 4321u + 909u, ')'); // -> 5230
-        // ::println();
-
-        // ::println("[EVAL (209 + 4321)]: ", BigUnsignedInteger<10>::add(209u, 4321u).toString(), " (", 209u + 4321u, ')'); // -> 4530
-        // ::println("[EVAL (4321 + 209)]: ", BigUnsignedInteger<10>::add(4321u, 209u).toString(), " (", 4321u + 209u, ')'); // -> 4530
-        // ::println();
-
-        // ::println("[EVAL (1111 + 9999)]: ", BigUnsignedInteger<10>::add(1111u, 9999u).toString(), " (", 1111u + 9999u, ')'); // -> 11110
-        // ::println("[EVAL (9999 + 1111)]: ", BigUnsignedInteger<10>::add(9999u, 1111u).toString(), " (", 9999u + 1111u, ')'); // -> 11110
-        // ::println();
-
-        ::println("[EVAL (22114 + 928)]: ", BigUnsignedInteger<10>::add(22114u, 928u).toString(), " (", 22114u + 928u, ')'); // -> 23042
-        ::println("[EVAL (928 + 22114)]: ", BigUnsignedInteger<10>::add(928u, 22114u).toString(), " (", 928u + 22114u, ')'); // -> 23042
-        ::println();
-
-        ::println("[EVAL (5598 + 97)]: ", BigUnsignedInteger<10>::add(5598u, 97u).toString(), " (", 5598u + 97u, ')'); // -> 5695
-        ::println("[EVAL (97 + 5598)]: ", BigUnsignedInteger<10>::add(97u, 5598u).toString(), " (", 97u + 5598u, ')'); // -> 5695
-        ::println();
-
-        ::println("[EVAL (11819 + 239)]: ", BigUnsignedInteger<10>::add(11819u, 239u).toString(), " (", 11819u + 239u, ')'); // -> 12058
-        ::println("[EVAL (239 + 11819)]: ", BigUnsignedInteger<10>::add(239u, 11819u).toString(), " (", 239u + 11819u, ')'); // -> 12058
-        ::println();
-
-        ::println("[EVAL (22774 + 565)]: ", BigUnsignedInteger<10>::add(22774u, 565u).toString(), " (", 22774u + 565u, ')'); // -> 23339
-        ::println("[EVAL (565 + 22774)]: ", BigUnsignedInteger<10>::add(565u, 22774u).toString(), " (", 565u + 22774u, ')'); // -> 23339
-        ::println();
-
-        ::println("[EVAL (19620 + 968)]: ", BigUnsignedInteger<10>::add(19620u, 968u).toString(), " (", 19620u + 968u, ')'); // -> 20588
-        ::println("[EVAL (968 + 19620)]: ", BigUnsignedInteger<10>::add(968u, 19620u).toString(), " (", 968u + 19620u, ')'); // -> 20588
-        ::println();
-
-        ::println("[EVAL (26814 + 976)]: ", BigUnsignedInteger<10>::add(26814u, 976u).toString(), " (", 26814u + 976u, ')'); // -> 27790
-        ::println("[EVAL (976 + 26814)]: ", BigUnsignedInteger<10>::add(976u, 26814u).toString(), " (", 976u + 26814u, ')'); // -> 27790
-        ::println();
-
         // for (unsigned char iterator = 0u; iterator ^ 40u; ++iterator) {
         //     unsigned const numberA = ::randbool() ? 0u : ::randint(1e5);
         //     unsigned const numberB = ::randbool() && ::randbool() ? numberA : ::randint(1e3);
