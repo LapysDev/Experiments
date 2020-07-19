@@ -83,8 +83,8 @@ void putPixel(const HWND, const HDC, const int, const int, const COLORREF) noexc
                         yRatioIterator += yRatio;
 
                         // Logic > ... --- NOTE (Lapys) -> Determines the length of the line (at an angle).
-                        if ((x * x) + (y * y) <= LENGTH * LENGTH)
-                        ::putPixel(windowHandle, graphicsDeviceContextHandle, x, y, color);
+                        if ((x * x) + (y * y) <= LENGTH * LENGTH) ::putPixel(windowHandle, graphicsDeviceContextHandle, x, y, color);
+                        else break;
 
                         // Logic > Update > ... --- NOTE (Lapys) -> Determines the angle of the line.
                         if (xRatioIterator >= 1.0f) { xWeight < 0.0f ? --x : ++x; --xRatioIterator; }

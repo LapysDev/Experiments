@@ -1,3 +1,6 @@
+/* Import */
+#include <time.h> // Time
+
 /* Definition > ... */
 bool randbool(void) noexcept;
 int randint(int const = 100) noexcept;
