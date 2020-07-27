@@ -39,7 +39,7 @@ template <class type, class... types> void print(type, types...);
 struct print_line { public:
     inline void operator()(void) const { print("\r\n"); }
     template <size_t count> inline void operator()(void) const { if (count) { char output[(count * 2u) + 1u] {0}; for (size_t iterator = 0u, length = 0u; count ^ iterator; ++iterator) { *(output + length++) = '\r'; *(output + length++) = '\n'; *(output + length) = '\0'; } print((char const*) output); } }
-    template <size_t count = 1u, class... types> inline void operator()(types... arguments) const { print(arguments...); 1u == count ? operator()() : operator()<count>(); }
+    template <size_t count = 1u, class... types> inline void operator()(types... arguments) const { print(arguments...); operator()<count>(); }
 } const println;
 
 struct print_tab { public:

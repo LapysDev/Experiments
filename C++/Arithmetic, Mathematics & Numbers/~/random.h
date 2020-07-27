@@ -39,5 +39,5 @@ void randseed(unsigned const) noexcept;
     }
 
     // Random Seed --- WARN (Lapys) -> Seeds only once.
-    inline void randseed(void) noexcept { randseed(0x0); }
+    inline void randseed(void) noexcept { randseed(::time(0x0)); }
     inline void randseed(unsigned const seed) noexcept { static bool once = false; if (false == once) { ::srand(seed); once = true; } }

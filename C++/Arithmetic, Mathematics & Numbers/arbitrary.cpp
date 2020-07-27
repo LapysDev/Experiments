@@ -1,6 +1,7 @@
 /* Import */
     // [C Standard Library]
     #include <float.h> // Floating-Points
+    #include <limits.h> // Limits
     #include <math.h> // Mathematics
     #include <stdint.h> // Standard Integer
     #include <stdlib.h> // Standard Library
@@ -86,7 +87,7 @@ typedef BigMathematics BigMath;
                 inline static BigUnsignedInteger modulo(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.modulo(numberB, manageMemory); return evaluation; }
 
                 template <size_t base> constexpr void multiply(BigUnsignedInteger<base> const& number, bool const);
-                constexpr inline static void multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB, manageMemory); return evaluation; }
+                constexpr inline static BigUnsignedInteger multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB, manageMemory); return evaluation; }
 
                 constexpr inline void shiftLeft(bool const manageMemory) { BigUnsignedInteger::shiftLeft(1u, manageMemory); }
                 constexpr void shiftLeft(length_t, bool const);
@@ -108,6 +109,9 @@ typedef BigMathematics BigMath;
 
         // [...]
         public:
+            // Definition > ...
+            static BigUnsignedInteger const PRIMITIVE_MAX;
+
             // [Constructor]
             constexpr BigUnsignedInteger(void);
             constexpr BigUnsignedInteger(primitive_t const);
@@ -148,6 +152,9 @@ typedef BigMathematics BigMath;
 
             constexpr bool isBaseFactor(void) const noexcept;
             constexpr inline static bool isBaseFactor(BigUnsignedInteger const& number) noexcept { return number.isBaseFactor(); }
+
+            constexpr bool isBig(void) const noexcept;
+            constexpr inline static bool isBig(BigUnsignedInteger const& number) noexcept { return number.isBig(); }
 
             constexpr bool isComputable(void) const noexcept;
             constexpr inline static bool isComputable(BigUnsignedInteger const& number) noexcept { return number.isComputable(); }
@@ -244,6 +251,11 @@ typedef BigMathematics BigMath;
         typedef typename BigUnsignedInteger<radix>::Digit Digit;
         typedef typename BigUnsignedInteger<radix>::Digit::digit_t digit_t;
         typedef signed long primitive_t;
+
+        // [...]
+        public:
+            // Definition > ...
+            static BigSignedInteger const PRIMITIVE_MAX;
     };
 
     /* Big Float */
@@ -257,6 +269,11 @@ typedef BigMathematics BigMath;
         typedef typename BigSignedInteger<radix>::Digit Digit;
         typedef typename BigSignedInteger<radix>::Digit::digit_t digit_t;
         typedef long double primitive_t;
+
+        // [...]
+        public:
+            // Definition > ...
+            static BigFloat const PRIMITIVE_MAX;
     };
 
     /* Digit --- NOTE (Lapys) -> Fixed arithmetic integer value between `0u` and `radix`. Can and will not store any values beyond `radix`. */
@@ -440,7 +457,55 @@ class BigMathematics { public:
 
         // Factorial Of --- CHECKPOINT (Lapys)
         template <size_t radix>
-        constexpr inline BigUnsignedInteger<radix> BigMathematics::factorialOf(BigUnsignedInteger<radix> const& number) {}
+        constexpr inline BigUnsignedInteger<radix> BigMathematics::factorialOf(BigUnsignedInteger<radix> const& number) {
+            // Evaluation > Evaluation
+            BigUnsignedInteger<radix> evaluation {};
+
+            // Definition > ...
+            typedef BigUnsignedInteger<radix> BigUnsignedInteger;
+            typedef typename BigUnsignedInteger::DigitBuffer DigitBuffer;
+            typedef typename BigUnsignedInteger::length_t length_t;
+
+            // Logic
+            if (BigUnsignedInteger::isOne(number)) {
+                // ...; Modification > Evaluation > (Length, Value)
+                evaluation.allocate((evaluation.length = 1u));
+                evaluation.value -> value = 1u;
+            }
+
+            else if (BigUnsignedInteger::isSignificant(number)) {
+                DigitBuffer buffer = NULL;
+
+                buffer = BigUnsignedInteger::createBuffer(
+                    ((length_t) number * 2u) +
+                    (number.length * 2u)
+                );
+
+                long double base, count, integer;
+
+                count = number;
+                integer = number;
+
+                if (count)
+                for (--count; count; --count) {
+                    base = count;
+                    evaluation = 0.00L;
+
+                    while (base) {
+                        if (::fmod(base, 2.00L))
+                        evaluation += integer;
+
+                        base = ::trunc(base / 2.00L);
+                        integer = ::trunc(integer * 2.00L);
+                    }
+
+                    integer = evaluation;
+                }
+            }
+
+            // Return
+            return evaluation;
+        }
 
         // Greatest Divisor Of --- CHECKPOINT (Lapys)
         // template <size_t radix>
@@ -903,7 +968,7 @@ class BigMathematics { public:
             return evaluation;
         }
 
-        // From Number
+        // From Number --- NOTE (Lapys) -> May return a false positive.
         template <size_t radix>
         constexpr inline BigUnsignedInteger<radix> BigUnsignedInteger<radix>::fromNumber(primitive_t number) {
             // Evaluation > Evaluation
@@ -1024,6 +1089,8 @@ class BigMathematics { public:
         }
 
         // Is ... --- CITE (Lapys) -> https://www.geeksforgeeks.org/check-if-the-number-is-even-or-odd-whose-digits-and-base-radix-is-given/
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isBaseFactor(void) const noexcept { return BigUnsignedInteger::isSignificant() && Digit::isLowestRank((this -> value + (this -> length - 1u)) -> value); }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isBig(void) const noexcept { return BigUnsignedInteger::isGreater(PRIMITIVE_MAX); }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isComputable(void) const noexcept { return true; }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isEven(void) const noexcept { return false == BigUnsignedInteger::isOdd(); }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isFinite(void) const noexcept { return true; }
@@ -1035,19 +1102,6 @@ class BigMathematics { public:
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isPositive(void) const noexcept { return true; }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(void) const noexcept { return this -> length && this -> value -> value; }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(void) const noexcept { return 0u == this -> length || 0u == this -> value -> value; }
-
-        // Is Base Factor --- NOTE (Lapys) -> Assert the number is a power of its radix; For decimals that would be 10, 100, 1000, 10000... and so on.
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isBaseFactor(void) const noexcept {
-            // Evaluation > Evaluation
-            bool evaluation = true;
-
-            // Loop > Logic > Update > Evaluation ...
-            for (Digit *iterator = this -> value + this -> length; iterator != this -> value; --iterator)
-            if (0u != iterator -> value) { evaluation = false; break; }
-
-            // Return
-            return evaluation && 1u == *(this -> value);
-        }
 
         // Is Equal
         template <size_t radix> template <size_t base>
@@ -1138,23 +1192,42 @@ class BigMathematics { public:
             number.value = NULL;
         }
 
-        // Multiply
+        // Multiply --- CHECKPOINT (Lapys)
         template <size_t radix> template <size_t base>
         constexpr inline void BigUnsignedInteger<radix>::multiply(BigUnsignedInteger<base> const& number, bool const manageMemory) {
             // Logic > ...
             if (base ^ radix) BigUnsignedInteger::multiply(BigUnsignedInteger::fromBase<base>(number), manageMemory);
             else if (BigUnsignedInteger::isZero() || BigUnsignedInteger::isZero(number)) BigUnsignedInteger::zero(manageMemory);
             else if (BigUnsignedInteger::isOne()) BigUnsignedInteger::copy(number, manageMemory);
+            else if (BigUnsignedInteger::isBaseFactor(number)) {
+                // Initialization > (Dummy, Iterator)
+                BigUnsignedInteger dummy;
+                Digit const *iterator = number.value + number.length;
+
+                // Loop > Update > Iterator
+                for (--iterator; Digit::isLowestRank(iterator -> value); --iterator) continue;
+
+                // ...; Modification > Dummy > (Length, Value)
+                dummy.length = (++iterator) - number.value; dummy.value = number.value;
+
+                BigUnsignedInteger::multiply(dummy, manageMemory);
+                BigUnsignedInteger::shiftLeft(number.length - dummy.length, manageMemory);
+
+                dummy.length = 0u; dummy.value = NULL;
+            }
+
             else if (false == BigUnsignedInteger::isOne(number)) {
-                // Initialization > (Carry, Length, Partial [Product], Product)
+                // Initialization > (..., Carry, Length, Partial [Product], Product)
+                DigitBuffer const buffer = BigUnsignedInteger::createBuffer((length * 2u) + 1u);
+
                 Digit carry = 0u;
                 length_t const length = this -> length + number.length + 1u;
                 BigUnsignedInteger partial;
                 BigUnsignedInteger product;
 
-                // Update > (Partial, Product)
-                partial.allocate(length + 1u);
-                product.allocate(length);
+                // Modification > (Partial, Product) > Value
+                partial.value = buffer + length;
+                product.value = buffer;
 
                 // Loop > Logic
                 for (Digit *iteratorA = NULL, *iteratorB = number.value + number.length; number.value != iteratorB--; )
@@ -1193,10 +1266,16 @@ class BigMathematics { public:
                     product.add(partial, false);
                 }
 
-                // ...
-                BigUnsignedInteger::zero(manageMemory);
-                BigUnsignedInteger::move((BigUnsignedInteger&&) product);
-                if (manageMemory) BigUnsignedInteger::allocate(this -> length);
+                // Logic > ...
+                if (manageMemory) {
+                    BigUnsignedInteger::zero();
+                    BigUnsignedInteger::move((BigUnsignedInteger&&) product);
+                    BigUnsignedInteger::allocate(this -> length);
+                } else BigUnsignedInteger::copy(product, false);
+
+                // Modification > Partial > (Length, Value)
+                partial.length = 0u;
+                partial.value = NULL;
             }
         }
 
@@ -1286,7 +1365,7 @@ class BigMathematics { public:
             return evaluation;
         }
 
-        // To Number
+        // To Number --- NOTE (Lapys) -> May return a false positive.
         template <size_t radix>
         constexpr inline typename BigUnsignedInteger<radix>::primitive_t BigUnsignedInteger<radix>::toNumber(BigUnsignedInteger const& number) {
             // Initialization > (Evaluation, ...)
@@ -1297,7 +1376,7 @@ class BigMathematics { public:
             for (Digit const *indexer = number.value + number.length; indexer-- != number.value; ++exponent) {
                 // Initialization > Unit
                 // : ...
-                primitive_t unit = *indexer;
+                primitive_t unit = indexer -> value;
                 for (length_t iterator = 0u; exponent ^ iterator; ++iterator) unit *= radix;
 
                 // Update > Evaluation
@@ -1510,30 +1589,79 @@ class BigMathematics { public:
 
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isDenary(digit_t value) noexcept { while (value) { if (value == 1u) return true; else if (value % 10u) return false; else value /= 10u; } return false; }
 
+/* Constant > ... */
+template <size_t radix> constexpr BigUnsignedInteger<radix> const BigUnsignedInteger<radix>::PRIMITIVE_MAX {ULONG_MAX};
+template <size_t radix> constexpr BigSignedInteger<radix> const BigSignedInteger<radix>::PRIMITIVE_MAX {LONG_MAX};
+template <size_t radix> constexpr BigFloat<radix> const BigFloat<radix>::PRIMITIVE_MAX {LDBL_MAX};
+
 /* Main */
 int main(void) {
     /* [Begin] ... */
     ::println("[PROGRAM INITIATED]");
 
     /* .... */ {
-        // for (unsigned short iterator = 0u; iterator ^ 65500u; ++iterator) {
-        //     unsigned const number = iterator;
-        //     BigUnsignedInteger<10> const bigNumber {number};
+        // for (unsigned short iterator = 0u; iterator ^ 10u; ++iterator) {
+        //     unsigned const exponent = (unsigned) (::randbool() ? 1e4 : ::randbool() ? 1e3 : ::randbool() ? 1e2 : 1e1);
+        //     unsigned number = iterator; if (number) { for (unsigned short subiterator = iterator - 1u; subiterator; --subiterator) number *= subiterator; }
+        //     BigUnsignedInteger<10> const bigNumber {iterator};
 
         //     ::print('[', bigNumber.toString(), " (", number, ")]: ");
-        //     ::println(BigMathematics::cubeRoot(bigNumber).toString(), " (", ::trunc(::cbrt(number)), ')');
+        //     ::println(BigMathematics::factorialOf(bigNumber).toString(), " (", number, ')');
         // }
 
         // for (unsigned short iterator = 0u; iterator ^ 40u; ++iterator) {
+        //     unsigned const exponent = (unsigned) (::randbool() ? 1e4 : ::randbool() ? 1e3 : ::randbool() ? 1e2 : 1e1);
         //     unsigned const numberA = ::randbool() ? 0u : ::randint(1e7);
-        //     unsigned const numberB = ::randbool() && ::randbool() ? numberA : ::randint(1e4);
+        //     unsigned const numberB = exponent * (::randbool() && ::randbool() ? numberA : ::randint(1e4));
 
         //     BigUnsignedInteger<10> const bigNumberA = numberA;
         //     BigUnsignedInteger<10> const bigNumberB = numberB;
 
-        //     ::print('[', bigNumberA.toString(), " (", numberA, ") + ", bigNumberB.toString(), " (", numberB, ")]: ");
-        //     ::println(BigUnsignedInteger<10>::add(bigNumberA, bigNumberB).toString(), " (", numberA + numberB, ')');
+        //     ::print('[', bigNumberA.toString(), " (", numberA, ") x ", bigNumberB.toString(), " (", numberB, ")]: ");
+        //     ::println(BigUnsignedInteger<10>::multiply(bigNumberA, bigNumberB).toString(), " (", numberA * numberB, ')');
         // }
+
+        // ::println("[EVAL (14516 * 44570)]: ", BigUnsignedInteger<10>::multiply(14516u, 44570u).toString(), " (", 14516uL * 44570uL, ')');
+        // ::println("[EVAL (0 * 99120000)]: ", BigUnsignedInteger<10>::multiply(0uL, 99120000u).toString(), " (", 0uL * 99120000uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (0 * 7735000)]: ", BigUnsignedInteger<10>::multiply(0uL, 7735000u).toString(), " (", 0uL * 7735000uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (2087 * 26810)]: ", BigUnsignedInteger<10>::multiply(2087u, 26810u).toString(), " (", 2087uL * 26810uL, ')');
+        // ::println("[EVAL (4073 * 9441000)]: ", BigUnsignedInteger<10>::multiply(4073u, 9441000u).toString(), " (", 4073uL * 9441000uL, ')');
+        // ::println("[EVAL (2195 * 17360)]: ", BigUnsignedInteger<10>::multiply(2195u, 17360u).toString(), " (", 2195uL * 17360uL, ')');
+        // ::println("[EVAL (0 * 85050)]: ", BigUnsignedInteger<10>::multiply(0uL, 85050u).toString(), " (", 0uL * 85050uL, ')');
+        // ::println("[EVAL (20690 * 70090000)]: ", BigUnsignedInteger<10>::multiply(20690u, 70090000u).toString(), " (", 20690uL * 70090000uL, ')');
+        // ::println("[EVAL (12276 * 44080000)]: ", BigUnsignedInteger<10>::multiply(12276u, 44080000u).toString(), " (", 12276uL * 44080000uL, ')');
+        // ::println("[EVAL (0 * 32170)]: ", BigUnsignedInteger<10>::multiply(0uL, 32170u).toString(), " (", 0uL * 32170uL, ')');
+        // ::println("[EVAL (15849 * 2381000)]: ", BigUnsignedInteger<10>::multiply(15849u, 2381000u).toString(), " (", 15849uL * 2381000uL, ')');
+        // ::println("[EVAL (0 * 3890000)]: ", BigUnsignedInteger<10>::multiply(0uL, 3890000u).toString(), " (", 0uL * 3890000uL, ')');
+        // ::println("[EVAL (0 * 671000)]: ", BigUnsignedInteger<10>::multiply(0uL, 671000u).toString(), " (", 0uL * 671000uL, ')');
+        // ::println("[EVAL (19340 * 805200)]: ", BigUnsignedInteger<10>::multiply(19340u, 805200u).toString(), " (", 19340uL * 805200uL, ')');
+        // ::println("[EVAL (11942 * 72360000)]: ", BigUnsignedInteger<10>::multiply(11942u, 72360000u).toString(), " (", 11942uL * 72360000uL, ')');
+        // ::println("[EVAL (0 * 638000)]: ", BigUnsignedInteger<10>::multiply(0uL, 638000u).toString(), " (", 0uL * 638000uL, ')');
+        // ::println("[EVAL (0 * 69200000)]: ", BigUnsignedInteger<10>::multiply(0uL, 69200000u).toString(), " (", 0uL * 69200000uL, ')');
+        // ::println("[EVAL (993 * 2560000)]: ", BigUnsignedInteger<10>::multiply(993u, 2560000u).toString(), " (", 993uL * 2560000uL, ')');
+        // ::println("[EVAL (17769 * 32610000)]: ", BigUnsignedInteger<10>::multiply(17769u, 32610000u).toString(), " (", 17769uL * 32610000uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (4962 * 4962000)]: ", BigUnsignedInteger<10>::multiply(4962u, 4962000u).toString(), " (", 4962uL * 4962000uL, ')');
+        // ::println("[EVAL (0 * 7450000)]: ", BigUnsignedInteger<10>::multiply(0uL, 7450000u).toString(), " (", 0uL * 7450000uL, ')');
+        // ::println("[EVAL (9680 * 18540)]: ", BigUnsignedInteger<10>::multiply(9680u, 18540u).toString(), " (", 9680uL * 18540uL, ')');
+        // ::println("[EVAL (31994 * 319940)]: ", BigUnsignedInteger<10>::multiply(31994u, 319940u).toString(), " (", 31994uL * 319940uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (13976 * 26820000)]: ", BigUnsignedInteger<10>::multiply(13976u, 26820000u).toString(), " (", 13976uL * 26820000uL, ')');
+        // ::println("[EVAL (32374 * 2223000)]: ", BigUnsignedInteger<10>::multiply(32374u, 2223000u).toString(), " (", 32374uL * 2223000uL, ')');
+        // ::println("[EVAL (11844 * 9006000)]: ", BigUnsignedInteger<10>::multiply(11844u, 9006000u).toString(), " (", 11844uL * 9006000uL, ')');
+        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
+        // ::println("[EVAL (0 * 75190)]: ", BigUnsignedInteger<10>::multiply(0uL, 75190u).toString(), " (", 0uL * 75190uL, ')');
+        // ::println("[EVAL (19975 * 199750000)]: ", BigUnsignedInteger<10>::multiply(19975u, 199750000u).toString(), " (", 19975uL * 199750000uL, ')');
+        // ::println("[EVAL (31124 * 6830000)]: ", BigUnsignedInteger<10>::multiply(31124u, 6830000u).toString(), " (", 31124uL * 6830000uL, ')');
+        // ::println("[EVAL (20800 * 20800000)]: ", BigUnsignedInteger<10>::multiply(20800u, 20800000u).toString(), " (", 20800uL * 20800000uL, ')');
+        // ::println("[EVAL (0 * 12240)]: ", BigUnsignedInteger<10>::multiply(0uL, 12240u).toString(), " (", 0uL * 12240uL, ')');
+        // ::println("[EVAL (11516 * 115160000)]: ", BigUnsignedInteger<10>::multiply(11516u, 115160000u).toString(), " (", 11516uL * 115160000uL, ')');
+        // ::println("[EVAL (0 * 36700)]: ", BigUnsignedInteger<10>::multiply(0uL, 36700u).toString(), " (", 0uL * 36700uL, ')');
+        // ::println("[EVAL (22522 * 225220000)]: ", BigUnsignedInteger<10>::multiply(22522u, 225220000u).toString(), " (", 22522uL * 225220000uL, ')');
     }
 
     /* [End] ... */
