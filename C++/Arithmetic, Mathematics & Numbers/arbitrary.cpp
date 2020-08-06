@@ -1,1672 +1,398 @@
+#include <iostream>
 /* Import */
-    // [C Standard Library]
-    #include <float.h> // Floating-Points
-    #include <limits.h> // Limits
-    #include <math.h> // Mathematics
-    #include <stdint.h> // Standard Integer
-    #include <stdlib.h> // Standard Library
-
-    // [...]
-    #include "~/logger.hpp" // Logger
-    #include "~/random.h" // Random
+#include <float.h> // Floating-Points
+#include <limits.h> // Limits
+#include <math.h> // Mathematics
+#include <stdio.h> // Standard Input/ Output
+#include <stdint.h> // Standard Integer
+#include <stdlib.h> // Standard Library
 
 /* Definition > ... */
-template <size_t = 10u> class BigFloat;
-template <size_t = 10u> class BigSignedInteger;
-template <size_t = 10u> class BigUnsignedInteger;
+template <size_t radix> class BigFloat;
+template <size_t radix> class BigSignedInteger;
+template <size_t radix> class BigUnsignedInteger;
 
-class BigMathematics;
-typedef BigMathematics BigMath;
+typedef BigFloat<10u> big_float;
+typedef BigSignedInteger<10u> big_int;
+typedef BigUnsignedInteger<10u> big_uint;
 
 /* Class */
+    /* Big Float --- CHECKPOINT (Lapys) */
+    /* Big Signed Integer --- CHECKPOINT (Lapys) */
     /* Big Unsigned Integer */
     template <size_t radix>
-    class BigUnsignedInteger { friend BigMathematics; friend int main(void /* TEST (Lapys) */);
+    class BigUnsignedInteger {
         /* ... */
-        class Digit;
         template <size_t> friend class BigFloat;
         template <size_t> friend class BigSignedInteger;
         template <size_t> friend class BigUnsignedInteger;
 
-        typedef Digit* DigitBuffer;
-        typedef typename Digit::digit_t digit_t;
         typedef size_t length_t;
-        typedef unsigned long primitive_t;
+        #if defined(__cplusplus) && (__cplusplus == 201103L)
+            typedef unsigned long long primitive_t;
+        #else
+            typedef unsigned long primitive_t;
+        #endif
 
         // [...]
         protected:
-            // Method > (Assert, Create Buffer, Trim (Left ...), ...)
-            void assert(void) const;
+            /* Definition > (Digit, Iterator) */
+            class Digit; // NOTE (Lapys) -> Atomic unit of store.
+            class DigitBuffer; // NOTE (Lapys) -> Persistent heap allocation of `BigNumber::Digit`.
+            class Iterator; // NOTE (Lapys) -> For iterating each atomic unit of `BigNumber` or `primitive_t`.
 
-            static DigitBuffer createBuffer(size_t const);
-            constexpr static void deleteBuffer(DigitBuffer const);
-
-            constexpr static size_t getMaximumLength(void) noexcept;
-            constexpr static unsigned char getMaximumLengthSize(void) noexcept;
-
-            inline void trimLeft(void) { BigUnsignedInteger::trimLeft(1u, true); }
-            inline void trimLeft(length_t const length) { BigUnsignedInteger::trimLeft(length, true); }
+            // Declaration > (Add, From Number, Decrement, Increment, Zero)
+            void add(Iterator const&, bool const);
+            static void fromNumber(BigUnsignedInteger* const, primitive_t const, bool const = true);
+            void decrement(bool const) noexcept;
+            void increment(bool const);
+            void zero(bool const = true);
 
         // [...]
         private:
-            // Definition > (Length, Value)
-            length_t length : BigUnsignedInteger::getMaximumLengthSize();
+            // Definition > (Buffer, Length, Value) --- REDACT (Lapys)
+            static DigitBuffer buffer;
+            length_t length;
             Digit *value;
 
-            // [Constructor]
-            constexpr BigUnsignedInteger(Digit* const, length_t const = 0u);
-            constexpr BigUnsignedInteger(Digit const* const, length_t const = 0u);
+            /* Declaration > (Allocate ..., Assert, Clear Buffer, Free) --- NOTE (Lapys) -> Memory management utilities.
+                    Of course, it may be preferable to implement a slab allocator.
+            */
+            void allocate(length_t const);
+            static void* allocate(Digit* const, length_t const);
+            static void allocateBuffer(length_t const);
 
-            // Method
-                // Allocate, Copy, Free, Move
-                void allocate(size_t const);
-                template <size_t base> void copy(BigUnsignedInteger<base> const&, bool const = true);
-                constexpr void free(void);
-                template <size_t base> void move(BigUnsignedInteger<base>&&);
+            constexpr void assert(void);
 
-                // ...
-                template <size_t base> constexpr void add(BigUnsignedInteger<base> const& number, bool const);
-                constexpr inline static BigUnsignedInteger add(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.add(numberB, manageMemory); return evaluation; }
+            static void clearBuffer(void) noexcept;
+            void free(void) noexcept;
+            static void free(Digit* const) noexcept;
 
-                constexpr void decrement(bool const);
-                constexpr inline static BigUnsignedInteger decrement(BigUnsignedInteger const& number, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.decrement(manageMemory); return evaluation; }
-
-                template <size_t base> BigUnsignedInteger divide(BigUnsignedInteger<base> const& number, bool const);
-                inline static BigUnsignedInteger divide(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.divide(numberB, manageMemory); return evaluation; }
-
-                constexpr void doubly(bool const);
-                constexpr inline static BigUnsignedInteger doubly(BigUnsignedInteger const& number, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.doubly(manageMemory); return evaluation; }
-
-                constexpr void halve(bool const);
-                constexpr inline static BigUnsignedInteger halve(BigUnsignedInteger const& number, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.halve(manageMemory); return evaluation; }
-
-                constexpr void increment(bool const);
-                constexpr inline static BigUnsignedInteger increment(BigUnsignedInteger const& number, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(manageMemory); return evaluation; }
-
-                template <size_t base> void modulo(BigUnsignedInteger<base> const& number, bool const);
-                inline static BigUnsignedInteger modulo(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.modulo(numberB, manageMemory); return evaluation; }
-
-                template <size_t base> constexpr void multiply(BigUnsignedInteger<base> const& number, bool const);
-                constexpr inline static BigUnsignedInteger multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.multiply(numberB, manageMemory); return evaluation; }
-
-                constexpr inline void shiftLeft(bool const manageMemory) { BigUnsignedInteger::shiftLeft(1u, manageMemory); }
-                constexpr void shiftLeft(length_t, bool const);
-                constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& number, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftLeft(manageMemory); return evaluation; }
-                constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& number, length_t const length, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftLeft(length, manageMemory); return evaluation; }
-
-                constexpr inline void shiftRight(bool const manageMemory) { BigUnsignedInteger::shiftRight(1u, manageMemory); }
-                constexpr void shiftRight(length_t const, bool const);
-                constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& number, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftRight(manageMemory); return evaluation; }
-                constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& number, length_t const length, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.shiftRight(length, manageMemory); return evaluation; }
-
-                template <size_t base> constexpr void subtract(BigUnsignedInteger<base> const& number, bool const manageMemory);
-                constexpr inline static BigUnsignedInteger subtract(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB, bool const manageMemory) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.subtract(numberB, manageMemory); return evaluation; }
-
-                inline void trimLeft(bool const manageMemory) { BigUnsignedInteger::trimLeft(1u, manageMemory); }
-                void trimLeft(length_t const, bool const manageMemory);
-
-                constexpr void zero(bool const manageMemory) noexcept;
+            // Function > (Copy, Move) --- MINIFY (Lapys)
+            inline void copy(BigUnsignedInteger const& number, bool const manageMemory = true) { if (manageMemory) BigUnsignedInteger::allocate((this -> length = number.length)); else { this -> length = number.length; } for (length_t iterator = 0u; iterator ^ number.length; ++iterator) (this -> value + iterator) -> value = (number.value + iterator) -> value; }
+            constexpr inline void move(BigUnsignedInteger& number) noexcept { this -> length = number.length; this -> value = number.value; number.length = 0u; number.value = NULL; }
 
         // [...]
         public:
-            // Definition > ...
-            static BigUnsignedInteger const PRIMITIVE_MAX;
-
             // [Constructor]
-            constexpr BigUnsignedInteger(void);
-            constexpr BigUnsignedInteger(primitive_t const);
-            constexpr BigUnsignedInteger(BigUnsignedInteger const&);
-            template <size_t base> constexpr BigUnsignedInteger(BigUnsignedInteger<base> const&);
-            template <size_t base> constexpr BigUnsignedInteger(BigUnsignedInteger<base>&&);
+            BigUnsignedInteger(void);
+            BigUnsignedInteger(primitive_t const);
+            BigUnsignedInteger(BigUnsignedInteger const&);
+            constexpr BigUnsignedInteger(BigUnsignedInteger&&);
 
-            // [Destructor]
-            ~BigUnsignedInteger(void);
+            // Function > ...
+            inline void add(primitive_t number) { BigUnsignedInteger::add(&number, true); }
+            inline void add(BigUnsignedInteger const& number) { BigUnsignedInteger::add(&number, true); }
 
-            // Method > (Add, Decrement, Compare, Divide, Double, Exponentiate, From (Base, Number), Halve, Increment, Is ..., Modulo, Multiply, Shift (Left, Right), Subtract, To ..., Zero)
-            constexpr inline void add(primitive_t const number) { BigUnsignedInteger::add(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr inline void add(BigUnsignedInteger<base> const& number) { BigUnsignedInteger::add(number, true); }
-            constexpr inline static BigUnsignedInteger add(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { return BigUnsignedInteger::add(numberA, numberB, true); }
+            inline void decrement(void) noexcept { BigUnsignedInteger::decrement(true); }
+            inline static BigUnsignedInteger decrement(BigUnsignedInteger const& number) noexcept { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.decrement(); return evaluation; }
 
-            constexpr inline void decrement(void) { BigUnsignedInteger::decrement(true); }
-            constexpr inline static BigUnsignedInteger decrement(BigUnsignedInteger const& number) { return BigUnsignedInteger::decrement(number, true); }
+            inline static BigUnsignedInteger fromNumber(primitive_t const number) { BigUnsignedInteger evaluation {}; BigUnsignedInteger::fromNumber(&evaluation, number, true); return evaluation; }
 
-            constexpr inline void doubly(void) { BigUnsignedInteger::doubly(true); }
-            constexpr inline static BigUnsignedInteger doubly(BigUnsignedInteger const& number) { return BigUnsignedInteger::doubly(number, true); }
-
-            constexpr inline void divide(primitive_t const number) { BigUnsignedInteger::divide(BigUnsignedInteger(number)); }
-            template <size_t base> inline void divide(BigUnsignedInteger<base> const& number) { BigUnsignedInteger::divide(number, true); }
-            inline static BigUnsignedInteger divide(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { return BigUnsignedInteger::divide(numberA, numberB, true); }
-
-            constexpr inline void exponentiate(primitive_t const number) { BigUnsignedInteger::exponentiate(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr void exponentiate(BigUnsignedInteger<base> const&);
-            constexpr inline static BigUnsignedInteger exponentiate(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.exponentiate(numberB); return evaluation; }
-
-            template <size_t base> constexpr static BigUnsignedInteger<radix> fromBase(BigUnsignedInteger<base> const&);
-            constexpr static BigUnsignedInteger fromNumber(primitive_t);
-
-            constexpr inline void halve(void) { BigUnsignedInteger::halve(true); }
-            constexpr inline static BigUnsignedInteger halve(BigUnsignedInteger const& number) { return BigUnsignedInteger::halve(number, true); }
-
-            constexpr inline void increment(void) { BigUnsignedInteger::increment(true); }
-            constexpr inline static BigUnsignedInteger increment(BigUnsignedInteger const& number) { return BigUnsignedInteger::increment(number, true); }
-
-            constexpr bool isBaseFactor(void) const noexcept;
-            constexpr inline static bool isBaseFactor(BigUnsignedInteger const& number) noexcept { return number.isBaseFactor(); }
-
-            constexpr bool isBig(void) const noexcept;
-            constexpr inline static bool isBig(BigUnsignedInteger const& number) noexcept { return number.isBig(); }
-
-            constexpr bool isComputable(void) const noexcept;
-            constexpr inline static bool isComputable(BigUnsignedInteger const& number) noexcept { return number.isComputable(); }
-
-            constexpr inline bool isEqual(primitive_t const number) const noexcept { return BigUnsignedInteger::isEqual(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr bool isEqual(BigUnsignedInteger<base> const&) const noexcept;
-            constexpr inline static bool isEqual(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) noexcept { return numberA.isEqual(numberB); }
-
-            constexpr bool isEven(void) const noexcept;
-            constexpr inline static bool isEven(BigUnsignedInteger const& number) noexcept { return number.isEven(); }
-
-            constexpr bool isFinite(void) const noexcept;
-            constexpr inline static bool isFinite(BigUnsignedInteger const& number) noexcept { return number.isFinite(); }
-
-            constexpr inline bool isGreater(primitive_t const number) const noexcept { return BigUnsignedInteger::isGreater(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr bool isGreater(BigUnsignedInteger<base> const&) const noexcept;
-            constexpr inline static bool isGreater(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) noexcept { return numberA.isGreater(numberB); }
-
-            constexpr bool isInfinite(void) const noexcept;
-            constexpr inline static bool isInfinite(BigUnsignedInteger const& number) noexcept { return number.isInfinite(); }
-
-            constexpr inline bool isLesser(primitive_t const number) const noexcept { return BigUnsignedInteger::isLesser(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr bool isLesser(BigUnsignedInteger<base> const&) const noexcept;
-            constexpr inline static bool isLesser(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) noexcept { return numberA.isLesser(numberB); }
-
-            constexpr bool isNegative(void) const noexcept;
-            constexpr inline static bool isNegative(BigUnsignedInteger const& number) noexcept { return number.isNegative(); }
-
-            constexpr bool isNonComputable(void) const noexcept;
-            constexpr inline static bool isNonComputable(BigUnsignedInteger const& number) noexcept { return number.isNonComputable(); }
-
-            constexpr bool isOdd(void) const noexcept;
-            constexpr inline static bool isOdd(BigUnsignedInteger const& number) noexcept { return number.isOdd(); }
-
-            constexpr bool isOne(void) const noexcept;
-            constexpr inline static bool isOne(BigUnsignedInteger const& number) noexcept { return number.isOne(); }
-
-            constexpr bool isPositive(void) const noexcept;
-            constexpr inline static bool isPositive(BigUnsignedInteger const& number) noexcept { return number.isPositive(); }
+            inline void increment(void) { BigUnsignedInteger::increment(true); }
+            inline static BigUnsignedInteger increment(BigUnsignedInteger const& number) noexcept { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
 
             constexpr bool isSignificant(void) const noexcept;
             constexpr inline static bool isSignificant(BigUnsignedInteger const& number) noexcept { return number.isSignificant(); }
-
             constexpr bool isZero(void) const noexcept;
             constexpr inline static bool isZero(BigUnsignedInteger const& number) noexcept { return number.isZero(); }
 
-            constexpr inline void modulo(primitive_t const number) { BigUnsignedInteger::modulo(BigUnsignedInteger(number)); }
-            template <size_t base> inline void modulo(BigUnsignedInteger<base> const& number) { BigUnsignedInteger::modulo(number, true); }
-            inline static BigUnsignedInteger modulo(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { return BigUnsignedInteger::modulo(numberA, numberB, true); }
-
-            constexpr inline void multiply(primitive_t const number) { BigUnsignedInteger::multiply(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr void multiply(BigUnsignedInteger<base> const& number) { BigUnsignedInteger::multiply(number, true); }
-            constexpr inline static BigUnsignedInteger multiply(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { return BigUnsignedInteger::multiply(numberA, numberB, true); }
-
-            constexpr inline void root(primitive_t const number) { BigUnsignedInteger::root(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr void root(BigUnsignedInteger<base> const&);
-            constexpr inline static BigUnsignedInteger root(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { BigUnsignedInteger evaluation {}; evaluation.copy(numberA); evaluation.root(numberB); return evaluation; }
-
-            constexpr inline void shiftLeft(void) { BigUnsignedInteger::shiftLeft(1u, true); }
-            constexpr inline void shiftLeft(length_t const length) { BigUnsignedInteger::shiftLeft(length, true); }
-            constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& number) { return BigUnsignedInteger::shiftLeft(number, true); }
-            constexpr inline static BigUnsignedInteger shiftLeft(BigUnsignedInteger const& number, length_t const length) { return BigUnsignedInteger::shiftLeft(number, length, true); }
-
-            constexpr inline void shiftRight(void) { BigUnsignedInteger::shiftRight(1u, true); }
-            constexpr inline void shiftRight(length_t const length) { BigUnsignedInteger::shiftRight(length, true); }
-            constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& number) { return BigUnsignedInteger::shiftRight(number, true); }
-            constexpr inline static BigUnsignedInteger shiftRight(BigUnsignedInteger const& number, length_t const length) { return BigUnsignedInteger::shiftRight(number, length, true); }
-
-            constexpr inline void subtract(primitive_t const number) { BigUnsignedInteger::subtract(BigUnsignedInteger(number)); }
-            template <size_t base> constexpr inline void subtract(BigUnsignedInteger<base> const& number) { BigUnsignedInteger::subtract(number, true); }
-            constexpr inline static BigUnsignedInteger subtract(BigUnsignedInteger const& numberA, BigUnsignedInteger const& numberB) { return BigUnsignedInteger::subtract(numberA, numberB, true); }
-
-            template <size_t base> constexpr static BigUnsignedInteger<base> toBase(BigUnsignedInteger<radix> const&);
-            constexpr static primitive_t toNumber(BigUnsignedInteger const&);
-            constexpr char* toString(bool = false) const;
-            constexpr inline char* toString(length_t length, bool const delimit = false) const { length ^= this -> length; this -> length ^= length; length ^= this -> length; char *const evaluation = BigUnsignedInteger::toString(delimit); length ^= this -> length; this -> length ^= length; return evaluation; }
-
-            constexpr inline void zero(void) noexcept { BigUnsignedInteger::zero(true); }
-
-            // Operator > ...
-            constexpr inline BigUnsignedInteger operator +(void) const { BigUnsignedInteger evaluation {}; evaluation.copy(*this); return evaluation; }
-            constexpr inline BigUnsignedInteger operator +(primitive_t const number) const { return BigUnsignedInteger::add(*this, BigUnsignedInteger(number)); }
-            template <size_t base> constexpr inline BigUnsignedInteger operator +(BigUnsignedInteger<base> const& number) const { return BigUnsignedInteger::add(*this, number); }
+            char* toString(bool = false) const;
+            inline void zero(void) { BigUnsignedInteger::zero(true); }
     };
 
-    /* Big Signed Integer */
+/* Class --- REDACT (Lapys) */
+    /* Digit --- NOTE (Lapys) -> Denary-based value. */
     template <size_t radix>
-    class BigSignedInteger : public BigUnsignedInteger<radix> { friend BigMathematics; friend int main(void /* TEST (Lapys) */);
-        /* ... */
+    class BigUnsignedInteger<radix>::Digit final {
         template <size_t> friend class BigFloat;
         template <size_t> friend class BigSignedInteger;
         template <size_t> friend class BigUnsignedInteger;
-
-        typedef typename BigUnsignedInteger<radix>::Digit Digit;
-        typedef typename BigUnsignedInteger<radix>::Digit::digit_t digit_t;
-        typedef signed long primitive_t;
-
-        // [...]
-        public:
-            // Definition > ...
-            static BigSignedInteger const PRIMITIVE_MAX;
-    };
-
-    /* Big Float */
-    template <size_t radix>
-    class BigFloat final : public BigSignedInteger<radix> { friend BigMathematics; friend int main(void /* TEST (Lapys) */);
-        /* ... */
-        template <size_t> friend class BigFloat;
-        template <size_t> friend class BigSignedInteger;
-        template <size_t> friend class BigUnsignedInteger;
-
-        typedef typename BigSignedInteger<radix>::Digit Digit;
-        typedef typename BigSignedInteger<radix>::Digit::digit_t digit_t;
-        typedef long double primitive_t;
-
-        // [...]
-        public:
-            // Definition > ...
-            static BigFloat const PRIMITIVE_MAX;
-    };
-
-    /* Digit --- NOTE (Lapys) -> Fixed arithmetic integer value between `0u` and `radix`. Can and will not store any values beyond `radix`. */
-    template <size_t radix>
-    class BigUnsignedInteger<radix>::Digit final { friend BigMathematics; friend int main(void /* TEST (Lapys) */);
-        template <size_t> friend class BigFloat;
-        template <size_t> friend class BigSignedInteger;
-        template <size_t> friend class BigUnsignedInteger;
+        template <size_t subradix> friend class BigUnsignedInteger<subradix>::Iterator;
 
         typedef size_t digit_t;
 
-        protected:
-            constexpr static digit_t align(digit_t const) noexcept;
-            constexpr static unsigned char getLength(size_t) noexcept;
-            constexpr static unsigned char getSize(size_t) noexcept;
-            constexpr static bool isDenary(digit_t) noexcept;
-
-        private:
-            // NOTE (Lapys) -> Assumed to be a denary representation of the digit.
-            digit_t value : Digit::getSize((radix * 2u) - 1u /* NOTE (Lapys) -> For arithmetic shenanigans e.g.: storing `10` inside a single base-10 `Digit`. */);
-
-            static Digit* eval(void) noexcept;
-
         public:
-            constexpr inline Digit(void) : value{0u} {}
-            constexpr inline Digit(digit_t const value) : value{Digit::align(value)} {}
-            template <size_t base> constexpr inline Digit(typename BigUnsignedInteger<base>::Digit const& digit) : value{Digit::align(digit.value)} {}
+            constexpr inline Digit(digit_t const value) : value{value} {}
 
-            constexpr static bool isGreaterRank(digit_t const) noexcept;
-            constexpr static bool isGreatestRank(digit_t const) noexcept;
-            constexpr static bool isLowerRank(digit_t const) noexcept;
-            constexpr static bool isLowestRank(digit_t const) noexcept;
-            constexpr static bool isMeanRank(digit_t const) noexcept;
-            constexpr static bool isSignificant(digit_t const) noexcept;
-            constexpr static bool isZero(digit_t const) noexcept;
+            constexpr inline static unsigned char getSize(size_t number) noexcept { unsigned char size = 0u; while (number) { number >>= 1u; ++size; } return size ? size : 1u; }
+            constexpr inline static bool isGreatestRank(digit_t const digit) noexcept { return digit == radix - 1u; }
+            constexpr inline static bool isLowestRank(digit_t const digit) noexcept { return 0u == digit; }
 
-            // WARN (Lapys) -> Returns stack allocated pointer.
-            static Digit* add(Digit const&, Digit const&) noexcept;
-            static Digit* multiply(Digit const&, Digit const&) noexcept;
-
-            char* toString(void) const noexcept;
-            inline static char* toString(Digit const& digit) noexcept { return digit.toString(); }
-
-            constexpr inline Digit& operator =(digit_t const value) noexcept { this -> value = Digit::align(value); return *this; }
-            template <size_t base> constexpr inline Digit& operator =(typename BigUnsignedInteger<base>::Digit const& digit) noexcept { this -> value = Digit::align(digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator +=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value += digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator -=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value -= digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator *=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value *= digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator /=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value /= digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator %=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value %= digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator ^=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value ^= digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator &=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value &= digit.value); return *this; }
-            template <size_t base> constexpr inline Digit& operator |=(typename BigUnsignedInteger<base>::Digit const& digit) const noexcept { this -> value = Digit::align(this -> value |= digit.value); return *this; }
-            constexpr inline Digit operator ++(int const) const noexcept { Digit const evaluation {this -> value}; Digit::operator ++(); return evaluation; }
-            constexpr inline Digit& operator ++(void) const noexcept { this -> value = Digit::align(++(this -> value)); return *this; }
-            constexpr inline Digit operator --(int const) const noexcept { Digit const evaluation {this -> value}; Digit::operator --(); return evaluation; }
-            constexpr inline Digit& operator --(void) const noexcept { this -> value = Digit::align(--(this -> value)); return *this; }
-            constexpr inline operator digit_t(void) const noexcept { return this -> value; }
+        private: digit_t value : Digit::getSize(radix);
     };
 
-/* Namespace > Big Mathematics --- NOTE (Lapys) -> Identifies with more complex operations on arbitrary-precision numbers. */
-class BigMathematics { public:
-    /* Method > ... */
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> cubeRoot(BigUnsignedInteger<radix> const&);
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> factorialOf(BigUnsignedInteger<radix> const&);
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> greatestDivisorOf(BigUnsignedInteger<radix> const&, BigUnsignedInteger<radix> const&);
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> lowestMultipleOf(BigUnsignedInteger<radix> const&, BigUnsignedInteger<radix> const&);
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> power(BigUnsignedInteger<radix> const&, BigUnsignedInteger<radix> const&);
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> root(BigUnsignedInteger<radix> const&, BigUnsignedInteger<radix> const&);
-    template <size_t radix> constexpr static BigUnsignedInteger<radix> squareRoot(BigUnsignedInteger<radix> const&);
-};
+    /* Digit Buffer */
+    template <size_t radix>
+    class BigUnsignedInteger<radix>::DigitBuffer final { friend BigUnsignedInteger;
+        private: length_t length; Digit *value;
+        public:
+            inline DigitBuffer(void) : length{0u}, value{NULL} { BigUnsignedInteger::allocateBuffer(radix /* CONSIDER (Lapys) -> Pre-allocate memory for the buffer, but to what size? */); }
+            inline ~DigitBuffer(void) { BigUnsignedInteger::clearBuffer(); }
+
+            constexpr inline operator Digit*(void) const noexcept { return this -> value; }
+    };
+
+    /* Iterator */
+    template <size_t radix>
+    class BigUnsignedInteger<radix>::Iterator final {
+        private:
+            static Digit const *sentinel;
+
+            static enum IteratorType {BIG, PRIMITIVE} type;
+            static void const *value;
+
+        public:
+            constexpr inline Iterator(BigUnsignedInteger const* const number) { Iterator::sentinel = number -> value - 1; Iterator::type = Iterator::BIG; Iterator::value = number -> value + (number -> length - 1u); }
+            constexpr inline Iterator(primitive_t* const number) { Iterator::type = Iterator::PRIMITIVE; Iterator::value = number; }
+
+            constexpr inline typename BigUnsignedInteger::length_t count(void) const noexcept {
+                switch (this -> type) {
+                    case Iterator::BIG: return ((Digit*) Iterator::value) - Iterator::sentinel;
+                    case Iterator::PRIMITIVE: { primitive_t value = *((primitive_t*) Iterator::value); if (value) { BigUnsignedInteger::length_t evaluation = 0u; while (value) { ++evaluation; value /= radix; } return evaluation; } else return 1u; }
+                } return 0u;
+            }
+            constexpr inline bool done(void) const noexcept {
+                switch (this -> type) {
+                    case Iterator::BIG: return Iterator::sentinel != Iterator::value;
+                    case Iterator::PRIMITIVE: return *((primitive_t*) Iterator::value);
+                } return true;
+            }
+            constexpr inline BigUnsignedInteger::Digit next(void) const noexcept {
+                switch (Iterator::type) {
+                    case Iterator::BIG: { Digit const *const evaluation = (Digit const*) Iterator::value; Iterator::value = evaluation - 1; return evaluation -> value; }
+                    case Iterator::PRIMITIVE: { primitive_t const evaluation = *((primitive_t*) Iterator::value); *((primitive_t*) Iterator::value) /= radix; return evaluation % radix; }
+                } return 0u;
+            }
+    };
 
 /* Modification */
-    /* Big Mathematics */
-        // Cube Root --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigFloat<radix> BigMathematics::cubeRoot(BigFloat<radix> const& number) {
-        //     function(num) {
-        //         var threshold = 0.000001;
-        //         var left = 0, right = num;
-        //         var mid;
+    // Big Unsigned Integer > Buffer
+    template <size_t radix>
+    typename BigUnsignedInteger<radix>::DigitBuffer BigUnsignedInteger<radix>::buffer {};
 
-        //         while (left <= right) {
-        //             mid = (left + right) / 2;
+    // ... Iterator > (Sentinel, Type, Value)
+    template <size_t radix> typename BigUnsignedInteger<radix>::Digit const *BigUnsignedInteger<radix>::Iterator::sentinel = NULL;
+    template <size_t radix> typename BigUnsignedInteger<radix>::Iterator::IteratorType BigUnsignedInteger<radix>::Iterator::type {};
+    template <size_t radix> void const *BigUnsignedInteger<radix>::Iterator::value = NULL;
 
-        //             if (Math.abs(num - (mid * mid * mid)) < threshold) return mid;
-
-        //             if ((mid * mid * mid) > num) right = mid;
-        //             if ((mid * mid * mid) < num) left = mid;
-        //         }
-        //     }
-        // }
-
-        template <size_t radix>
-        constexpr inline BigUnsignedInteger<radix> BigMathematics::cubeRoot(BigUnsignedInteger<radix> const& number) {
-            // Evaluation > Evaluation
-            BigUnsignedInteger<radix> evaluation {};
-
-            // Definition > ...
-            typedef BigUnsignedInteger<radix> BigUnsignedInteger;
-            typedef typename BigUnsignedInteger::DigitBuffer DigitBuffer;
-            typedef typename BigUnsignedInteger::length_t length_t;
-
-            // Initialization > (Base, Integer, Scale, ...)
-            DigitBuffer buffer = NULL;
-            BigUnsignedInteger base;
-            BigUnsignedInteger integer;
-            BigUnsignedInteger scale;
-
-            // Loop > Modification > Scale > Length -> scale = number.length * 9u
-            for (length_t length = number.length * 9u; length; length /= radix) ++scale.length;
-
-            // ...; Update > (Base, Evaluation, Integer, Scale)
-            buffer = BigUnsignedInteger::createBuffer(scale.length + (number.length * 5u) + ((number.length + 1u) * 2u));
-
-            base.value = buffer + number.length;
-            evaluation.value = buffer;
-            integer.value = buffer + (number.length * 4u); integer.copy(number, false);
-            scale.value = buffer + (scale.length + (number.length * 5u));
-
-            // Loop > Modification > Scale > Value -> scale = number.length * 9u
-            for (length_t length = number.length * 9u; length; length /= radix) (--scale.value) -> value = length % radix;
-
-            // Loop
-            for (bool evaluated = false; false == evaluated; ) {
-                // Initialization > Iterator
-                BigUnsignedInteger iterator {buffer + (scale.length + (number.length * 5u))};
-
-                // Logic > Terminate
-                if (BigUnsignedInteger::isZero(scale)) evaluated = true;
-
-                /* CODE (Lapys) -> base = scale ** iterator */ {
-                    // Update > (Evaluation, Base, ...)
-                    evaluation.doubly(false);
-                    base.length = base.value -> value = 1u;
-                    iterator.copy(scale, false);
-
-                    // Loop
-                    while (BigUnsignedInteger::isSignificant(iterator)) {
-                        // Update > (Base, ...)
-                        base.doubly(false);
-                        iterator.decrement(false);
-                    }
-
-                    // Update > (..., Base)
-                    iterator.length = 1u; iterator.value -> value = 3u; iterator.multiply(evaluation, false);
-
-                    evaluation.increment(false);
-                    iterator.multiply(evaluation, false);
-
-                    evaluation.decrement(false);
-                    iterator.increment(false);
-
-                    base.multiply(iterator, false);
-                }
-
-                // Loop > Update > Scale
-                for (unsigned char iterator = 3u; iterator; --iterator)
-                scale.decrement(false);
-
-                // Logic > Update > (Evaluation, Integer)
-                if (false == BigUnsignedInteger::isGreater(base, integer)) {
-                    evaluation.increment(false);
-                    integer.subtract(base, false);
-                }
-
-                // ...
-                iterator.length = 0u;
-                iterator.value = NULL;
-            }
-
-            // Terminate > (Base, Integer, Scale); ...
-            base.length = integer.length = scale.length = 0u;
-            base.value = integer.value = scale.value = NULL;
-
-            evaluation.allocate(evaluation.length);
-
-            // Return
-            return evaluation;
-        }
-
-        // Factorial Of --- CHECKPOINT (Lapys)
-        template <size_t radix>
-        constexpr inline BigUnsignedInteger<radix> BigMathematics::factorialOf(BigUnsignedInteger<radix> const& number) {
-            // Evaluation > Evaluation
-            BigUnsignedInteger<radix> evaluation {};
-
-            // Definition > ...
-            typedef BigUnsignedInteger<radix> BigUnsignedInteger;
-            typedef typename BigUnsignedInteger::DigitBuffer DigitBuffer;
-            typedef typename BigUnsignedInteger::length_t length_t;
-
-            // Logic
-            if (BigUnsignedInteger::isOne(number)) {
-                // ...; Modification > Evaluation > (Length, Value)
-                evaluation.allocate((evaluation.length = 1u));
-                evaluation.value -> value = 1u;
-            }
-
-            else if (BigUnsignedInteger::isSignificant(number)) {
-                DigitBuffer buffer = NULL;
-
-                buffer = BigUnsignedInteger::createBuffer(
-                    ((length_t) number * 2u) +
-                    (number.length * 2u)
-                );
-
-                long double base, count, integer;
-
-                count = number;
-                integer = number;
-
-                if (count)
-                for (--count; count; --count) {
-                    base = count;
-                    evaluation = 0.00L;
-
-                    while (base) {
-                        if (::fmod(base, 2.00L))
-                        evaluation += integer;
-
-                        base = ::trunc(base / 2.00L);
-                        integer = ::trunc(integer * 2.00L);
-                    }
-
-                    integer = evaluation;
-                }
-            }
-
-            // Return
-            return evaluation;
-        }
-
-        // Greatest Divisor Of --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigUnsignedInteger<radix> BigMathematics::greatestDivisorOf(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) {}
-
-        // Lowest Multiple Of --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigUnsignedInteger<radix> BigMathematics::lowestMultipleOf(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) {}
-
-        // Power --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigUnsignedInteger<radix> BigMathematics::power(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) {}
-
-        // Root --- CHECKPOINT (Lapys)
-        // template <size_t radix>
-        // constexpr inline BigUnsignedInteger<radix> BigMathematics::root(BigUnsignedInteger<radix> const& numberA, BigUnsignedInteger<radix> const& numberB) {}
-
-        // Square Root --- CHECKPOINT (Lapys)
-        // template <size_t radix> // NOTE (Lapys) -> Utilizes the Newton–Raphson' algorithm to determine the real root.
-        // constexpr inline BigFloat<radix> Mathematics::squareRoot(BigFloat<radix> const& number) {
-        //         if (0 == x) return x;
-        //         var dividend = x;
-        //         var val = x;
-        //         var last;
-
-        //         do {
-        //             last = val;
-        //             val = (val + dividend / val) * 0.5;
-        //         } while (Math.abs(val - last) > 1e-9);
-
-        //         return val
-        // }
-
-        template <size_t radix> // NOTE (Lapys) -> Utilizes binary search to compute the root.
-        constexpr inline BigUnsignedInteger<radix> BigMathematics::squareRoot(BigUnsignedInteger<radix> const& number) {
-            // Evaluation > Evaluation
-            BigUnsignedInteger<radix> evaluation {};
-
-            // Definition > ...
-            typedef BigUnsignedInteger<radix> BigUnsignedInteger;
-            typedef typename BigUnsignedInteger::DigitBuffer DigitBuffer;
-
-            // Logic > ...
-            if (BigUnsignedInteger::isZero(number) || BigUnsignedInteger::isOne(number)) evaluation.copy(number);
-            else {
-                // Initialization > (End, Start, ...)
-                DigitBuffer const buffer = BigUnsignedInteger::createBuffer(number.length * 7u);
-                BigUnsignedInteger end {buffer + (number.length * 5u)};
-                BigUnsignedInteger start {buffer + (number.length * 6u)};
-
-                // Update > (End, Evaluation)
-                end.copy(number, false);
-                evaluation.value = buffer;
-
-                // Loop
-                while (false == BigUnsignedInteger::isLesser(end, start)) {
-                    // Initialization > (Next) Square
-                    BigUnsignedInteger nextSquare {buffer + (number.length * 3u)};
-                    BigUnsignedInteger square {buffer + number.length};
-
-                    // Update
-                        // Evaluation
-                        evaluation.zero(false);
-                        evaluation.add(end, false);
-                        evaluation.add(start, false);
-                        evaluation.halve(false);
-
-                        // (Next) Square
-                        nextSquare.copy(evaluation, false); nextSquare.increment(false);
-                        nextSquare.multiply(nextSquare, false);
-
-                        square.copy(evaluation, false);
-                        square.multiply(square, false);
-
-                    // Logic > Terminate
-                    if (
-                        BigUnsignedInteger::isLesser(number, nextSquare) &&
-                        false == BigUnsignedInteger::isLesser(number, square)
-                    ) break;
-
-                    // Logic > Update > (Evaluation, End, Start)
-                    if (BigUnsignedInteger::isGreater(square, number)) { evaluation.decrement(false); end.copy(evaluation, false); }
-                    else { evaluation.increment(false); start.copy(evaluation, false); }
-
-                    // ...
-                    nextSquare.length = square.length = 0u;
-                    nextSquare.value = square.value = NULL;
-                }
-
-                // ...
-                end.length = start.length = 0u;
-                end.value = start.value = NULL;
-
-                evaluation.allocate(evaluation.length);
-            }
-
-            // Return
-            return evaluation;
-        }
-
+/* Modification */
     /* Big Unsigned Integer */
         // [Constructor]
-        template <size_t radix> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(Digit* const value, length_t const length) : length{length}, value{value} {}
-        template <size_t radix> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(Digit const* const value, length_t const length) : length{length}, value{(Digit*) value} {}
-        template <size_t radix> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(void) : length{0u}, value{NULL} {}
-        template <size_t radix> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(primitive_t const number) : length{0u}, value{NULL} { BigUnsignedInteger::move(BigUnsignedInteger::fromNumber(number)); }
-        template <size_t radix> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(BigUnsignedInteger const& number) : length{0u}, value{NULL} { if (&number != this) BigUnsignedInteger::copy(number); }
-        template <size_t radix> template <size_t base> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(BigUnsignedInteger<base> const& number) : length{0u}, value{0u} { base == radix ? BigUnsignedInteger::copy(number) : BigUnsignedInteger::move(BigUnsignedInteger::fromBase<base>(number)); }
-        template <size_t radix> template <size_t base> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(BigUnsignedInteger<base>&& number) : length{0u}, value{NULL} { base == radix ? BigUnsignedInteger::move((BigUnsignedInteger&&) number) : BigUnsignedInteger::move(BigUnsignedInteger::fromBase<base>(number)); }
+        template <size_t radix> inline BigUnsignedInteger<radix>::BigUnsignedInteger(void) : length{0u}, value{} {}
+        template <size_t radix> inline BigUnsignedInteger<radix>::BigUnsignedInteger(primitive_t const number) : length{0u}, value{NULL} { BigUnsignedInteger::fromNumber(this, number); }
+        template <size_t radix> inline BigUnsignedInteger<radix>::BigUnsignedInteger(BigUnsignedInteger const& number) : length{0u}, value{NULL} { BigUnsignedInteger::copy(number); }
+        template <size_t radix> constexpr inline BigUnsignedInteger<radix>::BigUnsignedInteger(BigUnsignedInteger&& number) : length{0u}, value{NULL} { BigUnsignedInteger::move(number); }
 
-        // [Destructor]
-        template <size_t radix> inline BigUnsignedInteger<radix>::~BigUnsignedInteger(void) { BigUnsignedInteger::free(); }
-
-        // Add
-        template <size_t radix> template <size_t base>
-        constexpr inline void BigUnsignedInteger<radix>::add(BigUnsignedInteger<base> const& number, bool const manageMemory) {
-            // Logic
-            if (base ^ radix) BigUnsignedInteger::add(BigUnsignedInteger::fromBase<base>(number), manageMemory);
-            else if (BigUnsignedInteger::isZero()) BigUnsignedInteger::copy(number, manageMemory);
-            else if (BigUnsignedInteger::isOne()) { BigUnsignedInteger::copy(number, manageMemory); BigUnsignedInteger::increment(manageMemory, manageMemory); }
-            else if (BigUnsignedInteger::isOne(number)) BigUnsignedInteger::increment(manageMemory, manageMemory);
-            else if (BigUnsignedInteger::isSignificant(number)) {
-                // Initialization > Iterator (A, B) --- NOTE (Lapys) -> Set the "counter" variables.
-                Digit *iteratorA = this -> value + this -> length;
-                Digit const *iteratorB = number.value + number.length;
-
-                // Loop --- NOTE (Lapys) -> The algorithm used in the proceeding `for` loop only has defined behavior if the source number (`this`) has a greater or equal characteristics length to `number`.
-                if (this -> length < number.length) {
-                    // ...
-                    if (manageMemory) BigUnsignedInteger::allocate(number.length);
-
-                    iteratorA = this -> value + number.length;
-                    this -> value += this -> length;
-
-                    // Loop > Update > Iterator --- NOTE (Lapys) -> Shift the source number e.g.: `69 + 420` becomes `069 + 420`
-                    while ((this -> length)--) (--iteratorA) -> value = (--(this -> value)) -> value;
-                    while (this -> value != iteratorA--) iteratorA -> value = 0u;
-
-                    // Modification > Target > Length
-                    // : Update > Iterator A --- NOTE (Lapys) -> Reset the "counter" variable.
-                    this -> length = number.length;
-                    iteratorA = this -> value + this -> length;
-                }
-
-                // Loop --- NOTE (Lapys) -> Per-digit addition loop.
-                for (Digit carry = 0u, *evaluation = NULL; this -> value != iteratorA-- && --iteratorB; ) {
-                    // Logic
-                    if (number.value > iteratorB) { // NOTE (Lapys) -> Exhausted `number`'s digits to add.
-                        // Logic --- NOTE (Lapys) -> Round-up addition loop.
-                        if (Digit::isSignificant(carry)) {
-                            // Update > (Evaluation, ...)
-                            evaluation = Digit::add(carry.value, iteratorA -> value);
-                            carry.value = 0u;
-                        } else break;
-                    }
-
-                    else {
-                        // Update > Evaluation
-                        evaluation = Digit::add(iteratorA -> value, iteratorB -> value);
-
-                        // Logic --- NOTE (Lapys) -> Add the `carry` to the `evaluation`.
-                        if (Digit::isSignificant(carry)) {
-                            /* Update > (Carry, Evaluation)
-                                --- NOTE ---
-                                    #Lapys: Mutates the former values of `evaluation` via call to `Digit::add(...)`,
-                                        fortunately the second element in `evaluation` is preserved through unwitting arithmetic
-                                        and the first element is preserved through the initial statically parsed value of `evaluation -> value`.
-                                --- WARN (Lapys) -> `evaluation -> value += ...` evaluates to undefined arithmetic.
-                            */
-                            evaluation -> value = evaluation -> value + (Digit::isSignificant(Digit::add(carry, (evaluation + 1) -> value) -> value));
-                            carry.value = 0u; // NOTE (Lapys) -> Reset the carry for the next addition.
-                        }
-                    }
-
-                    // Update > Iterator A
-                    iteratorA -> value = (evaluation + 1) -> value;
-
-                    // Logic --- NOTE (Lapys) -> Handle multi-digit `evaluation`s as the carry and result.
-                    if (Digit::isSignificant(evaluation -> value)) {
-                        /* Update > Carry --- NOTE (Lapys) -> Storing the carry would have been redundant
-                                if the `Digit::add(...)` function was not utilized in the `BigUnsignedInteger::multiply(...)` method and
-                                since the size of `Digit::value` was able to store `0` - `(radix * 2u) - 1u` digits for private arithmetic.
-                        */
-                        carry.value = evaluation -> value;
-
-                        // Logic --- NOTE (Lapys) -> Expand the number.
-                        if (this -> value == iteratorA) {
-                            // ...
-                            if (manageMemory) BigUnsignedInteger::allocate(this -> length + 1u);
-
-                            iteratorA = this -> value + ++(this -> length);
-                            while (this -> value != --iteratorA) iteratorA -> value = (iteratorA - 1) -> value;
-                            iteratorA -> value = carry.value;
-
-                            break;
-                        }
-                    }
-                }
-            }
+        // Add --- CHECKPOINT (Lapys)
+        template <size_t radix>
+        inline void BigUnsignedInteger<radix>::add(Iterator const& number, bool const manageMemory) {
         }
 
-        /* Allocate
-                --- NOTE (Lapys) -> More efficient if a memory pool (preferably a slab allocator) was used.
-                --- REDACT (Lapys) -> Implicitly frees memory if the specified length is zero.
+        /* Allocate ...
+                --- CONSIDER (Lapys) -> Internally construct a region of memory instead of instantiating a set of `Digit` objects unto heap memory.
+                --- NOTE (Lapys) -> Request sufficient memory for storing `Digit` instances. --- REDACT (Lapys)
         */
+        template <size_t radix> inline void BigUnsignedInteger<radix>::allocateBuffer(length_t const length) { if (BigUnsignedInteger::Buffer.length < length) { BigUnsignedInteger::Buffer.length = length; BigUnsignedInteger::Buffer.value = (Digit*) BigUnsignedInteger::allocate(BigUnsignedInteger::Buffer.value, length); } }
+        template <size_t radix> inline void BigUnsignedInteger<radix>::allocate(length_t const length) { if (length) { this -> value = (Digit*) BigUnsignedInteger::allocate(this -> value, length + 1u); (this -> value + length) -> value = radix; } else BigUnsignedInteger::free(); }
+
         template <size_t radix>
-        inline void BigUnsignedInteger<radix>::allocate(size_t const length) {
-            // Logic ... --- NOTE (Lapys) -> Utilizes C-style dynamic memory allocation because RAII is not a requisite to handling `Digit` objects.
-            if (0u == length) BigUnsignedInteger::free();
-            else if (length >= SIZE_MAX / sizeof(Digit)) { ::print("\r[MemoryException]: Attempt to acquire additional memory (", length * sizeof(Digit), " of ", SIZE_MAX, " bytes) than is allocable for a pointer within arbitrary-precision number", '\0'); ::abort(); }
-            else {
-                void *const allocation = NULL == this -> value ? ::malloc(length * sizeof(Digit)) : ::realloc(this -> value, length * sizeof(Digit));
+        inline void* BigUnsignedInteger<radix>::allocate(Digit* const buffer, length_t const length) {
+            // Logic
+            if (length > SIZE_MAX / sizeof(Digit)) { ::puts("\r[Error]: Attempt to allocate excess memory for `Digit` instances"); ::abort(); }
+            else { void *const allocation = NULL == buffer ? ::malloc(length * sizeof(BigUnsignedInteger::Digit)) : ::realloc(buffer, length * sizeof(BigUnsignedInteger::Digit)); if (NULL == allocation) { ::puts("\r[Error]: Unable to allocate memory for additional `Digit` instances"); ::abort(); } return allocation; }
 
-                if (NULL == allocation) { ::print("\r[MemoryException]: Attempt to acquire additional memory (", length * sizeof(Digit), " bytes) for arbitrary-precision number failed", '\0'); ::abort(); }
-                else this -> value = (Digit*) allocation;
-            }
+            // Return
+            return NULL;
         }
 
-        // Assert --- NOTE (Lapys) -> Assert the arbitrary-precision number was initialized correctly.
-        template <size_t radix>
-        inline void BigUnsignedInteger<radix>::assert(void) const {
-            // Logic > Error
-            if (SIZE_MAX /* -> RADIX_MAX */ == radix || 0u == radix || radix == 1u) {
-                ::print("\r[LogicException]: Attempt to initialize arbitrary-precision number with invalid radix", '\0');
-                ::abort();
-            }
-        }
+        // Assert, Clear Buffer, Free --- MINIFY (Lapys)
+        template <size_t radix> constexpr inline void BigUnsignedInteger<radix>::assert(void) { if (0u == radix || 1u == radix || SIZE_MAX == radix) { ::puts("\r[Error]: Attempt to instantiate `BigNumber` with non-representable radix"); ::abort(); } }
+        template <size_t radix> inline void BigUnsignedInteger<radix>::clearBuffer(void) noexcept { BigUnsignedInteger::free(BigUnsignedInteger::Buffer.value); BigUnsignedInteger::Buffer.value = NULL; }
 
-        // Copy --- WARN (Lapys) -> Ignores differing numeral systems.
-        template <size_t radix> template <size_t base>
-        inline void BigUnsignedInteger<radix>::copy(BigUnsignedInteger<base> const& number, bool const manageMemory) {
-            // Logic > ...
-            if (BigUnsignedInteger::isZero(number)) BigUnsignedInteger::zero(manageMemory);
-            else {
-                // ...
-                if (manageMemory)
-                BigUnsignedInteger::allocate(number.length);
-
-                // (Loop > )Modification > Target > ...
-                for (this -> length = 0u; this -> length ^ number.length; ++(this -> length)) *(this -> value++) = *(number.value + this -> length);
-                this -> value -= this -> length;
-            }
-        }
-
-        // Create Buffer --- WARN (Lapys) -> Implementation is dependent on objects.
-        template <size_t radix> inline typename BigUnsignedInteger<radix>::DigitBuffer BigUnsignedInteger<radix>::createBuffer(size_t const length) { BigUnsignedInteger dummy {}; dummy.allocate(length); Digit *const evaluation = dummy.value; dummy.length = 0u; dummy.value = NULL; return evaluation; }
+        template <size_t radix> inline void BigUnsignedInteger<radix>::free(Digit* const buffer) noexcept { ::free(buffer); }
+        template <size_t radix> inline void BigUnsignedInteger<radix>::free(void) noexcept { BigUnsignedInteger::free(this -> value); this -> value = NULL; }
 
         // Decrement
         template <size_t radix>
-        constexpr inline void BigUnsignedInteger<radix>::decrement(bool const manageMemory) {
+        inline void BigUnsignedInteger<radix>::decrement(bool const manageMemory) noexcept {
             // Logic
             if (BigUnsignedInteger::isSignificant()) {
                 // Initialization > Iterator
-                Digit *iterator = this -> value + (this -> length - 1u);
-
-                // Loop > Update > Iterator ...
-                while (Digit::isLowestRank(iterator -> value)) iterator-- -> value = radix - 1u;
-                --(iterator -> value);
-
-                // Logic > ...
-                if (Digit::isLowestRank(this -> value -> value))
-                BigUnsignedInteger::trimLeft(manageMemory);
-            }
-        }
-
-        // Delete Buffer
-        template <size_t radix> constexpr inline void BigUnsignedInteger<radix>::deleteBuffer(DigitBuffer const buffer) { ::free(buffer); }
-
-        // Double --- NOTE (Lapys) -> Useful for quick counting; Not `BigUnsignedInteger::double` because C++.
-        template <size_t radix>
-        constexpr inline void BigUnsignedInteger<radix>::doubly(bool const manageMemory) {
-            // Logic > ...
-            if (radix == 2u) BigUnsignedInteger::shiftLeft(manageMemory);
-            else if (BigUnsignedInteger::isSignificant()) { // NOTE (Lapys) -> Works for binary numbers.
-                // Initialization > (Carry, Iterator)
-                bool carry = false;
                 Digit *iterator = this -> value + this -> length;
 
-                // Loop --- NOTE (Lapys) -> Double the number.
-                while (this -> value != iterator--) {
-                    // Constant > Evaluation
-                    Digit const evaluation = carry + (Digit::add(iterator -> value, iterator -> value) + 1) -> value;
+                // Loop > Update > Iterator
+                while (Digit::isLowestRank((--iterator) -> value))
+                iterator -> value = radix - 1u;
 
-                    // Update > (Carry, Iterator)
-                    carry = false == Digit::isLowerRank(iterator -> value);
-                    iterator -> value = evaluation.value;
-                }
+                // Logic --- NOTE (Lapys) -> Shrink the `BigNumber` instance.
+                if (Digit::isLowestRank(--(iterator -> value)) && iterator == this -> value) {
+                    // Loop > Update > Iterator
+                    for (Digit const *const end = iterator + --(this -> length); end != iterator; ++iterator)
+                    iterator -> value = (iterator + 1) -> value;
 
-                // Logic --- NOTE (Lapys) -> Expand the number.
-                if (carry) {
-                    // ...
-                    if (manageMemory) { BigUnsignedInteger::allocate(this -> length + 1u); }
-
-                    iterator = this -> value + ++(this -> length);
-                    while (this -> value != --iterator) iterator -> value = (iterator - 1) -> value;
-                    iterator -> value = 1u;
-                }
-            }
-        }
-
-        // Divide
-        template <size_t radix> template <size_t base>
-        inline BigUnsignedInteger<radix> BigUnsignedInteger<radix>::divide(BigUnsignedInteger<base> const& number, bool const manageMemory) {
-            // Initialization > Remainder
-            static BigUnsignedInteger remainder;
-
-            // Update > Remainder
-            remainder.zero();
-
-            // Logic > ...
-            if (BigUnsignedInteger::isZero(number)) { ::println("\r[ArithmeticException]: Attempt to divide arbitrary-precision number by zero"); ::abort(); }
-            else if (&number == this || number.value == this -> value) { BigUnsignedInteger evaluation; evaluation.copy(number); BigUnsignedInteger::divide(evaluation, manageMemory); }
-            else if (false == BigUnsignedInteger::isOne(number)) {
-                // Logic > ...
-                if (base ^ radix) BigUnsignedInteger::divide(BigUnsignedInteger::fromBase<base>(number), manageMemory);
-                else if (BigUnsignedInteger::isLesser(number)) BigUnsignedInteger::zero();
-                else if (BigUnsignedInteger::isEqual(number)) { if (this -> length ^ 1u) { BigUnsignedInteger::allocate((this -> length = 1u)); } this -> value -> value = 1u; }
-                else {
-                    // Initialization > (Dividend, Factor, [Dividend] Slice)
-                    BigUnsignedInteger dividend;
-                    BigUnsignedInteger factor;
-                    BigUnsignedInteger slice;
-
-                    // Update > (Dividend, Slice)
-                    dividend.copy(*this);
-                    slice.length = 1u;
-                    slice.value = dividend.value;
-
-                    // Modification > Target > Length
-                    this -> length = 0u;
-
-                    // Loop
-                    for (bool evaluated = false; false == evaluated; ) {
-                        // Logic
-                        if (Digit::isLowestRank(slice.value -> value)) { // NOTE (Lapys) -> When a `Digit` `0` is iterated.
-                            // Modification > Target > ...
-                            (this -> value + (this -> length)++) -> value = 0u;
-
-                            // Logic
-                            if (dividend.length == 1u)
-                                // Terminate
-                                evaluated = true;
-
-                            else {
-                                // : Loop > Update > Indexer
-                                // : Modification > Dividend > Length
-                                for (Digit *end = dividend.value + (dividend.length - 1u), *indexer = dividend.value; end != indexer; ++indexer) indexer -> value = (indexer + 1) -> value;
-                                --dividend.length;
-                            }
-                        }
-
-                        else {
-                            // Loop --- NOTE (Lapys) -> Account the next `slice` of the `dividend` to parse.
-                            for (bool multipleBringDown = false; BigUnsignedInteger::isGreater(number, slice); ) {
-                                // Logic
-                                if (dividend.value + dividend.length == slice.value + slice.length) { // NOTE (Lapys) -> End of the dividend reached and no more `Digit`'s to "bring down".
-                                    // Modification > Target > ...
-                                    // : Terminate
-                                    (this -> value + (this -> length)++) -> value = 0u;
-
-                                    evaluated = true;
-                                    break;
-                                }
-
-                                else {
-                                    // Modification > (Slice, Target) > ...
-                                    multipleBringDown ? (this -> value + (this -> length)++) -> value = 0u : multipleBringDown = true;
-                                    ++slice.length;
-                                }
-                            }
-
-                            // Logic --- NOTE (Lapys) -> Begin counting up to the `slice`.
-                            if (false == evaluated) {
-                                // Initialization > (Count, ...)
-                                digit_t count = 1u;
-                                length_t length = slice.length; // NOTE (Lapys) -> Dummy variable.
-
-                                // Update > Factor --- NOTE (Lapys) -> Reset the `factor` which is counted up to the current `slice` of `dividend`.
-                                factor.copy(number);
-
-                                // Loop > Update > (Count, Factor) --- NOTE (Lapys) -> "Intelligently" count up to the `slice`.
-                                while (false == BigUnsignedInteger::isGreater(factor, slice)) { count *= 2u; factor.doubly(); }
-                                count /= 2u; factor.halve();
-
-                                while (false == BigUnsignedInteger::isGreater(factor, slice)) { ++count; factor.add(number); }
-                                --count; factor.subtract(number);
-
-                                // Modification > Target > ...
-                                (this -> value + (this -> length)++) -> value = count;
-
-                                // Update > Slice
-                                slice.subtract(factor, false);
-
-                                // Logic > Loop > Update > Indexer --- NOTE (Lapys) -> Update the `dividend`.
-                                // : Modification > Dividend > Length
-                                if (length - slice.length) for (
-                                    Digit *const end = dividend.value + dividend.length, *indexer = dividend.value + slice.length, *iterator = indexer + (length - slice.length);
-                                    end != iterator; (++indexer, ++iterator)
-                                ) indexer -> value = iterator -> value;
-                                dividend.length -= (length - slice.length);
-
-                                // Logic > ...
-                                if (dividend.length == slice.length) evaluated = true;
-                                else if (dividend.length) slice.value = dividend.value;
-                                else evaluated = true;
-                            }
-                        }
-                    }
-
-                    // Logic
-                    if (Digit::isLowestRank(this -> value -> value)) {
-                        // ... Modification > Slice > Value; ...
-                        slice.value = this -> value;
-                        while (Digit::isLowestRank(slice.value -> value)) ++slice.value;
-
-                        BigUnsignedInteger::trimLeft(slice.value - (this -> value), manageMemory);
-                    }
-
-                    else {
-                        // Logic > ... --- WARN (Lapys) -> May be redundant.
-                        if (manageMemory)
-                        BigUnsignedInteger::allocate(this -> length);
-                    }
-
-                    // Update > ...
-                    remainder.move((BigUnsignedInteger&&) dividend);
-
-                    slice.length = 0u;
-                    slice.value = NULL;
-                }
-            }
-
-            // Return
-            return remainder;
-        }
-
-        // Exponentiate --- CHECKPOINT (Lapys)
-        // template <size_t radix> template <size_t base>
-        // constexpr inline void BigUnsignedInteger<radix>::exponentiate(BigUnsignedInteger<base> const& number) {
-        //     if (BigUnsignedInteger::isZero(number)) { BigUnsignedInteger::allocate((this -> length = 1u)); this -> value -> value = 1u; }
-        //     else if (&number == this || number.value == this -> value) { BigUnsignedInteger evaluation; evaluation.copy(number); BigUnsignedInteger::exponentiate(evaluation); }
-        //     else if (BigUnsignedInteger::isSignificant() && false == (BigUnsignedInteger::isOne() || BigUnsignedInteger::isOne(number))) {
-        //         /* ... */
-        //     }
-        // }
-
-        // Free
-        template <size_t radix> constexpr inline void BigUnsignedInteger<radix>::free(void) { if (NULL != this -> value) { ::free(this -> value); this -> value = NULL; } }
-
-        // From Base --- CHECKPOINT (Lapys)
-        template <size_t radix> template <size_t base>
-        constexpr inline BigUnsignedInteger<radix> BigUnsignedInteger<radix>::fromBase(BigUnsignedInteger<base> const& number) {
-            // Evaluation > Evaluation
-            BigUnsignedInteger<radix> evaluation {};
-
-            // Logic > ...
-            if (base == radix) evaluation.copy(number);
-
-            // Return
-            return evaluation;
-        }
-
-        // From Number --- NOTE (Lapys) -> May return a false positive.
-        template <size_t radix>
-        constexpr inline BigUnsignedInteger<radix> BigUnsignedInteger<radix>::fromNumber(primitive_t number) {
-            // Evaluation > Evaluation
-            BigUnsignedInteger<radix> evaluation {};
-
-            // (Loop > )Modification > Evaluation > Length
-            for (primitive_t iterator = number; iterator; iterator /= radix) ++evaluation.length;
-
-            // ...
-            evaluation.allocate(evaluation.length);
-            evaluation.value += evaluation.length;
-
-            // (Loop > )Modification > Evaluation > Value
-            while (number) { *--evaluation.value = number % radix; number /= radix; }
-
-            // Return
-            return evaluation;
-        }
-
-        // : Get Maximum Length
-        // : Get Maximum Length Size --- WARN (Lapys) -> Code re-used here(?).
-        template <size_t radix> constexpr inline size_t BigUnsignedInteger<radix>::getMaximumLength(void) noexcept { return SIZE_MAX / sizeof(Digit); }
-        template <size_t radix> constexpr inline unsigned char BigUnsignedInteger<radix>::getMaximumLengthSize(void) noexcept { unsigned char size = 0u; for (size_t maximumLength = BigUnsignedInteger::getMaximumLength(); maximumLength; maximumLength >>= 1u) ++size; return size ? size : 1u; }
-
-        // Halve --- NOTE (Lapys) -> Useful for quick counting.
-        template <size_t radix>
-        constexpr inline void BigUnsignedInteger<radix>::halve(bool const manageMemory) {
-            // Logic > ...
-            if (radix == 2u) BigUnsignedInteger::shiftRight(manageMemory);
-            else if (BigUnsignedInteger::isSignificant()) { // NOTE (Lapys) -> Works for binary numbers.
-                // Initialization > Iterator
-                Digit *iterator = this -> value;
-
-                // Loop
-                for (Digit const *end = this -> value + this -> length; end > iterator; ++iterator) {
                     // Logic > ...
-                    if (iterator -> value == 1u) { // NOTE (Lapys) -> `Digit` `1` divided by `2`.
-                        // Logic
-                        if (end == iterator + 1) iterator -> value = 0u;
-                        else {
-                            // Constant > Evaluation
-                            digit_t const evaluation = (radix + (iterator + 1) -> value) / 2u;
-
-                            // Logic > ...
-                            if (end != iterator + 2 && ((iterator + 1) -> value & 1u)) // NOTE (Lapys) -> Carry over unto the next `Digit`.
-                            (iterator + 2) -> value += radix;
-
-                            if (evaluation < radix) { // NOTE (Lapys) -> Update `this` based on `evaluation`.
-                                // Logic
-                                if (this -> value == iterator) { // -> evaluation = x
-                                    // Update > (Iterator, ...)
-                                    iterator -> value = evaluation;
-                                    for (Digit *subiterator = iterator + 1; end != subiterator; ++subiterator) subiterator -> value = (subiterator + 1) -> value;
-
-                                    --end;
-                                    --(this -> length); // CONSIDER (Lapys) -> Data was getting corrupted(?) when `BigUnsignedInteger::allocate()` was called on the new `length` here for some reason...
-                                }
-
-                                else { // -> evaluation = 0x
-                                    // Update > Iterator
-                                    iterator -> value = 0u;
-                                    (iterator + 1) -> value = evaluation;
-                                    ++iterator;
-                                }
-                            }
-
-                            else { // -> evaluation = xy
-                                // Update > Iterator
-                                iterator -> value = (evaluation % (radix * radix));
-                                (iterator + 1) -> value = (evaluation % radix);
-                            }
-                        }
-                    }
-
-                    else if (Digit::isSignificant(iterator -> value)) {
-                        // (Logic > )Update > Iterator
-                        if (end != iterator + 1 && (iterator -> value & 1u)) (iterator + 1) -> value += radix;
-                        iterator -> value /= 2u;
-                    }
+                    if (manageMemory)
+                    BigUnsignedInteger::allocate(this -> length);
                 }
-
-                // Logic > ...
-                if (Digit::isLowestRank(this -> value -> value)) BigUnsignedInteger::trimLeft(manageMemory);
-                else if (manageMemory) BigUnsignedInteger::allocate(this -> length);
             }
+        }
+
+        // From Number
+        template <size_t radix>
+        inline void BigUnsignedInteger<radix>::fromNumber(BigUnsignedInteger* const evaluation, primitive_t const number, bool const manageMemory) {
+            // Logic > ...
+            if (number) {
+                // Initialization > (Iterator, Length)
+                primitive_t iterator;
+                unsigned char length = 0u;
+
+                // Loop > Update > Length --- NOTE (Lapys) -> Get the characteristic `length` of the `number`.
+                for (iterator = number; iterator; iterator /= radix) ++length;
+
+                // Logic > Modification > Evaluation > Length --- NOTE (Lapys) -> Modify the `evaluation` `length` to use as an indexer.
+                if (manageMemory) evaluation -> allocate((evaluation -> length = length));
+                else evaluation -> length = length;
+
+                // Loop > Modification > Evaluation > (Length, Value)
+                for (iterator = number; iterator; iterator /= radix)
+                *(evaluation -> value + --(evaluation -> length)) = iterator % radix;
+
+                evaluation -> length = length; // NOTE (Lapys) -> Reset the `length` to the correct value.
+            } else evaluation -> zero(manageMemory);
         }
 
         // Increment
         template <size_t radix>
-        constexpr inline void BigUnsignedInteger<radix>::increment(bool const manageMemory) {
+        inline void BigUnsignedInteger<radix>::increment(bool const manageMemory) {
             // Logic
             if (BigUnsignedInteger::isZero()) {
-                // ...; Modification > Target > (Length, Value)
-                if (manageMemory) BigUnsignedInteger::allocate(this -> length);
-
-                this -> length = 1u;
-                (this -> value) -> value = 1u;
+                // Modification > Target > (Length, Value)
+                BigUnsignedInteger::allocate((this -> length = 1u));
+                this -> value -> value = 1u;
             }
 
             else {
                 // Initialization > Iterator
-                Digit *iterator = this -> value + (this -> length - 1u);
-
-                // Modification > Target > Value
-                // : Loop > Update > Iterator
-                --(this -> value);
-                while (iterator != this -> value && Digit::isGreatestRank(iterator -> value)) iterator-- -> value = 0u;
-
-                // Logic > ... --- REDACT (Lapys)
-                if (iterator == this -> value) {
-                    ++(this -> length);
-                    (++(this -> value)) -> value = 1u;
-
-                    if (manageMemory) BigUnsignedInteger::allocate(this -> length);
-                    (this -> value + (this -> length - 1u)) -> value = 0u;
-                } else { ++(iterator -> value); ++(this -> value); }
-            }
-        }
-
-        // Is ... --- CITE (Lapys) -> https://www.geeksforgeeks.org/check-if-the-number-is-even-or-odd-whose-digits-and-base-radix-is-given/
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isBaseFactor(void) const noexcept { return BigUnsignedInteger::isSignificant() && Digit::isLowestRank((this -> value + (this -> length - 1u)) -> value); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isBig(void) const noexcept { return BigUnsignedInteger::isGreater(PRIMITIVE_MAX); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isComputable(void) const noexcept { return true; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isEven(void) const noexcept { return false == BigUnsignedInteger::isOdd(); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isFinite(void) const noexcept { return true; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isInfinite(void) const noexcept { return false; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isNegative(void) const noexcept { return false; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isNonComputable(void) const noexcept { return false; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isOdd(void) const noexcept { if (radix & 1u) { length_t count = 0u; for (Digit *iterator = this -> value + this -> length; this -> value != iterator--; ) { if (iterator -> value & 1u) ++count; } return count & 1u; } return (this -> value + (this -> length - 1u)) -> value & 1u; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isOne(void) const noexcept { return NULL != this -> value && (this -> length == 1u && this -> value -> value == 1u); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isPositive(void) const noexcept { return true; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(void) const noexcept { return this -> length && this -> value -> value; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(void) const noexcept { return 0u == this -> length || 0u == this -> value -> value; }
-
-        // Is Equal
-        template <size_t radix> template <size_t base>
-        constexpr bool BigUnsignedInteger<radix>::isEqual(BigUnsignedInteger<base> const& number) const noexcept {
-            // Evaluation > Evaluation
-            bool evaluation = true;
-
-            // Logic > ... --- REDACT (Lapys)
-            if (base == radix) {
-                if (this -> length ^ number.length) evaluation = false;
-                else if (&number != this && this -> value != number.value) {
-                    for (length_t iterator = 0u; iterator ^ this -> length; ++iterator)
-                    if ((this -> value + iterator) -> value ^ (number.value + iterator) -> value) {
-                        evaluation = false;
-                        break;
-                    }
-                }
-            } else evaluation = BigUnsignedInteger::isEqual(BigUnsignedInteger::fromBase<base>(number));
-
-            // Return
-            return evaluation;
-        }
-
-        // Is Greater
-        template <size_t radix> template <size_t base>
-        constexpr bool BigUnsignedInteger<radix>::isGreater(BigUnsignedInteger<base> const& number) const noexcept {
-            // Evaluation > Evaluation
-            bool evaluation = false;
-
-            // Logic > ... --- REDACT (Lapys)
-            if (base == radix) {
-                if (this -> length > number.length) evaluation = true;
-                else if (this -> length == number.length) {
-                    for (length_t iterator = 0u; iterator ^ this -> length; ++iterator) {
-                        digit_t const& digitA = (this -> value + iterator) -> value;
-                        digit_t const& digitB = (number.value + iterator) -> value;
-
-                        if (digitA > digitB) { evaluation = true; break; }
-                        else if (digitA < digitB) { evaluation = false; break; }
-                    }
-                }
-            } else evaluation = BigUnsignedInteger::isGreater(BigUnsignedInteger::fromBase<base>(number));
-
-            // Return
-            return evaluation;
-        }
-
-        // Is Lesser
-        template <size_t radix> template <size_t base>
-        constexpr bool BigUnsignedInteger<radix>::isLesser(BigUnsignedInteger<base> const& number) const noexcept {
-            // Evaluation > Evaluation
-            bool evaluation = false;
-
-            // Logic > ... --- REDACT (Lapys)
-            if (base == radix) {
-                if (this -> length < number.length) evaluation = true;
-                else if (this -> length == number.length) {
-                    for (length_t iterator = 0u; iterator ^ this -> length; ++iterator) {
-                        digit_t const& digitA = (this -> value + iterator) -> value;
-                        digit_t const& digitB = (number.value + iterator) -> value;
-
-                        if (digitA < digitB) { evaluation = true; break; }
-                        else if (digitA > digitB) { evaluation = false; break; }
-                    }
-                }
-            } else evaluation = BigUnsignedInteger::isLesser(BigUnsignedInteger::fromBase<base>(number));
-
-            // Return
-            return evaluation;
-        }
-
-        // Modulo
-        template <size_t radix> template <size_t base>
-        inline void BigUnsignedInteger<radix>::modulo(BigUnsignedInteger<base> const& number, bool const manageMemory) {
-            // Logic > ...
-            if (BigUnsignedInteger::isLesser(number)) BigUnsignedInteger::zero(manageMemory);
-            else BigUnsignedInteger::move(BigUnsignedInteger::divide(number, manageMemory));
-        }
-
-        // Move --- WARN (Lapys) -> Ignores differing numeral systems.
-        template <size_t radix> template <size_t base>
-        inline void BigUnsignedInteger<radix>::move(BigUnsignedInteger<base>&& number) {
-            // Modification > (Target, Number) > ...
-            this -> length = number.length;
-            this -> value = number.value;
-
-            number.length = 0u;
-            number.value = NULL;
-        }
-
-        // Multiply --- CHECKPOINT (Lapys)
-        template <size_t radix> template <size_t base>
-        constexpr inline void BigUnsignedInteger<radix>::multiply(BigUnsignedInteger<base> const& number, bool const manageMemory) {
-            // Logic > ...
-            if (base ^ radix) BigUnsignedInteger::multiply(BigUnsignedInteger::fromBase<base>(number), manageMemory);
-            else if (BigUnsignedInteger::isZero() || BigUnsignedInteger::isZero(number)) BigUnsignedInteger::zero(manageMemory);
-            else if (BigUnsignedInteger::isOne()) BigUnsignedInteger::copy(number, manageMemory);
-            else if (BigUnsignedInteger::isBaseFactor(number)) {
-                // Initialization > (Dummy, Iterator)
-                BigUnsignedInteger dummy;
-                Digit const *iterator = number.value + number.length;
+                Digit *iterator = this -> value + this -> length;
 
                 // Loop > Update > Iterator
-                for (--iterator; Digit::isLowestRank(iterator -> value); --iterator) continue;
-
-                // ...; Modification > Dummy > (Length, Value)
-                dummy.length = (++iterator) - number.value; dummy.value = number.value;
-
-                BigUnsignedInteger::multiply(dummy, manageMemory);
-                BigUnsignedInteger::shiftLeft(number.length - dummy.length, manageMemory);
-
-                dummy.length = 0u; dummy.value = NULL;
-            }
-
-            else if (false == BigUnsignedInteger::isOne(number)) {
-                // Initialization > (..., Carry, Length, Partial [Product], Product)
-                DigitBuffer const buffer = BigUnsignedInteger::createBuffer((length * 2u) + 1u);
-
-                Digit carry = 0u;
-                length_t const length = this -> length + number.length + 1u;
-                BigUnsignedInteger partial;
-                BigUnsignedInteger product;
-
-                // Modification > (Partial, Product) > Value
-                partial.value = buffer + length;
-                product.value = buffer;
-
-                // Loop > Logic
-                for (Digit *iteratorA = NULL, *iteratorB = number.value + number.length; number.value != iteratorB--; )
-                if (Digit::isSignificant(iteratorB -> value)) { // NOTE (Lapys) -> It is redundant to iterate the `0` digits of `number`
-                    // Update > (Carry, Partial)
-                    carry = 0u;
-                    partial.length = length;
-
-                    // Loop
-                    for (iteratorA = this -> value + this -> length; this -> value != iteratorA--; ) {
-                        // Constant > Evaluation
-                        Digit *const evaluation = Digit::multiply(iteratorA -> value, iteratorB -> value);
-
-                        // (Logic > )Update > Evaluation --- NOTE (Lapys) -> Add the carry unto the `evaluation`.
-                        if (Digit::isSignificant(carry)) evaluation -> value = evaluation -> value + (Digit::add(carry, (evaluation + 1) -> value) -> value);
-
-                        // Update > (Carry, Partial)
-                        (partial.value + --partial.length) -> value = (evaluation + 1) -> value;
-                        carry = evaluation -> value;
-                    }
-
-                    // Logic > Update > Partial
-                    if (Digit::isSignificant(carry))
-                    (partial.value + --partial.length) -> value = carry.value;
-
-                    // (Loop > )Update > ...
-                    for (Digit *iterator = partial.value + partial.length; partial.value != iterator--; ) iterator -> value = 0u;
-                    for (Digit *const end = partial.value + length, *iterator = partial.value + partial.length; end != iterator; ++iterator) {
-                        partial.value++ -> value = iterator -> value;
-                        iterator -> value = 0u;
-                    }
-
-                    partial.value -= (partial.length = length - partial.length);
-                    partial.length += (number.value + number.length) - (iteratorB + 1);
-
-                    product.add(partial, false);
-                }
+                while (Digit::isGreatestRank((--iterator) -> value))
+                iterator -> value = 0u;
 
                 // Logic > ...
-                if (manageMemory) {
-                    BigUnsignedInteger::zero();
-                    BigUnsignedInteger::move((BigUnsignedInteger&&) product);
-                    BigUnsignedInteger::allocate(this -> length);
-                } else BigUnsignedInteger::copy(product, false);
+                if (iterator == this -> value - 1) { // NOTE (Lapys) -> Expand the `BigNumber` instance.
+                    // ... Update > Iterator; Modification > Target > ...
+                    iterator = this -> value + ++(this -> length);
+                    if (manageMemory) BigUnsignedInteger::allocate(this -> length);
 
-                // Modification > Partial > (Length, Value)
-                partial.length = 0u;
-                partial.value = NULL;
+                    while (--iterator != this -> value - 1) iterator -> value = (iterator - 1) -> value;
+                    this -> value -> value = 1u;
+                } else ++(iterator -> value);
             }
         }
 
-        // Root --- CHECKPOINT (Lapys)
-        // template <size_t radix> template <size_t base>
-        // constexpr inline void BigUnsignedInteger<radix>::root(BigUnsignedInteger<base> const& number) {
-        //     /* ... */
-        // }
+        // Is ... --- MINIFY (Lapys)
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(void) const noexcept { return this -> length; }
+        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(void) const noexcept { return 0u == this -> length; }
 
-        // Shift Left
+        /* To String
+                --- CONSIDER (Lapys) -> Request memory regions instead to dynamically handle varying sizes of each `Digit` in denary form.
+                --- WARN (Lapys) -> Returns statically qualified data allocated on heap memory.
+        */
         template <size_t radix>
-        constexpr inline void BigUnsignedInteger<radix>::shiftLeft(length_t length, bool const manageMemory) {
-            // Logic
-            if (length && BigUnsignedInteger::isSignificant()) {
-                // Update > Length
-                length += this -> length;
-
-                // Logic > ... --- REDACT (Lapys)
-                if (length > BigUnsignedInteger::getMaximumLength() || (0u == length || length < this -> length)) { ::println("\r[ArithmeticException]: Unable to represent arbitrary-precision number after shifting leftward by ", length - this -> length, " unit(s)"); ::abort(); }
-                else {
-                    if (manageMemory) BigUnsignedInteger::allocate(length);
-                    this -> value += this -> length;
-                    while (this -> length ^ length) { ++(this -> length); (this -> value)++ -> value = 0u; }
-                    this -> value -= this -> length;
-                }
-            }
-        }
-
-        // Shift Right
-        template <size_t radix> constexpr inline void BigUnsignedInteger<radix>::shiftRight(length_t const length, bool const manageMemory) {
-            // Logic
-            if (length) {
-                // Logic > ...
-                if (length > this -> length) BigUnsignedInteger::zero(manageMemory);
-                else { this -> length -= length; if (manageMemory) BigUnsignedInteger::allocate(this -> length); }
-            }
-        }
-
-        // Subtract
-        template <size_t radix> template <size_t base>
-        constexpr inline void BigUnsignedInteger<radix>::subtract(BigUnsignedInteger<base> const& number, bool const manageMemory) {
-            // Logic > ...
-            if (base ^ radix) BigUnsignedInteger::subtract(BigUnsignedInteger::fromBase<base>(number), manageMemory);
-            else if (BigUnsignedInteger::isOne(number)) BigUnsignedInteger::decrement(manageMemory);
-            else if (false == BigUnsignedInteger::isGreater(number)) BigUnsignedInteger::zero(manageMemory);
-            else if (BigUnsignedInteger::isSignificant() && BigUnsignedInteger::isSignificant(number)) {
-                // Initialization > Iterator (A, B)
-                Digit *iteratorA = this -> value + this -> length;
-                Digit /* const */*iteratorB = number.value + number.length;
-
-                // Loop > Logic --- NOTE (Lapys) -> Per-digit subtraction loop.
-                while (this -> value != iteratorA-- && number.value != iteratorB--)
-                if (iteratorB -> value) { // NOTE (Lapys) -> Because carry operations are calculated per iteration, it is redundant to iterate the `0` digits of `number`.
-                    // Logic
-                    if (iteratorA -> value < iteratorB -> value) {
-                        // Initialization > Iterator
-                        Digit *iterator = iteratorA;
-
-                        // (Loop > )Update > Iterator --- NOTE (Lapys) -> Completely calculate carry operations for this sub-operation.
-                        iterator-- -> value += radix; // WARN (Lapys) -> By-passes upper limit set by `radix` value.
-                        while (Digit::isLowestRank(iterator -> value)) iterator-- -> value = radix - 1u;
-                        --(iterator -> value);
-                    }
-
-                    // Update > Iterator A
-                    iteratorA -> value -= iteratorB -> value;
-                }
-
-                // ... Update > Iterator A; ...
-                iteratorA = this -> value;
-                while (Digit::isLowestRank(iteratorA -> value)) ++iteratorA;
-
-                BigUnsignedInteger::trimLeft(iteratorA - (this -> value), manageMemory);
-            }
-        }
-
-        // To Base --- CHECKPOINT (Lapys)
-        template <size_t radix> template <size_t base>
-        constexpr inline BigUnsignedInteger<base> BigUnsignedInteger<radix>::toBase(BigUnsignedInteger<radix> const& number) {
+        inline char* BigUnsignedInteger<radix>::toString(bool delimit) const {
             // Evaluation > Evaluation
-            BigUnsignedInteger<base> evaluation {};
-
-            // Logic > ...
-            if (base == radix) evaluation.copy(number);
-
-            // Return
-            return evaluation;
-        }
-
-        // To Number --- NOTE (Lapys) -> May return a false positive.
-        template <size_t radix>
-        constexpr inline typename BigUnsignedInteger<radix>::primitive_t BigUnsignedInteger<radix>::toNumber(BigUnsignedInteger const& number) {
-            // Initialization > (Evaluation, ...)
-            primitive_t evaluation {0u};
-            length_t exponent = 0u;
-
-            // Loop
-            for (Digit const *indexer = number.value + number.length; indexer-- != number.value; ++exponent) {
-                // Initialization > Unit
-                // : ...
-                primitive_t unit = indexer -> value;
-                for (length_t iterator = 0u; exponent ^ iterator; ++iterator) unit *= radix;
-
-                // Update > Evaluation
-                evaluation += unit;
-            }
-
-            // Return
-            return evaluation;
-        }
-
-        // To String
-        template <size_t radix>
-        constexpr inline char* BigUnsignedInteger<radix>::toString(bool delimit) const {
-            // Evaluation > Evaluation
-            char *evaluation = NULL;
+            static char *evaluation = NULL;
 
             // Logic
             if (BigUnsignedInteger::isZero()) {
-                // Update > Evaluation
-                evaluation = (char*) ::malloc((2u + (delimit * 2u)) * sizeof(char));
+                // Deletion; Update > Evaluation
+                ::free(evaluation);
+                evaluation = (char*) ::calloc(2u * (delimit + 1u), sizeof(char));
 
-                // Logic > Update > Evaluation
-                if (NULL == evaluation) evaluation = (char*) "";
-                else if (delimit) { *evaluation = '['; *(evaluation + 1) = '0'; *(evaluation + 2) = ']'; *(evaluation + 3) = '\0'; }
-                else { *evaluation = '0'; *(evaluation + 1) = '\0'; }
+                // Logic > ...
+                if (NULL == evaluation) { ::puts("\r[Error]: Unable to represent `BigNumber` instance in string form (`char*`) due to insufficient memory"); ::abort(); }
+                else { *(evaluation + delimit) = '0'; if (delimit) { *evaluation = '['; *(evaluation + 2) = ']'; } }
             }
 
             else {
                 // Update > Evaluation
-                evaluation = (char*) ::malloc(((delimit ? this -> length * 2u : 0u) + this -> length + 1u) * sizeof(char));
+                // : Logic
+                evaluation = (char*) (NULL == evaluation ?
+                    ::malloc(((this -> length * (1u + (delimit * 2u))) + 1u) * sizeof(char)) :
+                    ::realloc(evaluation, ((this -> length * (1u + (delimit * 2u))) + 1u) * sizeof(char))
+                );
+                if (NULL == evaluation) {
+                    // Error
+                    ::puts("\r[Error]: Unable to represent `BigNumber` instance in string form (`char*`) due to insufficient memory");
+                    ::abort();
+                }
 
-                // Logic > ...
-                if (NULL == evaluation) evaluation = (char*) "";
-                else {
-                    // Initialization > ...
-                    // : Loop
-                    char *iterator = evaluation;
-                    unsigned char length = 0u;
+                // Initialization > ...
+                char *iterator = evaluation;
+                unsigned char currentDigitLength = 0u;
+                unsigned char recentDigitLength = 0u;
 
-                    for (Digit const *indexer = this -> value; (indexer - this -> value) ^ this -> length; ++indexer) {
-                        // Logic
-                        if (delimit) { // NOTE (Lapys) -> Parse each digit as bracket (`[]`) delimited denary.
+                // Definition > ...; Loop
+                for (Digit *end = this -> value + this -> length, *start = this -> value; end != start; ++start) {
+                    // Logic
+                    if (delimit) {
+                        // ... Update > Current Digit Length
+                        currentDigitLength = 0u;
+                        for (typename Digit::digit_t subiterator = start -> value; subiterator; subiterator /= radix) ++currentDigitLength;
+
+                        // Logic --- NOTE (Lapys) -> Allocate more needed characters in memory for the string evaluation.
+                        if (currentDigitLength > recentDigitLength) {
+                            // Constant > Allocation
+                            void *const allocation = ::realloc(evaluation, ((this -> length * 2u) + recentDigitLength + 1u) * sizeof(char));
+
                             // Logic
-                            if (0u == indexer -> value) {
-                                // Update > Iterator
-                                *(iterator++) = '[';
-                                *(iterator++) = '0';
-                                *(iterator++) = ']';
+                            if (NULL == allocation) {
+                                // Error
+                                ::puts("\r[Error]: Unable to represent `BigNumber` instance in string form (`char*`) due to insufficient memory");
+                                ::abort();
                             }
 
-                            else {
-                                // Initialization > Current Length ...
-                                unsigned char currentLength = 0u;
-                                for (digit_t iterator = indexer -> value; iterator; iterator /= 10u) ++currentLength;
-
-                                // Logic
-                                if (currentLength > length) { // NOTE (Lapys) -> Acquire additional memory for `evaluation`.
-                                    // Constant > Current Iterator
-                                    int const currentIterator = iterator - evaluation;
-
-                                    // Update > Evaluation
-                                    evaluation = (char*) ::realloc(evaluation, ((this -> length * 2u) + (this -> length * currentLength) + 1u) * sizeof(char));
-
-                                    // Logic --- NOTE (Lapys) -> Repeat the current iteration or terminate the loop.
-                                    if (NULL == evaluation) { evaluation = (char*) ""; break; }
-                                    else { --indexer; iterator = evaluation + currentIterator; length = currentLength; }
-                                }
-
-                                else {
-                                    // (Loop > )Update > Iterator
-                                    *(iterator++) = '[';
-                                    for (digit_t subiterator = indexer -> value; subiterator; subiterator /= 10u) *(iterator++) = *("0123456789" + (subiterator % 10u));
-                                    *(iterator++) = ']';
-                                }
-                            }
+                            // Update > (Evaluation, Recent Digit Length)
+                            evaluation = (char*) allocation;
+                            recentDigitLength = currentDigitLength;
                         }
 
-                        else { // NOTE (Lapys) -> Parse each digit as denary or uppercase alphabet.
-                            // Logic
-                            if (indexer -> value > 35u) {
-                                // (Loop > )Update > (Length, Evaluation)
-                                for (digit_t iterator = indexer -> value; iterator; iterator /= radix) ++length;
-                                evaluation = (char*) ::realloc(evaluation, ((this -> length * 2u) + (this -> length * length) + 1u) * sizeof(char));
+                        // Update > Iterator
+                        *(iterator++) = '['; {
+                            // Logic > ... Update > Iterator
+                            if (start -> value) {
+                                iterator += currentDigitLength;
 
-                                // Logic --- NOTE (Lapys) -> "Reset" or terminate the loop.
-                                if (NULL == evaluation) { evaluation = (char*) ""; break; }
-                                else { delimit = true; indexer = this -> value - 1; iterator = evaluation; }
-                            }
+                                for (typename Digit::digit_t subiterator = start -> value; subiterator; subiterator /= radix)
+                                *--iterator = *("0123456789" + (subiterator % radix));
 
-                            else
-                                // Update > Iterator
-                                *(iterator++) = *("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" + (indexer -> value));
-                        }
+                                iterator += currentDigitLength;
+                            } else *(iterator++) = '0';
+                        } *(iterator++) = ']';
                     }
 
-                    // Update > Iterator
-                    *iterator = '\0';
+                    else {
+                        // Logic > ... --- NOTE (Lapys) -> Begin delimiting the string form, or add to it.
+                        if (start -> value > 36u) { delimit = true; start = this -> value - 1; }
+                        else *(iterator++) = *("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" + start -> value);
+                    }
                 }
+
+                // Update > Iterator
+                *iterator = '\0';
             }
 
             // Return
             return evaluation;
         }
 
-        // Trim Left --- NOTE (Lapys) -> Meant for removing leading zeroes.
-        template <size_t radix>
-        inline void BigUnsignedInteger<radix>::trimLeft(length_t const length, bool const manageMemory) {
-            // Logic
-            if (length) {
-                // Logic > ...
-                if (length < this -> length) {
-                    // Loop > Modification > Target > Value
-                    for (Digit const *const end = this -> value + this -> length, *iterator = this -> value + length; end != iterator; (++iterator, ++(this -> value)))
-                    (this -> value) -> value = iterator -> value;
-
-                    // Modification > Target > (Length, Value)
-                    this -> value -= (this -> length - length);
-                    this -> length -= length;
-
-                    // Logic > ...
-                    if (manageMemory) BigUnsignedInteger::allocate(this -> length);
-                } else if (manageMemory) BigUnsignedInteger::free();
-            }
-        }
-
-        // Zero --- WARN (Lapys) -> Be wary of not shrinking memory here.
-        template <size_t radix>
-        constexpr inline void BigUnsignedInteger<radix>::zero(bool const manageMemory) noexcept {
-            // Modification > Target > Length
-            this -> length = 0u;
-
-            // Logic > ...
-            if (manageMemory) BigUnsignedInteger::free();
-            else if (NULL != this -> value) this -> value -> value = 0u;
-        }
-
-    /* Big Signed Integer */
-    /* Big Float */
-    /* Digit */
-        // Add --- REDACT (Lapys)
-        template <size_t radix>
-        inline typename BigUnsignedInteger<radix>::Digit* BigUnsignedInteger<radix>::Digit::add(Digit const& digitA, Digit const& digitB) noexcept {
-            Digit *const evaluation = Digit::eval();
-
-            if (Digit::isGreaterRank(digitA) || Digit::isMeanRank(digitA)) {
-                if (Digit::isGreaterRank(digitB) || Digit::isMeanRank(digitB)) { evaluation -> value = 1u; (evaluation + 1) -> value = digitA.value - (radix - digitB.value); }
-                else (evaluation + 1) -> value = (evaluation -> value = digitA.value >= radix - digitB.value) ? digitA.value - (radix - digitB.value) : digitA.value + digitB.value;
-            }
-            else if (Digit::isGreaterRank(digitB) || Digit::isMeanRank(digitB)) {
-                if (Digit::isGreaterRank(digitA) || Digit::isMeanRank(digitA)) { evaluation -> value = 1u; (evaluation + 1) -> value = digitA.value - (radix - digitB.value); }
-                else (evaluation + 1) -> value = (evaluation -> value = digitB.value >= radix - digitA.value) ? digitB.value - (radix - digitA.value) : digitA.value + digitB.value;
-            }
-            else { evaluation -> value = 0u; (evaluation + 1) -> value = digitA.value + digitB.value; }
-
-            return evaluation;
-        }
-
-        // Is ... --- REDACT (Lapys)
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isGreaterRank(digit_t const value) noexcept { return value > (radix & 1u) + (radix / 2u); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isGreatestRank(digit_t const value) noexcept { return radix - 1u == value; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isLowerRank(digit_t const value) noexcept { return value < (radix & 1u) + (radix / 2u); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isLowestRank(digit_t const value) noexcept { return Digit::isZero(value); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isMeanRank(digit_t const value) noexcept { return value == (radix & 1u) + (radix / 2u); }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isSignificant(digit_t const value) noexcept { return value; }
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isZero(digit_t const value) noexcept { return 0u == value; }
-
-        // Multiply --- REDACT (Lapys)
-        template <size_t radix>
-        inline typename BigUnsignedInteger<radix>::Digit* BigUnsignedInteger<radix>::Digit::multiply(Digit const& digitA, Digit const& digitB) noexcept {
-            Digit *const evaluation = Digit::eval();
-
-            evaluation -> value = 0u;
-            (evaluation + 1) -> value = 0u;
-
-            for (digit_t iteratorA = 0u; digitA.value ^ iteratorA; ++iteratorA)
-            for (digit_t iteratorB = 0u; digitB.value ^ iteratorB; ++iteratorB) {
-                if (Digit::isGreatestRank((evaluation + 1) -> value)) { ++(evaluation -> value); (evaluation + 1) -> value = 0u; }
-                else ++((evaluation + 1) -> value);
-            }
-
-            return evaluation;
-        }
-
-        // To String --- REDACT (Lapys)
-        template <size_t radix>
-        inline char* BigUnsignedInteger<radix>::Digit::toString(void) const noexcept {
-            static char evaluation[Digit::getLength(radix) + (false == Digit::isDenary(radix))] {0};
-
-            if (0u == this -> value) { *evaluation = '0'; *(evaluation + 1) = '\0'; }
-            else { char *indexer = evaluation; for (digit_t iterator = this -> value; iterator; (++indexer, iterator /= 10u)) *indexer = *("0123456789" + (iterator % 10u)); *indexer-- = '\0'; for (char *subindexer = evaluation; indexer > subindexer; (--indexer, ++subindexer)) { *indexer ^= *subindexer; *subindexer ^= *indexer; *indexer ^= *subindexer; } }
-
-            return evaluation;
-        }
-
-        // ... --- NOTE (Lapys)
-        template <size_t radix> inline typename BigUnsignedInteger<radix>::Digit* BigUnsignedInteger<radix>::Digit::eval(void) noexcept { static Digit evaluation[2] {0u, 0u}; return evaluation; }
-
-        /* ...
-            : Align --- NOTE (Lapys) -> Correct arithmetic radix overflows due to size alignment.
-
-            : Get Length --- NOTE (Lapys) -> Determine the length of the numeric value.
-            : Get Size --- NOTE (Lapys) -> Determine how much memory (on the stack) is used per `Digit`.
-
-            : Is Denary
-        */
-        template <size_t radix> constexpr inline typename BigUnsignedInteger<radix>::Digit::digit_t BigUnsignedInteger<radix>::Digit::align(digit_t const value) noexcept { return value < radix ? value : value - radix; }
-
-        template <size_t radix> constexpr inline unsigned char BigUnsignedInteger<radix>::Digit::getLength(size_t value) noexcept { unsigned char length = 0u; while (value) { ++length; value /= 10u; } return length; }
-        template <size_t radix> constexpr inline unsigned char BigUnsignedInteger<radix>::Digit::getSize(size_t value) noexcept { unsigned char size = 0u; while (value) { ++size; value >>= 1u; } return size ? size : 1u; }
-
-        template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::Digit::isDenary(digit_t value) noexcept { while (value) { if (value == 1u) return true; else if (value % 10u) return false; else value /= 10u; } return false; }
-
-/* Constant > ... */
-template <size_t radix> constexpr BigUnsignedInteger<radix> const BigUnsignedInteger<radix>::PRIMITIVE_MAX {ULONG_MAX};
-template <size_t radix> constexpr BigSignedInteger<radix> const BigSignedInteger<radix>::PRIMITIVE_MAX {LONG_MAX};
-template <size_t radix> constexpr BigFloat<radix> const BigFloat<radix>::PRIMITIVE_MAX {LDBL_MAX};
+        // Zero --- MINIFY (Lapys)
+        template <size_t radix> inline void BigUnsignedInteger<radix>::zero(bool const manageMemory) { this -> length = 0u; if (manageMemory) BigUnsignedInteger::free(); else if (NULL != this -> value) this -> value -> value = 0u; }
 
 /* Main */
 int main(void) {
-    /* [Begin] ... */
-    ::println("[PROGRAM INITIATED]");
-
-    /* .... */ {
-        // for (unsigned short iterator = 0u; iterator ^ 10u; ++iterator) {
-        //     unsigned const exponent = (unsigned) (::randbool() ? 1e4 : ::randbool() ? 1e3 : ::randbool() ? 1e2 : 1e1);
-        //     unsigned number = iterator; if (number) { for (unsigned short subiterator = iterator - 1u; subiterator; --subiterator) number *= subiterator; }
-        //     BigUnsignedInteger<10> const bigNumber {iterator};
-
-        //     ::print('[', bigNumber.toString(), " (", number, ")]: ");
-        //     ::println(BigMathematics::factorialOf(bigNumber).toString(), " (", number, ')');
-        // }
-
-        // for (unsigned short iterator = 0u; iterator ^ 40u; ++iterator) {
-        //     unsigned const exponent = (unsigned) (::randbool() ? 1e4 : ::randbool() ? 1e3 : ::randbool() ? 1e2 : 1e1);
-        //     unsigned const numberA = ::randbool() ? 0u : ::randint(1e7);
-        //     unsigned const numberB = exponent * (::randbool() && ::randbool() ? numberA : ::randint(1e4));
-
-        //     BigUnsignedInteger<10> const bigNumberA = numberA;
-        //     BigUnsignedInteger<10> const bigNumberB = numberB;
-
-        //     ::print('[', bigNumberA.toString(), " (", numberA, ") x ", bigNumberB.toString(), " (", numberB, ")]: ");
-        //     ::println(BigUnsignedInteger<10>::multiply(bigNumberA, bigNumberB).toString(), " (", numberA * numberB, ')');
-        // }
-
-        // ::println("[EVAL (14516 * 44570)]: ", BigUnsignedInteger<10>::multiply(14516u, 44570u).toString(), " (", 14516uL * 44570uL, ')');
-        // ::println("[EVAL (0 * 99120000)]: ", BigUnsignedInteger<10>::multiply(0uL, 99120000u).toString(), " (", 0uL * 99120000uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (0 * 7735000)]: ", BigUnsignedInteger<10>::multiply(0uL, 7735000u).toString(), " (", 0uL * 7735000uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (2087 * 26810)]: ", BigUnsignedInteger<10>::multiply(2087u, 26810u).toString(), " (", 2087uL * 26810uL, ')');
-        // ::println("[EVAL (4073 * 9441000)]: ", BigUnsignedInteger<10>::multiply(4073u, 9441000u).toString(), " (", 4073uL * 9441000uL, ')');
-        // ::println("[EVAL (2195 * 17360)]: ", BigUnsignedInteger<10>::multiply(2195u, 17360u).toString(), " (", 2195uL * 17360uL, ')');
-        // ::println("[EVAL (0 * 85050)]: ", BigUnsignedInteger<10>::multiply(0uL, 85050u).toString(), " (", 0uL * 85050uL, ')');
-        // ::println("[EVAL (20690 * 70090000)]: ", BigUnsignedInteger<10>::multiply(20690u, 70090000u).toString(), " (", 20690uL * 70090000uL, ')');
-        // ::println("[EVAL (12276 * 44080000)]: ", BigUnsignedInteger<10>::multiply(12276u, 44080000u).toString(), " (", 12276uL * 44080000uL, ')');
-        // ::println("[EVAL (0 * 32170)]: ", BigUnsignedInteger<10>::multiply(0uL, 32170u).toString(), " (", 0uL * 32170uL, ')');
-        // ::println("[EVAL (15849 * 2381000)]: ", BigUnsignedInteger<10>::multiply(15849u, 2381000u).toString(), " (", 15849uL * 2381000uL, ')');
-        // ::println("[EVAL (0 * 3890000)]: ", BigUnsignedInteger<10>::multiply(0uL, 3890000u).toString(), " (", 0uL * 3890000uL, ')');
-        // ::println("[EVAL (0 * 671000)]: ", BigUnsignedInteger<10>::multiply(0uL, 671000u).toString(), " (", 0uL * 671000uL, ')');
-        // ::println("[EVAL (19340 * 805200)]: ", BigUnsignedInteger<10>::multiply(19340u, 805200u).toString(), " (", 19340uL * 805200uL, ')');
-        // ::println("[EVAL (11942 * 72360000)]: ", BigUnsignedInteger<10>::multiply(11942u, 72360000u).toString(), " (", 11942uL * 72360000uL, ')');
-        // ::println("[EVAL (0 * 638000)]: ", BigUnsignedInteger<10>::multiply(0uL, 638000u).toString(), " (", 0uL * 638000uL, ')');
-        // ::println("[EVAL (0 * 69200000)]: ", BigUnsignedInteger<10>::multiply(0uL, 69200000u).toString(), " (", 0uL * 69200000uL, ')');
-        // ::println("[EVAL (993 * 2560000)]: ", BigUnsignedInteger<10>::multiply(993u, 2560000u).toString(), " (", 993uL * 2560000uL, ')');
-        // ::println("[EVAL (17769 * 32610000)]: ", BigUnsignedInteger<10>::multiply(17769u, 32610000u).toString(), " (", 17769uL * 32610000uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (4962 * 4962000)]: ", BigUnsignedInteger<10>::multiply(4962u, 4962000u).toString(), " (", 4962uL * 4962000uL, ')');
-        // ::println("[EVAL (0 * 7450000)]: ", BigUnsignedInteger<10>::multiply(0uL, 7450000u).toString(), " (", 0uL * 7450000uL, ')');
-        // ::println("[EVAL (9680 * 18540)]: ", BigUnsignedInteger<10>::multiply(9680u, 18540u).toString(), " (", 9680uL * 18540uL, ')');
-        // ::println("[EVAL (31994 * 319940)]: ", BigUnsignedInteger<10>::multiply(31994u, 319940u).toString(), " (", 31994uL * 319940uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (13976 * 26820000)]: ", BigUnsignedInteger<10>::multiply(13976u, 26820000u).toString(), " (", 13976uL * 26820000uL, ')');
-        // ::println("[EVAL (32374 * 2223000)]: ", BigUnsignedInteger<10>::multiply(32374u, 2223000u).toString(), " (", 32374uL * 2223000uL, ')');
-        // ::println("[EVAL (11844 * 9006000)]: ", BigUnsignedInteger<10>::multiply(11844u, 9006000u).toString(), " (", 11844uL * 9006000uL, ')');
-        // ::println("[EVAL (0 * 0uL)]: ", BigUnsignedInteger<10>::multiply(0uL, 0uL).toString(), " (", 0uL * 0uL, ')');
-        // ::println("[EVAL (0 * 75190)]: ", BigUnsignedInteger<10>::multiply(0uL, 75190u).toString(), " (", 0uL * 75190uL, ')');
-        // ::println("[EVAL (19975 * 199750000)]: ", BigUnsignedInteger<10>::multiply(19975u, 199750000u).toString(), " (", 19975uL * 199750000uL, ')');
-        // ::println("[EVAL (31124 * 6830000)]: ", BigUnsignedInteger<10>::multiply(31124u, 6830000u).toString(), " (", 31124uL * 6830000uL, ')');
-        // ::println("[EVAL (20800 * 20800000)]: ", BigUnsignedInteger<10>::multiply(20800u, 20800000u).toString(), " (", 20800uL * 20800000uL, ')');
-        // ::println("[EVAL (0 * 12240)]: ", BigUnsignedInteger<10>::multiply(0uL, 12240u).toString(), " (", 0uL * 12240uL, ')');
-        // ::println("[EVAL (11516 * 115160000)]: ", BigUnsignedInteger<10>::multiply(11516u, 115160000u).toString(), " (", 11516uL * 115160000uL, ')');
-        // ::println("[EVAL (0 * 36700)]: ", BigUnsignedInteger<10>::multiply(0uL, 36700u).toString(), " (", 0uL * 36700uL, ')');
-        // ::println("[EVAL (22522 * 225220000)]: ", BigUnsignedInteger<10>::multiply(22522u, 225220000u).toString(), " (", 22522uL * 225220000uL, ')');
-    }
-
-    /* [End] ... */
-    ::print(println, "[PROGRAM TERMINATED]");
-
     // Return
     return EXIT_SUCCESS;
 }
