@@ -1,4 +1,4 @@
-Prefix	Organisation
+Prefix	Organization
 -atsc-	Advanced Television Standards Committee
 -khtml-	Konqueror browser
 -ms-	Microsoft

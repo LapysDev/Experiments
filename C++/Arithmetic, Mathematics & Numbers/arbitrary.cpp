@@ -80,10 +80,16 @@ typedef BigUnsignedInteger<10u> big_uint;
         // [...]
         protected:
             // Declaration
-            // : Add, Decrement, Increment, Zero
+            // : Add, Decrement, Increment, Is ..., Subtract, Zero
             void add(DigitIterator const&, bool const);
             void decrement(bool const) noexcept;
             void increment(bool const);
+
+            constexpr bool isEqual(DigitIterator const&) const noexcept;
+            constexpr bool isGreater(DigitIterator const&) const noexcept;
+            constexpr bool isLesser(DigitIterator const&) const noexcept;
+
+            void subtract(DigitIterator const&, bool const);
             void zero(bool const = true);
 
             // : From Primitive
@@ -124,8 +130,17 @@ typedef BigUnsignedInteger<10u> big_uint;
             inline void increment(void) { BigUnsignedInteger::increment(true); }
             inline static BigUnsignedInteger increment(BigUnsignedInteger const& number) noexcept { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
 
+            inline bool isEqual(primitive_t number) { return BigUnsignedInteger::isEqual(&number); }
+            inline bool isEqual(BigUnsignedInteger const& number) { return BigUnsignedInteger::isEqual(&number); }
+            inline bool isGreater(primitive_t number) { return BigUnsignedInteger::isGreater(&number); }
+            inline bool isGreater(BigUnsignedInteger const& number) { return BigUnsignedInteger::isGreater(&number); }
+            inline bool isLesser(primitive_t number) { return BigUnsignedInteger::isLesser(&number); }
+            inline bool isLesser(BigUnsignedInteger const& number) { return BigUnsignedInteger::isLesser(&number); }
             constexpr bool isSignificant(void) const noexcept override;
             constexpr bool isZero(void) const noexcept override;
+
+            inline void subtract(primitive_t number) { BigUnsignedInteger::subtract(&number, true); }
+            inline void subtract(BigUnsignedInteger const& number) { BigUnsignedInteger::subtract(&number, true); }
 
             char* toString(bool = false) const;
             inline void zero(void) { BigUnsignedInteger::zero(true); }
@@ -253,7 +268,10 @@ typedef BigUnsignedInteger<10u> big_uint;
                 DigitIterator::type = DigitIterator::BIG;
             }
 
-            // Function > To (Big Number, Primitive)
+            // Function > (Is, To) (Big Number, Primitive)
+            constexpr inline bool isBigNumber(void) const noexcept { return DigitIterator::BIG == DigitIterator::type; }
+            constexpr inline bool isPrimitive(void) const noexcept { return DigitIterator::PRIMITIVE == DigitIterator::type; }
+
             constexpr inline BigNumber& toBigNumber(BigNumber* const evaluation) const noexcept { return *evaluation; }
             constexpr inline void* toPrimitive(...) const noexcept = delete;
     };
@@ -523,6 +541,74 @@ typedef BigUnsignedInteger<10u> big_uint;
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isSignificant(void) const noexcept { return this -> length; }
         template <size_t radix> constexpr inline bool BigUnsignedInteger<radix>::isZero(void) const noexcept { return 0u == this -> length; }
 
+        // Is Equal
+        template <size_t radix>
+        constexpr inline bool BigUnsignedInteger<radix>::isEqual(DigitIterator const& number) const noexcept {
+            // Logic > ...
+            if (BigUnsignedInteger::isZero()) return number.done();
+            else if (number.isBigNumber() && (this -> length ^ number.count())) return false;
+            else { Digit *iterator = this -> value + this -> length; while (--iterator, true) {
+                // Logic > Return
+                // : NOTE (Lapys) -> Are they of equal length?
+                if (iterator == this -> value - 1) return number.done();
+                else if (number.done()) return iterator == this -> value - 1;
+
+                // : NOTE (Lapys) -> Are the digits the same?
+                if (iterator -> value ^ number.next().value) return false;
+            } }
+
+            // Return
+            return false;
+        }
+
+        // Is Greater
+        template <size_t radix>
+        constexpr inline bool BigUnsignedInteger<radix>::isGreater(DigitIterator const& number) const noexcept {
+            // Initialization > ...
+            length_t value = number.count();
+
+            // Logic > ...
+            if (BigUnsignedInteger::isZero()) return false == number.done();
+            else if (this -> length ^ value) return this -> length > value;
+            else { Digit *iterator = this -> value + this -> length; while (--iterator, true) {
+                // Logic > Return
+                if (iterator == this -> value - 1) return false;
+                else if (number.done()) return iterator != this -> value - 1;
+                else if (iterator -> value ^ (value = number.next().value)) return iterator -> value > value;
+            } }
+
+            // Return
+            return false;
+        }
+
+        // Is Lesser
+        template <size_t radix>
+        constexpr inline bool BigUnsignedInteger<radix>::isLesser(DigitIterator const& number) const noexcept {
+            // Initialization > ...
+            length_t value = number.count();
+
+            // Logic > ...
+            if (BigUnsignedInteger::isZero()) return false == number.done();
+            else if (this -> length ^ value) return this -> length < value;
+            else { Digit *iterator = this -> value + this -> length; while (--iterator, true) {
+                // Logic > Return
+                if (iterator == this -> value - 1) return false == number.done();
+                else if (number.done()) return iterator != this -> value - 1;
+                else if (iterator -> value ^ (value = number.next().value)) return iterator -> value < value;
+            } }
+
+            // Return
+            return false;
+        }
+
+        // Subtract --- CHECKPOINT (Lapys)
+        template <size_t radix>
+        inline void BigUnsignedInteger<radix>::subtract(DigitIterator const& number, bool const manageMemory) {
+            // Logic > ...
+            if (BigUnsignedInteger::isLesser(number)) BigUnsignedInteger::zero(manageMemory);
+            else if (BigUnsignedInteger::isSignificant()) {}
+        }
+
         /* To String
                 --- CONSIDER (Lapys) -> Request memory regions instead to dynamically handle varying sizes of each `Digit` in denary form.
                 --- WARN (Lapys) -> Returns statically qualified data allocated on heap memory.
@@ -620,15 +706,6 @@ typedef BigUnsignedInteger<10u> big_uint;
 
 /* Main */
 int main(void) {
-    big_uint number = 1u;
-
-    std::cout << "[EVAL]: " << number.toString() << std::endl;
-    for (unsigned iterator = 1u; iterator <= 10000u; iterator += iterator) {
-        std::cout << "[EVAL (" << iterator << ")]: " << number.toString() << std::endl;
-        number.add(number);
-    }
-    std::cout << "[EVAL]: " << number.toString() << std::endl;
-
     // Return
     return EXIT_SUCCESS;
 }
