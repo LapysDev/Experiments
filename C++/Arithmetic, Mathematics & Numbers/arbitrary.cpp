@@ -85,15 +85,14 @@ typedef BigUnsignedInteger<10u> big_uint;
         // [...]
         protected:
             // Declaration
-            // : Add, Decrement, Increment, Is ..., Multiply, Subtract, Zero
+            // : Add, Decrement, Divide, Increment, Is ..., Multiply, Subtract, Zero
             void add(DigitReverseIterator, bool const);
             void decrement(bool const) noexcept;
+            void divide(BigUnsignedInteger const&, bool const);
             void increment(bool const);
-
             constexpr bool isEqual(DigitReverseIterator) const noexcept;
             constexpr bool isGreater(DigitForwardIterator) const noexcept;
             constexpr bool isLesser(DigitForwardIterator) const noexcept;
-
             void multiply(DigitReverseIterator, bool const);
             void subtract(DigitReverseIterator, bool const);
             void zero(bool const);
@@ -134,16 +133,19 @@ typedef BigUnsignedInteger<10u> big_uint;
             inline BigUnsignedInteger& decrement(void) noexcept { BigUnsignedInteger::decrement(true); return *this; }
             inline static BigUnsignedInteger decrement(BigUnsignedInteger const& number) noexcept { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.decrement(); return evaluation; }
 
+            inline BigUnsignedInteger& divide(primitive_t const number) { BigUnsignedInteger::divide(number, true); return *this; }
+            inline BigUnsignedInteger& divide(BigUnsignedInteger const& number) { BigUnsignedInteger::divide(number, true); return *this; }
+
             inline static BigUnsignedInteger fromPrimitive(primitive_t const number) { BigUnsignedInteger evaluation {}; BigUnsignedInteger::fromPrimitive(&evaluation, number, true); return evaluation; }
 
             inline BigUnsignedInteger& increment(void) { BigUnsignedInteger::increment(true); return *this; }
             inline static BigUnsignedInteger increment(BigUnsignedInteger const& number) noexcept { BigUnsignedInteger evaluation {}; evaluation.copy(number); evaluation.increment(); return evaluation; }
 
-            inline bool isEqual(primitive_t number) { return BigUnsignedInteger::isEqual(&number); }
+            inline bool isEqual(primitive_t const number) { return BigUnsignedInteger::isEqual(&number); }
             inline bool isEqual(BigUnsignedInteger const& number) { return BigUnsignedInteger::isEqual(&number); }
-            inline bool isGreater(primitive_t number) { return BigUnsignedInteger::isGreater(&number); }
+            inline bool isGreater(primitive_t const number) { return BigUnsignedInteger::isGreater(&number); }
             inline bool isGreater(BigUnsignedInteger const& number) { return BigUnsignedInteger::isGreater(&number); }
-            inline bool isLesser(primitive_t number) { return BigUnsignedInteger::isLesser(&number); }
+            inline bool isLesser(primitive_t const number) { return BigUnsignedInteger::isLesser(&number); }
             inline bool isLesser(BigUnsignedInteger const& number) { return BigUnsignedInteger::isLesser(&number); }
             constexpr bool isSignificant(void) const noexcept override;
             constexpr bool isZero(void) const noexcept override;
@@ -533,6 +535,90 @@ typedef BigUnsignedInteger<10u> big_uint;
             }
         }
 
+        // Divide --- CHECKPOINT (Lapys)
+        template <size_t radix>
+        inline void BigUnsignedInteger<radix>::divide(BigUnsignedInteger const& number, bool const) {
+            if (this == &number) (this -> value + ((this -> length = 0u) - 1u)) -> value = 1u;
+            else {
+                Digit *buffer = (Digit*) DigitBuffer(this -> length);
+                Digit *const end = this -> value + this -> length;
+                BigUnsignedInteger slice;
+
+                slice.value = buffer;
+                slice.copy(*this, false);
+                slice.length = 0u;
+
+                buffer += this -> length + 1u;
+
+                for (this -> length = 0u; ; ++(this -> length)) {
+                    typename Digit::digit_t factor;
+                    length_t length;
+
+                    std::cout << "[SLICE : PRE. [" << slice.length << "](" << slice.value << " -> " << buffer << ")]" << std::endl;
+
+                    if (buffer == slice.value + 1) {
+                        std::cout << "[END 0x1]" << std::endl;
+                        goto end;
+                    }
+
+                    for (factor = false, (void) length; slice.isLesser(&number); factor = true) {
+                        if (buffer == slice.value + ++slice.length) {
+                            std::cout << "[END 0x2]" << std::endl;
+                            goto end;
+                        }
+
+                        (this -> value + this -> length) -> value = 0u;
+                        this -> length += factor;
+                    }
+
+                    std::cout << "[SLICE : INIT. [" << slice.length << "](" << slice.value << " -> " << buffer << ")]: " << slice.toString(true) << std::endl;
+
+                    for (factor = 0u, length = slice.length; false == slice.isLesser(&number); ++factor) {
+                        std::cout << '*';
+                        slice.subtract(&number, false);
+                    }
+
+                    std::cout << "[SLICE : SUB. [" << slice.length << "](" << slice.value << " -> " << buffer << ")]: ";
+
+                    (this -> value + this -> length) -> value = factor;
+
+                    std::cout << slice.toString(true) << std::endl;
+
+                    if (slice.isZero()) {
+                        if (buffer == (slice.value += length)) {
+                            std::cout << "[END 0x3]" << std::endl;
+                            goto end;
+                        }
+                        std::cout << "[SLICE : POST 0x1 [" << slice.length << "](" << slice.value << " -> " << buffer << ")]: " << slice.toString(true) << std::endl;
+                    }
+
+                    else {
+                        std::cout << "[SLICE : POST 0x2 [" << slice.length << "](" << slice.value << " -> " << buffer << ")]: " << slice.toString(true) << ':';
+                        length -= slice.length;
+                        for (Digit *iterator = slice.value + slice.length; buffer - 1 > iterator + 1; ++iterator) iterator -> value = (iterator + length) -> value;
+
+                        for (Digit *iterator = slice.value + slice.length; buffer - 1 > iterator + 1; ++iterator) std::cout << '[' << iterator -> value << ']';
+                        std::endl(std::cout); {
+                            std::cout << "[SLICE : POST 0x2 [" << slice.length << "](" << slice.value << " -> " << (buffer - length) << ")]: " << slice.toString(true) << ':';
+                            for (Digit *iterator = slice.value + slice.length; buffer - 1 > iterator + 1; ++iterator) std::cout << '[' << iterator -> value << ']';
+                        } std::endl(std::cout);
+                        buffer -= length;
+                    }
+
+                    continue;
+                }
+
+                end: {
+                    slice.value = NULL;
+
+                    for (Digit *iterator = this -> value + this -> length; end != iterator; ++iterator) {
+                        iterator -> value = 0u;
+                        ++(this -> length);
+                    }
+                }
+            }
+        }
+
         // From Primitive
         template <size_t radix>
         inline void BigUnsignedInteger<radix>::fromPrimitive(BigUnsignedInteger* const evaluation, primitive_t const number, bool const manageMemory) {
@@ -595,7 +681,8 @@ typedef BigUnsignedInteger<10u> big_uint;
         template <size_t radix>
         constexpr inline bool BigUnsignedInteger<radix>::isEqual(DigitReverseIterator number) const noexcept {
             // Logic > ...
-            if (BigUnsignedInteger::isZero()) return number.done();
+            if (this == number.get()) return true;
+            else if (BigUnsignedInteger::isZero()) return number.done();
             else if (number.isBigNumber() && (this -> length ^ number.count())) return false;
             else { Digit *iterator = this -> value + this -> length; while (--iterator, true) {
                 // Logic > Return
@@ -664,7 +751,7 @@ typedef BigUnsignedInteger<10u> big_uint;
                 subevaluation.length = number.count() + this -> length;
 
                 // Initialization > (Buffer, Padding)
-                DigitBuffer const buffer {(subevaluation.length * 2u) + 1u};
+                Digit *const buffer = (Digit*) DigitBuffer((subevaluation.length * 2u) + 1u);
                 length_t padding = 0u;
 
                 // Modification > (Sub-)Evaluation > Value
@@ -690,11 +777,12 @@ typedef BigUnsignedInteger<10u> big_uint;
                             subproduct = Digit::multiply(digit.value, iterator -> value) + 1;
 
                             // Logic > ... Update > Sub-Product
-                            if (false == Digit::isLowestRank(subevaluation.value -> value))
-                            if ((radix - subproduct -> value) - 1u < subevaluation.value -> value) {
-                                subproduct -> value = subevaluation.value -> value - (radix - (subproduct -> value));
-                                ++((subproduct - 1) -> value);
-                            } else subproduct -> value += subevaluation.value -> value;
+                            if (false == Digit::isLowestRank(subevaluation.value -> value)) {
+                                if ((radix - subproduct -> value) - 1u < subevaluation.value -> value) {
+                                    subproduct -> value = subevaluation.value -> value - (radix - (subproduct -> value));
+                                    ++((subproduct - 1) -> value);
+                                } else subproduct -> value += subevaluation.value -> value;
+                            }
 
                             // Modification > Sub-Evaluation > Value
                             subevaluation.value -> value = subproduct-- -> value;
@@ -763,6 +851,8 @@ typedef BigUnsignedInteger<10u> big_uint;
                     else { // -> Sub-digit subtraction.
                         // Initialization > Digit
                         Digit& digit = number.next();
+
+                        std::cout << "[SUBTRACT]" << std::endl;
 
                         // Logic --- NOTE (Lapys) -> Do not subtract by `0`.
                         if (false == Digit::isLowestRank(digit.value)) {
@@ -928,15 +1018,18 @@ typedef BigUnsignedInteger<10u> big_uint;
 
 /* Main */
 int main(void) {
-    for (unsigned long long numberA = 1u; numberA ^ 101u; ++numberA)
-    for (unsigned long long numberB = 1u; numberB ^ 101u; ++numberB) {
-        big_uint bigNumberA = numberA;
-        big_uint bigNumberB = numberB;
+    std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(10u).divide(1u).toString() << std::endl << '\n';
 
-        std::cout << "[MULTIPLY : EVAL]: " << bigNumberA.toString() << " (" << numberA << ") x ";
-        std::cout << bigNumberB.toString() << " (" << numberB << ") = ";
-        std::cout << bigNumberA.multiply(bigNumberB).toString() << " (" << (numberA * numberB) << ')' << std::endl;
-    }
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(10u).divide(2u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(10u).divide(9u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(10u).divide(10u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(10u).divide(11u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(10u).divide(100u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(3333u).divide(33u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(3333u).divide(31u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(3333u).divide(4u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(33333u).divide(33u).toString() << std::endl << '\n';
+    // std::cout << "[DIVISION | EVAL]: " << std::endl; std::cout << big_uint(333333u).divide(332u).toString() << std::endl << '\n';
 
     // Return
     return EXIT_SUCCESS;
