@@ -1,45 +1,0 @@
-<arrow::down>[R]
-
-<arrow::down>[R]
-
-'+'[P]
-'+'[R after 0.088000s]
-'+'[R after 0.088000s]
-'+'[P]
-'+'[R after 0.073000s]
-'+'[R after 0.073000s]
-'-'[P]
-'-'[R after 0.045000s]
-'-'[R after 0.045000s]
-'-'[P]
-'-'[R after 0.070000s]
-'-'[R after 0.070000s]
-<oem::adder>[P]
-
-<oem::adder>[R after 0.060000s]
-
-<oem::adder>[R after 0.060000s]
-
-<oem::adder>[P]
-
-<oem::adder>[R after 0.065000s]
-
-<oem::adder>[R after 0.065000s]
-
-<oem::subtracter>[P]
-
-<oem::subtracter>[R]
-
-<oem::subtracter>[R]
-
-<oem::subtracter>[P]
-
-<oem::subtracter>[R after 0.045000s]
-
-<oem::subtracter>[R after 0.045000s]
-
-<control::left>[P]
-
-<control::left>[P]
-
-
