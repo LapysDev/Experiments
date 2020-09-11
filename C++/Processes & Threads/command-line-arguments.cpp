@@ -55,7 +55,7 @@
                     int const size = ::WideCharToMultiByte(CP_UTF8, 0x0, path, length, NULL, 0, NULL, NULL);
 
                     // Update > Argument (Count)
-                    argument = (LPSTR) ::malloc(size * sizeof(CHAR));
+                    argument = (LPSTR) ::malloc(size);
                     argumentCount = 0;
 
                     // Logic
