@@ -9,10 +9,11 @@
     #   include <io.h>
     #endif
     #include <stdint.h> // Standard Integers
+    #include <wchar.h> // Wide Characters -- Window
     #include <windows.h> // Windows
 
     /* Main */
-    int WinMain(HINSTANCE const, HINSTANCE const, LPSTR const argumentString, int const) {
+    int WinMain(HINSTANCE const, HINSTANCE const, LPSTR const, int const) {
         // Initialization > Console Active Screen Buffer Handle
         HANDLE consoleActiveScreenBufferHandle = INVALID_HANDLE_VALUE;
 
@@ -40,162 +41,14 @@
             int argumentCount;
             LPWSTR *const arguments = ::CommandLineToArgvW(::GetCommandLineW(), &argumentCount);
 
-            // Logic -->
-            if (NULL == arguments) { /* argumentString --- NOTE (Lapys) -> Parse the executable path, Parse the `argumentString` as a vector of arguments. */
-                // Constant > Path
-                LPWSTR const path = (LPWSTR) ::malloc(MAX_PATH * sizeof(WCHAR));
-
-                // Logic > ...
-                if (NULL == path) ::CloseHandle(consoleActiveScreenBufferHandle); // ERROR (Lapys)
-                else if (0 == ::GetModuleFileNameW(NULL, path, MAX_PATH)) { ::CloseHandle(consoleActiveScreenBufferHandle); ::free(path); } // ERROR (Lapys)
-                else {
-                    // Initialization > (Argument, Length, Size)
-                    LPSTR argument;
-                    int const length = (int) ::wcslen(path);
-                    int const size = ::WideCharToMultiByte(CP_UTF8, 0x0, path, length, NULL, 0, NULL, NULL);
-
-                    // Update > Argument (Count)
-                    argument = (LPSTR) ::malloc(size);
-                    argumentCount = 0;
-
-                    // Logic
-                    if (NULL == argument) { ::CloseHandle(consoleActiveScreenBufferHandle); ::free(path); ::exit(EXIT_FAILURE); } // ERROR (Lapys)
-                    else { // NOTE (Lapys) -> Escape characters from the command-line itself (e.g.: `^`) aren't evaluated within the `argumentString`.
-                        // Initialization > (Delimiter, End)
-                        CHAR delimiter = '\0';
-                        LPSTR end = argumentString + ::strlen(argumentString);
-
-                        // Update > Argument; ...
-                        ::WideCharToMultiByte(CP_UTF8, 0x0, path, -1, argument, length, NULL, NULL);
-                        ::free(path);
-
-                        // Print
-                        // : Deletion
-                        ::WriteFile(consoleActiveScreenBufferHandle, "[0]: \"", 6u, NULL, NULL);
-                        ::WriteFile(consoleActiveScreenBufferHandle, argument, length, NULL, NULL);
-                        ::WriteFile(consoleActiveScreenBufferHandle, "\"\r\n", 3u, NULL, NULL);
-
-                        ::free(argument);
-
-                        // ... Update > (Argument, End)
-                        argument = argumentString;
-                        while (' ' == *(end - 1)) --end;
-
-                        // Loop > Logic
-                        for (LPSTR iterator = argumentString; ; ++iterator) {
-                            // Logic
-                            if (end == iterator) {
-                                // Logic > ...
-                                if ('\0' == delimiter) break;
-                                else { // NOTE (Lapys) -> The native implementation assumes the remaining parameters are not string-delimited.
-                                    // Update > (Delimiter, Iterator)
-                                    delimiter = '\0';
-                                    iterator = ++argument;
-                                }
-                            }
-
-                            else switch (*iterator) {
-                                // [String Delimited]
-                                case '"': case '\'': {
-                                    // Initialization > Escaped
-                                    bool escaped = false;
-
-                                    // Loop > Update > Escaped
-                                    for (LPSTR subiterator = iterator - 1; argumentString < subiterator && '\\' == *subiterator; --subiterator)
-                                    escaped = false == escaped;
-
-                                    // Logic
-                                    if (false == escaped) {
-                                        // Logic
-                                        if ('\0' == delimiter) {
-                                            // Update > Delimiter
-                                            delimiter = *iterator;
-
-                                            // Logic --> `argument=value`
-                                            if (false == (argumentString != iterator && '=' == *(iterator - 1))) {
-                                                // ... Print
-                                                ++argumentCount; {
-                                                    ::WriteFile(consoleActiveScreenBufferHandle, "[", 1u, NULL, NULL);
-                                                    for (int exponent = 1, value = argumentCount; exponent; exponent *= 10, value /= 10) { if (0 == value) for (char digit; exponent /= 10; ) ::WriteFile(consoleActiveScreenBufferHandle, &(digit = *("0123456789" + ((argumentCount / exponent) % 10))), 1u, NULL, NULL); }
-                                                    ::WriteFile(consoleActiveScreenBufferHandle, "]: \"", 4u, NULL, NULL);
-                                                    ::WriteFile(consoleActiveScreenBufferHandle, argument, iterator - argument, NULL, NULL);
-                                                    ::WriteFile(consoleActiveScreenBufferHandle, "\"\r\n", 3u, NULL, NULL);
-                                                }
-
-                                                // Update > Argument
-                                                argument = iterator + 1;
-                                            }
-                                        }
-
-                                        else if (delimiter == *iterator) {
-                                            // ... Print
-                                            ++argumentCount; {
-                                                ::WriteFile(consoleActiveScreenBufferHandle, "[", 1u, NULL, NULL);
-                                                for (int exponent = 1, value = argumentCount; exponent; exponent *= 10, value /= 10) { if (0 == value) for (char digit; exponent /= 10; ) ::WriteFile(consoleActiveScreenBufferHandle, &(digit = *("0123456789" + ((argumentCount / exponent) % 10))), 1u, NULL, NULL); }
-                                                ::WriteFile(consoleActiveScreenBufferHandle, "]: \"", 4u, NULL, NULL);
-
-                                                if (argument == iterator) ::WriteFile(consoleActiveScreenBufferHandle, argument, 1u, NULL, NULL);
-                                                else if (argument != argumentString && delimiter == *(argument - 1)) ::WriteFile(consoleActiveScreenBufferHandle, argument, iterator - argument, NULL, NULL);
-                                                else {
-                                                    while (delimiter ^ *argument) ::WriteFile(consoleActiveScreenBufferHandle, argument++, 1u, NULL, NULL);
-                                                    ++argument; ::WriteFile(consoleActiveScreenBufferHandle, argument, iterator - argument, NULL, NULL);
-                                                }
-
-                                                ::WriteFile(consoleActiveScreenBufferHandle, "\"\r\n", 3u, NULL, NULL);
-                                            }
-
-                                            // Loop > Update > Iterator
-                                            if (argument == iterator) {
-                                                while (delimiter == *iterator && end != iterator) ++iterator;
-                                                --iterator;
-                                            }
-
-                                            // Update > (Argument, Delimiter)
-                                            argument = iterator + 1;
-                                            delimiter = '\0';
-                                        }
-                                    }
-                                } break;
-
-                                // [Whitespace Delimited]
-                                case ' ': if ('\0' == delimiter) {
-                                    // Logic
-                                    if (argument != iterator) {
-                                        // ... Print
-                                        ++argumentCount; {
-                                            ::WriteFile(consoleActiveScreenBufferHandle, "[", 1u, NULL, NULL);
-                                            for (int exponent = 1, value = argumentCount; exponent; exponent *= 10, value /= 10) { if (0 == value) for (char digit; exponent /= 10; ) ::WriteFile(consoleActiveScreenBufferHandle, &(digit = *("0123456789" + ((argumentCount / exponent) % 10))), 1u, NULL, NULL); }
-                                            ::WriteFile(consoleActiveScreenBufferHandle, "]: \"", 4u, NULL, NULL);
-                                            ::WriteFile(consoleActiveScreenBufferHandle, argument, iterator - argument, NULL, NULL);
-                                            ::WriteFile(consoleActiveScreenBufferHandle, "\"\r\n", 3u, NULL, NULL);
-                                        }
-                                    }
-
-                                    // Update > Argument
-                                    argument = iterator + 1;
-                                } break;
-                            }
-                        }
-
-                        // Logic
-                        if (argument != end) {
-                            // ... Print
-                            ++argumentCount; {
-                                ::WriteFile(consoleActiveScreenBufferHandle, "[", 1u, NULL, NULL);
-                                for (int exponent = 1, value = argumentCount; exponent; exponent *= 10, value /= 10) { if (0 == value) for (char digit; exponent /= 10; ) ::WriteFile(consoleActiveScreenBufferHandle, &(digit = *("0123456789" + ((argumentCount / exponent) % 10))), 1u, NULL, NULL); }
-                                ::WriteFile(consoleActiveScreenBufferHandle, "]: \"", 4u, NULL, NULL);
-                                ::WriteFile(consoleActiveScreenBufferHandle, argument, end - argument, NULL, NULL);
-                                ::WriteFile(consoleActiveScreenBufferHandle, "\"\r\n", 3u, NULL, NULL);
-                            }
-                        }
-
-                        // Deletion
-                        ::CloseHandle(consoleActiveScreenBufferHandle);
-                    }
-                }
+            // Logic
+            if (NULL == arguments && 0 == argumentCount) { // ERROR (Lapys)
+                // Deletion; ...
+                ::CloseHandle(consoleActiveScreenBufferHandle);
+                ::exit(EXIT_FAILURE);
             }
 
-            else if (argumentCount) { /* arguments --- NOTE (Lapys) -> Parse the `arguments` as a vector of ASCII arguments to be compatible with `char argv[]`'s implementation. */
+            else {
                 // Initialization > Argument
                 // : Loop
                 LPSTR argument = NULL;
@@ -204,12 +57,10 @@
                     int const length = (int) ::wcslen(*iterator);
                     int const size = ::WideCharToMultiByte(CP_UTF8, 0x0, *iterator, length, NULL, 0, NULL, NULL);
 
-                    // Update > Allocation --- NOTE (Lapys) -> Initially invoked with a `NULL` `argument`.
-                    argument = (LPSTR) ::realloc(argument, size * sizeof(CHAR));
-
-                    // Logic
-                    if (NULL == argument) { ::free(argument); argument = NULL; } // ERROR (Lapys)
-                    else {
+                    // Update > Argument --- NOTE (Lapys) -> Initially invoked with a `NULL` `argument`.
+                    // : Logic
+                    argument = (LPSTR) ::realloc(argument, size);
+                    if (NULL != argument) {
                         // Constant > Index
                         int const index = iterator - arguments;
 
@@ -242,7 +93,7 @@
     int main(int const count, char const* const arguments[]) {
         // Loop > Print
         for (int iterator = 0; count ^ iterator; ++iterator)
-        ::printf("[%i]: \"%s\"\r\n", iterator, arguments[iterator]);
+        ::printf("[%i]: \"%s\"\r\n", iterator, *(arguments + iterator));
 
         // Return
         return EXIT_SUCCESS;
