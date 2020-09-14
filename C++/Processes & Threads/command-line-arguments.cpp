@@ -91,7 +91,7 @@
 #else
     /* Main */
     int main(int const count, char const* const arguments[]) {
-        // Loop > Print
+        // ... Print
         for (int iterator = 0; count ^ iterator; ++iterator)
         ::printf("[%i]: \"%s\"\r\n", iterator, *(arguments + iterator));
 
