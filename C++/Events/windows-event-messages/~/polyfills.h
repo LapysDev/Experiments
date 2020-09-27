@@ -1,17 +1,3 @@
-/* Import */
-    // [Windows]
-    #include "../windows/commctrl.h" // Common Controls
-    #include "../windows/ftsiface.h" // ...
-    #include "../windows/olectl.h" // Object-Linking & Embedding Controls
-    #include "../windows/penwin.h" // Pen for Windows
-    #include "../windows/prsht.h" // Prop Sheet
-    #include "../windows/richedit.h" // Rich Edit
-    #include "../windows/smx.h" // Server Manager Extensions
-    #include "../windows/shellapi.h" // Shell API
-    #include "../windows/shlobj.h" // Shell Object
-    #include "../windows/vfw.h" // Video for Windows
-    #include "../windows/wfext.h" // Windows File Extensions
-
 /* Definition */
     /* [Common Controls] `<commctrl.h>` */
     #ifndef _INC_COMMCTRL

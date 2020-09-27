@@ -94,7 +94,7 @@ int WinMain(HINSTANCE instanceHandle, HINSTANCE /*previousInstanceHandle*/, LPST
     ::FillConsoleOutputCharacter(screenConsoleBufferHandle, ' ', screenConsoleBufferInformation.dwSize.X * screenConsoleBufferInformation.dwSize.Y, {0L, 0L}, &screenConsoleBufferBytesWritten);
     ::SetConsoleActiveScreenBuffer(screenConsoleBufferHandle);
     ::SetConsoleCursorPosition(screenConsoleBufferHandle, {0, 1});
-    ::SetConsoleTitle("Circle");
+    ::SetConsoleTitle("Transparent");
     ::ShowWindow(::GetConsoleWindow(), SW_SHOW);
 
     ::WriteConsoleOutputCharacter(screenConsoleBufferHandle, "[PROGRAM INITIATED]", 19, {0, 0}, &screenConsoleBufferBytesWritten);

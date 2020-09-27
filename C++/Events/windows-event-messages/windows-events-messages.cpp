@@ -3,8 +3,20 @@
     #include <stdlib.h> // Standard Library
 
     // [Windows]
+    #include <windef.h> // Windows Definitions
     #include <winbase.h> // Windows Base
     #include <winuser.h> // Windows User
+    #   include <commctrl.h> // Common Controls
+    #   include <ftsiface.h> // ...
+    #   include <olectl.h> // Object-Linking & Embedding Controls
+    #   include <penwin.h> // Pen for Windows
+    #   include <prsht.h> // Prop Sheet
+    #   include <richedit.h> // Rich Edit
+    #   include <smx.h> // Server Manager Extensions
+    #   include <shellapi.h> // Shell API
+    #   include <shlobj.h> // Shell Object
+    #   include <vfw.h> // Video for Windows
+    #   include <wfext.h> // Windows File Extensions
 
     // [...]
     #include "~/polyfills.h" // Polyfills
@@ -526,7 +538,12 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM argumen
                 ::println(printt, "Toolbar -> Map Accelerator");
             ::print('}');
         } break;
-        case EM_GETPAGE: ::print('[', EM_GETPAGE, "]: Rich Edit -> Get Page"); break;
+        case EM_GETPAGE: {
+            ::println('[', EM_GETPAGE, "]: {");
+                ::println(printt, "Multimedia (MCI) Window -> Get Error");
+                ::println(printt, "Rich Edit -> Get Page");
+            ::print('}');
+        } break;
         case EM_GETPAGEROTATE: ::print('[', EM_GETPAGEROTATE, "]: Rich Edit -> Get Page Rotate"); break;
         case EM_GETPARAFORMAT /* -> TB_GETTEXTROWS */: {
             ::println('[', EM_GETPARAFORMAT, "]: {");
@@ -1019,7 +1036,7 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM argumen
                 ::println(printt, "Prop Sheet -> Set Header Subtitle");
             ::print('}');
         } break;
-        case MCIWNDM_GETERRORW: ::print('[', MCIWNDM_GETERRORW, "]: Multimedia (MCI) Window -> Get Error"); break;
+        /* case MCIWNDM_GETERRORW: break; */
         /* case MCIWNDM_GETFILENAMEA: break; */
         /* case MCIWNDM_GETFILENAMEW: break; */
         /* case MCIWNDM_GETINACTIVETIMER: break; */
@@ -1788,7 +1805,13 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM argumen
             }
         } break;
         /* case WM_KEYFIRST: break; */
-        case WM_KEYLAST: ::print('[', WM_KEYLAST, "]: Windows -> Key [LAST]"); break;
+        case WM_KEYLAST: /* -> WM_UNICHAR | WM_WNT_CONVERTREQUESTEX */ {
+            ::println('[', WM_KEYLAST, "]: {");
+                ::println(printt, "Windows -> Convert Request");
+                ::println(printt, "Windows -> Key [LAST]");
+                ::println(printt, "Windows -> Unicode Character");
+            ::print('}');
+        } break;
         case WM_KEYUP: ::print('[', WM_KEYUP, "]: Windows -> Key Up"); break;
         case WM_KILLFOCUS: ::print('[', WM_KILLFOCUS, "]: Windows -> Kill Focus"); break;
         case WM_LBUTTONDBLCLK: ::print('[', WM_LBUTTONDBLCLK, "]: Windows -> Left (Mouse) Button Double-Click"); break;
@@ -1916,12 +1939,7 @@ LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM argumen
         case WM_TIMECHANGE: ::print('[', WM_TIMECHANGE, "]: Windows -> Time Change"); break;
         case WM_TIMER: ::print('[', WM_TIMER, "]: Windows -> Timer"); break;
         case WM_UNDO: ::print('[', WM_UNDO, "]: Windows -> Undo"); break;
-        case WM_UNICHAR /* -> WM_WNT_CONVERTREQUESTEX */: {
-            ::println('[', WM_UNICHAR, "]: {");
-                ::println(printt, "Windows -> Convert Request");
-                ::println(printt, "Windows -> Unicode Character");
-            ::print('}');
-        } break;
+        /* case WM_UNICHAR: break; */
         case WM_UNINITMENUPOPUP: ::print('[', WM_UNINITMENUPOPUP, "]: Windows -> Uninitiate Menu Pop-Up"); break;
         case WM_UPDATEUISTATE: ::print('[', WM_UPDATEUISTATE, "]: Windows -> Update UI State"); break;
         /* case WM_USER: break; */
