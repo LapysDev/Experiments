@@ -133,88 +133,85 @@
             case WM_SYSCOMMAND: if (SC_CLOSE == parameter) goto Destroy; break;
             case WM_SYSKEYDOWN: if (VK_F4 == parameter) goto Destroy; break;
 
-            // [Create]
-            case WM_CREATE: { // Initialize > Window ...; ...
+            // [Create] Initialization > Window; ...
+            case WM_CREATE: {
+                // Update > Window ...
                 WINDOW_BACKGROUND_GRAPHICS_DEVICE_CONTEXT_HANDLE = ::GetDCEx(NULL, NULL, CS_OWNDC | DCX_NORESETATTRS | DCX_WINDOW);
                 WINDOW_FONT = ::CreateFont(WINDOW_FONT_SIZE, FW_DONTCARE, FALSE, TRUE, FALSE, 0, 0, 0, 0, 0, 0, 0, 0, WINDOW_FONT_FAMILY);
                 WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE = ::GetDCEx(windowHandle, NULL, CS_OWNDC | DCX_NORESETATTRS);
                 WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE = ::CreateCompatibleDC(WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE);
                 WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateCompatibleBitmap(WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+                // Update > Window ...
                 ::SelectObject(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_BITMAP_HANDLE);
                 ::SetBkMode(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, TRANSPARENT);
                 {
-                    // ::SetLayeredWindowAttributes(windowHandle, 0x000000, 255u, LWA_ALPHA | LWA_COLORKEY);
-
-                    BLENDFUNCTION blendFunction = {};
-                    blendFunction.AlphaFormat = AC_SRC_ALPHA;
-                    blendFunction.BlendFlags = 0x0;
-                    blendFunction.BlendOp = AC_SRC_OVER;
-                    blendFunction.SourceConstantAlpha = 255u;
-                    // POINT point = {0L, 0L};
-                    // SIZE size = {WINDOW_WIDTH, WINDOW_HEIGHT};
-                    if (FALSE == ::UpdateLayeredWindow(
-                        windowHandle, WINDOW_BACKGROUND_GRAPHICS_DEVICE_CONTEXT_HANDLE,
-                        NULL, NULL,
-                        WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE,
-                        NULL, 0x000000,
-                        &blendFunction, ULW_ALPHA | ULW_COLORKEY
-                    )) ::printf("[ERROR]: %lu", ::GetLastError());
+                    ::SetLayeredWindowAttributes(windowHandle, 0x000000, 255u, LWA_ALPHA | LWA_COLORKEY);
                 }
                 ::ShowWindow(windowHandle, WINDOW_APPEARANCE);
+            } BUTTON_PROCEDURE(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, message, cursorPosition); break;
 
-                BUTTON_PROCEDURE(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, message, cursorPosition);
-            } break;
-
-            // [Destroy]
-            case WM_DESTROY: { // Deletion > Window ...; ...
+            // [Destroy] Deletion > Window; ...
+            case WM_DESTROY: {
+                // Deletion > Window ...
                 ::DeleteDC(WINDOW_BACKGROUND_GRAPHICS_DEVICE_CONTEXT_HANDLE);
                 ::DeleteObject(WINDOW_FONT);
                 ::DeleteDC(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE);
                 ::DeleteObject(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_BITMAP_HANDLE);
                 ::ReleaseDC(windowHandle, WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE);
 
+                // Terminate
                 ::PostQuitMessage(EXIT_SUCCESS);
-                BUTTON_PROCEDURE(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, message, cursorPosition);
-            } break;
+            } BUTTON_PROCEDURE(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, message, cursorPosition); break;
 
-            // [Paint]
-            case WM_PAINT: { // Update > Window ...; ...
-                HGDIOBJ windowOffscreenGraphicsDeviceContextFont;
-                COLORREF windowOffscreenGraphicsDeviceContextTextColor;
-                RECT windowTextContentRectangle = {};
+            // [Paint] Update > Window; ...
+            case WM_PAINT: {
+                // Initialization > Window ...
+                HGDIOBJ const windowOffscreenGraphicsDeviceContextFont = ::SelectObject(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, WINDOW_FONT);
+                COLORREF const windowOffscreenGraphicsDeviceContextTextColor = ::SetTextColor(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, WINDOW_TEXT_COLOR);
+                BLENDFUNCTION windowOnscreenBlendFunction = {};
+                RECT windowTextContentRectangle = {10L, 10L, 100L, 10L};
                 LONG const windowTextContentVerticalPadding = 2L;
 
-                windowOffscreenGraphicsDeviceContextFont = ::SelectObject(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, WINDOW_FONT);
-                windowOffscreenGraphicsDeviceContextTextColor = ::SetTextColor(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, WINDOW_TEXT_COLOR);
-                windowTextContentRectangle = {10L, 10L, 100L, 10L};
+                /* ... */ {
+                    ::BitBlt(
+                        WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE,
+                        0, 0,
+                        WINDOW_BACKGROUND_RECTANGLE.right - WINDOW_BACKGROUND_RECTANGLE.left, WINDOW_BACKGROUND_RECTANGLE.bottom - WINDOW_BACKGROUND_RECTANGLE.top, WINDOW_BACKGROUND_GRAPHICS_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY
+                    );
 
-                ::BitBlt(
-                    WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, 0, 0,
-                    WINDOW_BACKGROUND_RECTANGLE.right - WINDOW_BACKGROUND_RECTANGLE.left, WINDOW_BACKGROUND_RECTANGLE.bottom - WINDOW_BACKGROUND_RECTANGLE.top,
-                    WINDOW_BACKGROUND_GRAPHICS_DEVICE_CONTEXT_HANDLE, 0, 0,
-                    SRCCOPY
-                );
-                for (
-                    char const *const textGuides[] = {
-                        "Exit Window: 'Alt + F4' hotkey, 'Esc' key",
-                        "Fullscreen: 'F11' key",
-                        "",
-                        "Activate Button: 'Enter' key, 'Left-Click' button",
-                        "Select Button: 'Tab' key"
-                    }, *const *iterator = textGuides, *const *const end = iterator + (sizeof(textGuides) / sizeof(char*));
-                    end != iterator; ++iterator
-                ) {
-                    windowTextContentRectangle.top = windowTextContentRectangle.bottom + windowTextContentVerticalPadding;
-                    windowTextContentRectangle.bottom = WINDOW_FONT_SIZE + windowTextContentRectangle.top + windowTextContentVerticalPadding;
+                    for (char const *const textGuides[] = {
+                        "Exit Window: 'Alt + F4' hotkey, 'Esc' key", "Fullscreen: 'F11' key", "",
+                        "Activate Button: 'Enter' key, 'Left-Click' button", "Select Button: 'Tab' key"
+                    }, *const *iterator = textGuides, *const *const end = iterator + (sizeof(textGuides) / sizeof(char*)); end != iterator; ++iterator) {
+                        windowTextContentRectangle.top = windowTextContentRectangle.bottom + windowTextContentVerticalPadding;
+                        windowTextContentRectangle.bottom = WINDOW_FONT_SIZE + windowTextContentRectangle.top + windowTextContentVerticalPadding;
 
-                    ::DrawText(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, *iterator, -1, &windowTextContentRectangle, DT_LEFT | DT_NOCLIP | DT_SINGLELINE | DT_TOP);
+                        ::DrawText(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, *iterator, -1, &windowTextContentRectangle, DT_LEFT | DT_NOCLIP | DT_SINGLELINE | DT_TOP);
+                    }
+
+                    windowOnscreenBlendFunction.AlphaFormat = 0x000000;
+                    windowOnscreenBlendFunction.BlendFlags = 0x0;
+                    windowOnscreenBlendFunction.BlendOp = AC_SRC_OVER;
+                    windowOnscreenBlendFunction.SourceConstantAlpha = 127u;
+
+                    if (FALSE == ::UpdateLayeredWindow( // FLAG (Lapys) -> Invalid parameter error here; Why?
+                        windowHandle, WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE,
+                        NULL, NULL, WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE,
+                        NULL, 0x000000,
+                        &windowOnscreenBlendFunction,
+                        ULW_ALPHA
+                    )) ::fprintf(stderr, "[ERROR]: %x\r\n", reinterpret_cast<void*>(::GetLastError()));
+
+                    BUTTON_PROCEDURE(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, message, cursorPosition);
                 }
-                BUTTON_PROCEDURE(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, message, cursorPosition);
 
+                // Update > Window (On-Screen) Graphics Device Context Handle
+                // : Reset > Window ...
                 ::BitBlt(WINDOW_ONSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
-
                 ::SelectObject(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, windowOffscreenGraphicsDeviceContextFont);
+
+                // Update > Window ...
                 ::SetTextColor(WINDOW_OFFSCREEN_GRAPHICS_DEVICE_CONTEXT_HANDLE, windowOffscreenGraphicsDeviceContextTextColor);
                 ::ValidateRect(windowHandle, NULL);
             } return EXIT_SUCCESS;
@@ -333,7 +330,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
         // ...; Logic > ...
         ::SystemParametersInfo(SPI_GETWORKAREA, 0u, (PVOID) &WINDOW_BACKGROUND_RECTANGLE, 0u);
         if (NULL != ::CreateWindowEx(
-            WS_EX_LAYERED | WS_EX_TRANSPARENT, WINDOW_CLASS.lpszClassName, WINDOW_TITLE, WS_POPUP,
+            WS_EX_LAYERED, WINDOW_CLASS.lpszClassName, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
             ((WINDOW_BACKGROUND_RECTANGLE.right - WINDOW_BACKGROUND_RECTANGLE.left) - WINDOW_WIDTH) / 2,
             ((WINDOW_BACKGROUND_RECTANGLE.bottom - WINDOW_BACKGROUND_RECTANGLE.top) - WINDOW_HEIGHT) / 2,
             WINDOW_WIDTH, WINDOW_HEIGHT, NULL, (HMENU) NULL, WINDOW_CLASS.hInstance, NULL
