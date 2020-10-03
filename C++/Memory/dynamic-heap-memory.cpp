@@ -2,6 +2,16 @@
 #include <stdio.h> // Standard Input-Output
 #include <stdlib.h> // Standard Library
 
+/*
+template <class type, class... types>
+void* alloc(types... arguments) {
+  void *const allocation = malloc(sizeof(object));
+
+  new(static_cast<type*>(allocation)) type {arguments...};
+  return allocation;
+}
+*/
+
 /* Class > Pointer */
 class Pointer {
     // [...]

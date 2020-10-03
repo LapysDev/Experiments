@@ -1,4 +1,5 @@
 /* Import */
+#include <limits.h>
 #include <stdlib.h> // Standard Library
 #include <string.h> // String
 
@@ -22,69 +23,42 @@ template <radix_t radix>
 class BigNumber : public BigNumberExtension<radix> {
     // [...]
     protected:
-        /* Definition > (Digit ..., ...) --- REDACT (Lapys) */
-        class DigitIterator;
-        class DigitForwardIterator;
-        class DigitReverseIterator;
-
-        class Digit {
-            template <radix_t> friend class BigFloat;
-            template <radix_t> friend class BigNumber;
-            template <radix_t> friend class BigSignedInteger;
-            template <radix_t> friend class BigUnsignedInteger;
-
-            typedef radix_t digit_t;
-
-            private:
-                constexpr inline static unsigned char widthOf(radix_t value) noexcept {
-                    unsigned char width = 0u;
-                    do ++width; while (value >>= 1uL);
-                    return ((width >> 1u) << 1u) + 2u;
-                }
-
-            protected:
-                digit_t value : Digit::widthOf(radix);
-                constexpr inline Digit(digit_t const value = 0u) : value{value} {}
-        };
-
-        typedef typename Digit::digit_t digit_t;
+        /* Definition > ... */
+        typedef radix_t digit_t;
         typedef unsigned length_t;
         typedef void primitive_t;
 
+        /* Class > Digit ... Iterator --- REDACT (Lapys) */
+        class DigitIterator { protected:
+            constexpr inline DigitIterator(primitive_t) {}
+            constexpr inline DigitIterator(DigitIterator const&) = delete;
+
+            constexpr inline unsigned char count(void) const noexcept { return 0u; }
+            constexpr inline bool done(void) const noexcept { return true; }
+            constexpr inline digit_t iterate(void) const noexcept { return 0uL; }
+
+            constexpr inline DigitIterator& operator =(DigitIterator const&) noexcept = delete;
+        };
+
+        class DigitForwardIterator { protected:
+            constexpr inline DigitForwardIterator(primitive_t) {}
+            constexpr inline DigitForwardIterator(BigNumber const&) {}
+            constexpr inline DigitForwardIterator(DigitForwardIterator const&) = delete;
+
+            constexpr inline DigitForwardIterator& operator =(BigNumber const&) noexcept = delete;
+            constexpr inline DigitForwardIterator& operator =(DigitForwardIterator const&) noexcept = delete;
+        };
+        class DigitReverseIterator { protected:
+            constexpr inline DigitReverseIterator(primitive_t) {}
+            constexpr inline DigitReverseIterator(BigNumber const&) {}
+            constexpr inline DigitReverseIterator(DigitReverseIterator const&) = delete;
+
+            constexpr inline DigitReverseIterator& operator =(BigNumber const&) noexcept = delete;
+            constexpr inline DigitReverseIterator& operator =(DigitReverseIterator const&) noexcept = delete;
+        };
+
     // [...] > [Constructor]
     public: constexpr inline BigNumber(primitive_t) {}
-};
-
-/* : Digit ... Iterator --- REDACT (Lapys) */
-template <radix_t radix>
-class BigNumber<radix>::DigitIterator { typedef typename BigNumber<radix>::Digit Digit; protected:
-    constexpr inline DigitIterator(primitive_t) {}
-    constexpr inline DigitIterator(DigitIterator const&) = delete;
-
-    constexpr inline unsigned char count(void) const noexcept { return 0u; }
-    constexpr inline bool done(void) const noexcept { return true; }
-    constexpr inline Digit iterate(void) const noexcept { return Digit(); }
-
-    constexpr inline DigitIterator& operator =(DigitIterator const&) const noexcept = delete;
-};
-
-template <radix_t radix>
-class BigNumber<radix>::DigitForwardIterator : public BigNumber<radix>::DigitIterator { typedef class BigNumber<radix> BigNumber; protected:
-    constexpr inline DigitForwardIterator(primitive_t) {}
-    constexpr inline DigitForwardIterator(BigNumber const&) {}
-    constexpr inline DigitForwardIterator(DigitForwardIterator const&) = delete;
-
-    constexpr inline DigitForwardIterator& operator =(BigNumber const&) const noexcept = delete;
-    constexpr inline DigitForwardIterator& operator =(DigitForwardIterator const&) const noexcept = delete;
-};
-template <radix_t radix>
-class BigNumber<radix>::DigitReverseIterator : public BigNumber<radix>::DigitIterator { typedef class BigNumber<radix> BigNumber; protected:
-    constexpr inline DigitReverseIterator(primitive_t) {}
-    constexpr inline DigitReverseIterator(BigNumber const&) {}
-    constexpr inline DigitReverseIterator(DigitReverseIterator const&) = delete;
-
-    constexpr inline DigitReverseIterator& operator =(BigNumber const&) const noexcept = delete;
-    constexpr inline DigitReverseIterator& operator =(DigitReverseIterator const&) const noexcept = delete;
 };
 
 /* Class */
@@ -96,9 +70,8 @@ class BigUnsignedInteger : public BigNumber<radix>, BigUnsignedIntegerExtension<
     template <radix_t> friend class BigSignedInteger;
     template <radix_t> friend class BigUnsignedInteger;
 
-    typedef class BigNumber<radix>::Digit Digit;
     typedef typename BigNumber<radix>::digit_t digit_t;
-    typedef typename BigNumber<radix>::length_t length_t;
+    typedef typename BigNumber<radix>::length_t index_t, length_t;
     typedef unsigned long primitive_t;
 
     // [...]
@@ -109,16 +82,16 @@ class BigUnsignedInteger : public BigNumber<radix>, BigUnsignedIntegerExtension<
         /* Class > Digit ... Iterator --- REDACT (Lapys) */
         class DigitIterator : public BigNumber<radix>::DigitIterator { protected:
             union iterable_v {
-                Digit *arbitrary[2];
+                digit_t *arbitrary[2];
                 primitive_t primitive;
 
-                constexpr inline iterable_v(BigUnsignedInteger const begin[], BigUnsignedInteger const end[]) : arbitrary{begin, end} {}
+                constexpr inline iterable_v(digit_t const begin[], digit_t const end[]) : arbitrary{begin, end} {}
                 constexpr inline iterable_v(primitive_t const value) : primitive{value} {}
             } iterable;
             enum iterable_t {ARBITRARY, PRIMITIVE} type;
 
             constexpr inline DigitIterator(primitive_t const iterable) : iterable{iterable}, type{PRIMITIVE} {}
-            constexpr inline DigitIterator(BigUnsignedInteger const& iterable) : iterable{iterable.valueof(), iterable.valueof() + iterable.lengthof()}, type{ARBITRARY} {}
+            constexpr inline DigitIterator(BigUnsignedInteger const& iterable) : iterable{iterable.valueOf(), iterable.valueOf() + iterable.lengthOf()}, type{ARBITRARY} {}
             constexpr inline DigitIterator(DigitIterator const&) = delete;
 
             constexpr inline unsigned char count(void) const noexcept {
@@ -133,49 +106,94 @@ class BigUnsignedInteger : public BigNumber<radix>, BigUnsignedIntegerExtension<
                     case PRIMITIVE: return 0uL == this -> iterable.primitive;
                 } return BigNumber<radix>::DigitIterator::done();
             }
-            virtual inline Digit iterate(void) noexcept { return BigNumber<radix>::DigitIterator::iterate(); }
+            virtual inline digit_t iterate(void) noexcept { return BigNumber<radix>::DigitIterator::iterate(); }
 
-            constexpr inline DigitIterator& operator =(primitive_t const) const noexcept = delete;
-            constexpr inline DigitIterator& operator =(BigUnsignedInteger const&) const noexcept = delete;
-            constexpr inline DigitIterator& operator =(DigitIterator const&) const noexcept = delete;
+            constexpr inline DigitIterator& operator =(primitive_t const) noexcept = delete;
+            constexpr inline DigitIterator& operator =(BigUnsignedInteger const&) noexcept = delete;
+            constexpr inline DigitIterator& operator =(DigitIterator const&) noexcept = delete;
         };
 
-        class DigitForwardIterator : public BigNumber<radix>::DigitForwardIterator, public DigitIterator { typedef typename DigitIterator::iterable_t iterable_t; protected:
-            constexpr inline DigitForwardIterator(DigitForwardIterator const&) = delete;
-            constexpr inline DigitForwardIterator& operator =(DigitForwardIterator const&) const noexcept = delete;
+        class DigitForwardIterator : public BigNumber<radix>::DigitForwardIterator, public DigitIterator { typedef typename DigitIterator::iterable_t iterable_t;
+            public: constexpr inline DigitForwardIterator(primitive_t const iterable) : DigitIterator(iterable) {}
+            public: constexpr inline DigitForwardIterator(BigUnsignedInteger const& iterable) : DigitIterator(iterable) {}
+            protected: constexpr inline DigitForwardIterator(DigitForwardIterator const&) = delete;
 
-            constexpr inline Digit iterate(void) noexcept override {
+            constexpr inline digit_t iterate(void) noexcept override {
                 switch (this -> type) {
                     case iterable_t::ARBITRARY: return this -> iterable.arbitrary[0]++ -> value;
                     case iterable_t::PRIMITIVE: primitive_t iterable = 0uL, length = 1uL; while (radix < this -> iterable.primitive / length) { iterable += (this -> iterable.primitive / length) % radix; length *= radix; } Digit const evaluation = {this -> iterable.primitive / length}; this -> iterable.primitive = iterable; return evaluation;
                 } return DigitIterator::iterate();
             }
-        };
-        class DigitReverseIterator : public BigNumber<radix>::DigitReverseIterator, public DigitIterator {
-            typedef typename DigitIterator::iterable_t iterable_t;
-            protected:
-                constexpr inline DigitReverseIterator(DigitReverseIterator const&) = delete;
-                constexpr inline DigitReverseIterator& operator =(DigitReverseIterator const&) const noexcept = delete;
 
-                constexpr inline Digit iterate(void) noexcept override {
-                    switch (this -> type) {
-                        case iterable_t::ARBITRARY: return (--(this -> iterable.arbitrary[1])) -> value;
-                        case iterable_t::PRIMITIVE: Digit const evaluation = {this -> iterable.primitive % radix}; this -> iterable.primitive /= radix; return evaluation;
-                    } return DigitIterator::iterate();
-                }
+            constexpr inline DigitForwardIterator& operator =(DigitForwardIterator const&) noexcept = delete;
+        };
+        class DigitReverseIterator : public BigNumber<radix>::DigitReverseIterator, public DigitIterator { typedef typename DigitIterator::iterable_t iterable_t; protected:
             public: constexpr inline DigitReverseIterator(primitive_t const iterable) : DigitIterator(iterable) {}
+            public: constexpr inline DigitReverseIterator(BigUnsignedInteger const& iterable) : DigitIterator(iterable) {}
+            protected: constexpr inline DigitReverseIterator(DigitReverseIterator const&) = delete;
+
+            constexpr inline digit_t iterate(void) noexcept override {
+                switch (this -> type) {
+                    case iterable_t::ARBITRARY: return (--(this -> iterable.arbitrary[1])) -> value;
+                    case iterable_t::PRIMITIVE: digit_t const evaluation = {this -> iterable.primitive % radix}; this -> iterable.primitive /= radix; return evaluation;
+                } return DigitIterator::iterate();
+            }
+
+            constexpr inline DigitReverseIterator& operator =(DigitReverseIterator const&) noexcept = delete;
         };
 
-        // Function
-        // : Allocate --- REDACT (Lapys) --- CONSIDER (Lapys) -> Is the `1.5` growth rate wasted memory?
+        // Function --- REDACT (Lapys)
+        // : Allocate
         inline void allocate(length_t const length) {
-            void *const allocation = ::realloc(this -> buffer, ((length * 3u) / 2u) + sizeof(length_t));
+            void *const allocation = ::realloc(this -> buffer, sizeof(length_t) + (length + sizeof(digit_t)));
             NULL == allocation ? ::exit(EXIT_FAILURE) : (void) this -> buffer = allocation;
         }
 
+        // : ... Digit ...
+        constexpr inline digit_t getDigitAt(index_t index) const noexcept {
+            digit_t digitCollection = BigUnsignedInteger::getDigitCollectionAt(index);
+            while (index--) digitCollection /= radix;
+            return digitCollection % radix;
+        }
+        constexpr inline digit_t& getDigitCollectionAt(index_t const index) const noexcept {
+            constexpr unsigned short const digitCollectionBitSize = CHAR_BIT * sizeof(digit_t);
+            index_t digitCollectionIndex = 0u;
+
+            for (
+                unsigned short digitBitOffset = index * BigUnsignedInteger::getDigitBitWidth();
+                digitBitOffset > digitCollectionBitSize;
+                digitBitOffset -= digitCollectionBitSize
+            ) ++digitCollectionIndex;
+
+            return *(digitCollectionIndex + BigUnsignedInteger::valueOf());
+        }
+        constexpr inline static unsigned char getDigitBitWidth(void) noexcept {
+            radix_t iterator = radix;
+            unsigned char width = 0u;
+
+            do ++width; while (iterator >>= 1uL);
+            return width;
+        }
+        constexpr inline void setDigitAt(index_t index, digit_t const digit) noexcept {
+            digit_t& digitCollection = BigUnsignedInteger::getDigitCollectionAt(index);
+            digit_t digitCollectionDigits = 0uL;
+            digit_t digitCollectionExponent = 1uL;
+
+            ++index;
+            for (digit_t digitCollectionIterator = digitCollection; index--; digitCollectionIterator /= radix) {
+                digitCollectionDigits += digitCollectionExponent * (digitCollectionIterator % radix);
+                digitCollectionExponent *= radix;
+            }
+            digitCollectionExponent /= radix;
+
+            digitCollection -= digitCollectionDigits;
+            digitCollection += digit * digitCollectionExponent;
+            digitCollection += digitCollectionDigits - (digitCollectionExponent * (digitCollectionDigits / digitCollectionExponent));
+        }
+
         // : (Length, Value) Of
-        constexpr inline length_t& lengthof(void) const noexcept { return *(length_t*) this -> buffer; }
-        constexpr inline Digit* valueof(void) const noexcept { return 1 + (length_t*) this -> buffer; }
+        constexpr inline length_t& lengthOf(void) const noexcept { return *(length_t*) this -> buffer; }
+        constexpr inline digit_t* valueOf(void) const noexcept { return 1 + (length_t*) this -> buffer; }
 
     // [...]
     private:
@@ -184,12 +202,17 @@ class BigUnsignedInteger : public BigNumber<radix>, BigUnsignedIntegerExtension<
 
     // [...]
     public:
+        // [Constructor]
         constexpr inline BigUnsignedInteger(void) : buffer{NULL} {}
         inline BigUnsignedInteger(DigitReverseIterator const& number) : buffer{NULL} { BigUnsignedInteger::copy(number); }
         constexpr inline BigUnsignedInteger(BigUnsignedInteger&& number) : buffer{NULL} { BigUnsignedInteger::move(number); }
 
-        inline void copy(DigitIterator const&) {}
+        inline ~BigUnsignedInteger(void) { ::free(this -> buffer); }
 
+        // Definition > Copy
+        inline void copy(DigitReverseIterator const&);
+
+        // [Operator] > [=]
         inline BigUnsignedInteger& operator =(DigitReverseIterator const& number) noexcept { BigUnsignedInteger::copy(number); return *this; }
         constexpr inline BigUnsignedInteger& operator =(BigUnsignedInteger&& number) noexcept { BigUnsignedInteger::move(number); return *this; }
 };
@@ -248,7 +271,6 @@ struct bignum_t : private BigNumber {
     template <class type> friend constexpr inline bool operator >(type numberA, bignum_t const& numberB) noexcept { return false == numberB.greaterThan(numberA); }
     template <class type> friend constexpr inline bool operator >=(bignum_t const& numberA, type numberB) noexcept { return numberA.equals(numberB) || numberA.greaterThan(numberB); }
     template <class type> friend constexpr inline bool operator >=(type numberA, bignum_t const& numberB) noexcept { return numberB.lesserThan(numberA); }
-    template <class type> inline bignum_t& operator =(type number) { return BigNumber::copy(number), *this; }
     template <class type> inline bignum_t& operator +=(type number) { return BigNumber::add(number), *this; }
     template <class type> inline bignum_t& operator -=(type number) { return BigNumber::subtract(number), *this; }
     template <class type> inline bignum_t& operator *=(type number) { return BigNumber::multiply(number), *this; }
@@ -269,7 +291,12 @@ struct bigfloat_t final : public bignum_t<BigFloat<10uL>> {};
 struct bigint_t final : public bignum_t<BigSignedInteger<10uL>> {};
 struct biguint_t final : public bignum_t<BigUnsignedInteger<10uL>> {};
 
-/* Modification > ... */
+/* Modification */
+    /* Big Float */
+    /* Big Signed Integer */
+    /* Big Unsigned Integer */
+    template <radix_t radix>
+    inline void BigUnsignedInteger<radix>::copy(DigitReverseIterator const& number) {}
 
 /* Main */
 #include <iostream>
