@@ -173,7 +173,7 @@
             case WM_SYSCOMMAND: if (SC_CLOSE == parameter) goto Destroy; break;
             case WM_SYSKEYDOWN: if (VK_F4 == parameter) goto Destroy; break;
 
-            // [Create] --- CHECKPOINT (Lapys)
+            // [Create]
             case WM_CREATE: {
                 // Modification > ...
                 WINDOW.handles.deviceContext = ::GetDCEx(WINDOW.handle, NULL, CS_OWNDC | DCX_NORESETATTRS);
@@ -364,57 +364,18 @@
                     }
 
                     /* [Solid Brush Background] ... */
-                    // HGDIOBJ const object = ::SelectObject(windowBackground.handles.deviceContext, WINDOW.classInformation.hbrBackground);
-                    // ::PatBlt(windowBackground.handles.deviceContext, 0, 0, WINDOW.style.width, WINDOW.style.height, PATCOPY);
-                    // ::SelectObject(windowBackground.handles.deviceContext, object);
+                    RECT windowRectangle = {0L, 0L, WINDOW.style.width, WINDOW.style.height};
 
-                    // RECT windowRectangle = {0L, 0L, WINDOW.style.width, WINDOW.style.height};
-                    // ::FillRect(windowBackground.handles.deviceContext, &windowRectangle, WINDOW.classInformation.hbrBackground);
-                    // ::BitBlt(WINDOW.handles.memoryDeviceContext, 0, 0, WINDOW.style.width, WINDOW.style.height, windowBackground.handles.deviceContext, 0, 0, SRCCOPY);
-                    HBITMAP bitmap = NULL;
-                    BITMAPINFO bitmapInformation = {}; ::ZeroMemory(&bitmapInformation, sizeof(BITMAPINFO));
-                    HDC device = ::CreateCompatibleDC(WINDOW.handles.deviceContext);
-
-                    bitmapInformation.bmiHeader.biCompression = BI_RGB;
-                    bitmapInformation.bmiHeader.biBitCount = 32u;
-                    bitmapInformation.bmiHeader.biHeight = WINDOW.style.height;
-                    bitmapInformation.bmiHeader.biPlanes = 1u;
-                    bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                    bitmapInformation.bmiHeader.biWidth = WINDOW.style.width;
-                    bitmapInformation.bmiHeader.biSizeImage = 4 * bitmapInformation.bmiHeader.biHeight * bitmapInformation.bmiHeader.biWidth;
-                    bitmap = ::CreateDIBSection(device, &bitmapInformation, DIB_RGB_COLORS, NULL, NULL, 0u);
-
-                    ::GetDIBits(device, bitmap, 0, bitmapInformation.bmiHeader.biHeight, NULL, &bitmapInformation, DIB_RGB_COLORS);
-                    BYTE *buffer = new BYTE[bitmapInformation.bmiHeader.biSizeImage];
-                    ::GetDIBits(device, bitmap, 0, bitmapInformation.bmiHeader.biHeight, buffer, &bitmapInformation, DIB_RGB_COLORS);
-
-                    unsigned char *pixel = (unsigned char*) buffer;
-                    for (int y = 0; y < bitmapInformation.bmiHeader.biHeight; ++y)
-                    for (int x = 0; x < bitmapInformation.bmiHeader.biWidth; ++x) {
-                        pixel[0] = (BYTE) 125;
-                        // pixel[0] = (BYTE) (((float) pixel[3] / 255.0f) * (float) pixel[0]);
-                        // pixel[1] = (BYTE) (((float) pixel[3] / 255.0f) * (float) pixel[1]);
-                        // pixel[2] = (BYTE) (((float) pixel[3] / 255.0f) * (float) pixel[2]);
-
-                        pixel += 4;
-                    }
-
-                    ::SelectObject(device, bitmap);
-                    ::SetDIBits(device, bitmap, 0, bitmapInformation.bmiHeader.biHeight, buffer, &bitmapInformation, DIB_RGB_COLORS);
-
+                    ::FillRect(windowBackground.handles.deviceContext, &windowRectangle, WINDOW.classInformation.hbrBackground);
                     ::AlphaBlend(
                         WINDOW.handles.memoryDeviceContext,
                         0, 0, WINDOW.style.width, WINDOW.style.height,
 
-                        device,
+                        windowBackground.handles.deviceContext,
                         0, 0, WINDOW.style.width, WINDOW.style.height,
 
                         BLENDFUNCTION {AC_SRC_OVER, 0x0, 255u, AC_SRC_ALPHA}
                     );
-
-                    ::DeleteDC(device);
-                    ::DeleteDC(bitmap);
-                    delete[] buffer;
 
                     /* [Button] ... */
                     if (cursorPositionEvaluated) {
