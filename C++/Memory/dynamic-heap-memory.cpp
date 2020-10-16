@@ -5,9 +5,9 @@
 /*
 template <class type, class... types>
 void* alloc(types... arguments) {
-  void *const allocation = malloc(sizeof(object));
+  void *const allocation = malloc(sizeof(type));
 
-  new(static_cast<type*>(allocation)) type {arguments...};
+  new (allocation) type {arguments...};
   return allocation;
 }
 */

@@ -60,9 +60,9 @@
             } const padding = {};
 
             COLORREF const color = RGB(0xFF, 0xFF, 0xFF);
-            INT const height = -1; // NOTE (Lapys) -> Negative values denote automatic sizes.
-            INT const width = -1;
-        } const style = {};
+            INT height = -1; // NOTE (Lapys) -> Negative values denote automatic sizes.
+            INT width = -1;
+        } style = {};
 
         static VOID CALLBACK procedure(UINT const, WPARAM const, LPARAM const);
         RECT rectangle = {0L, 0L, 0L, 0L};
@@ -82,7 +82,7 @@
         struct {
             struct {
                 COLORREF const color = RGB(0x00, 0x30, 0xCC) /* ?? ::GetSysColor(COLOR_WINDOW) */;
-                BYTE const opacity = 127u;
+                BYTE const opacity = 0u;
             } const background = {};
 
             struct {
@@ -108,7 +108,7 @@
     VOID CALLBACK decltype(BUTTON)::procedure(UINT const message, WPARAM const parameter, LPARAM const subparameter) {
         // Constant > (Cursor Position, Window Device Context Handle)
         POINT const cursorPosition = 0x0 == subparameter ? POINT() : *(POINT const*) subparameter;
-        HDC const& windowDeviceContextHandle = (HDC) parameter;
+        HDC const& windowDeviceContextHandle = (HDC const&) parameter;
 
         // Logic
         switch (message) {
@@ -118,8 +118,39 @@
 
             // [Paint] --- CHECKPOINT (Lapys)
             case WM_PAINT: {
-                (void) cursorPosition;
-                (void) windowDeviceContextHandle;
+                // Initialization > ... Device Context Information --- NOTE (Lapys) -> Keep track of the device context state.
+                RECT buttonTextContentRectangle = {};
+                struct {
+                    HGDIOBJ const fontHandle = ::SelectObject(windowDeviceContextHandle, BUTTON.handles.font);
+                    COLORREF const textColor = ::SetTextColor(windowDeviceContextHandle, BUTTON.style.color);
+                } const windowDeviceContextInformation = {};
+
+                ::GetTextExtentPoint32A(windowDeviceContextHandle, BUTTON.textContent, ::strlen(BUTTON.textContent), (LPSIZE) &buttonTextContentRectangle);
+
+                if (BUTTON.style.height == -1) {}
+                if (BUTTON.style.width == -1) {}
+
+                // WINDOW.rectangle.bottom / WINDOW.rectangle.top
+                // WINDOW.rectangle.left / WINDOW.rectangle.right
+
+                // cursorPosition
+                // windowDeviceContextHandle
+                // ==============================
+                // BUTTON.rectangle
+                // BUTTON.state
+                // BUTTON.style.background.color
+                // BUTTON.style.color
+                // BUTTON.style.height
+                // BUTTON.style.padding.bottom
+                // BUTTON.style.padding.left
+                // BUTTON.style.padding.right
+                // BUTTON.style.padding.top
+                // BUTTON.style.width
+                // BUTTON.textContent
+
+                // Reset > Window Device Context Handle
+                ::SelectObject(windowDeviceContextHandle, windowDeviceContextInformation.fontHandle);
+                ::SetTextColor(windowDeviceContextHandle, windowDeviceContextInformation.textColor);
             } break;
         }
     }
@@ -136,6 +167,10 @@
             struct {
                 HDC deviceContext;
                 HBITMAP deviceContextBitmap;
+
+                HDC memoryDeviceContext;
+                HBITMAP memoryDeviceContextBitmap;
+                VOID *memoryDeviceContextBitmapBits;
             } handles = {};
 
             struct { HWND handle; BYTE opacity; RECT rectangle; }
@@ -144,7 +179,7 @@
             unsigned windowInformationListLength = 0u;
         } windowBackground = {};
 
-        // : ...
+        // : ... --- NOTE (Lapys) -> Miscellaneous.
         LPVOID allocation = NULL;
         constexpr SHORT const virtualKeySize = (SHORT) (1 << (sizeof(SHORT) * 8 - 1));
 
@@ -175,22 +210,48 @@
 
             // [Create]
             case WM_CREATE: {
+                // Initialization > ... Background Memory ... Bitmap Information
+                int const maximumWindowHeight = ::GetSystemMetrics(SM_CYMAXTRACK);
+                int const maximumWindowWidth = ::GetSystemMetrics(SM_CXMAXTRACK);
+
+                BITMAPINFO windowBackgroundMemoryDeviceContextBitmapInformation = {};
+
+                // Update > ...
+                ::ZeroMemory(&windowBackgroundMemoryDeviceContextBitmapInformation, sizeof(BITMAPINFO));
+
                 // Modification > ...
                 WINDOW.handles.deviceContext = ::GetDCEx(WINDOW.handle, NULL, CS_OWNDC | DCX_NORESETATTRS);
                 WINDOW.handles.font = ::CreateFont(WINDOW.style.font.size, FW_DONTCARE, FALSE, TRUE, FALSE, 0, 0, 0, 0, 0, 0, 0, 0, WINDOW.style.font.family);
                 WINDOW.handles.memoryDeviceContext = ::CreateCompatibleDC(WINDOW.handles.deviceContext);
                 WINDOW.handles.memoryDeviceContextBitmap = ::CreateCompatibleBitmap(WINDOW.handles.deviceContext, WINDOW.style.width, WINDOW.style.height);
 
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biBitCount = 32u;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biClrUsed = 0u;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biClrImportant = 0u;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biCompression = BI_RGB;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biHeight = maximumWindowHeight;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biPlanes = 1u;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biWidth = maximumWindowWidth;
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(WINDOW.handles.deviceContext, HORZRES) / ::GetDeviceCaps(WINDOW.handles.deviceContext, HORZSIZE);
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(WINDOW.handles.deviceContext, VERTRES) / ::GetDeviceCaps(WINDOW.handles.deviceContext, VERTSIZE);
+                windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biSizeImage = windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biHeight * windowBackgroundMemoryDeviceContextBitmapInformation.bmiHeader.biWidth * 4u;
+
                 windowBackground.handles.deviceContext = ::CreateCompatibleDC(WINDOW.handles.deviceContext);
-                windowBackground.handles.deviceContextBitmap = ::CreateCompatibleBitmap(WINDOW.handles.deviceContext, ::GetSystemMetrics(SM_CXMAXTRACK), ::GetSystemMetrics(SM_CYMAXTRACK));
+                windowBackground.handles.deviceContextBitmap = ::CreateCompatibleBitmap(WINDOW.handles.deviceContext, maximumWindowWidth, maximumWindowHeight);
+
+                windowBackground.handles.memoryDeviceContext = ::CreateCompatibleDC(WINDOW.handles.deviceContext);
+                windowBackground.handles.memoryDeviceContextBitmap = ::CreateDIBSection(windowBackground.handles.memoryDeviceContext, &windowBackgroundMemoryDeviceContextBitmapInformation, DIB_RGB_COLORS, &windowBackground.handles.memoryDeviceContextBitmapBits, NULL, 0u);
+
                 if (255u ^ WINDOW.style.background.opacity) ::CopyMemory(&windowBackground.windowInformationList, &(allocation = ::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, 16u * sizeof(windowBackground.windowInformation))), sizeof(void*));
 
                 // Update > ...
-                ::SelectObject(WINDOW.handles.memoryDeviceContext, WINDOW.handles.memoryDeviceContextBitmap);
                 ::SetBkMode(WINDOW.handles.memoryDeviceContext, TRANSPARENT);
+                ::SelectObject(WINDOW.handles.memoryDeviceContext, WINDOW.handles.memoryDeviceContextBitmap);
                 ::ShowWindow(WINDOW.handle, WINDOW.appearance);
 
                 ::SelectObject(windowBackground.handles.deviceContext, windowBackground.handles.deviceContextBitmap);
+                ::SelectObject(windowBackground.handles.memoryDeviceContext, windowBackground.handles.memoryDeviceContextBitmap);
 
                 // ...
                 BUTTON.procedure(message, 0x0, 0x0);
@@ -198,15 +259,18 @@
 
             // [Destroy]
             case WM_DESTROY: {
-                // Deletion
-                ::DeleteDC(windowBackground.handles.deviceContext);
-                ::DeleteObject(windowBackground.handles.deviceContextBitmap);
-                if (NULL != windowBackground.windowInformationList) ::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, (LPVOID) windowBackground.windowInformationList);
-
+                // ... Deletion
                 ::DeleteObject(WINDOW.handles.font);
-                ::DeleteDC(WINDOW.handles.memoryDeviceContext); // NOTE (Lapys) -> The selected bitmap handle gets released here.
+                ::DeleteDC(WINDOW.handles.memoryDeviceContext);
                 ::DeleteObject(WINDOW.handles.memoryDeviceContextBitmap);
                 ::ReleaseDC(WINDOW.handle, WINDOW.handles.deviceContext);
+
+                ::DeleteDC(windowBackground.handles.deviceContext);
+                ::DeleteObject(windowBackground.handles.deviceContextBitmap);
+                ::DeleteDC(windowBackground.handles.memoryDeviceContext);
+                ::DeleteObject(windowBackground.handles.memoryDeviceContextBitmap);
+
+                if (NULL != windowBackground.windowInformationList) ::HeapFree(::GetProcessHeap(), HEAP_NO_SERIALIZE, (LPVOID) windowBackground.windowInformationList);
 
                 // Terminate; ...
                 ::PostQuitMessage(EXIT_SUCCESS);
@@ -247,85 +311,125 @@
 
             // [Paint]
             case WM_PAINT: {
-                // Constant > Window Memory Device Context Information
+                // Constant > ... Device Context Information --- NOTE (Lapys) -> Keep track of the device context state.
                 struct {
                     HGDIOBJ const fontHandle = ::SelectObject(WINDOW.handles.memoryDeviceContext, WINDOW.handles.font);
                     COLORREF const textColor = ::SetTextColor(WINDOW.handles.memoryDeviceContext, WINDOW.style.color);
                 } const windowMemoryDeviceContextInformation = {};
 
                 /* ... */ {
+                    /* [Solid Brush Background] ... */
+                    if (0u ^ WINDOW.style.background.opacity) {
+                        RECT const windowRectangle = {0L, 0L, WINDOW.style.width, WINDOW.style.height};
+
+                        ::FillRect(windowBackground.handles.deviceContext, &windowRectangle, WINDOW.classInformation.hbrBackground);
+                        ::BitBlt(WINDOW.handles.memoryDeviceContext, 0, 0, WINDOW.style.width, WINDOW.style.height, windowBackground.handles.deviceContext, 0, 0, SRCCOPY);
+                    }
+
                     /* [Transparent Background] */
-                    if (255u ^ WINDOW.style.background.opacity) {
+                    RECT hitTestRectangle = {};
+
+                    if ((255u ^ WINDOW.style.background.opacity) && ::IsWindowVisible(WINDOW.handle) && FALSE == ::IsIconic(WINDOW.handle) && NULLREGION != GetClipBox(WINDOW.handle, &hitTestRectangle)) {
+                        // Initialization > ... Window Handle
+                        HWND desktopWallpaperWindowHandle = NULL;
+                        static HWND const programManagerWindowHandle = ::FindWindowW(L"ProgMan", NULL);
+
                         // Modification > Window Background > Window Information List Length
                         windowBackground.windowInformationListLength = 0u;
 
-                        // Loop > Logic --- NOTE (Lapys) -> Iterate background windows.
-                        for (HWND windowHandle = WINDOW.handle; NULL != windowHandle; windowHandle = ::GetWindow(windowHandle, GW_HWNDNEXT))
-                        if (windowHandle == ::GetAncestor(windowHandle, GA_ROOT)) {
-                            // Logic --- NOTE (Lapys) -> Do not iterate the current `WINDOW`.
-                            if (WINDOW.handle != windowHandle) {
-                                // Initialization > Window Is Cloaked
-                                INT windowIsCloaked = FALSE;
+                        // ...; Loop --- NOTE (Lapys) -> Iterate background windows.
+                        ::SendMessageTimeout(programManagerWindowHandle, 0x052C, 0x0, 0x0, SMTO_NORMAL, 1000u, NULL); // NOTE (Lapys) -> Spawn a worker (`WorkerW`) behind the desktop icons (if not already spawned).
+                        for (HWND windowHandleIterator = WINDOW.handle; NULL != windowHandleIterator; windowHandleIterator = ::GetWindow(windowHandleIterator, GW_HWNDNEXT)) {
+                            // Initialization > Window (Handle, Opacity, Rectangle)
+                            HWND windowHandle = windowHandleIterator;
+                            BYTE windowOpacity = 255u;
+                            RECT windowRectangle = {};
 
-                                // ... Logic --- NOTE (Lapys) -> Ignore cloaked, iconic, & non-visible windows.
-                                ::DwmGetWindowAttribute(windowHandle, DWMWA_CLOAKED, &windowIsCloaked, sizeof(INT));
-                                if (FALSE == windowIsCloaked && FALSE == ::IsIconic(windowHandle) && ::IsWindowVisible(windowHandle)) {
-                                    // Initialization > Window ...
-                                    HDC const windowDeviceContextHandle = ::GetDCEx(windowHandle, NULL, CS_OWNDC | DCX_NORESETATTRS | DCX_WINDOW);
-                                    RECT windowHitTestRectangle = {};
-                                    RECT windowRectangle = {};
+                            // Logic ... --- NOTE (Lapys) -> Find the desktop wallpaper window handle.
+                            if (NULL != ::FindWindowExW(windowHandle, NULL, L"SHELLDLL_DefView", NULL))
+                            desktopWallpaperWindowHandle = ::FindWindowExW(NULL, windowHandle, L"WorkerW", NULL);
 
-                                    // ... Logic --- NOTE (Lapys) -> Ignore non-intersecting / wrapping windows (against the `WINDOW`).
-                                    ::GetWindowRect(windowHandle, &windowRectangle);
-                                    if (
-                                        ::IntersectRect(&windowHitTestRectangle, &windowRectangle, &WINDOW.rectangle) &&
-                                        NULLREGION != ::GetClipBox(windowDeviceContextHandle, &windowHitTestRectangle)
-                                    ) {
-                                        // Initialization > Window (Is Obscured, Opacity)
-                                        BOOL windowIsObscured = FALSE;
-                                        BYTE windowOpacity = 255u;
+                            // Logic --- NOTE (Lapys) -> Iterate top-level windows.
+                            if (windowHandle == ::GetAncestor(windowHandle, GA_ROOT)) {
+                                // Logic --- NOTE (Lapys) -> Do not iterate the current `WINDOW`.
+                                if (WINDOW.handle != windowHandle) {
+                                    // Initialization > Window Is Cloaked
+                                    INT windowIsCloaked = FALSE;
 
-                                        // Logic --- NOTE (Lapys) -> Assert translucent windows.
-                                        if (::GetWindowLongPtr(WINDOW.handle, GWL_EXSTYLE) & WS_EX_LAYERED) {
-                                            // Update > Window (Is Obscured, Opacity)
-                                            ::GetLayeredWindowAttributes(windowHandle, NULL, &windowOpacity, NULL);
-                                            windowIsObscured = 255u ^ windowOpacity;
+                                    // ... Logic --- NOTE (Lapys) -> Ignore cloaked, iconic, & non-visible windows.
+                                    ::DwmGetWindowAttribute(windowHandle, DWMWA_CLOAKED, &windowIsCloaked, sizeof(INT));
+                                    if (FALSE == windowIsCloaked && FALSE == ::IsIconic(windowHandle) && ::IsWindowVisible(windowHandle)) {
+                                        // Initialization > Window ...
+                                        HDC const windowDeviceContextHandle = ::GetDCEx(windowHandle, NULL, CS_OWNDC | DCX_NORESETATTRS | DCX_WINDOW);
+
+                                        // ... Logic --- NOTE (Lapys) -> Ignore non-intersecting / wrapping windows (against the `WINDOW`).
+                                        ::GetWindowRect(windowHandle, &windowRectangle);
+                                        if (
+                                            ::IntersectRect(&hitTestRectangle, &windowRectangle, &WINDOW.rectangle) &&
+                                            NULLREGION != ::GetClipBox(windowDeviceContextHandle, &hitTestRectangle)
+                                        ) {
+                                            // Initialization > Window Is Obscured
+                                            BOOL windowIsObscured = FALSE;
+
+                                            // Logic --- NOTE (Lapys) -> Assert translucent windows.
+                                            if (::GetWindowLongPtr(WINDOW.handle, GWL_EXSTYLE) & WS_EX_LAYERED) {
+                                                // Update > Window (Is Obscured, Opacity)
+                                                ::GetLayeredWindowAttributes(windowHandle, NULL, &windowOpacity, NULL);
+                                                windowIsObscured = 255u ^ windowOpacity;
+                                            }
+
+                                            // Logic --- NOTE (Lapys) -> Ignore non-intersecting / wrapping windows (against other background windows).
+                                            if (FALSE == windowIsObscured)
+                                            for (unsigned iterator = windowBackground.windowInformationListLength; iterator--; ) {
+                                                // Constant > ... Background Window Rectangle
+                                                RECT const& windowBackgroundWindowRectangle = (windowBackground.windowInformationList + iterator) -> rectangle;
+
+                                                // ... Update > Window Is Obscured
+                                                if (
+                                                    windowRectangle.bottom <= windowBackgroundWindowRectangle.bottom &&
+                                                    windowRectangle.left <= windowBackgroundWindowRectangle.left &&
+                                                    windowRectangle.right >= windowBackgroundWindowRectangle.right &&
+                                                    windowRectangle.top <= windowBackgroundWindowRectangle.top
+                                                ) { windowIsObscured = TRUE; break; }
+                                            }
+
+                                            // Logic --- NOTe (Lapys) -> Ignore obscured windows.
+                                            if (FALSE == windowIsObscured) goto AddUnderlappingWindow;
                                         }
 
-                                        // Logic --- NOTE (Lapys) -> Ignore non-intersecting / wrapping windows (against other background windows).
-                                        if (FALSE == windowIsObscured)
-                                        for (unsigned iterator = windowBackground.windowInformationListLength; iterator--; ) {
-                                            // Constant > ... Background Window Rectangle
-                                            RECT const& windowBackgroundWindowRectangle = (windowBackground.windowInformationList + iterator) -> rectangle;
-
-                                            // ... Update > Window Is Obscured
-                                            if (
-                                                windowRectangle.bottom <= windowBackgroundWindowRectangle.bottom &&
-                                                windowRectangle.left <= windowBackgroundWindowRectangle.left &&
-                                                windowRectangle.right >= windowBackgroundWindowRectangle.right &&
-                                                windowRectangle.top <= windowBackgroundWindowRectangle.top
-                                            ) { windowIsObscured = TRUE; break; }
-                                        }
-
-                                        // Logic --- NOTe (Lapys) -> Ignore obscured windows.
-                                        if (FALSE == windowIsObscured) {
-                                            // Constant > ... Size
-                                            HANDLE const processHeap = ::GetProcessHeap();
-                                            SIZE_T const windowBackgroundWindowInformationListSize = ::HeapSize(processHeap, HEAP_NO_SERIALIZE, windowBackground.windowInformationList);
-
-                                            // ... Update > (Window Background > Window Information List)
-                                            if (windowBackgroundWindowInformationListSize == windowBackground.windowInformationListLength * sizeof(windowBackground.windowInformation))
-                                            ::CopyMemory(&windowBackground.windowInformationList, &(allocation = ::HeapReAlloc(processHeap, HEAP_NO_SERIALIZE, windowBackground.windowInformationList, ((windowBackgroundWindowInformationListSize * 3u) / 2u) * sizeof(windowBackground.windowInformation))), sizeof(void*));
-
-                                            // Update > (Window Background > Window Information List ...)
-                                            windowBackground.windowInformationList[windowBackground.windowInformationListLength++] = {
-                                                windowHandle, windowOpacity, windowRectangle
-                                            };
-                                        }
+                                        // Deletion
+                                        ::ReleaseDC(windowHandle, windowDeviceContextHandle);
                                     }
+                                }
+                            }
 
-                                    // Deletion
-                                    ::ReleaseDC(windowHandle, windowDeviceContextHandle);
+                            // ...; [Add Under-lapping Window]
+                            continue;
+                            AddUnderlappingWindow: {
+                                // Constant > ... Size
+                                HANDLE const processHeap = ::GetProcessHeap();
+                                SIZE_T const windowBackgroundWindowInformationListSize = ::HeapSize(processHeap, HEAP_NO_SERIALIZE, windowBackground.windowInformationList);
+
+                                // ... Update > (Window Background > Window Information List)
+                                if (windowBackgroundWindowInformationListSize <= (windowBackground.windowInformationListLength + 1u) * sizeof(windowBackground.windowInformation))
+                                ::CopyMemory(&windowBackground.windowInformationList, &(allocation = ::HeapReAlloc(processHeap, HEAP_NO_SERIALIZE, windowBackground.windowInformationList, ((windowBackgroundWindowInformationListSize * 3u) / 2u) * sizeof(windowBackground.windowInformation))), sizeof(void*));
+
+                                // Update > (Window Background > Window Information List ...)
+                                windowBackground.windowInformationList[windowBackground.windowInformationListLength++] = {
+                                    windowHandle, windowOpacity, windowRectangle
+                                };
+
+                                // Logic --- NOTE (Lapys) -> Recognize the desktop wallpaper.
+                                if (NULL != desktopWallpaperWindowHandle) {
+                                    // Update > Window ...
+                                    windowHandle = desktopWallpaperWindowHandle;
+                                    windowOpacity = 0u; // NOTE (Lapys) -> Represent the wallpaper background.
+                                    ::GetWindowRect(desktopWallpaperWindowHandle, &windowRectangle);
+
+                                    desktopWallpaperWindowHandle = NULL;
+
+                                    // ...
+                                    goto AddUnderlappingWindow;
                                 }
                             }
                         }
@@ -336,15 +440,15 @@
                             BOOL const windowIsPopup = 0 == (::GetWindowLongPtr(WINDOW.handle, GWL_STYLE) & WS_POPUP);
 
                             HWND const& windowBackgroundWindowHandle = (windowBackground.windowInformationList + iterator) -> handle;
-                            RECT& windowBackgroundWindowRectangle = (windowBackground.windowInformationList + iterator) -> rectangle;
                             BYTE const& windowBackgroundWindowOpacity = (windowBackground.windowInformationList + iterator) -> opacity;
+                            RECT& windowBackgroundWindowRectangle = (windowBackground.windowInformationList + iterator) -> rectangle;
 
-                            // Modification > ... Background Window Rectangle
+                            // Modification > ... Background Window Rectangle --- WARN (Lapys) -> Might be a bit offset.
                             windowBackgroundWindowRectangle.bottom -= windowBackgroundWindowRectangle.top;
                             windowBackgroundWindowRectangle.right -= windowBackgroundWindowRectangle.left;
 
                             windowBackgroundWindowRectangle.left -= WINDOW.rectangle.left;
-                            windowBackgroundWindowRectangle.left -= windowIsPopup * ::GetSystemMetrics(SM_CXSIZEFRAME);
+                            windowBackgroundWindowRectangle.left -= windowIsPopup * (::GetSystemMetrics(SM_CXSIZEFRAME));
 
                             windowBackgroundWindowRectangle.top -= WINDOW.rectangle.top;
                             windowBackgroundWindowRectangle.top -= windowIsPopup * (::GetSystemMetrics(SM_CYCAPTION) + ::GetSystemMetrics(SM_CYSIZEFRAME));
@@ -355,27 +459,58 @@
                             (windowBackgroundWindowRectangle.right > WINDOW.style.width - windowBackgroundWindowRectangle.left) &&
                             (windowBackgroundWindowRectangle.right = WINDOW.style.width - windowBackgroundWindowRectangle.left);
 
-                            // ...
-                            ::PrintWindow(windowBackgroundWindowHandle, windowBackground.handles.deviceContext, PW_RENDERFULLCONTENT);
-                            255u == windowBackgroundWindowOpacity ?
-                                ::BitBlt(WINDOW.handles.memoryDeviceContext, windowBackgroundWindowRectangle.left, windowBackgroundWindowRectangle.top, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom, windowBackground.handles.deviceContext, 0, 0, SRCCOPY) :
-                                ::AlphaBlend(WINDOW.handles.memoryDeviceContext, windowBackgroundWindowRectangle.left, windowBackgroundWindowRectangle.top, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom, windowBackground.handles.deviceContext, 0, 0, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom, BLENDFUNCTION {AC_SRC_OVER, 0x0, windowBackgroundWindowOpacity, AC_SRC_ALPHA});
+                            /* ...
+                                --- NOTE (Lapys) -> Paint the background window content.
+                                --- WARN ---
+                                    #Lapys: `PrintWindow(...)` is single-threaded and relatively expensive.
+                                        `BitBlt(...)` would be a faster alternative but it doesn't work for windows with non-GDI renders.
+                            */
+                            ::PrintWindow(windowBackgroundWindowHandle, windowBackground.handles.memoryDeviceContext, PW_RENDERFULLCONTENT);
+
+                            // Logic > ...
+                            if (0u == windowBackgroundWindowOpacity || 255u == windowBackgroundWindowOpacity) {
+                                // Logic > ...
+                                if (
+                                    (0u ^ windowBackgroundWindowOpacity) &&
+                                    0u == (windowBackground.windowInformationList + (iterator + 1u)) -> opacity
+                                ) {
+                                    // Initialization > ... Background Window Memory ... Bitmap (Bits, Information, Transparency Color)
+                                    UINT32 *windowBackgroundWindowMemoryDeviceContextBitmapBits = (UINT32*) windowBackground.handles.memoryDeviceContextBitmapBits;
+                                    BITMAP windowBackgroundWindowMemoryDeviceContextBitmapInformation = {};
+                                    UINT32 const windowBackgroundWindowMemoryDeviceContextBitmapTransparencyColor = (*windowBackgroundWindowMemoryDeviceContextBitmapBits) & 0x00FFFFFF;
+
+                                    // Update > ... Background Window Memory ... Bitmap Information --- NOTE (Lapys) -> Affordable because `sizeof(DIBSECTION)` contains a `BTIMAP` structure as its first member when sliced into a `sizeof(BITMAP)`.
+                                    // : Loop
+                                    ::GetObject(windowBackground.handles.memoryDeviceContextBitmap, sizeof(BITMAP), &windowBackgroundWindowMemoryDeviceContextBitmapInformation);
+
+                                    for (int x = windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmWidth - 1; ~x; --x)
+                                    for (int y = windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmHeight - 1; ~y; --y) {
+                                        // Initialization > ... Background Window Memory ... Bitmap Color
+                                        // : ... --- NOTE (Lapys) -> 0xAARRGGBB
+                                        UINT32& windowBackgroundWindowMemoryDeviceContextBitmapColor = windowBackgroundWindowMemoryDeviceContextBitmapBits[x + (y * windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmWidth)];
+
+                                        if (
+                                            (windowBackgroundWindowMemoryDeviceContextBitmapColor & 0xFF000000) &&
+                                            windowBackgroundWindowMemoryDeviceContextBitmapTransparencyColor == (windowBackgroundWindowMemoryDeviceContextBitmapColor & 0x00FFFFFF)
+                                        ) windowBackgroundWindowMemoryDeviceContextBitmapColor = 0x00000000;
+                                    }
+
+                                    // ...
+                                    ::AlphaBlend(
+                                        windowBackground.handles.deviceContext,
+                                        windowBackgroundWindowRectangle.left, windowBackgroundWindowRectangle.top,
+                                        windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom,
+                                        windowBackground.handles.memoryDeviceContext,
+                                        0, 0, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom,
+                                        BLENDFUNCTION {AC_SRC_OVER, 0x0, 255u, AC_SRC_ALPHA}
+                                    );
+                                } else ::BitBlt(windowBackground.handles.deviceContext, windowBackgroundWindowRectangle.left, windowBackgroundWindowRectangle.top, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom, windowBackground.handles.memoryDeviceContext, 0, 0, SRCCOPY);
+                            } else ::AlphaBlend(windowBackground.handles.deviceContext, windowBackgroundWindowRectangle.left, windowBackgroundWindowRectangle.top, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom, windowBackground.handles.memoryDeviceContext, 0, 0, windowBackgroundWindowRectangle.right, windowBackgroundWindowRectangle.bottom, BLENDFUNCTION {AC_SRC_OVER, 0x0, windowBackgroundWindowOpacity, AC_SRC_ALPHA});
                         }
+
+                        // ...
+                        ::AlphaBlend(WINDOW.handles.memoryDeviceContext, 0, 0, WINDOW.style.width, WINDOW.style.height, windowBackground.handles.deviceContext, 0, 0, WINDOW.style.width, WINDOW.style.height, BLENDFUNCTION {AC_SRC_OVER, 0x0, (BYTE) (255u - WINDOW.style.background.opacity), AC_SRC_ALPHA});
                     }
-
-                    /* [Solid Brush Background] ... */
-                    RECT windowRectangle = {0L, 0L, WINDOW.style.width, WINDOW.style.height};
-
-                    ::FillRect(windowBackground.handles.deviceContext, &windowRectangle, WINDOW.classInformation.hbrBackground);
-                    ::AlphaBlend(
-                        WINDOW.handles.memoryDeviceContext,
-                        0, 0, WINDOW.style.width, WINDOW.style.height,
-
-                        windowBackground.handles.deviceContext,
-                        0, 0, WINDOW.style.width, WINDOW.style.height,
-
-                        BLENDFUNCTION {AC_SRC_OVER, 0x0, 255u, AC_SRC_ALPHA}
-                    );
 
                     /* [Button] ... */
                     if (cursorPositionEvaluated) {
@@ -384,7 +519,7 @@
                         BUTTON.procedure(message, (WPARAM) WINDOW.handles.memoryDeviceContext, (LPARAM) &cursorPosition);
                     }
 
-                    /* [Text Guides] */ if (false) {
+                    /* [Text Guides] */ {
                         // Initialization > Window Text Content ...
                         RECT windowTextContentRectangle = {10L, 10L, 100L, 10L};
                         LONG const windowTextContentVerticalPadding = 2L;
@@ -513,7 +648,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
         }
 
         WINDOW.handle = ::CreateWindowEx(
-            0x0, WINDOW.classInformation.lpszClassName, WINDOW.title, WS_OVERLAPPEDWINDOW,
+            0x0, WINDOW.classInformation.lpszClassName, WINDOW.title, WS_CAPTION | WS_OVERLAPPED | WS_SYSMENU,
             WINDOW.rectangle.left, WINDOW.rectangle.top, WINDOW.style.width, WINDOW.style.height,
             HWND_DESKTOP, (HMENU) NULL, WINDOW.classInformation.hInstance, (LPVOID) /*(LPARAM) */NULL
         );
