@@ -1,6 +1,6 @@
 /* ...
-    --- CODE (Lapys) -> C++20
-        advapi32.lib, dwmapi.lib, gdi32.lib, kernel32.lib, msimg32.lib, user32.lib
+    --- CODE (Lapys) -> C++17
+        advapi32.lib, dwmapi.lib, gdi32.lib, kernel32.lib, msimg32.lib, shell32.lib, user32.lib
 
     --- NOTE (Lapys) -> Single window; Single animated, stylized button.
     --- WARN (Lapys) -> Double-buffering not implemented.
@@ -23,6 +23,7 @@
 #   include <basetsd.h> // Basic Types Definition
 #   include <dwmapi.h> // Desktop Window Manager API
 #   include <heapapi.h> // Heap API
+#   include <shellapi.h> // Shell API
 #   include <windef.h> // Windows Definitions
 #   ifndef NOGDI // Windows GDI (Graphics Device Interface)
 #       include <wingdi.h>
@@ -104,7 +105,7 @@
     } WINDOW = {};
 
 /* Modification > ... > Procedure */
-    /* Button */
+    /* Button --- CHECKPOINT (Lapys) -> To be picked up another time. :p */
     VOID CALLBACK decltype(BUTTON)::procedure(UINT const message, WPARAM const parameter, LPARAM const subparameter) {
         // Constant > (Cursor Position, Window Device Context Handle)
         POINT const cursorPosition = 0x0 == subparameter ? POINT() : *(POINT const*) subparameter;
@@ -559,11 +560,13 @@
 
 /* Main */
 int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHandle, LPSTR const, int const appearance) {
-    // Initialization > (Exit Code, Lock Handle)
+    // Initialization > (Exit Code, Instance File Name, Lock Handle)
     int exitCode = EXIT_SUCCESS;
+    CHAR instanceFileName[MAX_PATH] = {0};
     HANDLE lockHandle = NULL;
 
-    // Update > Timestamp Frequency --- REDACT (Lapys)
+    // ...; Update > Timestamp Frequency --- REDACT (Lapys)
+    ::GetModuleFileName(NULL, instanceFileName, MAX_PATH);
     TIMESTAMP_FREQUENCY = 2000uL; {
         HKEY registryKeyHandle;
         if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0u, KEY_READ, &registryKeyHandle)) {
@@ -580,7 +583,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
     WINDOW.classInformation.cbClsExtra = 0;
     WINDOW.classInformation.cbSize = sizeof(WNDCLASSEX);
     WINDOW.classInformation.cbWndExtra = 0;
-    WINDOW.classInformation.hIcon = (HICON) NULL;
+    WINDOW.classInformation.hIcon = (HICON) ::ExtractIcon(instanceHandle, instanceFileName, 0u);
     WINDOW.classInformation.hIconSm = (HICON) NULL;
     WINDOW.classInformation.hInstance = instanceHandle; // -> ::GetModuleHandle(NULL);
     WINDOW.classInformation.hCursor = (HCURSOR) ::LoadCursor(NULL, IDC_ARROW); // -> ::LoadImage(NULL, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
