@@ -202,9 +202,18 @@ class BigUnsignedInteger : public BigNumber {
 		}
 
 		else {
-			// length_t const length = this -> getLength();
-			// digits_t const *const digitsCollectionBegin = this -> getDigitsCollection(), *digitsCollectionEnd = begin + (length / DIGITS_MAX);
-			// struct { digits_t *collection; unsigned char index; } collection = {nullptr}, iterator = {static_cast<digits_t*>(digitsCollectionEnd)};
+			length_t const length = this -> getLength();
+			digits_t const *const digitsCollectionBegin = this -> getDigitsCollection(), *digitsCollectionEnd = begin + (length / DIGITS_MAX);
+			struct { digits_t *collection; unsigned char index; } iterator = {static_cast<digits_t*>(digitsCollectionEnd)}, recent = {nullptr};
+
+			while (digitsCollectionBegin != iterator.collection--) {
+				for (iterator.index = 0u; DIGITS_MAX ^ iterator.index; ++iterator.index)
+				(*iterator.collection >> iterator.index) & 1u;
+
+
+				recent.collection = iterator.collection;
+				recent.index = iterator.index;
+			}
 		}
 	}
 	// 0b0001
