@@ -3,11 +3,12 @@
 #include <cstdio> // C Standard Input/ Output
 #include <cstdint> // C Standard Integers
 #include <cstdlib> // C Standard Library
+#include <cstring> // C String
 
 /* ... */
 #define private public
 #define protected public
-static char BINARY_FORM_STRING_BUFFER[64];
+static char BINARY_FORM_STRING_BUFFER[CHAR_BIT + 1u];
 constexpr char (&binaryof(std::uintmax_t number) noexcept)[sizeof(BINARY_FORM_STRING_BUFFER)] {
 	char *iterator = BINARY_FORM_STRING_BUFFER + (sizeof(BINARY_FORM_STRING_BUFFER) / sizeof(char));
 
@@ -32,7 +33,7 @@ class BigUnsignedInteger : public BigNumber {
 	// [...]
 	protected:
 		// ... --- NOTE (Lapys)
-		enum class ALLOCATE : unsigned char { RESIZE = 0x1 };
+		enum class ALLOCATE : unsigned char { FIXED = 0x1, RESIZE = 0x2, ZERO = 0x4 };
 		constexpr static unsigned char DIGITS_MAX = CHAR_BIT;
 		enum class ERROR : std::uintptr_t { GET_CONSTRUCTOR_NAME, REPORT_INSUFFICIENT_MEMORY_FOR_DIGITS, REPORT_INSUFFICIENT_MEMORY_FOR_STRING };
 
@@ -42,6 +43,7 @@ class BigUnsignedInteger : public BigNumber {
 		typedef std::uint64_t primitive_t;
 
 		constexpr friend unsigned char operator &(ALLOCATE const flagA, ALLOCATE const flagB) noexcept { return static_cast<unsigned char>(flagA) & static_cast<unsigned char>(flagB); }
+		constexpr friend ALLOCATE operator |(ALLOCATE const flagA, ALLOCATE const flagB) noexcept { return static_cast<ALLOCATE>(static_cast<unsigned char>(flagA) | static_cast<unsigned char>(flagB)); }
 
 		// Method > ...
 		constexpr unsigned char static lengthof(primitive_t const) noexcept;
@@ -60,7 +62,7 @@ class BigUnsignedInteger : public BigNumber {
 		void error(char const[]) const noexcept(false);
 
 		// : Memory
-		void allocate(ALLOCATE const, std::size_t const);
+		void allocate(ALLOCATE const, std::size_t);
 		void copy(primitive_t const);
 		void copy(BigUnsignedInteger const&);
 		constexpr void move(BigUnsignedInteger&) noexcept;
@@ -109,13 +111,12 @@ class BigUnsignedInteger : public BigNumber {
 	constexpr void BigUnsignedInteger::move(BigUnsignedInteger& number) noexcept { this -> value = number.value; number.value = nullptr; }
 	void BigUnsignedInteger::release(void) noexcept { std::free(this -> value); this -> value = nullptr; }
 
-	void BigUnsignedInteger::allocate(ALLOCATE const flag, std::size_t const size) {
-		if (flag & ALLOCATE::RESIZE) {
-			void *const allocation = std::realloc(this -> value, size + sizeof(length_t));
+	void BigUnsignedInteger::allocate(ALLOCATE const flag, std::size_t size) {
+		void *const allocation = std::realloc(this -> value, size = (flag & ALLOCATE::FIXED ? (3u * size) / 2u : size) + sizeof(length_t));
 
-			if (nullptr == allocation) this -> error(ERROR::REPORT_INSUFFICIENT_MEMORY_FOR_DIGITS);
-			this -> value = reinterpret_cast<byte_t*>(allocation);
-		}
+		if (nullptr == allocation) this -> error(ERROR::REPORT_INSUFFICIENT_MEMORY_FOR_DIGITS);
+		this -> value = reinterpret_cast<byte_t*>(allocation);
+		if (flag & ALLOCATE::ZERO) std::memset(this -> getDigitsCollection(), 0x0, size - sizeof(length_t));
 	}
 
 	void BigUnsignedInteger::copy(primitive_t const number) {
@@ -137,6 +138,9 @@ class BigUnsignedInteger : public BigNumber {
 			digits_t *digitsCollectionIterator = this -> getDigitsCollection(), *numberDigitsCollectionIterator = number.getDigitsCollection(); length--;
 		) digitsCollectionIterator[length] = numberDigitsCollectionIterator[length];
 	}
+
+	// Decrement
+	constexpr void BigUnsignedInteger::decrement(void) noexcept {}
 
 	// Error
 	char const* BigUnsignedInteger::error(ERROR const flag) const noexcept(false) {
@@ -196,41 +200,46 @@ class BigUnsignedInteger : public BigNumber {
 
 	// Increment
 	void BigUnsignedInteger::increment(void) {
+		// Logic
 		if (this -> isZero()) {
-			*(this -> getDigitsCollection()) |= (((1u << (8u - 1u)) - 1u) << 1u) + 1u;
+			// ...; Update > Target
+			this -> allocate(ALLOCATE::RESIZE, 1u);
+
+			*(this -> getDigitsCollection()) |= (((1u << (DIGITS_MAX - 1u)) - 1u) << 1u) + 1u; // -> this -> setDigitsCollection(1u, 0u, 1u);
 			this -> setLength(1u);
 		}
 
 		else {
-			length_t const length = this -> getLength();
-			digits_t const *const digitsCollectionBegin = this -> getDigitsCollection(), *digitsCollectionEnd = begin + (length / DIGITS_MAX);
-			struct { digits_t *collection; unsigned char index; } iterator = {static_cast<digits_t*>(digitsCollectionEnd)}, recent = {nullptr};
+			// Initialization > (Length, Digits Collection ...)
+			length_t length = this -> getLength();
+			digits_t *const digitsCollectionEnd = this -> getDigitsCollection(), *digitsCollectionIterator = digitsCollectionEnd + ((length - 1u) / DIGITS_MAX);
+			unsigned char digitsCollectionLength = length % DIGITS_MAX;
 
-			while (digitsCollectionBegin != iterator.collection--) {
-				for (iterator.index = 0u; DIGITS_MAX ^ iterator.index; ++iterator.index)
-				(*iterator.collection >> iterator.index) & 1u;
+			// ...; Loop
+			(0u == digitsCollectionLength) && (digitsCollectionLength = DIGITS_MAX);
+			do {
+				// Loop > Logic
+				for (unsigned char iterator = digitsCollectionLength; iterator; --iterator)
+				if (0u == ((*digitsCollectionIterator >> (DIGITS_MAX - iterator)) & 1u)) {
+					// ...; Terminate
+					*digitsCollectionIterator ^= *digitsCollectionIterator & ((1u << (DIGITS_MAX - iterator + 1u)) - 1u);
+					*digitsCollectionIterator |= 1u << (DIGITS_MAX - iterator);
 
+					return;
+				}
 
-				recent.collection = iterator.collection;
-				recent.index = iterator.index;
-			}
+				// Update > Digits Collection ...
+				*digitsCollectionIterator = 0u;
+				digitsCollectionLength = DIGITS_MAX;
+			} while (digitsCollectionEnd != digitsCollectionIterator--);
+
+			// ...; Update > Target
+			this -> allocate(ALLOCATE::RESIZE | ALLOCATE::ZERO, ++length);
+
+			*(this -> getDigitsCollection()) = 1u << (DIGITS_MAX - 1u); // -> this -> setDigitsCollection(1u << (DIGITS_MAX - 1u), 0u, DIGITS_MAX);
+			this -> setLength(length);
 		}
 	}
-	// 0b0001
-	// 0b0010
-	// 0b0011
-	// 0b0100
-	// 0b0101
-	// 0b0110
-	// 0b0111
-	// 0b1000
-	// 0b1001
-	// 0b1010
-	// 0b1011
-	// 0b1100
-	// 0b1101
-	// 0b1110
-	// 0b1111
 
 	// Is ...
 	constexpr bool BigUnsignedInteger::isZero(void) const noexcept { return nullptr == this -> value || 0u == this -> getLength(); }
@@ -330,19 +339,34 @@ int main(void) {
 		// ::printf("#11 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xFFF}.toString());
 		// ::printf("#12 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xFF}.toString());
 		// ::printf("#13 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xF}.toString());
+		// ::printf("#14 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xF}.toString());
+		// ::printf("#15 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xE}.toString());
+		// ::printf("#16 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xD}.toString());
+		// ::printf("#17 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xC}.toString());
+		// ::printf("#18 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xB}.toString());
+		// ::printf("#19 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0xA}.toString());
+		// ::printf("#20 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x9}.toString());
+		// ::printf("#21 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x8}.toString());
+		// ::printf("#22 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x7}.toString());
+		// ::printf("#23 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x6}.toString());
+		// ::printf("#24 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x5}.toString());
+		// ::printf("#25 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x4}.toString());
+		// ::printf("#26 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x3}.toString());
+		// ::printf("#27 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x2}.toString());
+		// ::printf("#28 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x1}.toString());
+		// ::printf("#29 [EVAL]: \"%s\"" "\r\n", BigUnsignedInteger {0x0}.toString());
 
-		// for (unsigned char iterator = 0u; iterator <= 40u; ++iterator) {
+		// for (unsigned char iterator = 0u; iterator ^ 40u; ++iterator) {
 		// 	BigUnsignedInteger number = 0xFFFFFFFFFFFFu;
 		// 	number.setDigitsCollection(0x0u, iterator, 8u);
 		// 	::printf("[EVAL (%u)]: \"%s\"" "\r\n", iterator, number.toString());
 		// }
 
-		BigUnsignedInteger number = 0u;
-		for (unsigned char iterator = 0u; iterator <= 100u; ++iterator) {
-			char string[64];
-
-			::printf("[EVAL]: \"%s\"" "\r\n", number.toString(string));
-			number.increment();
-		}
+		// BigUnsignedInteger number = 0u;
+		// for (std::size_t iterator = 0u; iterator <= ULLONG_MAX; ++iterator) {
+		// 	char string[64];
+		// 	::printf("[EVAL]: (%zu) \"%s\"" "\r\n", iterator, number.toString(string));
+		// 	number.increment();
+		// }
     ::puts("[PROGRAM TERMINATED]");
 }
