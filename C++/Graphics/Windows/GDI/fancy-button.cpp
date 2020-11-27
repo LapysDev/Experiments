@@ -484,8 +484,8 @@
                                     // : Loop
                                     ::GetObject(windowBackground.handles.memoryDeviceContextBitmap, sizeof(BITMAP), &windowBackgroundWindowMemoryDeviceContextBitmapInformation);
 
-                                    for (int x = windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmWidth - 1; ~x; --x)
-                                    for (int y = windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmHeight - 1; ~y; --y) {
+                                    for (int x = windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmWidth - 1L; ~x; --x)
+                                    for (int y = windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmHeight - 1L; ~y; --y) {
                                         // Initialization > ... Background Window Memory ... Bitmap Color
                                         // : ... --- NOTE (Lapys) -> 0xAARRGGBB
                                         UINT32& windowBackgroundWindowMemoryDeviceContextBitmapColor = windowBackgroundWindowMemoryDeviceContextBitmapBits[x + (y * windowBackgroundWindowMemoryDeviceContextBitmapInformation.bmWidth)];

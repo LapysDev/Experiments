@@ -8,7 +8,7 @@
 /* ... */
 #define private public
 #define protected public
-static char BINARY_FORM_STRING_BUFFER[CHAR_BIT + 1u];
+static char BINARY_FORM_STRING_BUFFER[(CHAR_BIT * 2u) + 1u];
 constexpr char (&binaryof(std::uintmax_t number) noexcept)[sizeof(BINARY_FORM_STRING_BUFFER)] {
 	char *iterator = BINARY_FORM_STRING_BUFFER + (sizeof(BINARY_FORM_STRING_BUFFER) / sizeof(char));
 
@@ -86,7 +86,7 @@ class BigUnsignedInteger : public BigNumber {
 		~BigUnsignedInteger(void) noexcept;
 
 		// Method > ...
-		constexpr void decrement(void) noexcept;
+		void decrement(void) noexcept;
 		void increment(void);
 
 		constexpr bool isZero(void) const noexcept;
@@ -139,8 +139,60 @@ class BigUnsignedInteger : public BigNumber {
 		) digitsCollectionIterator[length] = numberDigitsCollectionIterator[length];
 	}
 
-	// Decrement
-	constexpr void BigUnsignedInteger::decrement(void) noexcept {}
+	// Decrement --- CHECKPOINT (Lapys)
+	void BigUnsignedInteger::decrement(void) noexcept {
+		if (false == this -> isZero()) {
+			length_t length = this -> getLength();
+			digits_t *const digitsCollectionEnd = this -> getDigitsCollection(), *digitsCollectionIterator = digitsCollectionEnd + ((length - 1u) / DIGITS_MAX);
+			unsigned char digitsCollectionLength = length % DIGITS_MAX;
+
+			(0u == digitsCollectionLength) && (digitsCollectionLength = DIGITS_MAX);
+			do {
+				for (unsigned char iterator = digitsCollectionLength; iterator; --iterator)
+				if (1u == ((*digitsCollectionIterator >> (DIGITS_MAX - iterator)) & 1u)) {
+					::printf("[...]: {%s} (%u of %zi)" "\r\n", binaryof(*digitsCollectionIterator), iterator, digitsCollectionIterator - digitsCollectionEnd);
+					*digitsCollectionIterator = (1u << (DIGITS_MAX - iterator)) - 1u;
+					::printf("[...]: {%s} EQU" "\r\n", binaryof(*digitsCollectionIterator));
+					::printf("%*c{%s}" "\r\n", 7, ' ', binaryof((1u << (DIGITS_MAX - iterator)) - 1u));
+
+					if (1u == iterator) {
+						*digitsCollectionIterator |= (((1u << (DIGITS_MAX - iterator)) - 1u) << 1u) + 1u;
+						this -> setLength(this -> getLength() - 1u);
+
+						::printf("[...]: {%s} LESS" "\r\n", binaryof(*digitsCollectionIterator));
+					}
+
+					else if (DIGITS_MAX ^ iterator) {
+						// *digitsCollectionIterator |= ((1u << (DIGITS_MAX - iterator)) - 1u) << 1u;
+						// ::printf("[...]: {%s} OR" "\r\n", binaryof(*digitsCollectionIterator));
+						// ::printf("%*c{%s}" "\r\n", 7, ' ', binaryof(((1u << (DIGITS_MAX - iterator)) - 1u) << 1u));
+					}
+
+					return;
+				}
+
+				*digitsCollectionIterator = (((1u << (DIGITS_MAX - 1u)) - 1u) << 1u) + 1u;
+				digitsCollectionLength = DIGITS_MAX;
+			} while (digitsCollectionEnd != digitsCollectionIterator--);
+		}
+	}
+
+	// 0b1111
+	// 0b1110
+	// 0b1101
+	// 0b1100
+	// 0b1011
+	// 0b1010
+	// 0b1001
+	// 0b1000
+	// 0b0111
+	// 0b0110
+	// 0b0101
+	// 0b0100
+	// 0b0011
+	// 0b0010
+	// 0b0001
+	// 0b0000
 
 	// Error
 	char const* BigUnsignedInteger::error(ERROR const flag) const noexcept(false) {
@@ -205,7 +257,7 @@ class BigUnsignedInteger : public BigNumber {
 			// ...; Update > Target
 			this -> allocate(ALLOCATE::RESIZE, 1u);
 
-			*(this -> getDigitsCollection()) |= (((1u << (DIGITS_MAX - 1u)) - 1u) << 1u) + 1u; // -> this -> setDigitsCollection(1u, 0u, 1u);
+			*(this -> getDigitsCollection()) |= 1u << (DIGITS_MAX - 1u); // -> this -> setDigitsCollection(1u, 0u, 1u);
 			this -> setLength(1u);
 		}
 
@@ -363,10 +415,17 @@ int main(void) {
 		// }
 
 		// BigUnsignedInteger number = 0u;
-		// for (std::size_t iterator = 0u; iterator <= ULLONG_MAX; ++iterator) {
+		// for (unsigned long iterator = 0u; iterator <= ULONG_MAX; ++iterator) {
 		// 	char string[64];
-		// 	::printf("[EVAL]: (%zu) \"%s\"" "\r\n", iterator, number.toString(string));
+		// 	::printf("[EVAL]: (%lu) \"%s\"" "\r\n", iterator, number.toString(string));
 		// 	number.increment();
 		// }
+
+		BigUnsignedInteger number = 65536u;
+		for (signed long iterator = 65536L; ~iterator; --iterator) {
+			char string[64];
+			::printf("[EVAL]: (%li) \"%s\"" "\r\n", iterator, number.toString(string));
+			number.decrement();
+		}
     ::puts("[PROGRAM TERMINATED]");
 }
