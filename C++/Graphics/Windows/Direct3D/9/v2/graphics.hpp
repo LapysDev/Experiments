@@ -1,8 +1,23 @@
-#include <cstddef>
-#include <type_traits>
-#include <utility>
+/* Import */
+// : C++ Standard Library
+#include <cstddef> // C Standard Definition
+#include <cstdlib> // C Standard Library
+#include <type_traits> // Type Traits
+#include <utility> // Utility
 
-/* Namespace > Standard Library --- WARN (Lapys) -> Extending the standard library is undefined. */
+// : Windows
+#include <windef.h> // Windows Definitions
+#include <winuser.h> // Windows User
+
+/* Definition > ... */
+#define __MAIN__ int main(int const, char const* const[])
+#define __WINDOWS__MAIN__ int WinMain(HINSTANCE const, HINSTANCE const, LPSTR const, int const)
+#define __WINDOWS_DLL__MAIN__ BOOL WINAPI DllMain(HINSTANCE const, DWORD const, LPVOID const)
+
+/* Namespace > Standard Library
+    --- WARN (Lapys) -> Extending the standard library is undefined.
+        - The following code uses a tab width of 2.
+*/
 namespace std {
   template <typename> struct alias_t;
   template <typename> struct base_of_t;
@@ -304,4 +319,105 @@ namespace std {
   template <class object_t, typename return_t, typename... types> struct is_noexcept<return_t (object_t::*)(types..., ...) const&&> final : public std::false_type {};
   template <class object_t, typename return_t, typename... types> struct is_noexcept<return_t (object_t::*)(types..., ...) const volatile&&> final : public std::false_type {};
   template <class object_t, typename return_t, typename... types> struct is_noexcept<return_t (object_t::*)(types..., ...) volatile&&> final : public std::false_type {};
+}
+
+/* Class > Application */
+class Application final {
+    /* ... */
+    friend __MAIN__;
+    friend __WINDOWS__MAIN__;
+    friend __WINDOWS_DLL__MAIN__;
+
+    // [...]
+    public:
+        /* Class > ... */
+        class Error;
+        class Window;
+
+    // [...]
+    private:
+        /* Definition > ... */
+        static Window const PRIMARY_WINDOW;
+        int exitCode;
+
+    // [...]
+    public:
+        /* Definition > ... */
+        std::immutable_accessor<Application, Window const*> primaryWindow;
+        char const *&title;
+
+        /* [Constructor] */
+        constexpr Application(void) noexcept;
+
+        /* Method > ... */
+        void Initiate (void); bool Initiate (int...);
+        void Reset    (void); void Reset    (int...);
+        void Update   (void); bool Update   (int...);
+        void Terminate(void); void Terminate(int...);
+};
+    /* Error */
+    class Application::Error final { public:
+        enum class Result : signed char { FAILED = -1, UNIMPLEMENTED = -2, NONE = 0x0, FALSIFIED = 1, FORCED = 0x7FFFFFFF };
+
+        std::immutable_accessor<Error, char const*> const message;
+        constexpr Error(char const message[]) noexcept : message{message} {}
+    };
+
+    /* Window */
+    class Application::Window final {
+        friend Application;
+
+        private: static inline PROCEDURE(HWND const, UINT const, WPARAM const, LPARAM const);
+        public:
+            std::immutable_accessor<Window, HWND> handle;
+            std::immutable_accessor<Window, LONG> height;
+            std::immutable_accessor<Window, bool> isFocused;
+            std::immutable_accessor<Window, char const*> title;
+            std::immutable_accessor<Window, LONG> width;
+
+            constexpr Window(SIZE const size, char const title[]) noexcept : handle{NULL}, height{size.cy}, isFocused{false}, title{title}, width{size.cx} {}
+            inline ~Window(void) {}
+    };
+
+/* Definition > ... */
+typedef Application::Error Error;
+typedef Application::Window Window;
+
+/* Modification > Application */
+    // Primary Window
+    Window const Application::PRIMARY_WINDOW = Window {};
+
+    // [Constructor]
+    constexpr Application::Application(void) noexcept : exitCode{EXIT_SUCCESS}, primaryWindow{&Application::PRIMARY_WINDOW}, title{Application::PRIMARY_WINDOW.title} {}
+
+    // Phase
+    // : Initiate
+    void Application::Initiate(void) {
+        // Logic
+        if (Application::Initiate(EXIT_SUCCESS)) {
+        }
+    }
+
+    // : Reset
+    void Application::Reset(void) {}
+
+    // : Update
+    void Application::Update(void) {}
+
+    // : Terminate
+    void Application::Terminate(void) {
+        Application::Terminate(EXIT_SUCCESS);
+    }
+
+/* Global > ... */
+Application APPLICATION = Application {};
+
+/* Main */
+__MAIN__ {
+    /* ... */
+    Application::Initiate();
+    Application::Terminate();
+
+    // Return
+    return EXIT_SUCCESS;
 }
