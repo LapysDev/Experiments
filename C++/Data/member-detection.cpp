@@ -9,19 +9,19 @@
 namespace {
   template <typename> struct dummy {};
   enum void_t {}; template <std::size_t> struct to_void_t { typedef void_t type; };
-
-  template <class, typename = void_t>
-  struct disambiguate final
-  { public: static bool const value = false; };
-
-  template <class object>
-  struct disambiguate<dummy<object>, typename to_void_t<sizeof(object::member)>::type> final
-  { public: static bool const value = true; };
 }
 
 template <class object>
 struct has_member {
   private:
+    template <class, typename = void_t>
+    struct disambiguate final
+    { public: static bool const value = false; };
+
+    template <class subobject>
+    struct disambiguate<dummy<subobject>, typename to_void_t<sizeof(subobject::member)>::type> final
+    { public: static bool const value = true; };
+
     // Summon nasal demons, here..
     struct member_object { public: int member; };
     class subobject : public object, public member_object {};
