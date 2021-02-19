@@ -1,37 +1,30 @@
-/* C++ Detection Idiom.
-     - Inspired by Yakk's `can_apply` implementation (https://stackoverflow.com/a/29521342/2069064)
-     - Reference http://open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4502.pdf
-*/
-#include <cstddef>
 #include <iostream>
+#include <type_traits>  //std::true_type / std::false_type
 
-/* ... */
-namespace {
-  template <typename> struct dummy {};
-  enum void_t {}; template <std::size_t> struct to_void_t { typedef void_t type; };
-}
+#define CREATE_HAS_METHOD_NAME(name, method)                                                    \
+namespace                                                                                       \
+{                                                                                               \
+    template<size_t...>                                                                         \
+    using void_t = void;                                                                        \
+                                                                                                \
+    struct X##name {bool method(); };                                                           \
+                                                                                                \
+    template <class Object>                                                                     \
+    struct Xor##name : public Object, public X##name {};                                        \
+                                                                                                \
+    template<class, class = void_t<>>                                                           \
+    struct has_##name : std::true_type {};                                                      \
+                                                                                                \
+    template<class Object>                                                                      \
+    struct has_##name<Object, void_t<sizeof(&Xor##name<Object>::method)>> : std::false_type {}; \
+}                                                                                               \
 
-template <class object>
-struct has_member {
-  private:
-    template <class, typename = void_t>
-    struct disambiguate final
-    { public: static bool const value = false; };
+//first parameter is name and usage is has_##name
+//second parameter is method for example operator+
 
-    template <class subobject>
-    struct disambiguate<dummy<subobject>, typename to_void_t<sizeof(subobject::member)>::type> final
-    { public: static bool const value = true; };
+CREATE_HAS_METHOD_NAME(member, member);
+CREATE_HAS_METHOD_NAME(plus, operator+);
 
-    // Summon nasal demons, here..
-    struct member_object { public: int member; };
-    class subobject : public object, public member_object {};
-
-  public:
-    // If the `object` type uses the `final` base clause/ is a `union`,
-    // then defer to the `disambiguate<dummy<object>>::value`, instead
-    // [*] Note that the fallback doesn't work for `private`/ `protected` members..
-    static bool const value = false == disambiguate<dummy<subobject>>::value;
-};
 
 // Tests
 class A { public: int member; };
@@ -48,20 +41,40 @@ class K { private: template <typename> class member {}; };
 class L { private: enum member {}; };
 class M {};
 
-int main(void) {
-  std::boolalpha(std::cout);
+class N { public: void operator +(void); };
+class O { public: void operator +(A const&); };
+class P { protected: void operator +(A const&); };
+class Q { private: void operator +(A const&); };
+//class R { private: template<class...> void operator +(X const&); };
+class S { private: int& operator +(void); void operator +(A const&); };
+class T { private: friend void operator +(G const&); };
+class U {};
 
-  std::cout << has_member<A>::value << std::endl;
-  std::cout << has_member<B>::value << std::endl;
-  std::cout << has_member<C>::value << std::endl;
-  std::cout << has_member<D>::value << std::endl;
-  std::cout << has_member<E>::value << std::endl;
-  std::cout << has_member<F>::value << std::endl;
-  std::cout << has_member<G>::value << std::endl;
-  std::cout << has_member<H>::value << std::endl;
-  std::cout << has_member<I>::value << std::endl;
-  std::cout << has_member<J>::value << std::endl;
-  std::cout << has_member<K>::value << std::endl;
-  std::cout << has_member<L>::value << std::endl;
-  std::cout << has_member<M>::value << std::endl;
+int main()
+{
+    std::cout << std::boolalpha;
+    std::cout << "member:\n";
+    std::cout << has_member<A>::value << '\n';
+    std::cout << has_member<B>::value << '\n';
+    std::cout << has_member<C>::value << '\n';
+    std::cout << has_member<D>::value << '\n';
+    std::cout << has_member<E>::value << '\n';
+    std::cout << has_member<F>::value << '\n';
+    std::cout << has_member<G>::value << '\n';
+    std::cout << has_member<H>::value << '\n';
+    std::cout << has_member<I>::value << '\n';
+    std::cout << has_member<J>::value << '\n';
+    std::cout << has_member<K>::value << '\n';
+    std::cout << has_member<L>::value << '\n';
+    std::cout << has_member<M>::value << '\n';
+
+    std::cout << "operator+:\n";
+    std::cout << has_plus<N>::value << '\n';
+    std::cout << has_plus<O>::value << '\n';
+    std::cout << has_plus<P>::value << '\n';
+    std::cout << has_plus<Q>::value << '\n';
+    //std::cout << has_member<R>::value << '\n';
+    std::cout << has_plus<S>::value << '\n';
+    std::cout << has_plus<T>::value << '\n';
+    std::cout << has_plus<U>::value << '\n';
 }

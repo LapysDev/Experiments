@@ -3,7 +3,10 @@
         advapi32.lib, dwmapi.lib, gdi32.lib, kernel32.lib, msimg32.lib, shell32.lib, user32.lib
 
     --- NOTE (Lapys) -> Single window; Single animated, stylized button.
-    --- WARN (Lapys) -> Double-buffering not implemented.
+    --- WARN (Lapys) ->
+        - Double-buffering not implemented.
+        - Does not work with Windows Task Manager.
+        - Does not accurately simulate Windows Desktop Background i.e. Program Manager
 */
 
 /* Definitions > ... */
@@ -122,9 +125,12 @@
                 // Initialization > ... Device Context Information --- NOTE (Lapys) -> Keep track of the device context state.
                 RECT buttonTextContentRectangle = {};
                 struct {
-                    HGDIOBJ const fontHandle = ::SelectObject(windowDeviceContextHandle, BUTTON.handles.font);
-                    COLORREF const textColor = ::SetTextColor(windowDeviceContextHandle, BUTTON.style.color);
-                } const windowDeviceContextInformation = {};
+                    HGDIOBJ fontHandle;
+                    COLORREF textColor;
+                } const windowDeviceContextInformation = {
+                    ::SelectObject(windowDeviceContextHandle, BUTTON.handles.font), /* HGDIOBJ fontHandle */
+                    ::SetTextColor(windowDeviceContextHandle, BUTTON.style.color) /* COLORREF textColor */
+                };
 
                 ::GetTextExtentPoint32A(windowDeviceContextHandle, BUTTON.textContent, ::strlen(BUTTON.textContent), (LPSIZE) &buttonTextContentRectangle);
 
