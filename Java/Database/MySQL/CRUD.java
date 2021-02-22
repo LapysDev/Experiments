@@ -12,6 +12,8 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.Toolkit;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 
@@ -153,6 +155,8 @@ public class CRUD {
 
       final int WINDOW_HEIGHT = (int) (SCREEN_HEIGHT * (75.0 / 100.0));
       final int WINDOW_WIDTH = (int) (SCREEN_WIDTH * (75.0 / 100.0));
+
+      final Color WINDOW_BACKGROUND_COLOR = new Color(255, 255, 255);
         // : [Carousel]
         final JPanel CAROUSEL = new JPanel();
         final GroupLayout CAROUSEL_LAYOUT = new GroupLayout(CAROUSEL);
@@ -188,14 +192,6 @@ public class CRUD {
         // : [Title]
         final JLabel TITLE = new JLabel(APPLICATION_NAME);
 
-        // ((Runnable) () -> {
-        //   new Timer().schedule(new TimerTask() {
-        //     public void run() {
-        //       TITLE.setText(TITLE.getText() + "*");
-        //     }
-        //   }, 3000L);
-        // }).run();
-
       // Insertion -> Structure UI components.
       WINDOW.add(LOGO_PANEL);
         LOGO_PANEL.add(LOGO);
@@ -211,6 +207,9 @@ public class CRUD {
 
       WINDOW.add(SOCIAL_PANEL);
         SOCIAL_PANEL.add(FACEBOOK_BUTTON);
+
+      WINDOW.add(FOOTER);
+        FOOTER.add(FOOTNOTE);
 
       // ... -> Order UI components.
       CAROUSEL.setLayout(CAROUSEL_LAYOUT); {
@@ -270,6 +269,7 @@ public class CRUD {
             .addComponent(CAROUSEL)
             .addComponent(REGISTRATION_PANEL)
             .addComponent(SOCIAL_PANEL)
+            .addComponent(FOOTER)
         ));
         WINDOW_LAYOUT.setVerticalGroup(WINDOW_LAYOUT
           .createSequentialGroup()
@@ -278,14 +278,27 @@ public class CRUD {
             .addGroup(WINDOW_LAYOUT.createSequentialGroup().addComponent(CAROUSEL))
             .addGroup(WINDOW_LAYOUT.createSequentialGroup().addComponent(REGISTRATION_PANEL))
             .addGroup(WINDOW_LAYOUT.createSequentialGroup().addComponent(SOCIAL_PANEL))
+            .addGroup(WINDOW_LAYOUT.createSequentialGroup().addComponent(FOOTER))
         );
       }
 
-      // Update > Window
+      // Update > ... -> Style UI components.
+      WINDOW.getContentPane().setBackground(WINDOW_BACKGROUND_COLOR);
       WINDOW.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-      WINDOW.setIconImage(new ImageIcon("images/icons/covenant.png").getImage()); // WARN (Lapys) -> Does not accept Windows `.ico` files.
+      WINDOW.setIconImage(new ImageIcon(APPLICATION_ICON_PATH).getImage()); // WARN (Lapys) -> Does not accept Windows `.ico` files.
       WINDOW.setLocation((int) ((SCREEN_WIDTH - WINDOW_WIDTH) / 2.0), (int) ((SCREEN_HEIGHT - WINDOW_HEIGHT) / 2.0));
       WINDOW.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+      WINDOW.setTitle(APPLICATION_NAME);
+
+      // Event
+        // (Login, Sign Up) Button
+        LOGIN_BUTTON.addActionListener(new ActionListener() {
+          @Override public void actionPerformed(final ActionEvent event) {}
+        });
+
+        SIGNUP_BUTTON.addActionListener(new ActionListener() {
+          @Override public void actionPerformed(final ActionEvent event) {}
+        });
 
       // Event
         // ...
