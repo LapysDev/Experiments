@@ -250,7 +250,8 @@
                 windowBackground.handles.memoryDeviceContext = ::CreateCompatibleDC(WINDOW.handles.deviceContext);
                 windowBackground.handles.memoryDeviceContextBitmap = ::CreateDIBSection(windowBackground.handles.memoryDeviceContext, &windowBackgroundMemoryDeviceContextBitmapInformation, DIB_RGB_COLORS, &windowBackground.handles.memoryDeviceContextBitmapBits, NULL, 0u);
 
-                if (255u ^ WINDOW.style.background.opacity) ::CopyMemory(&windowBackground.windowInformationList, &(allocation = ::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, 16u * sizeof(windowBackground.windowInformation))), sizeof(void*));
+                if (255u ^ WINDOW.style.background.opacity)
+                ::CopyMemory(&windowBackground.windowInformationList, &(allocation = ::HeapAlloc(::GetProcessHeap(), HEAP_NO_SERIALIZE, 16u * sizeof(windowBackground.windowInformation))), sizeof(void*));
 
                 // Update > ...
                 ::SetBkMode(WINDOW.handles.memoryDeviceContext, TRANSPARENT);
