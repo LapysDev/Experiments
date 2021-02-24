@@ -23,9 +23,9 @@
 static void Draw(void);
 
 /* Definition > ... */
-inline void drawArc(...);
+inline void drawArc(unsigned short const, unsigned short const, float const);
 inline void drawLine(unsigned short const, unsigned short const, unsigned short const, unsigned short const);
-inline void drawSpline(unsigned char const, ...);
+inline void drawSpline(...);
 
 inline int getPixel(unsigned short const, unsigned short const);
 inline void putPixel(unsigned short const, unsigned short const);
@@ -113,6 +113,9 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
 }
 
 /* Function --- NOTE (Lapys) */
+    // Draw Arc
+    // void drawArc(unsigned short const x, unsigned short const y, float const angle) {}
+
     // Draw Line
     void drawLine(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget) {
         // Initialization > (X ..., Y ...)
@@ -134,17 +137,15 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
             xRatioIterator += xRatio;
             yRatioIterator += yRatio;
 
-            putPixel(x, y);
-
             if (x == xTarget && y == yTarget) break;
             else {
+                putPixel(x, y);
+
                 if (xRatioIterator >= 1.0f) { xOrigin > xTarget ? --x : ++x; --xRatioIterator; }
                 if (yRatioIterator >= 1.0f) { yOrigin > yTarget ? --y : ++y; --yRatioIterator; }
             }
         }
     }
-
-    void drawSpline(unsigned char const /* ... */, ...) {}
 
     // Get Pixel (Color) -> Whitish tone between ~50% - 100% intensity. (based on `x` & `y` coordinates)
     // Put Pixel -> (0 >= x <= windowMemoryDeviceContextBitmap.bmWidth) && (0 >= y <= windowMemoryDeviceContextBitmap.bmHeight)

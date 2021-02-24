@@ -24,6 +24,14 @@ import java.awt.image.BufferedImage;
 // : Java > Input/ Output
 import java.io.File;
 
+// : Java > Structured Query Language (SQL)
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 // : Java > Utilities
 import java.util.Timer;
 import java.util.TimerTask;
@@ -140,7 +148,14 @@ public class CRUD {
     final private static String APPLICATION_NAME = "CRUD Application";
 
     final private static String APPLICATION_ROOT_PATH = "";
-    final private static String APPLICATION_ICON_PATH = APPLICATION_ROOT_PATH + "images/icons/covenant.png";
+    final private static String APPLICATION_ICON_PATH = APPLICATION_ROOT_PATH + "images/icons/";
+
+    // Database ...
+    final private static String DATABASE_PASSWORD = "Lapys30*)";
+    final private static String DATABASE_USER = "LapysDev";
+    final private static Connection DATABASE_CONNECTION = try {
+      DriverManager.getConnection("jdbc:mysql://localhost/?user=" + DATABASE_USER + "&password=" + DATABASE_PASSWORD);
+    } catch (final Exception error) {}
 
     // Screen ...
     final private static Dimension SCREEN_SIZE = Toolkit.getDefaultToolkit().getScreenSize();
@@ -148,7 +163,7 @@ public class CRUD {
     final private static int SCREEN_WIDTH = SCREEN_SIZE.width;
 
   /* Main --- NOTE (Lapys) */
-  public static void main(final String[] arguments) throws Exception {
+  public static void main(final String[] arguments) {
       /* Constant > ... */
       final JFrame WINDOW = new JFrame(APPLICATION_NAME);
       final GroupLayout WINDOW_LAYOUT = new GroupLayout(WINDOW.getContentPane());
@@ -169,7 +184,7 @@ public class CRUD {
         final JLabel FOOTNOTE = new JLabel("Copyright @ Lapys, 2020");
 
         // : [Logo]
-        final JImage LOGO = new JImage(APPLICATION_ICON_PATH);
+        final JImage LOGO = new JImage(APPLICATION_ICON_PATH + "covenant.png");
         final JPanel LOGO_PANEL = new JPanel();
         final GroupLayout LOGO_PANEL_LAYOUT = new GroupLayout(LOGO_PANEL);
 
@@ -181,10 +196,10 @@ public class CRUD {
         final GroupLayout REGISTRATION_PANEL_LAYOUT = new GroupLayout(REGISTRATION_PANEL);
 
         // : [Social]
-        final JButton FACEBOOK_BUTTON = new JRoundedButton(new ImageIcon("images/icons/facebook.png"));
-        final JButton LINKEDIN_BUTTON = new JRoundedButton(new ImageIcon("images/icons/linkedin.png"));
-        final JButton TWITTER_BUTTON = new JRoundedButton(new ImageIcon("images/icons/twitter.png"));
-        final JButton YOUTUBE_BUTTON = new JRoundedButton(new ImageIcon("images/icons/youtube.png"));
+        final JButton FACEBOOK_BUTTON = new JRoundedButton(new ImageIcon(APPLICATION_ICON_PATH + "facebook.png"));
+        final JButton LINKEDIN_BUTTON = new JRoundedButton(new ImageIcon(APPLICATION_ICON_PATH + "linkedin.png"));
+        final JButton TWITTER_BUTTON = new JRoundedButton(new ImageIcon(APPLICATION_ICON_PATH + "twitter.png"));
+        final JButton YOUTUBE_BUTTON = new JRoundedButton(new ImageIcon(APPLICATION_ICON_PATH + "youtube.png"));
 
         final JPanel SOCIAL_PANEL = new JPanel();
         final GroupLayout SOCIAL_PANEL_LAYOUT = new GroupLayout(SOCIAL_PANEL);
@@ -293,11 +308,17 @@ public class CRUD {
       // Event
         // (Login, Sign Up) Button
         LOGIN_BUTTON.addActionListener(new ActionListener() {
-          @Override public void actionPerformed(final ActionEvent event) {}
+          @Override
+          public void actionPerformed(final ActionEvent event) {
+            /* LOGIN PAGE */
+          }
         });
 
         SIGNUP_BUTTON.addActionListener(new ActionListener() {
-          @Override public void actionPerformed(final ActionEvent event) {}
+          @Override
+          public void actionPerformed(final ActionEvent event) {
+            /* SIGNUP PAGE */
+          }
         });
 
       // Event
