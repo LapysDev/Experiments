@@ -1,0 +1,181 @@
+/* CSS At-Rules > ... */
+@font-face { font-family: "Open Sans"; src: url("../fonts/open-sans.ttf") }
+
+box-shadow: 0 0 0 4000px #FFFFFF;
+/* DOM Elements > ... */
+* { box-sizing: content-box }
+[hidden], [hidden] * { display: none !important }
+a { color: inherit; cursor: pointer; text-decoration: none }
+body { font-family: "Open Sans", sans-serif; margin: 0 }
+body, html { height: 100%; width: 100% }
+button, input, textarea { cursor: pointer; padding: 0 }
+dl, li, ol, ul { margin-left: 0 }
+h1, h2, h3, h4, h5, h6 { margin-bottom: 0; margin-top: 0 }
+input[type=email], input[type=password], input[type=text] { cursor: text }
+link, meta, script, style, title { display: none }
+video { object-fit: contain }
+
+/* Features */
+    /* Aside */
+    #aside { height: 0; width: 0 }
+
+    /* Footer, Header, Main */
+    #footer, #header, #main {
+        font-family: "Open Sans", sans-serif;
+        font-size: 14px;
+        line-height: 1;
+        width: 100%
+    }
+
+    /* Loader */
+    #loader {
+        background-color: #FFFFFF;
+        box-shadow: 0 0 0 4000px #FFFFFF;
+        height: 100%;
+        left: 0;
+        opacity: 1;
+        position: absolute;
+        top: 0;
+        transition: 300ms linear 0s all;
+        width: 100%;
+        z-index: 65536
+    }
+        /* [All] */
+        #loader * {
+            animation: spin 500ms linear 0s infinite;
+            border: 7.5px solid #333333;
+            border-radius: 50%;
+            border-right-color: #0099FF;
+            bottom: 0;
+            height: 30px;
+            left: 0;
+            margin: auto;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 30px
+        }
+            /* [CSS At-Rules] */
+            @keyframes spin {
+                from { transform: rotateZ(000deg) }
+                to { transform: rotateZ(360deg) }
+            }
+
+    /* Main */
+    #main {
+        font-weight: 300;
+        padding-top: 60px
+    }
+
+    /* Navigation */
+    #navigation {
+        background-color: #FFFFFF;
+        border-bottom: 3px solid #7F007F;
+        box-shadow: 0 2px 3px 0 rgba(0, 0, 0, .3);
+        color: #7F007F;
+        display: table;
+        font-size: 100%;
+        font-weight: 300;
+        height: 60px;
+        left: 0;
+        position: absolute;
+        table-layout: fixed;
+        text-align: center;
+        top: 0;
+        width: 100%
+    }
+        /* Link */
+        #navigation .link {
+            border-left: 1px solid #FAFAFA;
+            box-shadow: inset 0 0 0 0 rgba(127, 0, 127, 0);
+            box-sizing: border-box;
+            display: table-cell;
+            font-size: 105%;
+            transition: 90ms ease-in 0s all, 50ms ease-in 50ms color;
+            vertical-align: middle
+        }
+
+        #navigation [role=home] + .link { border-left-color: #CCCCCC }
+
+        #navigation [role=home]:focus + .link,
+        #navigation [role=home]:hover + .link { border-left-color: #CCCCCC !important }
+            /* [Pseudo] */
+            #navigation .link:before {
+                content: '/';
+                float: left;
+                font-family: cursive;
+                font-size: 200%;
+                font-weight: 600;
+                line-height: 50%;
+                opacity: 1;
+                transform: translateX(-50%);
+                transition: 90ms ease-in 200ms all, 0s linear 0s color
+            }
+
+            /* [State] */
+            #navigation .link:hover,
+            #navigation .link:hover + .link { border-left-color: transparent }
+
+            #navigation .link:focus,
+            #navigation .link:hover {
+                background-color: #7F007F;
+                box-shadow: inset 0 -60px 0 0 rgba(127, 0, 127, 1);
+                color: #FFFFFF;
+                outline: none
+            }
+                /* [Pseudo] */
+                #navigation .link:focus:before, #navigation .link:focus + .link:before,
+                #navigation .link:hover:before, #navigation .link:hover + .link:before {
+                    opacity: 0;
+                    transition-delay: 0s
+                }
+
+        /* Home */
+        #navigation [role=home] { width: 26.75% }
+            /* [State] */
+            #navigation [role=home]:focus { border-left-color: #7F007F }
+
+        /* Home, Registrar */
+        #navigation [role=home],
+        #navigation [role=registrar] {
+            min-width: 20%;
+            overflow: hidden
+        }
+            /* [Pseudo] */
+            #navigation [role=home]:before,
+            #navigation [role=home] + .link:before,
+            #navigation [role=registrar]:before { display: none }
+
+            /* [State] */
+            #navigation [role=home]:focus, #navigation [role=home]:hover,
+            #navigation [role=registrar]:focus, #navigation [role=registrar]:hover {
+                background-color: inherit;
+                box-shadow: none;
+                outline: none
+            }
+
+        /* Registrar */
+            /* <a> */
+            #navigation [role=registrar] a {
+                background-color: #7F007F;
+                border: 1px solid rgba(255, 255, 255, 0);
+                border-radius: 32.5px;
+                bottom: 0;
+                box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0), inset 0 0 0 0 rgba(0, 0, 0, 0);
+                color: #FFFFFF;
+                height: 32.5px;
+                margin: auto;
+                overflow: hidden;
+                padding: 3.3% 10%;
+                position: relative;
+                transition: 100ms linear 0s all, 300ms linear 0s box-shadow;
+                word-break: keep-all
+            }
+                /* [State] */
+                #navigation [role=registrar] a:focus,
+                #navigation [role=registrar] a:hover {
+                    border-color: rgba(255, 255, 255, .65);
+                    bottom: 2px;
+                    box-shadow: 0 2px 3px 0 rgba(0, 0, 0, .33), inset 0 0 0 16.5px rgba(0, 0, 0, .1);
+                    outline: none
+                }
