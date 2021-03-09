@@ -232,6 +232,66 @@ void function Main(DOCUMENT, GLOBAL) {
     function InitiateBeforeDOMLoad() {
         // Constant > ...
             // : [Body]
+            var footerAddress = DOCUMENT.createElement("div");
+            var footerBottom = DOCUMENT.createElement("div");
+            var footerContent = DOCUMENT.createElement("div");
+            var footerContentAside = DOCUMENT.createElement("div");
+            var footerContentAsidePrompt = DOCUMENT.createElement('a');
+            var footerContentNewsletter = DOCUMENT.createElement("div");
+            var footerContentNewsletterRegistrar = DOCUMENT.createElement("form");
+            var footerContentNewsletterRegistrarField = DOCUMENT.createElement("input");
+            var footerContentNewsletterRegistrarSubmit = DOCUMENT.createElement("input");
+            var footerContentNewsletterSocials = DOCUMENT.createElement("div");
+
+            footerContent.appendChild(footerContentNewsletter);
+                footerContentNewsletter.appendChild(DOCUMENT.createElement("h2"));
+                footerContentNewsletter.appendChild(DOCUMENT.createElement('p'));
+                footerContentNewsletter.appendChild(footerContentNewsletterRegistrar);
+                    footerContentNewsletterRegistrar.appendChild(footerContentNewsletterRegistrarField);
+                    footerContentNewsletterRegistrar.appendChild(footerContentNewsletterRegistrarSubmit);
+                footerContentNewsletter.appendChild(footerContentNewsletterSocials);
+            footerContent.appendChild(footerContentAside);
+                footerContentAside.appendChild(DOCUMENT.createElement("h2"));
+                footerContentAside.appendChild(DOCUMENT.createElement('p'));
+                footerContentAside.appendChild(footerContentAsidePrompt);
+
+            footerAddress.innerHTML = "Orbit Media Studios &bull; 4043 N Ravenswood Ave, Suite 316, Chicago, IL 60613 &bull; Main (773) 348.4581 &bull; Support (773) 353.8314";
+            footerAddress.setAttribute("role", "address");
+
+            footerBottom.setAttribute("role", "bottom");
+            for (var content = ["Privacy Policy", "Sitemap", "&copy; 2015 Orbit Media Studios"], iterator = 0, length = content.length; iterator != length; ++iterator) {
+                var element = DOCUMENT.createElement("div");
+
+                element.innerHTML = content[iterator];
+                footerBottom.appendChild(element)
+            }
+
+            footerContent.setAttribute("role", "content");
+
+            footerContentAside.getElementsByTagName("h2").item(0).innerText = "Committed to Covenant";
+            footerContentAside.getElementsByTagName('p').item(0).innerText = "Our mission is to stimulate the dream of royalty and dream of dignity into our students so that they can begin to develop a royal attitude, cultivate royal habits and form royal character so as to fulfill the Covenant University dream of raising a new generation of leaders.";
+            footerContentAside.setAttribute("role", "aside");
+            footerContentAsidePrompt.href = APPLICATION.ROOT + "pages/about.html";
+            footerContentAsidePrompt.innerHTML = "More about our status &#x27B2;";
+            footerContentAsidePrompt.setAttribute("role", "prompt");
+
+            footerContentNewsletter.getElementsByTagName("h2").item(0).innerText = "Stay connected";
+            footerContentNewsletter.getElementsByTagName('p').item(0).innerText = "Join over 420,000 people who receive bi-weekly web marketing tips";
+            footerContentNewsletter.setAttribute("role", "newsletter");
+            footerContentNewsletterRegistrarField.setAttribute("placeholder", "Email Address");
+            footerContentNewsletterRegistrarField.type = "text";
+            footerContentNewsletterRegistrarSubmit.type = "submit";
+            footerContentNewsletterRegistrarSubmit.value = "Sign-Up";
+            footerContentNewsletterSocials.setAttribute("role", "socials");
+            for (var content = ["facebook.png", "twitter.png", "youtube.png"], iterator = 0, length = content.length; iterator != length; ++iterator) {
+                var element = DOCUMENT.createElement("div");
+                var elementIcon = DOCUMENT.createElement("img");
+
+                element.appendChild(elementIcon);
+                elementIcon.src = APPLICATION.ROOT + "images/icons/" + content[iterator];
+                footerContentNewsletterSocials.appendChild(element)
+            }
+
             var loader = DOCUMENT.createElement("div");
 
             var navigation = DOCUMENT.createElement("div");
@@ -277,6 +337,11 @@ void function Main(DOCUMENT, GLOBAL) {
 
         // Insertion --- REDACT (Lapys)
         BODY.appendChild(loader);
+
+        FOOTER.appendChild(footerContent);
+        FOOTER.appendChild(footerAddress);
+        FOOTER.appendChild(footerBottom);
+
         HEADER.appendChild(navigation);
 
         loader.appendChild(DOCUMENT.createElement("div"));

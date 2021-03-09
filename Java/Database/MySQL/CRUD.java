@@ -15,6 +15,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import java.awt.geom.Ellipse2D;
@@ -50,6 +51,7 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 /* Class --- REDACT (Lapys) */
   /* Java Image */
@@ -110,38 +112,6 @@ import javax.swing.JPanel;
 
 /* Application */
 public class CRUD {
-  /* Main
-      --- NOTE ---
-        #Lapys:
-          LOGO
-          CRUD APPLICATION
-          LOGIN [VALIDATE]
-            INSERT NAME/ MATRICULATION NUMBER
-            INSERT PASSWORD
-
-            VALID - READ STUDENT ACCOUNT FROM DATABASE TABLE
-              NAME
-              COURSE
-              EMAIL
-              MATRICULATION NUMBER
-              [UPDATE ACCOUNT] - MODIFY {NAME, COURSE, EMAIL, MATRICULATION NUMBER} IN DATABASE TABLE
-              [RESET PASSWORD] - MODIFY {PASSWORD} FIELD IN DATABASE TABLE
-              [DELETE ACCOUNT] - REMOVE STUDENT ACCOUNT FROM DATABASE TABLE
-
-            INVALID - TRY AGAIN
-
-          SIGN UP [VALIDATE]
-            INSERT NAME
-            INSERT COURSE
-            INSERT MATRICULATION NUMBER
-            INSERT EMAIL
-            INSERT PASSWORD
-
-            VALID - ADD STUDENT ACCOUNT TO DATABASE TABLE | READ STUDENT ACCOUNT FROM DATABASE TABLE
-              ...
-
-            INVALID - TRY AGAIN
-  */
   /* Global > ... */
     // Application ...
     final private static String APPLICATION_DESCRIPTION = "Client-side software application that Creates, Reads, Updates, and Deletes relevant data with a MySQL database";
@@ -151,11 +121,10 @@ public class CRUD {
     final private static String APPLICATION_ICON_PATH = APPLICATION_ROOT_PATH + "images/icons/";
 
     // Database ...
+    private static Connection DATABASE_CONNECTION;
+    final private static String DATABASE_NAME = "CRUD Database";
     final private static String DATABASE_PASSWORD = "Lapys30*)";
     final private static String DATABASE_USER = "LapysDev";
-    final private static Connection DATABASE_CONNECTION = try {
-      DriverManager.getConnection("jdbc:mysql://localhost/?user=" + DATABASE_USER + "&password=" + DATABASE_PASSWORD);
-    } catch (final Exception error) {}
 
     // Screen ...
     final private static Dimension SCREEN_SIZE = Toolkit.getDefaultToolkit().getScreenSize();
@@ -207,7 +176,7 @@ public class CRUD {
         // : [Title]
         final JLabel TITLE = new JLabel(APPLICATION_NAME);
 
-      // Insertion -> Structure UI components.
+      /* Insertion -> Structure UI components. */
       WINDOW.add(LOGO_PANEL);
         LOGO_PANEL.add(LOGO);
 
@@ -297,7 +266,15 @@ public class CRUD {
         );
       }
 
-      // Update > ... -> Style UI components.
+      /* Update > ... */
+      try { Class.forName("com.mysql" + ".cj" + ".jdbc.Driver").newInstance(); }
+      catch (final ClassNotFoundException error) { System.err.println(error); }
+      catch (final IllegalAccessException error) { System.err.println(error); }
+      catch (final InstantiationException error) { System.err.println(error); }
+
+      try { DATABASE_CONNECTION = DriverManager.getConnection("jdbc:mysql://localhost:3306/", DATABASE_USER, DATABASE_PASSWORD); }
+      catch (final SQLException error) { System.err.println(error); }
+
       WINDOW.getContentPane().setBackground(WINDOW_BACKGROUND_COLOR);
       WINDOW.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       WINDOW.setIconImage(new ImageIcon(APPLICATION_ICON_PATH).getImage()); // WARN (Lapys) -> Does not accept Windows `.ico` files.
@@ -305,8 +282,8 @@ public class CRUD {
       WINDOW.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
       WINDOW.setTitle(APPLICATION_NAME);
 
-      // Event
-        // (Login, Sign Up) Button
+      /* Event */
+        // (Login, Sign Up) Button > Action
         LOGIN_BUTTON.addActionListener(new ActionListener() {
           @Override
           public void actionPerformed(final ActionEvent event) {
@@ -321,7 +298,18 @@ public class CRUD {
           }
         });
 
-      // Event
+        // Window > ...
+        WINDOW.addWindowListener(new WindowAdapter() {
+          @Override
+          public void windowClosing(final WindowEvent event) {
+            try {
+              if (null != DATABASE_CONNECTION && false == DATABASE_CONNECTION.isClosed())
+              DATABASE_CONNECTION.close();
+            } catch (final SQLException error) { System.err.println(error); }
+          }
+        });
+
+      /* Event */
         // ...
         EventQueue.invokeLater(new Runnable() {
           @Override
@@ -346,5 +334,45 @@ public class CRUD {
             return false;
           }
         });
+
+      /* ...
+        --- NOTE ---
+          #Lapys:
+            USER PAGE
+              CHECK ONLINE PORTAL (JSP PAGE)
+
+            LOGIN [VALIDATE]
+              INSERT NAME/ MATRICULATION NUMBER
+              INSERT PASSWORD
+
+              VALID - READ STUDENT ACCOUNT FROM DATABASE TABLE
+                NAME
+                COURSE
+                EMAIL
+                MATRICULATION NUMBER
+                [UPDATE ACCOUNT] - MODIFY {NAME, COURSE, EMAIL, MATRICULATION NUMBER} IN DATABASE TABLE
+                [RESET PASSWORD] - MODIFY {PASSWORD} FIELD IN DATABASE TABLE
+                [DELETE ACCOUNT] - REMOVE STUDENT ACCOUNT FROM DATABASE TABLE
+
+              INVALID - TRY AGAIN
+
+            SIGN UP [VALIDATE]
+              INSERT NAME
+              INSERT COURSE
+              INSERT MATRICULATION NUMBER
+              INSERT EMAIL
+              INSERT PASSWORD
+
+              VALID - ADD STUDENT ACCOUNT TO DATABASE TABLE | READ STUDENT ACCOUNT FROM DATABASE TABLE
+                ...
+
+              INVALID - TRY AGAIN
+      */
+      // final Statement statement = DATABASE_CONNECTION.createStatement();
+      // final ResultSet result = statement.executeQuery("[mysql query]");
+
+      // "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = " + DATABASE_NAME
+      //   "CREATE " + DATABASE
+      // if ()
   }
 }

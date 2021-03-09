@@ -1,7 +1,6 @@
 /* CSS At-Rules > ... */
 @font-face { font-family: "Open Sans"; src: url("../fonts/open-sans.ttf") }
 
-box-shadow: 0 0 0 4000px #FFFFFF;
 /* DOM Elements > ... */
 * { box-sizing: content-box }
 [hidden], [hidden] * { display: none !important }
@@ -17,7 +16,115 @@ video { object-fit: contain }
 
 /* Features */
     /* Aside */
-    #aside { height: 0; width: 0 }
+    #aside {
+        height: 0;
+        width: 0
+    }
+
+    /* Footer */
+    #footer {
+        border-top: 5px solid #7F007F;
+        color: #333333;
+        font-size: 90%;
+        display: table;
+        padding: 1% 0;
+        width: 90%
+    }
+        /* Address */
+        #footer [role=address] {
+            font-size: 90%;
+            font-style: italic;
+            margin: 0 auto;
+            text-align: center;
+            width: 65%
+        }
+        /* Bottom */
+            /* <div> */
+            #footer [role=bottom] div { display: table-cell }
+
+        /* Address, Bottom, Content */
+        #footer [role=address],
+        #footer [role=bottom],
+        #footer [role=content] {
+            display: table;
+            margin: 0 auto;
+            padding: .8% 0
+        }
+
+        /* Bottom */
+        #footer [role=bottom] { width: 50% }
+            /* <div> */
+            #footer [role=bottom] div { display: table-cell }
+
+        /* Bottom, Content */
+        #footer [role=bottom],
+        #footer [role=content] { table-layout: fixed }
+
+        /* Content */
+        #footer [role=content] { width: 90% }
+            /* Aside */
+                /* Prompt */
+                #footer [role=content] [role=aside] [role=prompt] {
+                    color: #7F007F;
+                    font-size: 90%;
+                    font-style: italic;
+                    text-decoration: underline
+                }
+
+            /* Aside, Newsletter */
+            #footer [role=content] [role=aside],
+            #footer [role=content] [role=newsletter] {
+                display: table-cell;
+                width: 50%
+            }
+
+            /* Newsletter */
+                /* <form> */
+                #footer [role=content] [role=newsletter] form {}
+                    /* <input> */
+                    #footer [role=content] [role=newsletter] form input {
+                        border-radius: 3px;
+                        padding: 1.5% 1%
+                    }
+
+                    #footer [role=content] [role=newsletter] form input[type=submit] {
+                        background-color: #7F007F;
+                        border: none;
+                        border-bottom-left-radius: 0;
+                        border-top-left-radius: 0;
+                        color: #FFFFFF;
+                        padding-left: 2.5%;
+                        padding-right: 2.5%
+                    }
+
+                    #footer [role=content] [role=newsletter] form input[type=text] {
+                        border: 1px solid #CCCCCC;
+                        border-bottom-right-radius: 0;
+                        border-top-right-radius: 0
+                    }
+                        /* [State] */
+                        #footer [role=content] [role=newsletter] form input:focus { outline: none }
+
+                /* Socials */
+                #footer [role=content] [role=newsletter] [role=socials] {
+                    display: table;
+                    height: 50px;
+                    margin: 1% 0;
+                    table-layout: fixed;
+                    width: 75%
+                }
+                    /* <div> */
+                    #footer [role=content] [role=newsletter] [role=socials] div {
+                        display: table-cell;
+                        height: inherit;
+                        text-align: center;
+                        vertical-align: middle
+                    }
+                        /* <img> */
+                        #footer [role=content] [role=newsletter] [role=socials] img {
+                            height: 75%;
+                            width: auto
+                        }
 
     /* Footer, Header, Main */
     #footer, #header, #main {
@@ -79,6 +186,7 @@ video { object-fit: contain }
         height: 60px;
         left: 0;
         position: absolute;
+        position: fixed;
         table-layout: fixed;
         text-align: center;
         top: 0;

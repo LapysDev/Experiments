@@ -4,6 +4,7 @@
 
 // : [C++ Standard Library]
 #include <cstdarg> // C Standard Arguments
+#include <cstdio>
 #include <cstdlib> // C Standard Library
 
 // : [Windows API]
@@ -23,12 +24,12 @@
 static void Draw(void);
 
 /* Definition > ... */
-inline void drawArc(unsigned short const, unsigned short const, float const);
+inline void drawCircle(unsigned short const, unsigned short const, unsigned short const);
 inline void drawLine(unsigned short const, unsigned short const, unsigned short const, unsigned short const);
-inline void drawSpline(...);
+inline void drawSpline(unsigned short const, unsigned short const, unsigned short const);
 
 inline int getPixel(unsigned short const, unsigned short const);
-inline void putPixel(unsigned short const, unsigned short const);
+inline void putPixel(unsigned short const, unsigned short const, DWORD const = 0x000000u);
 
 /* Global > Window ... */
 static WNDCLASSEX windowClassInformation = WNDCLASSEX();
@@ -112,45 +113,104 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
     return ::DefWindowProc(windowHandle, message, messageParameter, messageSubparameter);
 }
 
-/* Function --- NOTE (Lapys) */
-    // Draw Arc
-    // void drawArc(unsigned short const x, unsigned short const y, float const angle) {}
+/* Function */
+    // Draw Spline
+    void drawCircle(unsigned short const xAnchor, unsigned short const yAnchor, unsigned short const radius) {
+        // Initialization > (... Neighbor, X, Y)
+        enum { east, north, northeast, northwest, south, southeast, southwest, west } currentNeighbor = northwest, recentNeighbor;
+        int x = xAnchor + radius, y = yAnchor;
 
-    // Draw Line
+        // Loop --- NOTE (Lapys)
+        do {
+            // Initialization > (... Delta, Reversed)
+            unsigned short const xDelta = x > xAnchor ? x - xAnchor : (xAnchor - x);
+            unsigned short const yDelta = y > yAnchor ? y - yAnchor : (yAnchor - y);
+            int const delta = (radius * radius) - ((xDelta * xDelta) + (yDelta * yDelta));
+
+            bool reversed = false;
+
+            // ... Update > Reversed -> Prevent the Current Neighbor infinitely reversing back onto itself.
+            switch (currentNeighbor) {
+                case east: reversed = recentNeighbor == northwest || recentNeighbor == southwest || recentNeighbor == west; break;
+                case north: reversed = recentNeighbor == south || recentNeighbor == southeast || recentNeighbor == southwest; break;
+                case northeast: reversed = recentNeighbor == south || recentNeighbor == southwest || recentNeighbor == west; break;
+                case northwest: reversed = recentNeighbor == east || recentNeighbor == south || recentNeighbor == southeast; break;
+                case south: reversed = recentNeighbor == north || recentNeighbor == northeast || recentNeighbor == northwest; break;
+                case southeast: reversed = recentNeighbor == north || recentNeighbor == northwest || recentNeighbor == west; break;
+                case southwest: reversed = recentNeighbor == east || recentNeighbor == north || recentNeighbor == northeast; break;
+                case west: reversed = recentNeighbor == east || recentNeighbor == northeast || recentNeighbor == southeast; break;
+            }
+
+            // Logic > ...
+            if (false == reversed && radius >= (delta < 0 ? -delta : delta)) {
+                recentNeighbor = currentNeighbor;
+                currentNeighbor = northwest;
+
+                putPixel(x, y);
+            }
+
+            else switch (currentNeighbor) {
+                // Update > ... Neighbor -> Assert next neighboring pixel, clock-wise.
+                //                          Reset the translation from checking neighboring pixels.
+                case east: --x; currentNeighbor = southeast; break;
+                case north: ++y; currentNeighbor = northeast; break;
+                case northeast: --x; ++y; currentNeighbor = east; break;
+                case northwest: ++x; ++y; currentNeighbor = north; break;
+                case south: --y; currentNeighbor = southwest; break;
+                case southeast: --x; --y; currentNeighbor = south; break;
+                case southwest: ++x; --y; currentNeighbor = west; break;
+                case west: return; // -> Checked all neighboring pixels.
+            }
+
+            // Update > ... -> Check next neighboring pixel matches circle circumference.
+            //                 This works because the circumference is continuous.
+            switch (currentNeighbor) {
+                case east: ++x; break;
+                case north: --y; break;
+                case northeast: ++x; --y; break;
+                case northwest: --x; --y; break;
+                case south: ++y; break;
+                case southeast: ++x; ++y; break;
+                case southwest: --x; ++y; break;
+                case west: --x; break;
+            }
+        } while (false == (x == xAnchor + radius && y == yAnchor));
+    }
+
+    // Draw Line --- NOTE (Lapys)
     void drawLine(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget) {
         // Initialization > (X ..., Y ...)
-        int x = xOrigin;
-        unsigned short xDelta = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget; // abs(xOrigin - xTarget);
-        float xRatio, xRatioIterator = 0.0f;
+            // : ...
+            int x = xOrigin;
+            int y = yOrigin;
 
-        int y = yOrigin;
-        unsigned short yDelta = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget; // abs(yOrigin - yTarget);
-        float yRatio, yRatioIterator = 0.0f;
+            // : Delta -> Distance between origin & targets.
+            unsigned short const xDelta = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget; // -> Run
+            unsigned short const yDelta = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget; // -> Rise
 
-        // Logic > ... --- NOTE (Lapys) -> Determine iterative translation value from origin -- based on how much the X & Y axes are relatively displaced.
-        if (xDelta == yDelta) xRatio = 1.0f, yRatio = 1.0f;
-        else if (xDelta > yDelta) xRatio = 1.0f, yRatio = static_cast<float>(yDelta) / static_cast<float>(xDelta);
-        else if (xDelta < yDelta) xRatio = static_cast<float>(xDelta) / static_cast<float>(yDelta), yRatio = 1.0f;
+            // : Slope -> Determine iterative translation value from origin -- based on how much the X & Y axes are relatively displaced.
+            float const xSlope = xDelta < yDelta ? static_cast<float>(xDelta) / static_cast<float>(yDelta) : 1.0f;
+            float const ySlope = xDelta > yDelta ? static_cast<float>(yDelta) / static_cast<float>(xDelta) : 1.0f;
 
-        // Loop > ... --- NOTE (Lapys) -> Sequentially translate from origin to target based on displacement ratios & relative quadrants.
-        while (true) {
-            xRatioIterator += xRatio;
-            yRatioIterator += yRatio;
+        // Loop > ... -> Sequentially translate from origin to target based on displacement ratios & relative quadrants.
+        for (float xSlopeIterator = 0.0f, ySlopeIterator = 0.0f; false == (x == xTarget && y == yTarget); ) {
+            putPixel(x, y);
 
-            if (x == xTarget && y == yTarget) break;
-            else {
-                putPixel(x, y);
+            xSlopeIterator += xSlope;
+            ySlopeIterator += ySlope;
 
-                if (xRatioIterator >= 1.0f) { xOrigin > xTarget ? --x : ++x; --xRatioIterator; }
-                if (yRatioIterator >= 1.0f) { yOrigin > yTarget ? --y : ++y; --yRatioIterator; }
-            }
+            if (xSlopeIterator >= 1.0f) { xOrigin > xTarget ? --x : ++x; --xSlopeIterator; }
+            if (ySlopeIterator >= 1.0f) { yOrigin > yTarget ? --y : ++y; --ySlopeIterator; }
         }
     }
+
+    // Draw Spline
+    // void drawSpline(unsigned short const x, unsigned short const y, unsigned short const point) {}
 
     // Get Pixel (Color) -> Whitish tone between ~50% - 100% intensity. (based on `x` & `y` coordinates)
     // Put Pixel -> (0 >= x <= windowMemoryDeviceContextBitmap.bmWidth) && (0 >= y <= windowMemoryDeviceContextBitmap.bmHeight)
     int getPixel(unsigned short const x, unsigned short const y) { int const intensity = static_cast<int>(127.0f + (255.0f - 127.0f) * ((1.0f * (static_cast<float>(x + y) / 2.0f)) / windowHeight)); return RGB(intensity, intensity, intensity); }
-    void putPixel(unsigned short const x, unsigned short const y) { static_cast<UINT32*>(windowMemoryDeviceContextBitmapBits)[x + ((windowMemoryDeviceContextBitmap.bmHeight - y - 1L) * windowMemoryDeviceContextBitmap.bmWidth)] = getPixel(x, y) | (0xFF << 0x18); }
+    void putPixel(unsigned short const x, unsigned short const y, DWORD const color) { static_cast<UINT32*>(windowMemoryDeviceContextBitmapBits)[x + ((windowMemoryDeviceContextBitmap.bmHeight - y - 1L) * windowMemoryDeviceContextBitmap.bmWidth)] = (0xFFu << 0x18u) | (0x000000u == color ? getPixel(x, y) : color); }
 
 /* Phase > Draw --- NOTE (Lapys) -> Geometry Demonstration. */
 void Draw(void) {
@@ -171,6 +231,13 @@ void Draw(void) {
     drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (000.0f / 100.0f));
     drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (050.0f / 100.0f));
     drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (100.0f / 100.0f));
+
+    // [Circles] ...
+    for (unsigned char radius = 0u; radius != 255u; radius += 17u)
+    drawCircle(windowWidth / 2u, windowHeight / 2u, radius);
+
+    // [Splines] ...
+    // drawSpline(20u, 20u, 100u, 100u, 80u, 50u);
 }
 
 /* Main --- NOTE (Lapys) */
