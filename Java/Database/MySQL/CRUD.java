@@ -1,4 +1,4 @@
-/* Import > ... */
+a/* Import > ... */
 // : Java > Abstract Window Toolkit
 import java.awt.Color;
 import java.awt.Dimension;
@@ -122,7 +122,7 @@ public class CRUD {
 
     // Database ...
     private static Connection DATABASE_CONNECTION;
-    final private static String DATABASE_NAME = "CRUD Database";
+    final private static String DATABASE_NAME = "Java MySQL - CRUD Database";
     final private static String DATABASE_PASSWORD = "Lapys30*)";
     final private static String DATABASE_USER = "LapysDev";
 

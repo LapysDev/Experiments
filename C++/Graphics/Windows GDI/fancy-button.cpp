@@ -471,7 +471,7 @@
                                 --- NOTE (Lapys) -> Paint the background window content.
                                 --- WARN ---
                                     #Lapys: `PrintWindow(...)` is single-threaded and relatively expensive.
-                                        `BitBlt(...)` would be a faster alternative but it doesn't work for windows with non-GDI renders.
+                                        `BitBlt(...)` would be a faster alternative but it doesn't work for windows with non-* renders.
                             */
                             ::PrintWindow(windowBackgroundWindowHandle, windowBackground.handles.memoryDeviceContext, PW_RENDERFULLCONTENT);
 

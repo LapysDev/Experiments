@@ -26,7 +26,7 @@ static void Draw(void);
 /* Definition > ... */
 inline void drawCircle(unsigned short const, unsigned short const, unsigned short const);
 inline void drawLine(unsigned short const, unsigned short const, unsigned short const, unsigned short const);
-inline void drawSpline(unsigned short const, unsigned short const, unsigned short const);
+inline void drawSpline(unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned short const);
 
 inline int getPixel(unsigned short const, unsigned short const);
 inline void putPixel(unsigned short const, unsigned short const, DWORD const = 0x000000u);
@@ -113,14 +113,14 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
     return ::DefWindowProc(windowHandle, message, messageParameter, messageSubparameter);
 }
 
-/* Function */
-    // Draw Spline
+/* Function --- NOTE (Lapys) */
+    // Draw Circle
     void drawCircle(unsigned short const xAnchor, unsigned short const yAnchor, unsigned short const radius) {
         // Initialization > (... Neighbor, X, Y)
         enum { east, north, northeast, northwest, south, southeast, southwest, west } currentNeighbor = northwest, recentNeighbor;
         int x = xAnchor + radius, y = yAnchor;
 
-        // Loop --- NOTE (Lapys)
+        // Loop
         do {
             // Initialization > (... Delta, Reversed)
             unsigned short const xDelta = x > xAnchor ? x - xAnchor : (xAnchor - x);
@@ -177,20 +177,20 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
         } while (false == (x == xAnchor + radius && y == yAnchor));
     }
 
-    // Draw Line --- NOTE (Lapys)
+    // Draw Line
     void drawLine(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget) {
-        // Initialization > (X ..., Y ...)
-            // : ...
-            int x = xOrigin;
-            int y = yOrigin;
+        // Initialization
+        // : ...
+        int x = xOrigin;
+        int y = yOrigin;
 
-            // : Delta -> Distance between origin & targets.
-            unsigned short const xDelta = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget; // -> Run
-            unsigned short const yDelta = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget; // -> Rise
+        // : Delta -> Distance between origin & targets.
+        unsigned short const xDelta = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget; // -> Run
+        unsigned short const yDelta = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget; // -> Rise
 
-            // : Slope -> Determine iterative translation value from origin -- based on how much the X & Y axes are relatively displaced.
-            float const xSlope = xDelta < yDelta ? static_cast<float>(xDelta) / static_cast<float>(yDelta) : 1.0f;
-            float const ySlope = xDelta > yDelta ? static_cast<float>(yDelta) / static_cast<float>(xDelta) : 1.0f;
+        // : Slope -> Determine iterative translation value from origin -- based on how much the X & Y axes are relatively displaced.
+        float const xSlope = xDelta < yDelta ? static_cast<float>(xDelta) / static_cast<float>(yDelta) : 1.0f;
+        float const ySlope = xDelta > yDelta ? static_cast<float>(yDelta) / static_cast<float>(xDelta) : 1.0f;
 
         // Loop > ... -> Sequentially translate from origin to target based on displacement ratios & relative quadrants.
         for (float xSlopeIterator = 0.0f, ySlopeIterator = 0.0f; false == (x == xTarget && y == yTarget); ) {
@@ -205,7 +205,16 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
     }
 
     // Draw Spline
-    // void drawSpline(unsigned short const x, unsigned short const y, unsigned short const point) {}
+    void drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned short const xAnchor, unsigned short const yAnchor) {
+        static_cast<void>(xAnchor); static_cast<void>(xOrigin); static_cast<void>(xTarget);
+        static_cast<void>(yAnchor); static_cast<void>(yOrigin); static_cast<void>(yTarget);
+
+        // ...
+        putPixel(xOrigin, yOrigin, 0x0000FFu);
+        putPixel(xTarget, yTarget, 0x0000FFu);
+
+        putPixel(xAnchor, yAnchor, 0xFF0000u);
+    }
 
     // Get Pixel (Color) -> Whitish tone between ~50% - 100% intensity. (based on `x` & `y` coordinates)
     // Put Pixel -> (0 >= x <= windowMemoryDeviceContextBitmap.bmWidth) && (0 >= y <= windowMemoryDeviceContextBitmap.bmHeight)
@@ -237,7 +246,8 @@ void Draw(void) {
     drawCircle(windowWidth / 2u, windowHeight / 2u, radius);
 
     // [Splines] ...
-    // drawSpline(20u, 20u, 100u, 100u, 80u, 50u);
+    // drawSpline(20u, 20u, 400u, 400u, 200u, 20u);
+    drawSpline(20u, 20u, 400u, 400u, 400u, 20u);
 }
 
 /* Main --- NOTE (Lapys) */
