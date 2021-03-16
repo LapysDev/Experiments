@@ -3,6 +3,7 @@
 #include <stdint.h> // Standard Integers
 
 // : [C++ Standard Library]
+#include <cmath>
 #include <cstdarg> // C Standard Arguments
 #include <cstdio>
 #include <cstdlib> // C Standard Library
@@ -193,26 +194,104 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
         float const ySlope = xDelta > yDelta ? static_cast<float>(yDelta) / static_cast<float>(xDelta) : 1.0f;
 
         // Loop > ... -> Sequentially translate from origin to target based on displacement ratios & relative quadrants.
-        for (float xSlopeIterator = 0.0f, ySlopeIterator = 0.0f; false == (x == xTarget && y == yTarget); ) {
+        for (float xSlopeIterator = xSlope, ySlopeIterator = ySlope; xSlopeIterator || ySlopeIterator; ) {
             putPixel(x, y);
-
-            xSlopeIterator += xSlope;
-            ySlopeIterator += ySlope;
 
             if (xSlopeIterator >= 1.0f) { xOrigin > xTarget ? --x : ++x; --xSlopeIterator; }
             if (ySlopeIterator >= 1.0f) { yOrigin > yTarget ? --y : ++y; --ySlopeIterator; }
+
+            xSlopeIterator = (x != xTarget) * (xSlope + xSlopeIterator);
+            ySlopeIterator = (y != yTarget) * (ySlope + ySlopeIterator);
         }
     }
 
-    // Draw Spline
+    // Draw Spline -> Linear Interpolate = A + (ratio * (B - A)); Presumes `long` is 64-bit
     void drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned short const xAnchor, unsigned short const yAnchor) {
-        static_cast<void>(xAnchor); static_cast<void>(xOrigin); static_cast<void>(xTarget);
-        static_cast<void>(yAnchor); static_cast<void>(yOrigin); static_cast<void>(yTarget);
+        int xAnchorToOrigin = xOrigin, yAnchorToOrigin = yOrigin;
+        unsigned short const xAnchorToOriginDelta = xAnchor < xOrigin ? xOrigin - xAnchor : xAnchor - xOrigin;
+        unsigned short const yAnchorToOriginDelta = yAnchor < yOrigin ? yOrigin - yAnchor : yAnchor - yOrigin;
+        float xAnchorToOriginRatio = static_cast<float>(xAnchorToOriginDelta);
+        float yAnchorToOriginRatio = static_cast<float>(yAnchorToOriginDelta);
+        float const xAnchorToOriginSlope = xAnchorToOriginDelta < yAnchorToOriginDelta ? static_cast<float>(xAnchorToOriginDelta) / static_cast<float>(yAnchorToOriginDelta) : 1.0f;
+        float const yAnchorToOriginSlope = xAnchorToOriginDelta > yAnchorToOriginDelta ? static_cast<float>(yAnchorToOriginDelta) / static_cast<float>(xAnchorToOriginDelta) : 1.0f;
+
+        int xAnchorToTarget = xTarget, yAnchorToTarget = yTarget;
+        unsigned short const xAnchorToTargetDelta = xAnchor < xTarget ? xTarget - xAnchor : xAnchor - xTarget;
+        unsigned short const yAnchorToTargetDelta = yAnchor < yTarget ? yTarget - yAnchor : yAnchor - yTarget;
+        float xAnchorToTargetRatio = static_cast<float>(xAnchorToTargetDelta);
+        float yAnchorToTargetRatio = static_cast<float>(yAnchorToTargetDelta);
+        float const xAnchorToTargetSlope = xAnchorToTargetDelta < yAnchorToTargetDelta ? static_cast<float>(xAnchorToTargetDelta) / static_cast<float>(yAnchorToTargetDelta) : 1.0f;
+        float const yAnchorToTargetSlope = xAnchorToTargetDelta > yAnchorToTargetDelta ? static_cast<float>(yAnchorToTargetDelta) / static_cast<float>(xAnchorToTargetDelta) : 1.0f;
+
+        int xOriginToTarget = xOrigin, yOriginToTarget = yOrigin;
+        unsigned short const xOriginToTargetDelta = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+        unsigned short const yOriginToTargetDelta = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+        float xOriginToTargetRatio = static_cast<float>(xOriginToTargetDelta);
+        float yOriginToTargetRatio = static_cast<float>(yOriginToTargetDelta);
+        float const xOriginToTargetSlope = xOriginToTargetDelta < yOriginToTargetDelta ? static_cast<float>(xOriginToTargetDelta) / static_cast<float>(yOriginToTargetDelta) : 1.0f;
+        float const yOriginToTargetSlope = xOriginToTargetDelta > yOriginToTargetDelta ? static_cast<float>(yOriginToTargetDelta) / static_cast<float>(xOriginToTargetDelta) : 1.0f;
 
         // ...
+        if (xAnchorToOriginRatio > xAnchorToTargetRatio) { if (xAnchorToOriginRatio > xOriginToTargetRatio) { xAnchorToTargetRatio /= xAnchorToOriginRatio; xOriginToTargetRatio /= xAnchorToOriginRatio; xAnchorToOriginRatio = 1.0f; } else { xAnchorToOriginRatio /= xOriginToTargetRatio; xAnchorToTargetRatio /= xOriginToTargetRatio; xOriginToTargetRatio = 1.0f; } }
+        else { if (xAnchorToTargetRatio > xOriginToTargetRatio) { xAnchorToOriginRatio /= xAnchorToTargetRatio; xOriginToTargetRatio /= xAnchorToTargetRatio; xAnchorToTargetRatio = 1.0f; } else { xAnchorToOriginRatio /= xOriginToTargetRatio; xAnchorToTargetRatio /= xOriginToTargetRatio; xOriginToTargetRatio = 1.0f; } }
+
+        if (yAnchorToOriginRatio > yAnchorToTargetRatio) { if (yAnchorToOriginRatio > yOriginToTargetRatio) { yAnchorToTargetRatio /= yAnchorToOriginRatio; yOriginToTargetRatio /= yAnchorToOriginRatio; yAnchorToOriginRatio = 1.0f; } else { yAnchorToOriginRatio /= yOriginToTargetRatio; yAnchorToTargetRatio /= yOriginToTargetRatio; yOriginToTargetRatio = 1.0f; } }
+        else { if (yAnchorToTargetRatio > yOriginToTargetRatio) { yAnchorToOriginRatio /= yAnchorToTargetRatio; yOriginToTargetRatio /= yAnchorToTargetRatio; yAnchorToTargetRatio = 1.0f; } else { yAnchorToOriginRatio /= yOriginToTargetRatio; yAnchorToTargetRatio /= yOriginToTargetRatio; yOriginToTargetRatio = 1.0f; } }
+
+        // Compare the ratios of each line,
+        //   extrapolate those ratios to something like 0.5:1.0:0.2 with none exceeding 1.0
+        //   average each pixel from the main line to each supporting line
+        //   uh... good luck?
+        std::printf(
+            "[anchor -> origin]: (%lu) {%u, %u}" "\r\n"
+            "[anchor -> target]: (%lu) {%u, %u}" "\r\n"
+            "[origin -> target]: (%lu) {%u, %u}" "\r\n"
+            "\r\n",
+
+            (static_cast<unsigned long>(xAnchorToOriginDelta) * static_cast<unsigned long>(xAnchorToOriginDelta)) + (static_cast<unsigned long>(yAnchorToOriginDelta) * static_cast<unsigned long>(yAnchorToOriginDelta)),
+            xAnchorToOriginDelta, yAnchorToOriginDelta,
+
+            (static_cast<unsigned long>(xAnchorToTargetDelta) * static_cast<unsigned long>(xAnchorToTargetDelta)) + (static_cast<unsigned long>(yAnchorToTargetDelta) * static_cast<unsigned long>(yAnchorToTargetDelta)),
+            xAnchorToTargetDelta, yAnchorToTargetDelta,
+
+            (static_cast<unsigned long>(xOriginToTargetDelta) * static_cast<unsigned long>(xOriginToTargetDelta)) + (static_cast<unsigned long>(yOriginToTargetDelta) * static_cast<unsigned long>(yOriginToTargetDelta)),
+            xOriginToTargetDelta, yOriginToTargetDelta
+        );
+
+        // ...
+        for (float
+            xAnchorToOriginSlopeIterator = xAnchorToOriginSlope, yAnchorToOriginSlopeIterator = yAnchorToOriginSlope,
+            xAnchorToTargetSlopeIterator = xAnchorToTargetSlope, yAnchorToTargetSlopeIterator = yAnchorToTargetSlope,
+            xOriginToTargetSlopeIterator = xOriginToTargetSlope, yOriginToTargetSlopeIterator = yOriginToTargetSlope;
+
+            (xAnchorToOriginSlopeIterator || yAnchorToOriginSlopeIterator) ||
+            (xAnchorToTargetSlopeIterator || yAnchorToTargetSlopeIterator) ||
+            (xOriginToTargetSlopeIterator || yOriginToTargetSlopeIterator);
+        ) {
+            putPixel(xAnchorToOrigin, yAnchorToOrigin, 0xFF0000u);
+            if (xAnchorToOriginSlopeIterator >= 1.0f) { xOrigin > xAnchor ? --xAnchorToOrigin : ++xAnchorToOrigin; --xAnchorToOriginSlopeIterator; }
+            if (yAnchorToOriginSlopeIterator >= 1.0f) { yOrigin > yAnchor ? --yAnchorToOrigin : ++yAnchorToOrigin; --yAnchorToOriginSlopeIterator; }
+            xAnchorToOriginSlopeIterator = (xAnchor != xAnchorToOrigin) * (xAnchorToOriginSlope + xAnchorToOriginSlopeIterator);
+            yAnchorToOriginSlopeIterator = (yAnchor != yAnchorToOrigin) * (yAnchorToOriginSlope + yAnchorToOriginSlopeIterator);
+
+            // ...
+            putPixel(xAnchorToTarget, yAnchorToTarget, 0xFF0000u);
+            if (xAnchorToTargetSlopeIterator >= 1.0f) { xTarget > xAnchor ? --xAnchorToTarget : ++xAnchorToTarget; --xAnchorToTargetSlopeIterator; }
+            if (yAnchorToTargetSlopeIterator >= 1.0f) { yTarget > yAnchor ? --yAnchorToTarget : ++yAnchorToTarget; --yAnchorToTargetSlopeIterator; }
+            xAnchorToTargetSlopeIterator = (xAnchor != xAnchorToTarget) * (xAnchorToTargetSlope + xAnchorToTargetSlopeIterator);
+            yAnchorToTargetSlopeIterator = (yAnchor != yAnchorToTarget) * (yAnchorToTargetSlope + yAnchorToTargetSlopeIterator);
+
+            // ...
+            putPixel(xOriginToTarget, yOriginToTarget, 0x0000FFu);
+            if (xOriginToTargetSlopeIterator >= 1.0f) { xOrigin > xTarget ? --xOriginToTarget : ++xOriginToTarget; --xOriginToTargetSlopeIterator; }
+            if (yOriginToTargetSlopeIterator >= 1.0f) { yOrigin > yTarget ? --yOriginToTarget : ++yOriginToTarget; --yOriginToTargetSlopeIterator; }
+            xOriginToTargetSlopeIterator = (xTarget != xOriginToTarget) * (xOriginToTargetSlope + xOriginToTargetSlopeIterator);
+            yOriginToTargetSlopeIterator = (yTarget != yOriginToTarget) * (yOriginToTargetSlope + yOriginToTargetSlopeIterator);
+        }
+
+        /* ... */
         putPixel(xOrigin, yOrigin, 0x0000FFu);
         putPixel(xTarget, yTarget, 0x0000FFu);
-
         putPixel(xAnchor, yAnchor, 0xFF0000u);
     }
 
@@ -230,24 +309,27 @@ void Draw(void) {
     for (int x = windowWidth - 1; ~x; --x) putPixel(x, 0u); // -> Top.
 
     // [Right-angled Lines] ...
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (000.0f / 100.0f));
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (050.0f / 100.0f));
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (100.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (000.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (050.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (100.0f / 100.0f));
 
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (050.0f / 100.0f), windowHeight * (000.0f / 100.0f));
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (050.0f / 100.0f), windowHeight * (100.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (050.0f / 100.0f), windowHeight * (000.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (050.0f / 100.0f), windowHeight * (100.0f / 100.0f));
 
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (000.0f / 100.0f));
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (050.0f / 100.0f));
-    drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (100.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (000.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (050.0f / 100.0f));
+    // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (100.0f / 100.0f), windowHeight * (100.0f / 100.0f));
 
     // [Circles] ...
-    for (unsigned char radius = 0u; radius != 255u; radius += 17u)
-    drawCircle(windowWidth / 2u, windowHeight / 2u, radius);
+    // for (unsigned char radius = 0u; radius != 255u; radius += 17u)
+    // drawCircle(windowWidth / 2u, windowHeight / 2u, radius);
 
     // [Splines] ...
-    // drawSpline(20u, 20u, 400u, 400u, 200u, 20u);
-    drawSpline(20u, 20u, 400u, 400u, 400u, 20u);
+    drawSpline(20u, 20u, 420u, 400u, 400u, 30u);
+    // drawSpline(20u, 20u, 420u, 300u, 400u, 20u);
+    // drawSpline(20u, 20u, 420u, 200u, 400u, 20u);
+    // drawSpline(20u, 20u, 420u, 100u, 400u, 20u);
+    // drawSpline(20u, 20u, 420u, 40u, 400u, 20u);
 }
 
 /* Main --- NOTE (Lapys) */
