@@ -1,4 +1,4 @@
-a/* Import > ... */
+/* Import > ... */
 // : Java > Abstract Window Toolkit
 import java.awt.Color;
 import java.awt.Dimension;
@@ -368,8 +368,8 @@ public class CRUD {
 
               INVALID - TRY AGAIN
       */
-      // final Statement statement = DATABASE_CONNECTION.createStatement();
-      // final ResultSet result = statement.executeQuery("[mysql query]");
+      final Statement statement = DATABASE_CONNECTION.createStatement();
+      final ResultSet result = statement.executeQuery("[query]");
 
       // "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = " + DATABASE_NAME
       //   "CREATE " + DATABASE

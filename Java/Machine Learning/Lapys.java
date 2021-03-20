@@ -41,7 +41,10 @@ import java.io.IOException;
 
 // : Java > Structured Query Language (SQL)
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 // : Java > Utilities
 import java.util.ArrayList;
@@ -61,241 +64,373 @@ import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneLayout;
 
 /* Class --- REDACT (Lapys) */
-    /* Form */
-    class JForm extends JPanel {
-        // ...
-        public JForm() { super(); }
-        public JForm(final boolean isDoubleBuffered) { super(isDoubleBuffered); }
-        public JForm(final LayoutManager layout) { super(layout); }
-        public JForm(final LayoutManager layout, final boolean isDoubleBuffered) { super(layout, isDoubleBuffered); }
+// : Application
+class Application {
+    // ...
+    public Application() {}
+    public Application(final String name) { this.name = name; }
 
-        // ...
-        @Override
-        public boolean isOptimizedDrawingEnabled() { return false; }
+    // ...
+    class DatabaseInformation {
+        public Connection connection = null;
+        public String name = null;
+        public DatabaseMetaData metadata = null;
+        public String password = "";
+        public int port = 3306;
+        public ArrayList<DatabaseTableInformation> tables = new ArrayList<DatabaseTableInformation>();
+        public String user = "root";
     };
 
-    /* Window */
-    class JWindow extends JFrame {
-        protected JForm activeForm = null;
-        protected JForm[] forms;
+    class DatabaseTableInformation {
+        public DatabaseTableInformation(final String name) { this.name = name; }
 
-        // ...
-        public JWindow() { super(); }
-        public JWindow(final GraphicsConfiguration graphicsConfiguration) { super(graphicsConfiguration); }
-        public JWindow(final String title) { super(title); }
-        public JWindow(final String title, final GraphicsConfiguration graphicsConfiguration) { super(title, graphicsConfiguration); }
+        public String catalog = null;
+        public String name = null;
+        public String remarks = null;
+        public String schema = null;
+        public String selfReferencingColumnName = null;
+        public String selfReferencingColumnNameGeneration = null;
+        public String type = null;
+        public String typesCatalog = null;
+        public String typesSchema = null;
+        public String typeName = null;
+    };
 
-        // ...
-        public void switchToForm(final JForm form) { this.switchToForm(form, true); }
-        public void switchToForm(final JForm form, final boolean animated) {
-            // Constant > (... Active Form)
-            final JForm currentActiveForm = form;
-            final JForm recentActiveForm = this.activeForm;
+    class FontCollection {
+        public Font dialog = new Font(Font.DIALOG, Font.PLAIN, 13);
+        public Font dialogInput = new Font(Font.DIALOG_INPUT, Font.PLAIN, 13);
+        public Font monospace = new Font(Font.MONOSPACED, Font.PLAIN, 13);
+        public Font sansSerif = new Font(Font.SANS_SERIF, Font.PLAIN, 13);
+        public Font serif = new Font(Font.SERIF, Font.PLAIN, 13);
+    };
 
-            // Loop > ... Update > Window Form
-            for (final JForm windowForm : this.forms)
-            if (windowForm != currentActiveForm) {
-                if (windowForm != recentActiveForm) { windowForm.setLocation(windowForm.getParent().getSize().width, 0); }
-                windowForm.getParent().setComponentZOrder(windowForm, 0);
+    enum State {
+        INITIATING,
+        RESETTING,
+        UPDATING,
+        TERMINATING
+    };
+
+    // ...
+    protected Application.DatabaseInformation database = new DatabaseInformation();
+    protected String description = null;
+    protected Application.FontCollection fonts = new FontCollection();
+    protected String name = null;
+    protected Application.State state;
+
+    // ...
+    protected boolean connectToDatabaseServer() {
+        try {
+            this.database.connection = DriverManager.getConnection("jdbc:mysql://localhost:" + this.database.port + '/', this.database.user, this.database.password);
+            this.database.metadata = this.database.connection.getMetaData();
+
+            return true;
+        } catch (final SQLException error) { System.err.println(error); }
+
+        return false;
+    }
+
+    protected void disconnectFromDatabaseServer() {
+        try {
+            if (null != this.database.connection) {
+                this.database.connection.close();
+
+                this.database.connection = null;
+                this.database.metadata = null;
+            }
+        } catch (final SQLException error) { System.err.println(error); }
+    }
+
+    protected void evaluateDatabase() {
+        try {
+            final ResultSet databaseMetadataTables = this.database.metadata.getTables(null, null /* String schemaPattern */, "%" /* --> this.database.name */, new String[] {"TABLE"});
+            final ResultSet databaseTables = this.queryDatabase("SHOW TABLES FROM `" + this.database.name + '`');
+
+            for (; databaseMetadataTables.next(); databaseTables.first())
+            while (databaseTables.next()) {
+                final String databaseMetadataTableName = databaseMetadataTables.getString("TABLE_NAME");
+                final String databaseTableName = databaseTables.getString(0x1);
+
+                if (databaseTableName.equals(databaseMetadataTableName)) {
+                    final DatabaseTableInformation databaseTable = new DatabaseTableInformation(databaseMetadataTableName);
+
+                    databaseTable.catalog = databaseMetadataTables.getString("TABLE_CAT");
+                    databaseTable.remarks = databaseMetadataTables.getString("REMARKS");
+                    databaseTable.schema = databaseMetadataTables.getString("TABLE_SCHEM");
+                    databaseTable.selfReferencingColumnName = databaseMetadataTables.getString("SELF_REFERENCING_COL_NAME");
+                    databaseTable.selfReferencingColumnNameGeneration = databaseMetadataTables.getString("REF_GENERATION");
+                    databaseTable.type = databaseMetadataTables.getString("TABLE_TYPE");
+                    databaseTable.typesCatalog = databaseMetadataTables.getString("TYPE_CAT");
+                    databaseTable.typesSchema = databaseMetadataTables.getString("TYPE_SCHEM");
+                    databaseTable.typeName = databaseMetadataTables.getString("TYPE_NAME");
+
+                    this.database.tables.add(databaseTable);
+                    break;
+                }
             }
 
-            // Update > ... Active Form
-            this.activeForm = currentActiveForm;
-            currentActiveForm.getParent().setComponentZOrder(currentActiveForm, 1);
+            while (databaseTables.next()) {
+                final String databaseTableName = databaseTables.getString(0x1);
+                boolean hasDatabaseTable = false;
 
-            // ...
-            new Timer().scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    // Initialization > Current Active Form X Coordinate
-                    int currentActiveFormXCoordinate = currentActiveForm.getLocation().x;
+                for (final DatabaseTableInformation databaseTable : this.database.tables)
+                if (databaseTableName.equals(databaseTable.name)) { hasDatabaseTable = true; break; }
 
-                    // Logic
-                    if (0 == currentActiveFormXCoordinate) {
-                        // ... Update > Recent Active Form
-                        if (null != recentActiveForm && currentActiveForm != recentActiveForm)
-                        recentActiveForm.setLocation(recentActiveForm.getParent().getSize().width, 0);
+                if (false == hasDatabaseTable)
+                this.database.tables.add(new DatabaseTableInformation(databaseTableName));
+            }
+        } catch (final SQLException error) { System.err.println(error); }
+    }
 
-                        // Terminate
-                        cancel();
-                    }
+    protected boolean hasConnectedDatabaseServer() {
+        try { return null != this.database.connection && false == this.database.connection.isClosed(); }
+        catch (final SQLException error) { System.err.println(error); }
 
-                    else {
-                        // Update > Current Active Form ...
-                        currentActiveFormXCoordinate -= 10;
-                        currentActiveForm.setLocation(animated ? (currentActiveFormXCoordinate < 0 ? 0 : currentActiveFormXCoordinate) : 0, 0);
-                    }
-                }
-            }, 0, 3);
-        }
-    };
+        return false;
+    }
 
-/* Definition > Application */
-class Application {
-    enum State { INITIATING, RESETTING, UPDATING, TERMINATING };
-    protected State state;
+    protected int modifyDatabase(final String query) {
+        try { return this.hasConnectedDatabaseServer() ? this.database.connection.createStatement().executeUpdate(query) : -1; }
+        catch (final SQLException error) { System.err.println(error); }
+
+        return -1;
+    }
+
+    protected ResultSet queryDatabase(final String query) {
+        try { return this.hasConnectedDatabaseServer() ? this.database.connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery(query) : null; }
+        catch (final SQLException error) { System.err.println(error); }
+
+        return null;
+    }
+
+    protected boolean registerFont(final String name, final String path) {
+        try {
+            final Font font = Font.createFont(Font.TRUETYPE_FONT, new File(path)).deriveFont(13f);
+
+            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
+            switch (name) {
+                case Font.DIALOG: this.fonts.dialog = font; break;
+                case Font.DIALOG_INPUT: this.fonts.dialogInput = font; break;
+                case Font.MONOSPACED: this.fonts.monospace = font; break;
+                case Font.SANS_SERIF: this.fonts.sansSerif = font; break;
+                case Font.SERIF: this.fonts.serif = font; break;
+            }
+
+            return true;
+        } catch (final FontFormatException|IOException error) { System.err.println(error); }
+
+        return false;
+    }
 };
+
+// : Page
+class Page extends JPanel {};
+
+// : Window
+class Window extends JFrame {
+    protected Page activePage;
+    protected ArrayList<Page> pages;
+
+    // ...
+    public Window() { super(); }
+    public Window(final GraphicsConfiguration graphicsConfiguration) { super(graphicsConfiguration); }
+    public Window(final String title) { super(title); }
+    public Window(final String title, final GraphicsConfiguration graphicsConfiguration) { super(title, graphicsConfiguration); }
+
+    // ...
+    protected void setFavicon(final String path) { this.setIconImage(new ImageIcon(path).getImage()); }
+
+    protected void switchToPage(final Page form) { this.switchToPage(form, 0); }
+    protected void switchToPage(final Page form, final int animationDuration) {}
+};
+
+// : ...
 
 /* Application */
 public class Lapys extends Application {
-    /* Global */
-    // : Application ...
-    final protected static Lapys APPLICATION = new Lapys();
-    final protected static String APPLICATION_DESCRIPTION = "Testing software application coupled with database and machine learning technologies";
-    final protected static ArrayList<Font> APPLICATION_FONTS = new ArrayList<Font>();
-    final protected static String APPLICATION_NAME = "Lapys (AI)";
+    /* ... */
+    static final Application application = new Application();
+        static final int applicationDatabaseTableFieldCount = 6;
+        static final String[] applicationDatabaseTableFieldNames = {"Age", "Gender", "ID", "Matriculation Number", "Name", "Program"};
+        static final String[] applicationDatabaseTableFieldKeys = {null, null, "PRIMARY KEY", null, null, null};
+        static final String[] applicationDatabaseTableFieldMiscellanies = {null, null, "AUTO_INCREMENT", null, null, null};
+        static final boolean[] applicationDatabaseTableFieldNullities = {true, true, false, true, true, true};
+        static final String[] applicationDatabaseTableFieldTypes = {"INT", "INT", "INT", "VARCHAR(24)", "VARCHAR(64)", "VARCHAR(64)"};
+        static final String applicationDatabaseTableName = "Testers";
 
-    // : Database ...
-    protected static Connection DATABASE_CONNECTION;
-    final protected static String DATABASE_NAME = "Lapys Java";
-    final protected static String DATABASE_PASSWORD = "Lapys30*)";
-    final protected static String DATABASE_USER = "LapysDev";
-
-    // : Screen ...
-    final protected static Dimension SCREEN_SIZE = Toolkit.getDefaultToolkit().getScreenSize();
-    final protected static int SCREEN_HEIGHT = SCREEN_SIZE.height;
-    final protected static int SCREEN_WIDTH = SCREEN_SIZE.width;
-
-    // : Window
-    final protected static JWindow WINDOW = new JWindow(APPLICATION_NAME);
-    final protected static JPanel WINDOW_CONTENT = new JPanel();
-        // ...
-        final protected static JForm ACCOUNT_FORM  = new JForm(true /* boolean isDoubleBuffered */);
-        final protected static JForm HOME_FORM     = new JForm(true /* boolean isDoubleBuffered */);
-            final JPanel HOME_FORM_ACHIEVEMENTS = new JPanel();
-            final JPanel HOME_FORM_CAROUSEL = new JPanel();
-            final JPanel HOME_FORM_CONTENT = new JPanel();
-            final JScrollPane HOME_FORM_CONTENT_SCROLL = new JScrollPane();
-            final JPanel HOME_FORM_FOOTER = new JPanel();
-            final JPanel HOME_FORM_INTRODUCTION = new JPanel();
-        final protected static JForm REGISTER_FORM = new JForm(true /* boolean isDoubleBuffered */);
+    static final Window window = new Window();
 
     /* Phases */
-        /* Initiate */
-        protected void Initiate(final String[] arguments) {
-            // Constant > Window ...
-            final Container windowContentPane = WINDOW.getContentPane();
-            final int windowHeight = (int) (SCREEN_HEIGHT * (75.0 / 100.0));
-            final ImageIcon windowIcon = new ImageIcon("images/favicon.png");
-            final int windowWidth = (int) (SCREEN_WIDTH * (75.0 / 100.0));
-            final Dimension windowSize = new Dimension(windowWidth, windowHeight);
+    /* : Initiate */
+    protected static void Initiate(final String[] arguments) {
+        // Modification > Application > ...
+        application.database.name = "Java - Lapys (AI) Testers".toLowerCase(); // NOTE (Lapys) -> The MySQL database server does not persist the casing of table names.
+        application.database.password = "Lapys30*)";
+        application.database.port = 3306;
+        application.database.user = "LapysDev";
+        application.description = "Testing software application coupled with database and machine learning technologies";
+        application.name = "Lapys (AI)";
 
-            // Register > ...
-            for (final String fontPath : new String[] {"open-sans.ttf", "minecraft.otf"})
+        /* [Front-end] ... */ {
+            // Constant > (Screen, Window) Size
+            final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            final Dimension windowSize = new Dimension(
+                (int) ((75.0f / 100.0f) * (float) screenSize.width),
+                (int) ((75.0f / 100.0f) * (float) screenSize.height)
+            );
+
+            // ...
+            application.connectToDatabaseServer();
+            application.registerFont(Font.MONOSPACED, "fonts/minecraft.otf");
+            application.registerFont(Font.SANS_SERIF, "fonts/open-sans.ttf");
+
+            window.pack();
+            window.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+            window.setDefaultCloseOperation(Window.EXIT_ON_CLOSE);
+            window.setFavicon("images/favicon.png"); // WARN (Lapys) -> Does not accept `.ico` (`image/x-icon` MIME type) files.
+            window.setLocation((screenSize.width - windowSize.width) / 2, (screenSize.height - windowSize.height) / 2); // --> window.setLocationRelativeTo(null);
+            window.setMinimumSize(windowSize);
+            window.setSize(windowSize);
+            window.setTitle(application.name);
+            window.setVisible(true);
+        }
+
+        /* [Back-end] ... */ {
+            // Initialization > Application Has Database Table
+            boolean applicationHasDatabaseTable = false;
+
+            // ... --- NOTE (Lapys) -> Get the database.
+            application.modifyDatabase("CREATE DATABASE IF NOT EXISTS `" + application.database.name + '`');
+            application.queryDatabase("USE `" + application.database.name + '`');
+            application.evaluateDatabase();
+
+            // ... Update > Application Has Database Table
+            for (final Application.DatabaseTableInformation applicationDatabaseTable : application.database.tables)
+            if (applicationDatabaseTableName.equalsIgnoreCase(applicationDatabaseTable.name)) { applicationHasDatabaseTable = true; break; }
+
+            // Error Handling --- NOTE (Lapys) -> Get the database table.
             try {
-                APPLICATION_FONTS.add(Font.createFont(Font.TRUETYPE_FONT, new File("fonts/" + fontPath)).deriveFont(13f));
-                GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(APPLICATION_FONTS.get(APPLICATION_FONTS.size() - 1));
-            } catch (final FontFormatException|IOException error) { System.err.println(error); }
+                // Logic --- NOTE (Lapys) -> Ensure the table is as expected.
+                if (applicationHasDatabaseTable) {
+                    // ...; Loop
+                    final ResultSet applicationDatabaseTableDescription = application.queryDatabase("DESCRIBE `" + applicationDatabaseTableName + '`');
+                    for (boolean hasField; applicationHasDatabaseTable && applicationDatabaseTableDescription.next(); ) {
+                        // Constant > Application Database Table Field (Key, Miscellany, Name, Nullity, Type)
+                        final String applicationDatabaseTableFieldKey = applicationDatabaseTableDescription.getString("Key");
+                        final String applicationDatabaseTableFieldMiscellany = applicationDatabaseTableDescription.getString("Extra");
+                        final String applicationDatabaseTableFieldName = applicationDatabaseTableDescription.getString("Field");
+                        final String applicationDatabaseTableFieldNullity = applicationDatabaseTableDescription.getString("Null");
+                        final String applicationDatabaseTableFieldType = applicationDatabaseTableDescription.getString("Type");
 
-            // Modification > Window > ...
-            WINDOW.forms = new JForm[] {ACCOUNT_FORM, HOME_FORM, REGISTER_FORM};
+                        // ...; Loop
+                        hasField = false;
+                        for (int iterator = 0; applicationDatabaseTableFieldCount != iterator && false == hasField; ++iterator) {
+                            // Constant > ... Field (Key, Miscellany, Name, Nullity, Type)
+                            final String fieldKey = applicationDatabaseTableFieldKeys[iterator];
+                            final String fieldMiscellany = applicationDatabaseTableFieldMiscellanies[iterator];
+                            final String fieldName = applicationDatabaseTableFieldNames[iterator];
+                            final boolean fieldNullity = applicationDatabaseTableFieldNullities[iterator];
+                            final String fieldType = applicationDatabaseTableFieldTypes[iterator];
 
-            // Insertion
-            WINDOW.add(WINDOW_CONTENT); {
-                // WINDOW_CONTENT.setLayout(null);
-                WINDOW_CONTENT.setLocation(0, 0);
+                            // Logic > Assertion
+                            if (applicationDatabaseTableFieldName == fieldName || applicationDatabaseTableFieldName.equalsIgnoreCase(fieldName)) {
+                                // [Miscellany]
+                                if (applicationHasDatabaseTable) {
+                                    if (applicationDatabaseTableFieldMiscellany == fieldMiscellany) applicationHasDatabaseTable = true;
+                                    else applicationHasDatabaseTable = null == fieldMiscellany ? applicationDatabaseTableFieldMiscellany.isEmpty() : applicationDatabaseTableFieldMiscellany.equalsIgnoreCase(fieldMiscellany);
+                                }
 
-                // : Account Form
-                // WINDOW_CONTENT.add(ACCOUNT_FORM); {
-                //     ACCOUNT_FORM.setBackground(Color.MAGENTA);
-                // }
+                                // [Key]
+                                if (applicationHasDatabaseTable) {
+                                    if (applicationDatabaseTableFieldKey == fieldKey) applicationHasDatabaseTable = true;
+                                    else if (null != fieldKey) {
+                                        if (fieldKey.equals("MULTIPLE KEY")) applicationHasDatabaseTable = applicationDatabaseTableFieldKey.equalsIgnoreCase("MUL");
+                                        else if (fieldKey.equals("PRIMARY KEY")) applicationHasDatabaseTable = applicationDatabaseTableFieldKey.equalsIgnoreCase("PRI");
+                                        else if (fieldKey.equals("UNIQUE KEY")) applicationHasDatabaseTable = applicationDatabaseTableFieldKey.equalsIgnoreCase("UNI");
+                                    }
+                                }
 
-                // : Home Form
-                WINDOW_CONTENT.add(HOME_FORM); {
-                    HOME_FORM.add(new JButton("Button A"));
-                    HOME_FORM.add(new JButton("Button B"));
-                    HOME_FORM.add(new JButton("Button C"));
-                    HOME_FORM.setBackground(Color.GREEN);
-                    HOME_FORM.setLayout(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-                    HOME_FORM.setSize(new Dimension(windowWidth, windowHeight));
+                                // [Nullity]
+                                if (applicationHasDatabaseTable) {
+                                    if (false == fieldNullity) applicationHasDatabaseTable = applicationDatabaseTableFieldNullity.equals("NO");
+                                    else if (true == fieldNullity) applicationHasDatabaseTable = applicationDatabaseTableFieldNullity.equals("YES");
+                                }
 
-                    // : Content Scroll
-                    homeFormContentScroll.setLayout(new ScrollPaneLayout()); {
-                        homeFormContentScroll.getViewport().setView(homeFormContent);
-                        homeFormContentScroll.setBorder(null);
-                        homeFormContentScroll.setSize(windowWidth, windowHeight);
+                                // [Type]
+                                if (applicationHasDatabaseTable) {
+                                    if (applicationDatabaseTableFieldType == fieldType) applicationHasDatabaseTable = true;
+                                    else applicationHasDatabaseTable = null == fieldType ? applicationDatabaseTableFieldType.isEmpty() : applicationDatabaseTableFieldType.equalsIgnoreCase(fieldType);
+                                }
 
-                        homeFormContent.setBackground(Color.BLACK);
-                        homeFormContent.setSize(new Dimension(windowWidth, windowHeight));
+                                // Update > Has Field
+                                hasField = true;
+                            }
+                        }
+
+                        // ... Update > Application Has Database Table
+                        if (false == hasField)
+                        applicationHasDatabaseTable = false;
                     }
                 }
 
-                // : Register Form
-                // WINDOW_CONTENT.add(REGISTER_FORM); {
-                //     REGISTER_FORM.setBackground(Color.BLUE);
-                // }
-            }
+                // Logic --- NOTE (Lapys) -> Either the table does not exist or has an unexpected description.
+                if (false == applicationHasDatabaseTable) {
+                    // ...; Loop
+                    String applicationDatabaseTableSyntax = "";
+                    for (int iterator = 0; applicationDatabaseTableFieldCount != iterator; ++iterator) {
+                        // Constant > ... Field (Key, Miscellany, Name, Nullity, Type)
+                        final String fieldDelimiter = applicationDatabaseTableFieldCount - 1 == iterator ? "" : ", ";
+                        final String fieldKey = applicationDatabaseTableFieldKeys[iterator];
+                        final String fieldMiscellany = applicationDatabaseTableFieldMiscellanies[iterator];
+                        final String fieldName = applicationDatabaseTableFieldNames[iterator];
+                        final boolean fieldNullity = applicationDatabaseTableFieldNullities[iterator];
+                        final String fieldType = applicationDatabaseTableFieldTypes[iterator];
 
-            // ...
-            WINDOW.pack();
-            WINDOW.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
-            WINDOW.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            WINDOW.setIconImage(windowIcon.getImage()); // WARN (Lapys) -> Does not accept Windows `.ico` files.
-            WINDOW.setLocation((int) ((SCREEN_WIDTH - windowWidth) / 2.0), (int) ((SCREEN_HEIGHT - windowHeight) / 2.0)); // --> WINDOW.setLocationRelativeTo(null);
-            WINDOW.setMinimumSize(windowSize);
-            WINDOW.setSize(windowSize);
-            WINDOW.setTitle(APPLICATION_NAME);
-            WINDOW.setVisible(true);
+                        // Update > Application Database Table Syntax
+                        applicationDatabaseTableSyntax += '`' + fieldName + "` ";
+                        applicationDatabaseTableSyntax += fieldType;
+                        applicationDatabaseTableSyntax += fieldNullity ? "" : " NOT NULL";
+                        applicationDatabaseTableSyntax += null != fieldMiscellany ? ' ' + fieldMiscellany : "";
+                        applicationDatabaseTableSyntax += null != fieldKey ? ", " : fieldDelimiter;
+                        applicationDatabaseTableSyntax += null != fieldKey ? fieldKey + ' ' + "(`" + fieldName + "`)" + fieldDelimiter : "";
+                    }
 
-            // Update
-            Update();
+                    // ...
+                    application.modifyDatabase("DROP TABLE IF EXISTS `" + applicationDatabaseTableName + '`');
+                    application.modifyDatabase("CREATE TABLE `" + applicationDatabaseTableName + "` (" + applicationDatabaseTableSyntax + ')');
+                }
+            } catch (final Exception error) { System.err.println(error); }
+
+            // INSERT INTO `Testers` (`Age`, `Gender`, `Matriculation Number`, `Name`, `Program`) VALUES ('21', '0', '16CG021462', 'Lapys \'Lazuli?\'', 'Computing Science');
+            // SELECT * FROM `Testers`; --> Age | Gender | ID | Matriculation Number | Name | Program
+            // DELETE FROM `Testers`;
+            // DELETE FROM `Testers` WHERE `Age`=21';
+            // DELETE FROM `Testers` WHERE `Name`='Lapys \'Lazuli?\'';
+            // UPDATE `Testers` SET `Age`=22, `Name`='Lapys' WHERE `ID`=2;
         }
+    }
 
-        /* Reset */
-        protected void Reset(final int code) { /* ... */ }
+    /* : Reset */
+    protected static void Reset(final int code) { /* ... */ }
 
-        /* Update */
-        protected void Update() {
-            // ...
-            WINDOW_CONTENT.setSize(WINDOW.getContentPane().getSize());
-            for (final JForm windowForm : WINDOW.forms) {
-                windowForm.setLocation(0, 0);
-                windowForm.setSize(WINDOW_CONTENT.getSize());
-            }
-        }
+    /* : Terminate */
+    protected static void Terminate(final int code) {
+        application.disconnectFromDatabaseServer();
+        System.exit(code);
+    }
 
-        /* Terminate */
-        protected void Terminate(final int code) { System.exit(code); }
+    /* : Update */
+    protected static void Update() {}
 
     /* Main */
     public static void main(final String[] arguments) {
-        /* Event */
+        // Event
         // : ...
-        EventQueue.invokeLater(new Runnable() {
-            @Override public void run() {
-                APPLICATION.state = Application.State.INITIATING;
-                APPLICATION.Initiate(arguments);
-            }
-        });
+        EventQueue.invokeLater(new Runnable() { @Override public void run() { application.state = Application.State.INITIATING; Initiate(arguments); } });
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() { @Override public boolean dispatchKeyEvent(final KeyEvent event) { if (KeyEvent.KEY_PRESSED == event.getID() && KeyEvent.VK_ESCAPE == event.getKeyCode()) { window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)); } return false; } });
 
-        // : Key --- NOTE (Lapys) -> Close `WINDOW` when the "Escape" key is pressed.
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
-            @Override public boolean dispatchKeyEvent(final KeyEvent event) {
-                if (KeyEvent.KEY_PRESSED == event.getID() && KeyEvent.VK_ESCAPE == event.getKeyCode())
-                WINDOW.dispatchEvent(new WindowEvent(WINDOW, WindowEvent.WINDOW_CLOSING));
-
-                return false;
-            }
-        });
-
-        // : Window > (Close ..., Resize)
-        WINDOW.addComponentListener(new ComponentAdapter() {
-            @Override public void componentResized(final ComponentEvent event) {
-                if (APPLICATION.state == Application.State.INITIATING || APPLICATION.state == Application.State.UPDATING) {
-                    APPLICATION.state = Application.State.UPDATING;
-                    APPLICATION.Update();
-                }
-            }
-        });
-
-        WINDOW.addWindowListener(new WindowAdapter() {
-            @Override public void windowClosed(final WindowEvent event) { /* ... */ }
-            @Override public void windowClosing(final WindowEvent event) {
-                if (APPLICATION.state == Application.State.INITIATING || APPLICATION.state == Application.State.UPDATING) {
-                    APPLICATION.state = Application.State.TERMINATING;
-                    APPLICATION.Terminate(0x0);
-                }
-            }
-        });
+        // : Window > (Closing, Resize)
+        window.addComponentListener(new ComponentAdapter() { @Override public void componentResized(final ComponentEvent event) { if (Application.State.INITIATING == application.state || Application.State.UPDATING == application.state) { application.state = Application.State.UPDATING; Update(); } } });
+        window.addWindowListener(new WindowAdapter() { @Override public void windowClosing(final WindowEvent event) { if (Application.State.INITIATING == application.state || Application.State.UPDATING == application.state) { application.state = Application.State.TERMINATING; Terminate(0x0); } } });
     }
 };

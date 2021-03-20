@@ -56,7 +56,7 @@
             try {
                 databaseStatement = databaseConnection.createStatement();
 
-                if (0 == databaseStatement.executeUpdate("CREATE DATABASE " + databaseName + " IF NOT EXISTS " + databaseName))
+                if (0 == databaseStatement.executeUpdate("CREATE DATABASE IF NOT EXISTS " + databaseName))
                 throw new SQLException("Unable to create database \"" + databaseName + "\"");
             } catch (final SQLException error) { System.err.println(error); }
 
