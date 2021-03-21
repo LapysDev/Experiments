@@ -254,17 +254,24 @@ class ShadowedText extends JLabel {
 
     // ...
     public ShadowedText() { super(); }
+
+    public ShadowedText(final Color color) { super(); this.shadowColor = color; }
     public ShadowedText(final Icon image) { super(image); }
-    public ShadowedText(final Dimension size) { super(); this.shadowSize = size; }
     public ShadowedText(final String text) { super(text); }
+    public ShadowedText(final Color color, final Dimension size) { super(); this.shadowColor = color; this.shadowSize = size; }
+    public ShadowedText(final Icon image, final Color color) { super(image); this.shadowColor = color; }
     public ShadowedText(final Icon image, final int horizontalAlignment) { super(image, horizontalAlignment); }
-    public ShadowedText(final Icon image, final Dimension size) { super(image); this.shadowSize = size; }
+    public ShadowedText(final String text, final Color color) { super(text); this.shadowColor = color; }
     public ShadowedText(final String text, final int horizontalAlignment) { super(text, horizontalAlignment); }
-    public ShadowedText(final String text, final Dimension size) { super(text); this.shadowSize = size; }
-    public ShadowedText(final Icon image, final int horizontalAlignment, final Dimension size) { super(image, horizontalAlignment); this.shadowSize = size; }
-    public ShadowedText(final String text, final int horizontalAlignment, final Dimension size) { super(text, horizontalAlignment); this.shadowSize = size; }
+    public ShadowedText(final Icon image, final Color color, final Dimension size) { super(image); this.shadowColor = color; this.shadowSize = size; }
+    public ShadowedText(final Icon image, final int horizontalAlignment, final Color color) { super(image, horizontalAlignment); this.shadowColor = color; }
+    public ShadowedText(final String text, final Color color, final Dimension size) { super(text); this.shadowColor = color; this.shadowSize = size; }
+    public ShadowedText(final String text, final int horizontalAlignment, final Color color) { super(text, horizontalAlignment); this.shadowColor = color; }
     public ShadowedText(final String text, final Icon icon, final int horizontalAlignment) { super(text, icon, horizontalAlignment); }
-    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment, final Dimension size) { super(text, icon, horizontalAlignment); this.shadowSize = size; }
+    public ShadowedText(final Icon image, final int horizontalAlignment, final Color color, final Dimension size) { super(image, horizontalAlignment); this.shadowColor = color; this.shadowSize = size; }
+    public ShadowedText(final String text, final int horizontalAlignment, final Color color, final Dimension size) { super(text, horizontalAlignment); this.shadowColor = color; this.shadowSize = size; }
+    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment, final Color color) { super(text, icon, horizontalAlignment); this.shadowColor = color; }
+    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment, final Color color, final Dimension size) { super(text, icon, horizontalAlignment); this.shadowColor = color; this.shadowSize = size; }
 
     // ...
     protected Color getShadowColor() { return this.shadowColor; }
