@@ -249,33 +249,41 @@ class RoundedButton extends JButton {};
 
 // : Shadowed Text
 class ShadowedText extends JLabel {
+    protected Color shadowColor = new Color(0.0f, 0.0f, 0.0f, 0.075f);
+    protected Dimension shadowSize = new Dimension(5, 5);
+
     // ...
+    public ShadowedText() { super(); }
+    public ShadowedText(final Icon image) { super(image); }
+    public ShadowedText(final Dimension size) { super(); this.shadowSize = size; }
+    public ShadowedText(final String text) { super(text); }
+    public ShadowedText(final Icon image, final int horizontalAlignment) { super(image, horizontalAlignment); }
+    public ShadowedText(final Icon image, final Dimension size) { super(image); this.shadowSize = size; }
+    public ShadowedText(final String text, final int horizontalAlignment) { super(text, horizontalAlignment); }
+    public ShadowedText(final String text, final Dimension size) { super(text); this.shadowSize = size; }
+    public ShadowedText(final Icon image, final int horizontalAlignment, final Dimension size) { super(image, horizontalAlignment); this.shadowSize = size; }
+    public ShadowedText(final String text, final int horizontalAlignment, final Dimension size) { super(text, horizontalAlignment); this.shadowSize = size; }
+    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment) { super(text, icon, horizontalAlignment); }
+    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment, final Dimension size) { super(text, icon, horizontalAlignment); this.shadowSize = size; }
+
+    // ...
+    protected Color getShadowColor() { return this.shadowColor; }
+    protected Dimension getShadowSize() { return this.shadowSize; }
+
     @Override
     public void paint(final Graphics graphics) {  {
         final Graphics2D graphics2D = (Graphics2D) graphics;
         final TextLayout textLayout = new TextLayout(this.getText(), this.getFont(), graphics2D.getFontRenderContext());
+        int x = this.getLocation().x, y = this.getFont().getSize() + this.getLocation().y;
 
-        graphics2D.setPaint(new Color(0.0f, 0.0f, 0.0f, 0.3f));
-        textLayout.draw(graphics2D, this.getLocation().x + 3, this.getLocation().y + 3);
-
-        graphics2D.setPaint(Color.BLACK);
-        textLayout.draw(graphics2D, this.getLocation().x, this.getLocation().y);
+        for (int shadowHeightOffset = this.shadowSize.height, shadowWidthOffset = this.shadowSize.width; 0 != shadowHeightOffset && 0 != shadowWidthOffset; --shadowHeightOffset, --shadowWidthOffset) {
+            graphics2D.setPaint(this.shadowColor);
+            textLayout.draw(graphics2D, x + shadowWidthOffset, y + shadowHeightOffset);
+        }
     } super.paint(graphics); }
-    public void paint(Graphics g) {
-        String text = "Hello World";
-        int x = 10;
-        int y = 100;
 
-        Font font = new Font("Georgia", Font.ITALIC, 50);
-        Graphics2D g1 = (Graphics2D) g;
-
-        TextLayout textLayout = new TextLayout(text, font, g1.getFontRenderContext());
-        g1.setPaint(new Color(150, 150, 150));
-        textLayout.draw(g1, x + 3, y + 3);
-
-        g1.setPaint(Color.BLACK);
-        textLayout.draw(g1, x, y);
-      }
+    protected void setShadowColor(final Color color) { this.shadowColor = color; }
+    protected void setShadowSize(final Dimension size) { this.shadowSize = size; }
 };
 
 // : Window
