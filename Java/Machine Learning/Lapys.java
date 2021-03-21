@@ -60,6 +60,7 @@ import java.util.TimerTask;
 // : Java Extensions > Image Input/ Output
 // : Java Extensions > Swing
 import javax.swing.Action;
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -422,12 +423,10 @@ public class Lapys extends Application {
         application.name = "Lapys (AI)";
 
         /* [Front-end] ... */ {
-            // Constant > (Screen, Window) Size
+            // Constant > ...
+            final GridBagConstraints layoutConstraints = new GridBagConstraints();
             final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            final Dimension windowSize = new Dimension(
-                (int) ((75.0f / 100.0f) * (float) screenSize.width),
-                (int) ((75.0f / 100.0f) * (float) screenSize.height)
-            );
+            final Dimension windowSize = new Dimension((int) ((75.0f / 100.0f) * (float) screenSize.width), (int) ((75.0f / 100.0f) * (float) screenSize.height));
 
             // Insertion
             homeCarousel.add(homeCarouselBackgroundMedia);
@@ -445,21 +444,42 @@ public class Lapys extends Application {
             application.registerFont(Font.SANS_SERIF, "fonts/open-sans.ttf");
 
             // [Home] ...
-            for (int iterator = 0; iterator != homeCarouselIndicators.length; ++iterator)
-            homeCarouselIndicators[iterator] = new RoundedButton();
-
             homeCarousel.setBackground(Color.BLACK);
             homeCarousel.setLayout(null);
+            homeCarousel.setComponentZOrder(homeCarouselHeaderGroup, 1);
+            homeCarousel.setComponentZOrder(homeCarouselIndicatorList, 0);
 
             homeCarouselHeader.setForeground(Color.WHITE);
-            homeCarouselHeader.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 30));
+            homeCarouselHeader.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 42));
             homeCarouselHeader.setText("Carousel Title");
 
-            homeCarouselHeaderGroup.setBackground(Color.BLUE);
+            homeCarouselIndicatorList.setBackground(Color.RED);
+            homeCarouselIndicatorList.setLayout(new GridBagLayout());
+            homeCarouselIndicatorList.setLocation(0, 0); {
+                layoutConstraints.anchor = GridBagConstraints.PAGE_END;
+                layoutConstraints.gridx = 0;
+                layoutConstraints.insets = new Insets(0, 5, 20, 5);
+                layoutConstraints.weightx = 0.0;
+                layoutConstraints.weighty = 1.0;
+
+                for (int iterator = 0; iterator != homeCarouselIndicators.length; ++iterator) {
+                    final RoundedButton homeCarouselIndicator = new RoundedButton();
+
+                    homeCarouselIndicators[iterator] = homeCarouselIndicator;
+
+                    homeCarouselIndicatorList.add(homeCarouselIndicator, layoutConstraints);
+                    ++layoutConstraints.gridx;
+
+                    homeCarouselIndicator.setBackground(new Color(0.0f, 0.0f, 0.0f, 0.675f));
+                    homeCarouselIndicator.setPreferredSize(new Dimension(40, 40));
+                }
+            }
+
             homeCarouselHeaderGroup.setLayout(new BoxLayout(homeCarouselHeaderGroup, BoxLayout.Y_AXIS));
 
+            homeCarouselSubheader.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
             homeCarouselSubheader.setForeground(Color.WHITE);
-            homeCarouselSubheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 20));
+            homeCarouselSubheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 24));
             homeCarouselSubheader.setText("Carousel Subtitle");
 
             homePage.setLayout(new BoxLayout(homePage, BoxLayout.Y_AXIS));
@@ -627,6 +647,9 @@ public class Lapys extends Application {
         homeCarouselHeaderGroup.setLocation((int) (homeCarousel.getWidth() * (5.0f / 100.0f)), 15);
         homeCarouselHeaderGroup.setSize(new Dimension((int) (homeCarousel.getWidth() * (90.0f / 100.0f)), homeCarouselHeader.getHeight() + homeCarouselSubheader.getHeight()));
         homeCarouselHeaderGroup.doLayout();
+
+        homeCarouselIndicatorList.setSize(homeCarousel.getSize());
+        homeCarouselIndicatorList.doLayout();
     }
 
     /* Main */
