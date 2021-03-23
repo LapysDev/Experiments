@@ -1,3 +1,13 @@
+/* NOTE (Lapys) -> Compilation commands (on Windows administrative)
+    attrib +r *.java
+    cls
+    asadmin start-domain --domaindir . web
+    javac Lapys.java
+    java -cp .;libraries/mysql-connector.jar Lapys
+    asadmin stop-domain --domaindir . web
+    del /q *
+    attrib -r *.java
+*/
 /* Import > ... */
 // : Java > Abstract Window Toolkit
 import java.awt.BorderLayout;
@@ -5,6 +15,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -18,12 +29,10 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.KeyEventDispatcher;
 import java.awt.LayoutManager;
-import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
 
@@ -43,7 +52,12 @@ import java.io.IOException;
 
 // : Java > Language
 import java.lang.Exception;
-import java.lang.Throwable;
+import java.lang.Math;
+import java.lang.System;
+
+// : Java > Network
+import java.net.URI;
+import java.net.URISyntaxException;
 
 // : Java > Structured Query Language (SQL)
 import java.sql.Connection;
@@ -57,7 +71,6 @@ import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
-// : Java Extensions > Image Input/ Output
 // : Java Extensions > Swing
 import javax.swing.Action;
 import javax.swing.BorderFactory;
@@ -70,6 +83,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneLayout;
+import javax.swing.SwingConstants;
 
 /* Class --- REDACT (Lapys) --- NOTE (Lapys) */
 // : Application
@@ -79,7 +93,7 @@ class Application {
     public Application(final String name) { this.name = name; }
 
     // ...
-    class DatabaseInformation {
+    protected class DatabaseInformation {
         public Connection connection = null;
         public String name = null;
         public DatabaseMetaData metadata = null;
@@ -89,9 +103,10 @@ class Application {
         public String user = "root";
     };
 
-    class DatabaseTableInformation {
+    protected class DatabaseTableInformation {
         public DatabaseTableInformation(final String name) { this.name = name; }
 
+        // ...
         public String catalog = null;
         public String name = null;
         public String remarks = null;
@@ -104,7 +119,7 @@ class Application {
         public String typeName = null;
     };
 
-    class FontCollection {
+    protected class FontCollection {
         public Font dialog = new Font(Font.DIALOG, Font.PLAIN, 13);
         public Font dialogInput = new Font(Font.DIALOG_INPUT, Font.PLAIN, 13);
         public Font monospace = new Font(Font.MONOSPACED, Font.PLAIN, 13);
@@ -113,6 +128,7 @@ class Application {
     };
 
     // ...
+    protected Color color = new Color(153, 0, 170);
     protected Application.DatabaseInformation database = new DatabaseInformation();
     protected String description = null;
     protected Application.FontCollection fonts = new FontCollection();
@@ -133,6 +149,7 @@ class Application {
     protected void disconnectFromDatabaseServer() {
         try {
             if (null != this.database.connection) {
+                if (false == this.database.connection.isClosed())
                 this.database.connection.close();
 
                 this.database.connection = null;
@@ -142,6 +159,7 @@ class Application {
     }
 
     protected void evaluateDatabase() {
+        if (this.hasConnectedDatabaseServer())
         try {
             final ResultSet databaseMetadataTables = this.database.metadata.getTables(null, null /* String schemaPattern */, "%" /* --> this.database.name */, new String[] {"TABLE"});
             final ResultSet databaseTables = this.queryDatabase("SHOW TABLES FROM `" + this.database.name + '`');
@@ -223,149 +241,454 @@ class Application {
     }
 };
 
-// : Button -> Gradient background.
-class Button extends JButton {};
-
-// : Page -> Gradient background optimized for animations & transitions.
-class Page extends JPanel {
-    public Page() { super(true); }
-    public Page(final boolean isDoubleBuffered) { super(isDoubleBuffered); }
-    public Page(final LayoutManager layout) { super(layout); }
-    public Page(final LayoutManager layout, final boolean isDoubleBuffered) { super(layout, isDoubleBuffered); }
+// : Button
+class Button extends JButton {
+    public Button() { super(); }
+    public Button(final Action action) { super(action); }
+    public Button(final Icon icon) { super(icon); }
+    public Button(final String text) { super(text); }
+    public Button(final String text, final Icon icon) { super(text, icon); }
 
     // ...
-    @Override public boolean isOptimizedDrawingEnabled() { return false; }
-    @Override protected void paintComponent(final Graphics graphics) { super.paintComponent(graphics); {
+    @Override protected void paintBorder(final Graphics graphics) {
         final Graphics2D graphics2D = (Graphics2D) graphics;
 
-        graphics2D.setPaint(new GradientPaint(0, 0, new Color(153, 0, 170), this.getWidth() / 8.0f, this.getHeight() * 1.25f, new Color(0, 51, 192)));
-        graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        if (this.getModel().isArmed()) {
+            graphics2D.setColor(this.getForeground());
+            graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        graphics2D.fillRect(0, 0, this.getWidth(), this.getHeight());
-    } }
+            graphics2D.drawRect(0, 0, this.getWidth(), this.getHeight());
+        }
+    }
+};
+
+// : Carousel
+class Carousel extends Panel {
+    public Carousel() {
+        super((LayoutManager) null, true);
+
+        // ...
+        this.activeMedia = this.foregroundMedia;
+
+        // ...
+        this.add(this.backgroundMedia);
+        this.add(this.foregroundMedia);
+        this.add(this.headerGroup);
+        this.add(this.indicatorList);
+        this.add(this.mediaFilter);
+
+        this.headerGroup.add(this.header);
+        this.headerGroup.add(this.subheader);
+
+        // ...
+        this.setBackground(Color.BLACK);
+        this.setComponentZOrder(this.backgroundMedia, 4);
+        this.setComponentZOrder(this.foregroundMedia, 3);
+        this.setComponentZOrder(this.headerGroup, 1);
+        this.setComponentZOrder(this.indicatorList, 0);
+        this.setComponentZOrder(this.mediaFilter, 2);
+
+        this.backgroundMedia.setAlignmentX(SwingConstants.CENTER);
+        this.backgroundMedia.setHorizontalAlignment(JLabel.CENTER);
+        this.backgroundMedia.setHorizontalTextPosition(SwingConstants.CENTER);
+        this.backgroundMedia.setLocation(this.getWidth(), 0);
+
+        this.foregroundMedia.setAlignmentX(SwingConstants.CENTER);
+        this.foregroundMedia.setHorizontalAlignment(JLabel.CENTER);
+        this.foregroundMedia.setHorizontalTextPosition(SwingConstants.CENTER);
+        this.foregroundMedia.setLocation(0, 0);
+
+        this.headerGroup.setLayout(new BoxLayout(this.headerGroup, BoxLayout.Y_AXIS));
+        this.headerGroup.setLocation(0, 0);
+        this.headerGroup.setOpaque(false);
+
+        this.indicatorList.setLayout(new GridBagLayout());
+        this.indicatorList.setLocation(0, 0);
+        this.indicatorList.setOpaque(false);
+
+        this.mediaFilter.setBackground(new Color(0.0f, 0.0f, 0.0f, 0.5f));
+        this.mediaFilter.setLocation(0, 0);
+        this.mediaFilter.setOpaque(true);
+
+        this.subheader.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
+    }
+
+    // ...
+    private Label activeMedia;
+    private String activeMediaPath;
+
+    final protected Label backgroundMedia = new Label();
+    final protected Label foregroundMedia = new Label();
+
+
+    final protected ShadowedLabel header = new ShadowedLabel();
+    final protected Panel headerGroup = new Panel();
+
+    final protected Panel mediaFilter = new Panel(true);
+    final private ArrayList<String> mediaPaths = new ArrayList<String>();
+
+    private Color indicatorBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 0.675f);
+    private Color indicatorForegroundColor = new Color(1.0f, 1.0f, 1.0f, 0.675f);
+    final protected Panel indicatorList = new Panel();
+    private CarouselIndicator[] indicators = new CarouselIndicator[0];
+
+    final protected ShadowedLabel subheader = new ShadowedLabel();
+
+    // ...
+    public void addMedia(final String path) { this.mediaPaths.add(path); this.updateComponents(); }
+    public void addMedia(final String path, final String... paths) { this.mediaPaths.add(path); for (int iterator = 0; iterator != paths.length; ++iterator) { this.mediaPaths.add(paths[iterator]); } this.updateComponents(); }
+
+    @Override public void doLayout() {
+        super.doLayout();
+
+        for (final Component component : this.getComponents())
+        component.doLayout();
+    }
+
+    public Color getIndicatorBackground() { return this.indicatorBackgroundColor; }
+    public int getIndicatorCount() { return this.indicators.length; }
+    public Color getIndicatorForeground() { return this.indicatorForegroundColor; }
+    public CarouselIndicator[] getIndicators() { return this.indicators; }
+
+    public ArrayList<String> getMedia() { return this.mediaPaths; }
+    public int getMediaCount() { return this.mediaPaths.size(); }
+
+    public void removeMedia(final String path) { this.mediaPaths.remove(path); this.updateComponents(); }
+    public void removeMedia(final String path, final String... paths) { this.mediaPaths.remove(path); for (int iterator = 0; iterator != paths.length; ++iterator) { this.mediaPaths.remove(paths[iterator]); } this.updateComponents(); }
+
+    public void setIndicatorBackground(final Color color) { this.indicatorBackgroundColor = color; }
+    public void setIndicatorForeground(final Color color) { this.indicatorForegroundColor = color; }
+
+    protected void switchToMedia(final int index) {
+        final String mediaPath = this.mediaPaths.get(index);
+
+        if (mediaPath != this.activeMediaPath) {
+            final Label currentActiveMedia = this.activeMedia == this.backgroundMedia ? this.foregroundMedia : this.backgroundMedia;
+            final Label recentActiveMedia = this.activeMedia;
+
+            // ...
+            this.activeMedia = currentActiveMedia;
+            this.activeMediaPath = mediaPath;
+
+            // ...
+            this.setComponentZOrder(currentActiveMedia, this.getComponentCount() - 1);
+            this.setComponentZOrder(recentActiveMedia, this.getComponentCount() - 2);
+
+            recentActiveMedia.setIcon(new ImageIcon(mediaPath));
+
+            // ...
+            new Timer().scheduleAtFixedRate(new TimerTask() {
+                @Override public void run() {
+                    int recentActiveMediaXCoordinate = recentActiveMedia.getLocation().x;
+
+                    if (0 == recentActiveMediaXCoordinate) { currentActiveMedia.setLocation(currentActiveMedia.getParent().getWidth(), 0); cancel(); }
+                    else { recentActiveMediaXCoordinate -= 10; recentActiveMedia.setLocation(recentActiveMediaXCoordinate = recentActiveMediaXCoordinate < 0 ? 0 : recentActiveMediaXCoordinate, 0); }
+                }
+            }, 0, 3);
+        }
+    }
+
+    private void updateComponents() {
+        int iterator = this.indicatorList.getComponentCount();
+        final int length = this.mediaPaths.size();
+
+        if (iterator != length) {
+            this.indicators = new CarouselIndicator[length];
+            CarouselIndicator.LAYOUT_CONSTRAINTS.anchor = GridBagConstraints.LAST_LINE_START;
+            CarouselIndicator.LAYOUT_CONSTRAINTS.gridx = 0;
+            CarouselIndicator.LAYOUT_CONSTRAINTS.insets = new Insets(0, 5, 20, 5);
+            CarouselIndicator.LAYOUT_CONSTRAINTS.weightx = 0.0;
+            CarouselIndicator.LAYOUT_CONSTRAINTS.weighty = 1.0;
+
+            while (iterator > length)
+            this.indicatorList.remove(--iterator);
+
+            for (; iterator++ != length; ++CarouselIndicator.LAYOUT_CONSTRAINTS.gridx)
+            this.indicatorList.add(new CarouselIndicator(this), CarouselIndicator.LAYOUT_CONSTRAINTS);
+
+            for (iterator = length; 0 != iterator--; )
+            this.indicators[iterator] = (CarouselIndicator) this.indicatorList.getComponent(iterator);
+        }
+    }
+};
+
+// : Carousel Indicator
+class CarouselIndicator extends RoundedButton {
+    public CarouselIndicator(final Carousel carousel) {
+        super();
+
+        this.carousel = carousel;
+
+        this.addActionListener(CarouselIndicator.ACTION_LISTENER);
+        this.setBackground(this.carousel.getIndicatorBackground());
+
+        this.setCursor(CarouselIndicator.CURSOR);
+        this.setForeground(this.carousel.getIndicatorForeground());
+        this.setPreferredSize(this.getPreferredSize());
+    }
+
+    // ...
+    final public static ActionListener ACTION_LISTENER = new ActionListener() {
+        @Override public void actionPerformed(final ActionEvent event) {
+            final CarouselIndicator indicator = (CarouselIndicator) event.getSource();
+            final CarouselIndicator[] indicators = indicator.carousel.getIndicators();
+
+            for (int iterator = 0; iterator != indicators.length; ++iterator)
+            if (indicator == indicators[iterator]) {
+                indicator.carousel.switchToMedia(iterator);
+                break;
+            }
+        }
+    };
+
+    private Carousel carousel;
+    final public static Cursor CURSOR = new Cursor(Cursor.HAND_CURSOR);
+    final public static GridBagConstraints LAYOUT_CONSTRAINTS = new GridBagConstraints();
+
+    // ...
+    @Override public Dimension getPreferredSize() {
+        final int size = (int) (Math.min(this.carousel.getHeight(), this.carousel.getWidth()) / 14.4f);
+        return new Dimension(size, size);
+    }
+};
+
+// : Frame
+class Frame extends JFrame {
+    public Frame() { super(); }
+    public Frame(final GraphicsConfiguration graphicsConfiguration) { super(graphicsConfiguration); }
+    public Frame(final String title) { super(title); }
+    public Frame(final String title, final GraphicsConfiguration graphicsConfiguration) { super(title, graphicsConfiguration); }
+};
+
+// : Gradient Button
+class GradientButton extends Button {
+    public GradientButton() { super(); }
+    public GradientButton(final Action action) { super(action); }
+    public GradientButton(final Icon icon) { super(icon); }
+    public GradientButton(final GradientPaint gradient) { super(); this.setGradient(gradient); }
+    public GradientButton(final String text) { super(text); }
+    public GradientButton(final Action action, final GradientPaint gradient) { super(action); this.setGradient(gradient); }
+    public GradientButton(final Icon icon, final GradientPaint gradient) { super(icon); this.setGradient(gradient); }
+    public GradientButton(final String text, final GradientPaint gradient) { super(text); this.setGradient(gradient); }
+    public GradientButton(final String text, final Icon icon) { super(text, icon); }
+    public GradientButton(final String text, final Icon icon, final GradientPaint gradient) { super(text, icon); this.setGradient(gradient); }
+
+    // ...
+    protected GradientPaint gradient = null;
+
+    // ...
+    public GradientPaint getGradient() { return this.gradient; }
+
+    @Override protected void paintComponent(final Graphics graphics) {
+        final Color color = this.getBackground();
+        final GradientPaint gradient = this.getGradient();
+        final Graphics2D graphics2D = (Graphics2D) graphics;
+
+        if (null != gradient) {
+            this.setBackground(new Color(0.0f, 0.0f, 0.0f, 0.0f));
+
+            graphics2D.setColor(this.getModel().isArmed() ? new Color(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha() / 2) : color);
+            graphics2D.setPaint(gradient);
+            graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+            graphics2D.fillRect(0, 0, this.getWidth(), this.getHeight());
+        }
+
+        super.paintComponent(graphics);
+    }
+
+    public void setGradient(final GradientPaint gradient) { this.gradient = gradient; }
+};
+
+// : Gradient Panel
+class GradientPanel extends Panel {
+    public GradientPanel() { super(true); }
+    public GradientPanel(final boolean isDoubleBuffered) { super(isDoubleBuffered); }
+    public GradientPanel(final LayoutManager layout) { super(layout); }
+    public GradientPanel(final LayoutManager layout, final boolean isDoubleBuffered) { super(layout, isDoubleBuffered); }
+
+    // ...
+    protected GradientPaint gradient = null;
+
+    // ...
+    public GradientPaint getGradient() { return this.gradient; }
+    @Override public boolean isOptimizedDrawingEnabled() { return false; }
+
+    @Override protected void paintComponent(final Graphics graphics) {
+        final GradientPaint gradient = this.getGradient();
+        final Graphics2D graphics2D = (Graphics2D) graphics;
+
+        super.paintComponent(graphics);
+        if (null != gradient) {
+            graphics2D.setPaint(gradient);
+            graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+            graphics2D.fillRect(0, 0, this.getWidth(), this.getHeight());
+        }
+    }
+
+    public void setGradient(final GradientPaint gradient) { this.gradient = gradient; }
+};
+
+// : Label
+class Label extends JLabel {
+    public Label() { super(); }
+    public Label(final Icon image) { super(image); }
+    public Label(final String text) { super(text); }
+    public Label(final Icon image, final int horizontalAlignment) { super(image, horizontalAlignment); }
+    public Label(final String text, final int horizontalAlignment) { super(text, horizontalAlignment); }
+    public Label(final String text, final Icon icon, final int horizontalAlignment) { super(text, icon, horizontalAlignment); }
+};
+
+// : Panel
+class Panel extends JPanel {
+    public Panel() { super(true); }
+    public Panel(final boolean isDoubleBuffered) { super(isDoubleBuffered); }
+    public Panel(final LayoutManager layout) { super(layout); }
+    public Panel(final LayoutManager layout, final boolean isDoubleBuffered) { super(layout, isDoubleBuffered); }
 };
 
 // : Rounded Button
-class RoundedButton extends JButton {};
+class RoundedButton extends Button {
+    public RoundedButton() { super(); this.setContentAreaFilled(false); }
+    public RoundedButton(final Action action) { super(action); this.setContentAreaFilled(false); }
+    public RoundedButton(final Icon icon) { super(icon); this.setContentAreaFilled(false); }
+    public RoundedButton(final String text) { super(text); this.setContentAreaFilled(false); }
+    public RoundedButton(final String text, final Icon icon) { super(text, icon); this.setContentAreaFilled(false); }
 
-// : Shadowed Text
-class ShadowedText extends JLabel {
+    // ...
+    @Override public boolean contains(final int x, final int y) {
+        return new Ellipse2D.Float(0, this.getHeight() / 8, this.getWidth(), this.getHeight() - (this.getHeight() / 4)).contains(x, y);
+    }
+
+    @Override protected void paintBorder(final Graphics graphics) {
+        final Graphics2D graphics2D = (Graphics2D) graphics;
+
+        graphics2D.setColor(this.getForeground());
+        graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        graphics2D.drawOval(1, 1, this.getWidth() - 2, this.getHeight() - 2);
+    }
+
+    @Override protected void paintComponent(final Graphics graphics) {
+        final Color color = this.getBackground();
+        final Graphics2D graphics2D = (Graphics2D) graphics;
+
+        graphics2D.setColor(this.getModel().isArmed() ? new Color(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha() / 2) : color);
+        graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        graphics2D.fillOval(0, 0, this.getWidth(), this.getHeight());
+    }
+};
+
+// : Shadowed Label
+class ShadowedLabel extends Label {
     protected Color shadowColor = new Color(0.0f, 0.0f, 0.0f, 0.075f);
     protected Dimension shadowSize = new Dimension(5, 5);
 
     // ...
-    public ShadowedText() { super(); }
-
-    public ShadowedText(final Color color) { super(); this.shadowColor = color; }
-    public ShadowedText(final Icon image) { super(image); }
-    public ShadowedText(final String text) { super(text); }
-    public ShadowedText(final Color color, final Dimension size) { super(); this.shadowColor = color; this.shadowSize = size; }
-    public ShadowedText(final Icon image, final Color color) { super(image); this.shadowColor = color; }
-    public ShadowedText(final Icon image, final int horizontalAlignment) { super(image, horizontalAlignment); }
-    public ShadowedText(final String text, final Color color) { super(text); this.shadowColor = color; }
-    public ShadowedText(final String text, final int horizontalAlignment) { super(text, horizontalAlignment); }
-    public ShadowedText(final Icon image, final Color color, final Dimension size) { super(image); this.shadowColor = color; this.shadowSize = size; }
-    public ShadowedText(final Icon image, final int horizontalAlignment, final Color color) { super(image, horizontalAlignment); this.shadowColor = color; }
-    public ShadowedText(final String text, final Color color, final Dimension size) { super(text); this.shadowColor = color; this.shadowSize = size; }
-    public ShadowedText(final String text, final int horizontalAlignment, final Color color) { super(text, horizontalAlignment); this.shadowColor = color; }
-    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment) { super(text, icon, horizontalAlignment); }
-    public ShadowedText(final Icon image, final int horizontalAlignment, final Color color, final Dimension size) { super(image, horizontalAlignment); this.shadowColor = color; this.shadowSize = size; }
-    public ShadowedText(final String text, final int horizontalAlignment, final Color color, final Dimension size) { super(text, horizontalAlignment); this.shadowColor = color; this.shadowSize = size; }
-    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment, final Color color) { super(text, icon, horizontalAlignment); this.shadowColor = color; }
-    public ShadowedText(final String text, final Icon icon, final int horizontalAlignment, final Color color, final Dimension size) { super(text, icon, horizontalAlignment); this.shadowColor = color; this.shadowSize = size; }
+    public ShadowedLabel() { super(); }
+    public ShadowedLabel(final Color color) { super(); this.setShadowColor(color); }
+    public ShadowedLabel(final Icon image) { super(image); }
+    public ShadowedLabel(final String text) { super(text); }
+    public ShadowedLabel(final Color color, final Dimension size) { super(); this.setShadowColor(color); this.setShadowSize(size); }
+    public ShadowedLabel(final Icon image, final Color color) { super(image); this.setShadowColor(color); }
+    public ShadowedLabel(final Icon image, final int horizontalAlignment) { super(image, horizontalAlignment); }
+    public ShadowedLabel(final String text, final Color color) { super(text); this.setShadowColor(color); }
+    public ShadowedLabel(final String text, final int horizontalAlignment) { super(text, horizontalAlignment); }
+    public ShadowedLabel(final Icon image, final Color color, final Dimension size) { super(image); this.setShadowColor(color); this.setShadowSize(size); }
+    public ShadowedLabel(final Icon image, final int horizontalAlignment, final Color color) { super(image, horizontalAlignment); this.setShadowColor(color); }
+    public ShadowedLabel(final String text, final Color color, final Dimension size) { super(text); this.setShadowColor(color); this.setShadowSize(size); }
+    public ShadowedLabel(final String text, final int horizontalAlignment, final Color color) { super(text, horizontalAlignment); this.setShadowColor(color); }
+    public ShadowedLabel(final String text, final Icon icon, final int horizontalAlignment) { super(text, icon, horizontalAlignment); }
+    public ShadowedLabel(final Icon image, final int horizontalAlignment, final Color color, final Dimension size) { super(image, horizontalAlignment); this.setShadowColor(color); this.setShadowSize(size); }
+    public ShadowedLabel(final String text, final int horizontalAlignment, final Color color, final Dimension size) { super(text, horizontalAlignment); this.setShadowColor(color); this.setShadowSize(size); }
+    public ShadowedLabel(final String text, final Icon icon, final int horizontalAlignment, final Color color) { super(text, icon, horizontalAlignment); this.setShadowColor(color); }
+    public ShadowedLabel(final String text, final Icon icon, final int horizontalAlignment, final Color color, final Dimension size) { super(text, icon, horizontalAlignment); this.setShadowColor(color); this.setShadowSize(size); }
 
     // ...
     protected Color getShadowColor() { return this.shadowColor; }
     protected Dimension getShadowSize() { return this.shadowSize; }
 
-    @Override
-    public void paint(final Graphics graphics) {  {
+    @Override public void paint(final Graphics graphics) {
         final Graphics2D graphics2D = (Graphics2D) graphics;
         final TextLayout textLayout = new TextLayout(this.getText(), this.getFont(), graphics2D.getFontRenderContext());
-        int x = this.getLocation().x, y = this.getFont().getSize() + this.getLocation().y;
+        final int x = this.getLocation().x, y = this.getFont().getSize() + this.getLocation().y;
 
         for (int shadowHeightOffset = this.shadowSize.height, shadowWidthOffset = this.shadowSize.width; 0 != shadowHeightOffset && 0 != shadowWidthOffset; --shadowHeightOffset, --shadowWidthOffset) {
             graphics2D.setPaint(this.shadowColor);
             textLayout.draw(graphics2D, x + shadowWidthOffset, y + shadowHeightOffset);
         }
-    } super.paint(graphics); }
+
+        super.paint(graphics);
+    }
 
     protected void setShadowColor(final Color color) { this.shadowColor = color; }
     protected void setShadowSize(final Dimension size) { this.shadowSize = size; }
 };
 
 // : Window
-class Window extends JFrame {
+class Window extends Frame {
     public Window() { super(); }
     public Window(final GraphicsConfiguration graphicsConfiguration) { super(graphicsConfiguration); }
     public Window(final String title) { super(title); }
     public Window(final String title, final GraphicsConfiguration graphicsConfiguration) { super(title, graphicsConfiguration); }
 
     // ...
-    class WindowException extends Exception {
-        public WindowException() { super(); }
-        public WindowException(final String message) { super(message); }
-        public WindowException(final Throwable cause) { super(cause); }
-        public WindowException(final String message, final Throwable cause) { super(message, cause); }
-        public WindowException(final String message, final Throwable cause, final boolean enableSuppression, boolean writableStackTrace) { super(message, cause, enableSuppression, writableStackTrace); }
-    };
-
-    // ...
-    protected Page activePage = null;
+    protected Panel activePanel = null;
     private String faviconPath = null;
-    private ArrayList<String> pageNames = new ArrayList<String>();
-    protected ArrayList<Page> pages = new ArrayList<Page>();
+    protected ArrayList<Panel> panels = new ArrayList<Panel>();
 
     // ...
-    protected Page addPage(final Container container, final String name) /* throws WindowException */ {
-        for (final String pageName : this.pageNames) {
-            try { if (name == pageName) throw new WindowException("`Page` component with the name `" + name.replaceAll("`", "\\`") + "` already exists"); }
-            catch (final WindowException error) { System.err.println(error); }
-        }
+    /* @Override protected void add() {} */
+    protected Panel addPanel(final Panel panel) { return this.addPanel(this, panel); }
+    protected Panel addPanel(final Container container, final Panel panel) {
+        this.activePanel = 0 == this.panels.size() ? (Panel) panel : this.activePanel;
 
-        final Page page = new Page(true /* boolean isDoubleBuffered */);
+        this.panels.add(panel);
+        container.add(panel);
 
-        container.add(page);
-        page.setName(name);
-
-        this.activePage = 0 == this.pages.size() ? page : this.activePage;
-        this.pageNames.add(name);
-        this.pages.add(page);
-
-        return page;
+        return panel;
     }
+
     protected String getFavicon() { return this.faviconPath; }
-    protected Page getPageByName(final String name) { for (int iterator = 0; iterator != this.pageNames.size(); ++iterator) { if (name == this.pageNames.get(iterator)) return this.pages.get(iterator); } return null; }
-    protected boolean hasPageByName(final String name) { for (final String pageName : this.pageNames) { if (name == pageName) return true; } return false; }
-    protected boolean removePage(final String name) { for (int iterator = 0; iterator != this.pageNames.size(); ++iterator) { if (name == this.pageNames.get(iterator)) { this.pages.get(iterator).getParent().remove(this.pages.get(iterator)); return true; } } return false; }
+
+    /* @Override protected void remove() {} */
+    protected boolean removePanel(final Panel panel) { return this.removePanel(this, panel); }
+    protected boolean removePanel(final Container container, final Panel panel) {
+        for (final Panel windowPanel : this.panels)
+        if (panel == windowPanel) { container.remove(panel); return true; }
+
+        return false;
+    }
+
     protected void setFavicon(final String path) { this.setIconImage(new ImageIcon(this.faviconPath = path).getImage()); }
 
-    protected void switchToActivePage() { this.switchToPage(this.activePage); }
-    protected void switchToActivePage(final int animationDuration, final int animationSpeed) { this.switchToPage(this.activePage, animationDuration, animationSpeed); }
-    protected void switchToPage(final Page page) { this.switchToPage(page, 1, null == page ? 10 : page.getParent().getWidth()); }
-    protected void switchToPage(final Page page, final int animationDuration, final int animationSpeed) {
-        if (0 != this.pages.size()) {
-            final Page currentActivePage = page;
-            final Page recentActivePage = this.activePage;
+    protected void switchToActivePanel() { this.switchToPanel(this.activePanel); }
+    protected void switchToActivePanel(final int animationDuration, final int animationSpeed) { this.switchToPanel(this.activePanel, animationDuration, animationSpeed); }
+    protected void switchToPanel(final Panel panel) { this.switchToPanel(panel, 1, null == panel ? 10 : panel.getParent().getWidth()); }
+    protected void switchToPanel(final Panel panel, final int animationDuration, final int animationSpeed) {
+        if (0 != this.panels.size()) {
+            final Panel currentActivePanel = panel;
+            final Panel recentActivePanel = this.activePanel;
 
-            this.activePage = currentActivePage;
+            this.activePanel = currentActivePanel;
 
-            for (final Page windowPage : this.pages)
-            if (currentActivePage != windowPage && recentActivePage != windowPage) {
-                final Container pageContainer = windowPage.getParent();
+            for (final Panel windowPanel : this.panels)
+            if (currentActivePanel != windowPanel && recentActivePanel != windowPanel) {
+                final Container panelContainer = windowPanel.getParent();
 
-                windowPage.setLocation(pageContainer.getWidth(), 0);
-                pageContainer.setComponentZOrder(windowPage, pageContainer.getComponentCount() - 1);
+                windowPanel.setLocation(panelContainer.getWidth(), 0);
+                panelContainer.setComponentZOrder(windowPanel, panelContainer.getComponentCount() - 1);
             }
 
-            currentActivePage.getParent().setComponentZOrder(currentActivePage, 0);
+            currentActivePanel.getParent().setComponentZOrder(currentActivePanel, 0);
             new Timer().scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    int currentActivePageXCoordinate = currentActivePage.getLocation().x;
+                @Override public void run() {
+                    int currentActivePanelXCoordinate = currentActivePanel.getLocation().x;
 
-                    if (0 == currentActivePageXCoordinate) { if (currentActivePage != recentActivePage) { recentActivePage.setLocation(recentActivePage.getParent().getWidth(), 0); } cancel(); }
-                    else { currentActivePageXCoordinate -= animationSpeed; currentActivePage.setLocation(currentActivePageXCoordinate = currentActivePageXCoordinate < 0 ? 0 : currentActivePageXCoordinate, 0); }
+                    if (0 == currentActivePanelXCoordinate) { if (currentActivePanel != recentActivePanel) { recentActivePanel.setLocation(recentActivePanel.getParent().getWidth(), 0); } cancel(); }
+                    else { currentActivePanelXCoordinate -= animationSpeed; currentActivePanel.setLocation(currentActivePanelXCoordinate = currentActivePanelXCoordinate < 0 ? 0 : currentActivePanelXCoordinate, 0); }
                 }
             }, 0, animationDuration);
         }
@@ -377,39 +700,26 @@ public class Lapys extends Application {
     private enum State { INITIATING, RESETTING, UPDATING, TERMINATING };
 
     /* ... */
-    static final Application application = new Application();
-        static final int applicationDatabaseTableFieldCount = 6;
-        static final String[] applicationDatabaseTableFieldNames = {"Age", "Gender", "ID", "Matriculation Number", "Name", "Program"};
-        static final String[] applicationDatabaseTableFieldKeys = {null, null, "PRIMARY KEY", null, null, null};
-        static final String[] applicationDatabaseTableFieldMiscellanies = {null, null, "AUTO_INCREMENT", null, null, null};
-        static final boolean[] applicationDatabaseTableFieldNullities = {true, true, false, true, true, true};
-        static final String[] applicationDatabaseTableFieldTypes = {"INT", "INT", "INT", "VARCHAR(24)", "VARCHAR(64)", "VARCHAR(64)"};
-        static final String applicationDatabaseTableName = "Testers";
+    final static Application application = new Application();
+        final static int applicationDatabaseTableFieldCount = 6;
+        final static String[] applicationDatabaseTableFieldNames = {"Age", "Gender", "ID", "Matriculation Number", "Name", "Program"};
+        final static String[] applicationDatabaseTableFieldKeys = {null, null, "PRIMARY KEY", null, null, null};
+        final static String[] applicationDatabaseTableFieldMiscellanies = {null, null, "AUTO_INCREMENT", null, null, null};
+        final static boolean[] applicationDatabaseTableFieldNullities = {true, true, false, true, true, true};
+        final static String[] applicationDatabaseTableFieldTypes = {"INT", "INT", "INT", "VARCHAR(24)", "VARCHAR(64)", "VARCHAR(64)"};
+        final static String applicationDatabaseTableName = "Testers";
         static State applicationState;
 
-    static final Window window = new Window();
-        static final Container windowContentPane = window.getContentPane();
-        static final JPanel windowPageContainer = new JPanel();
+    final static Window window = new Window();
+        final static Container windowContentPane = window.getContentPane();
+        final static Panel windowPanelContainer = new Panel();
 
-        static final Page dummyPage = window.addPage(windowPageContainer, "dummy");
-        static final Page homePage = window.addPage(windowPageContainer, "home");
-            static final JPanel homeCarousel = new JPanel();
-            static final JLabel homeCarouselBackgroundMedia = new JLabel();
-            static final Button homeCarouselButton = new Button();
-            static final JLabel homeCarouselForegroundMedia = new JLabel();
-            static final JPanel homeCarouselHeaderGroup = new JPanel();
-            static final ShadowedText homeCarouselHeader = new ShadowedText();
-            static final String[] homeCarouselMediaPaths = {
-                "images/backgrounds/billboard.jpg",
-                "images/backgrounds/campus.jpg",
-                "images/backgrounds/college.jpg",
-                "images/backgrounds/hostel.jpg",
-                "images/backgrounds/senate.jpg",
-                "images/backgrounds/sports.jpg"
-            };
-            static final JPanel homeCarouselIndicatorList = new JPanel();
-            static final RoundedButton[] homeCarouselIndicators = new RoundedButton[homeCarouselMediaPaths.length];
-            static final ShadowedText homeCarouselSubheader = new ShadowedText();
+        final static GradientPanel dummyPanel = (GradientPanel) window.addPanel(windowPanelContainer, new GradientPanel(true));
+        final static GradientPanel homePanel = (GradientPanel) window.addPanel(windowPanelContainer, new GradientPanel(true));
+            final static Carousel homeCarousel = new Carousel();
+            final static GradientButton homeCarouselButton = new GradientButton();
+            final static Panel homeCarouselButtonContainer = new Panel(new BorderLayout());
+            final static Panel homeCarouselButtonSubcontainer = new Panel(new FlowLayout(FlowLayout.RIGHT, 40, 0));
 
     /* Phases */
     /* : Initiate */
@@ -429,64 +739,69 @@ public class Lapys extends Application {
             final Dimension windowSize = new Dimension((int) ((75.0f / 100.0f) * (float) screenSize.width), (int) ((75.0f / 100.0f) * (float) screenSize.height));
 
             // Insertion
-            homeCarousel.add(homeCarouselBackgroundMedia);
-            homeCarousel.add(homeCarouselForegroundMedia);
-            homeCarousel.add(homeCarouselHeaderGroup);
-            homeCarousel.add(homeCarouselIndicatorList);
-            homeCarouselHeaderGroup.add(homeCarouselHeader);
-            homeCarouselHeaderGroup.add(homeCarouselSubheader);
-            homePage.add(homeCarousel);
-            window.add(windowPageContainer);
+            homeCarousel.add(homeCarouselButtonContainer);
+            homeCarouselButtonContainer.add(homeCarouselButtonSubcontainer, BorderLayout.PAGE_END);
+            homeCarouselButtonSubcontainer.add(homeCarouselButton);
+            homePanel.add(homeCarousel);
+            window.add(windowPanelContainer);
+
+            // Event
+            // [Home] ...
+            homeCarouselButton.addActionListener(new ActionListener() {
+                @Override public void actionPerformed(final ActionEvent event) {
+                    try { java.awt.Desktop.getDesktop().browse(new URI("http://localhost:8080/predict/car-fuel.jsp")); }
+                    catch (final IOException|URISyntaxException error) { System.err.println(error); }
+                }
+            });
 
             // [Application] ...
             application.connectToDatabaseServer();
             application.registerFont(Font.MONOSPACED, "fonts/minecraft.otf");
             application.registerFont(Font.SANS_SERIF, "fonts/open-sans.ttf");
 
-            // [Home] ...
-            homeCarousel.setBackground(Color.BLACK);
-            homeCarousel.setLayout(null);
-            homeCarousel.setComponentZOrder(homeCarouselHeaderGroup, 1);
-            homeCarousel.setComponentZOrder(homeCarouselIndicatorList, 0);
+            // [Home Carousel] ...
+            homeCarousel.addMedia(
+                "images/backgrounds/billboard.jpg",
+                "images/backgrounds/campus.jpg",
+                "images/backgrounds/college.jpg",
+                "images/backgrounds/hostel.jpg",
+                "images/backgrounds/senate.jpg",
+                "images/backgrounds/sports.jpg"
+            );
 
-            homeCarouselHeader.setForeground(Color.WHITE);
-            homeCarouselHeader.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 42));
-            homeCarouselHeader.setText("Carousel Title");
+            homeCarousel.setComponentZOrder(homeCarouselButtonContainer, 2);
+            homeCarousel.switchToMedia(0); {
+                new Timer().scheduleAtFixedRate(new TimerTask() {
+                    int homeCarouselCurrentMediaIndex = 0;
 
-            homeCarouselIndicatorList.setBackground(Color.RED);
-            homeCarouselIndicatorList.setLayout(new GridBagLayout());
-            homeCarouselIndicatorList.setLocation(0, 0); {
-                layoutConstraints.anchor = GridBagConstraints.PAGE_END;
-                layoutConstraints.gridx = 0;
-                layoutConstraints.insets = new Insets(0, 5, 20, 5);
-                layoutConstraints.weightx = 0.0;
-                layoutConstraints.weighty = 1.0;
-
-                for (int iterator = 0; iterator != homeCarouselIndicators.length; ++iterator) {
-                    final RoundedButton homeCarouselIndicator = new RoundedButton();
-
-                    homeCarouselIndicators[iterator] = homeCarouselIndicator;
-
-                    homeCarouselIndicatorList.add(homeCarouselIndicator, layoutConstraints);
-                    ++layoutConstraints.gridx;
-
-                    homeCarouselIndicator.setBackground(new Color(0.0f, 0.0f, 0.0f, 0.675f));
-                    homeCarouselIndicator.setPreferredSize(new Dimension(40, 40));
-                }
+                    @Override public void run() {
+                        ++homeCarouselCurrentMediaIndex;
+                        homeCarousel.switchToMedia(homeCarouselCurrentMediaIndex = homeCarouselCurrentMediaIndex > homeCarousel.getMediaCount() - 1 ? 0 : homeCarouselCurrentMediaIndex);
+                    }
+                }, 0, 5000);
             }
 
-            homeCarouselHeaderGroup.setLayout(new BoxLayout(homeCarouselHeaderGroup, BoxLayout.Y_AXIS));
+            homeCarousel.header.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 42));
+            homeCarousel.header.setForeground(Color.WHITE);
+            homeCarousel.header.setText("Carousel Title");
 
-            homeCarouselSubheader.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
-            homeCarouselSubheader.setForeground(Color.WHITE);
-            homeCarouselSubheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 24));
-            homeCarouselSubheader.setText("Carousel Subtitle");
+            homeCarousel.subheader.setForeground(Color.WHITE);
+            homeCarousel.subheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 24));
+            homeCarousel.subheader.setText("Carousel Subtitle");
 
-            homePage.setLayout(new BoxLayout(homePage, BoxLayout.Y_AXIS));
+            homeCarouselButton.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 20));
+            homeCarouselButton.setForeground(Color.WHITE);
+            homeCarouselButton.setMargin(new Insets(5, 10, 5, 10));
+            homeCarouselButton.setText("Login/ Signup");
+            homeCarouselButtonContainer.setOpaque(false);
+            homeCarouselButtonSubcontainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 60, 0));
+            homeCarouselButtonSubcontainer.setOpaque(false);
+
+            homePanel.setLayout(new BoxLayout(homePanel, BoxLayout.Y_AXIS));
 
             // [Window] ...
-            for (final Page windowPage : window.pages)
-            windowPage.setSize(windowPageContainer.getSize());
+            for (final Panel windowPanel : window.panels)
+            windowPanel.setSize(windowPanelContainer.getSize());
 
             window.pack();
             window.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
@@ -497,10 +812,10 @@ public class Lapys extends Application {
             window.setSize(windowSize);
             window.setTitle(application.name);
             window.setVisible(true);
-            window.switchToPage(homePage);
+            window.switchToPanel(homePanel);
 
             windowContentPane.setPreferredSize(windowSize);
-            windowPageContainer.setLayout(null);
+            windowPanelContainer.setLayout(null);
         }
 
         /* [Back-end] ... */ {
@@ -619,14 +934,14 @@ public class Lapys extends Application {
 
         /* Update */
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() { @Override public boolean dispatchKeyEvent(final KeyEvent event) {
-            if (KeyEvent.KEY_PRESSED == event.getID()) window.switchToPage(homePage == window.activePage ? dummyPage : homePage, 3, 10);
+            if (KeyEvent.KEY_PRESSED == event.getID()) window.switchToPanel(homePanel == window.activePanel ? dummyPanel : homePanel, 3, 10);
             return false;
         } });
         Update();
     }
 
     /* : Reset */
-    protected static void Reset(final int code) { /* ... */ }
+    protected static void Reset(final int code) { /* Do nothing */ }
 
     /* : Terminate */
     protected static void Terminate(final int code) {
@@ -638,18 +953,32 @@ public class Lapys extends Application {
     /* : Update */
     protected static void Update() {
         // [Window] ...
-        for (final Page windowPage : window.pages) windowPage.setSize(windowPageContainer.getSize());
+        for (final Panel windowPanel : window.panels) {
+            windowPanel.setSize(windowPanelContainer.getSize());
+            ((GradientPanel) windowPanel).setGradient(new GradientPaint(0.0f, 0.0f, application.color, windowPanel.getWidth() / 8.0f, windowPanel.getHeight() * 1.25f, Color.BLUE));
+        }
 
-        window.switchToActivePage();
-        for (final Page windowPage : window.pages) windowPage.doLayout();
+        window.switchToActivePanel();
+        for (final Panel windowPanel : window.panels) windowPanel.doLayout();
 
-        // [Home] ...
-        homeCarouselHeaderGroup.setLocation((int) (homeCarousel.getWidth() * (5.0f / 100.0f)), 15);
-        homeCarouselHeaderGroup.setSize(new Dimension((int) (homeCarousel.getWidth() * (90.0f / 100.0f)), homeCarouselHeader.getHeight() + homeCarouselSubheader.getHeight()));
-        homeCarouselHeaderGroup.doLayout();
+        // [Home Carousel] ...
+        homeCarouselButton.setGradient(new GradientPaint(0.0f, 0.0f, application.color, homeCarouselButton.getWidth() / 8.0f, homeCarouselButton.getHeight() * 1.25f, Color.BLUE));
+        homeCarouselButtonContainer.setSize(homeCarousel.getSize());
+        homeCarouselButtonContainer.doLayout();
+        homeCarouselButtonSubcontainer.doLayout();
 
-        homeCarouselIndicatorList.setSize(homeCarousel.getSize());
-        homeCarouselIndicatorList.doLayout();
+        homeCarousel.backgroundMedia.setSize(homeCarousel.getSize());
+        homeCarousel.foregroundMedia.setSize(homeCarousel.getSize());
+
+        homeCarousel.headerGroup.setLocation((int) (homeCarousel.getWidth() * (5.0f / 100.0f)), 15);
+        homeCarousel.headerGroup.setSize(new Dimension((int) (homeCarousel.getWidth() * (90.0f / 100.0f)), homeCarousel.header.getHeight() + homeCarousel.subheader.getHeight()));
+
+        homeCarousel.indicatorList.setSize(new Dimension(homeCarousel.getWidth() / 2, homeCarousel.getHeight()));
+        for (final CarouselIndicator homeCarouselIndicator : homeCarousel.getIndicators()) homeCarouselIndicator.setPreferredSize(homeCarouselIndicator.getPreferredSize());
+
+        homeCarousel.mediaFilter.setSize(homeCarousel.getSize());
+
+        homeCarousel.doLayout();
     }
 
     /* Main */
