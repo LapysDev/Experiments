@@ -83,7 +83,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneLayout;
-import javax.swing.SwingConstants;
 
 /* Class --- REDACT (Lapys) --- NOTE (Lapys) */
 // : Application
@@ -288,14 +287,10 @@ class Carousel extends Panel {
         this.setComponentZOrder(this.indicatorList, 0);
         this.setComponentZOrder(this.mediaFilter, 2);
 
-        this.backgroundMedia.setAlignmentX(SwingConstants.CENTER);
         this.backgroundMedia.setHorizontalAlignment(JLabel.CENTER);
-        this.backgroundMedia.setHorizontalTextPosition(SwingConstants.CENTER);
         this.backgroundMedia.setLocation(this.getWidth(), 0);
 
-        this.foregroundMedia.setAlignmentX(SwingConstants.CENTER);
         this.foregroundMedia.setHorizontalAlignment(JLabel.CENTER);
-        this.foregroundMedia.setHorizontalTextPosition(SwingConstants.CENTER);
         this.foregroundMedia.setLocation(0, 0);
 
         this.headerGroup.setLayout(new BoxLayout(this.headerGroup, BoxLayout.Y_AXIS));
@@ -581,6 +576,13 @@ class RoundedButton extends Button {
     }
 };
 
+// : Scroll Pane
+class ScrollPane extends JScrollPane {
+    public ScrollPane() { super(); }
+    public ScrollPane(final Component view) { super(view); }
+    public ScrollPane(final int verticalScrollbarPolicy, final int horizontalScrollbarPolicy) { super(verticalScrollbarPolicy, horizontalScrollbarPolicy); }
+};
+
 // : Shadowed Label
 class ShadowedLabel extends Label {
     protected Color shadowColor = new Color(0.0f, 0.0f, 0.0f, 0.075f);
@@ -635,60 +637,60 @@ class Window extends Frame {
     public Window(final String title, final GraphicsConfiguration graphicsConfiguration) { super(title, graphicsConfiguration); }
 
     // ...
-    protected Panel activePanel = null;
+    protected Container activePage = null;
     private String faviconPath = null;
-    protected ArrayList<Panel> panels = new ArrayList<Panel>();
+    protected ArrayList<Container> pages = new ArrayList<Container>();
 
     // ...
     /* @Override protected void add() {} */
-    protected Panel addPanel(final Panel panel) { return this.addPanel(this, panel); }
-    protected Panel addPanel(final Container container, final Panel panel) {
-        this.activePanel = 0 == this.panels.size() ? (Panel) panel : this.activePanel;
+    protected Container addPage(final Container page) { return this.addPage(this, page); }
+    protected Container addPage(final Container container, final Container page) {
+        this.activePage = 0 == this.pages.size() ? page : this.activePage;
+        this.pages.add(page);
 
-        this.panels.add(panel);
-        container.add(panel);
+        container.add(page);
 
-        return panel;
+        return page;
     }
 
     protected String getFavicon() { return this.faviconPath; }
 
     /* @Override protected void remove() {} */
-    protected boolean removePanel(final Panel panel) { return this.removePanel(this, panel); }
-    protected boolean removePanel(final Container container, final Panel panel) {
-        for (final Panel windowPanel : this.panels)
-        if (panel == windowPanel) { container.remove(panel); return true; }
+    protected boolean removePage(final Container page) { return this.removePage(this, page); }
+    protected boolean removePage(final Container container, final Container page) {
+        for (final Container windowPage : this.pages)
+        if (page == windowPage) { container.remove(page); return true; }
 
         return false;
     }
 
     protected void setFavicon(final String path) { this.setIconImage(new ImageIcon(this.faviconPath = path).getImage()); }
 
-    protected void switchToActivePanel() { this.switchToPanel(this.activePanel); }
-    protected void switchToActivePanel(final int animationDuration, final int animationSpeed) { this.switchToPanel(this.activePanel, animationDuration, animationSpeed); }
-    protected void switchToPanel(final Panel panel) { this.switchToPanel(panel, 1, null == panel ? 10 : panel.getParent().getWidth()); }
-    protected void switchToPanel(final Panel panel, final int animationDuration, final int animationSpeed) {
-        if (0 != this.panels.size()) {
-            final Panel currentActivePanel = panel;
-            final Panel recentActivePanel = this.activePanel;
+    protected void switchToActivePage() { this.switchToPage(this.activePage); }
+    protected void switchToActivePage(final int animationDuration, final int animationSpeed) { this.switchToPage(this.activePage, animationDuration, animationSpeed); }
+    protected void switchToPage(final Container page) { this.switchToPage(page, 1, null == page ? 10 : page.getParent().getWidth()); }
+    protected void switchToPage(final Container page, final int animationDuration, final int animationSpeed) {
+        if (0 != this.pages.size()) {
+            final Container currentActivePage = page;
+            final Container recentActivePage = this.activePage;
 
-            this.activePanel = currentActivePanel;
+            this.activePage = currentActivePage;
 
-            for (final Panel windowPanel : this.panels)
-            if (currentActivePanel != windowPanel && recentActivePanel != windowPanel) {
-                final Container panelContainer = windowPanel.getParent();
+            for (final Container windowPage : this.pages)
+            if (currentActivePage != windowPage && recentActivePage != windowPage) {
+                final Container pageContainer = windowPage.getParent();
 
-                windowPanel.setLocation(panelContainer.getWidth(), 0);
-                panelContainer.setComponentZOrder(windowPanel, panelContainer.getComponentCount() - 1);
+                windowPage.setLocation(pageContainer.getWidth(), 0);
+                pageContainer.setComponentZOrder(windowPage, pageContainer.getComponentCount() - 1);
             }
 
-            currentActivePanel.getParent().setComponentZOrder(currentActivePanel, 0);
+            currentActivePage.getParent().setComponentZOrder(currentActivePage, 0);
             new Timer().scheduleAtFixedRate(new TimerTask() {
                 @Override public void run() {
-                    int currentActivePanelXCoordinate = currentActivePanel.getLocation().x;
+                    int currentActivePageXCoordinate = currentActivePage.getLocation().x;
 
-                    if (0 == currentActivePanelXCoordinate) { if (currentActivePanel != recentActivePanel) { recentActivePanel.setLocation(recentActivePanel.getParent().getWidth(), 0); } cancel(); }
-                    else { currentActivePanelXCoordinate -= animationSpeed; currentActivePanel.setLocation(currentActivePanelXCoordinate = currentActivePanelXCoordinate < 0 ? 0 : currentActivePanelXCoordinate, 0); }
+                    if (0 == currentActivePageXCoordinate) { if (currentActivePage != recentActivePage) { recentActivePage.setLocation(recentActivePage.getParent().getWidth(), 0); } cancel(); }
+                    else { currentActivePageXCoordinate -= animationSpeed; currentActivePage.setLocation(currentActivePageXCoordinate = currentActivePageXCoordinate < 0 ? 0 : currentActivePageXCoordinate, 0); }
                 }
             }, 0, animationDuration);
         }
@@ -712,14 +714,17 @@ public class Lapys extends Application {
 
     final static Window window = new Window();
         final static Container windowContentPane = window.getContentPane();
-        final static Panel windowPanelContainer = new Panel();
+        final static Panel windowPageContainer = new Panel();
 
-        final static GradientPanel dummyPanel = (GradientPanel) window.addPanel(windowPanelContainer, new GradientPanel(true));
-        final static GradientPanel homePanel = (GradientPanel) window.addPanel(windowPanelContainer, new GradientPanel(true));
+        final static GradientPanel dummyPage = (GradientPanel) window.addPage(windowPageContainer, new GradientPanel(true));
+        final static ScrollPane homePage = (ScrollPane) window.addPage(windowPageContainer, new ScrollPane());
+        final static GradientPanel homePageContent = new GradientPanel(true);
             final static Carousel homeCarousel = new Carousel();
             final static GradientButton homeCarouselButton = new GradientButton();
             final static Panel homeCarouselButtonContainer = new Panel(new BorderLayout());
             final static Panel homeCarouselButtonSubcontainer = new Panel(new FlowLayout(FlowLayout.RIGHT, 40, 0));
+
+            final static Panel homeIntroduction = new Panel();
 
     /* Phases */
     /* : Initiate */
@@ -742,8 +747,11 @@ public class Lapys extends Application {
             homeCarousel.add(homeCarouselButtonContainer);
             homeCarouselButtonContainer.add(homeCarouselButtonSubcontainer, BorderLayout.PAGE_END);
             homeCarouselButtonSubcontainer.add(homeCarouselButton);
-            homePanel.add(homeCarousel);
-            window.add(windowPanelContainer);
+
+            homePageContent.add(homeCarousel);
+            homePageContent.add(homeIntroduction);
+
+            window.add(windowPageContainer);
 
             // Event
             // [Home] ...
@@ -797,11 +805,19 @@ public class Lapys extends Application {
             homeCarouselButtonSubcontainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 60, 0));
             homeCarouselButtonSubcontainer.setOpaque(false);
 
-            homePanel.setLayout(new BoxLayout(homePanel, BoxLayout.Y_AXIS));
+            // [Home Introduction] ...
+            homeIntroduction.setBackground(Color.BLUE);
+
+            // [Home] ...
+            homePage.setBorder(null);
+            homePage.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            homePage.setViewportView(homePageContent);
+
+            homePageContent.setLayout(new BoxLayout(homePageContent, BoxLayout.Y_AXIS));
 
             // [Window] ...
-            for (final Panel windowPanel : window.panels)
-            windowPanel.setSize(windowPanelContainer.getSize());
+            for (final Container windowPage : window.pages)
+            windowPage.setSize(windowPageContainer.getSize());
 
             window.pack();
             window.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
@@ -812,10 +828,10 @@ public class Lapys extends Application {
             window.setSize(windowSize);
             window.setTitle(application.name);
             window.setVisible(true);
-            window.switchToPanel(homePanel);
+            window.switchToPage(homePage);
 
             windowContentPane.setPreferredSize(windowSize);
-            windowPanelContainer.setLayout(null);
+            windowPageContainer.setLayout(null);
         }
 
         /* [Back-end] ... */ {
@@ -934,7 +950,7 @@ public class Lapys extends Application {
 
         /* Update */
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() { @Override public boolean dispatchKeyEvent(final KeyEvent event) {
-            if (KeyEvent.KEY_PRESSED == event.getID()) window.switchToPanel(homePanel == window.activePanel ? dummyPanel : homePanel, 3, 10);
+            if (KeyEvent.KEY_PRESSED == event.getID()) window.switchToPage(homePage == window.activePage ? dummyPage : homePage, 3, 10);
             return false;
         } });
         Update();
@@ -953,13 +969,15 @@ public class Lapys extends Application {
     /* : Update */
     protected static void Update() {
         // [Window] ...
-        for (final Panel windowPanel : window.panels) {
-            windowPanel.setSize(windowPanelContainer.getSize());
-            ((GradientPanel) windowPanel).setGradient(new GradientPaint(0.0f, 0.0f, application.color, windowPanel.getWidth() / 8.0f, windowPanel.getHeight() * 1.25f, Color.BLUE));
+        for (final Container windowPage : window.pages) {
+            windowPage.setSize(windowPageContainer.getSize());
+
+            if (windowPage instanceof GradientPanel)
+            ((GradientPanel) windowPage).setGradient(new GradientPaint(0.0f, 0.0f, application.color, windowPage.getWidth() / 8.0f, windowPage.getHeight() * 1.25f, Color.BLUE));
         }
 
-        window.switchToActivePanel();
-        for (final Panel windowPanel : window.panels) windowPanel.doLayout();
+        window.switchToActivePage();
+        for (final Container windowPage : window.pages) windowPage.doLayout();
 
         // [Home Carousel] ...
         homeCarouselButton.setGradient(new GradientPaint(0.0f, 0.0f, application.color, homeCarouselButton.getWidth() / 8.0f, homeCarouselButton.getHeight() * 1.25f, Color.BLUE));
