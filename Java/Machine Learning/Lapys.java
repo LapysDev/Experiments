@@ -29,10 +29,13 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.KeyEventDispatcher;
 import java.awt.LayoutManager;
+import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
 
@@ -52,6 +55,7 @@ import java.io.IOException;
 
 // : Java > Language
 import java.lang.Exception;
+import java.lang.Integer;
 import java.lang.Math;
 import java.lang.System;
 
@@ -68,6 +72,7 @@ import java.sql.SQLException;
 
 // : Java > Utilities
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -82,7 +87,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.ScrollPaneLayout;
+import javax.swing.text.Document;
 
 /* Class --- REDACT (Lapys) --- NOTE (Lapys) */
 // : Application
@@ -242,11 +250,14 @@ class Application {
 
 // : Button
 class Button extends JButton {
-    public Button() { super(); }
-    public Button(final Action action) { super(action); }
-    public Button(final Icon icon) { super(icon); }
-    public Button(final String text) { super(text); }
-    public Button(final String text, final Icon icon) { super(text, icon); }
+    public Button() { super(); this.setCursor(Button.CURSOR); }
+    public Button(final Action action) { super(action); this.setCursor(Button.CURSOR); }
+    public Button(final Icon icon) { super(icon); this.setCursor(Button.CURSOR); }
+    public Button(final String text) { super(text); this.setCursor(Button.CURSOR); }
+    public Button(final String text, final Icon icon) { super(text, icon); this.setCursor(Button.CURSOR); }
+
+    // ...
+    final public static Cursor CURSOR = new Cursor(Cursor.HAND_CURSOR);
 
     // ...
     @Override protected void paintBorder(final Graphics graphics) {
@@ -263,10 +274,17 @@ class Button extends JButton {
 
 // : Carousel
 class Carousel extends Panel {
-    public Carousel() {
+    public Carousel(final String... media) {
         super((LayoutManager) null, true);
 
         // ...
+        CarouselIndicator.LAYOUT_CONSTRAINTS.anchor = GridBagConstraints.LAST_LINE_START;
+        CarouselIndicator.LAYOUT_CONSTRAINTS.gridx = 0;
+        CarouselIndicator.LAYOUT_CONSTRAINTS.gridy = 0;
+        CarouselIndicator.LAYOUT_CONSTRAINTS.insets = new Insets(0, 5, 20, 5);
+        CarouselIndicator.LAYOUT_CONSTRAINTS.weightx = 0.0f;
+        CarouselIndicator.LAYOUT_CONSTRAINTS.weighty = 1.0f;
+
         this.activeMedia = this.foregroundMedia;
 
         // ...
@@ -287,11 +305,13 @@ class Carousel extends Panel {
         this.setComponentZOrder(this.indicatorList, 0);
         this.setComponentZOrder(this.mediaFilter, 2);
 
-        this.backgroundMedia.setHorizontalAlignment(JLabel.CENTER);
+        this.backgroundMedia.setHorizontalAlignment(ImageLabel.CENTER);
         this.backgroundMedia.setLocation(this.getWidth(), 0);
 
-        this.foregroundMedia.setHorizontalAlignment(JLabel.CENTER);
+        this.foregroundMedia.setHorizontalAlignment(ImageLabel.CENTER);
         this.foregroundMedia.setLocation(0, 0);
+
+        this.header.setText("Carousel Title");
 
         this.headerGroup.setLayout(new BoxLayout(this.headerGroup, BoxLayout.Y_AXIS));
         this.headerGroup.setLocation(0, 0);
@@ -306,15 +326,19 @@ class Carousel extends Panel {
         this.mediaFilter.setOpaque(true);
 
         this.subheader.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
+        this.subheader.setText("Carousel Flavor");
+
+        // ...
+        for (final String path : media)
+        this.addMedia(path);
     }
 
     // ...
-    private Label activeMedia;
+    private ImageLabel activeMedia;
     private String activeMediaPath;
 
-    final protected Label backgroundMedia = new Label();
-    final protected Label foregroundMedia = new Label();
-
+    final protected ImageLabel backgroundMedia = new ImageLabel();
+    final protected ImageLabel foregroundMedia = new ImageLabel();
 
     final protected ShadowedLabel header = new ShadowedLabel();
     final protected Panel headerGroup = new Panel();
@@ -322,8 +346,8 @@ class Carousel extends Panel {
     final protected Panel mediaFilter = new Panel(true);
     final private ArrayList<String> mediaPaths = new ArrayList<String>();
 
-    private Color indicatorBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 0.675f);
-    private Color indicatorForegroundColor = new Color(1.0f, 1.0f, 1.0f, 0.675f);
+    private Color indicatorBackgroundColor = new Color(0.0f, 0.0f, 0.0f, 0.5f);
+    private Color indicatorForegroundColor = new Color(1.0f, 1.0f, 1.0f, 0.5f);
     final protected Panel indicatorList = new Panel();
     private CarouselIndicator[] indicators = new CarouselIndicator[0];
 
@@ -355,31 +379,33 @@ class Carousel extends Panel {
     public void setIndicatorForeground(final Color color) { this.indicatorForegroundColor = color; }
 
     protected void switchToMedia(final int index) {
-        final String mediaPath = this.mediaPaths.get(index);
+        if (index < this.mediaPaths.size()) {
+            final String mediaPath = this.mediaPaths.get(index);
 
-        if (mediaPath != this.activeMediaPath) {
-            final Label currentActiveMedia = this.activeMedia == this.backgroundMedia ? this.foregroundMedia : this.backgroundMedia;
-            final Label recentActiveMedia = this.activeMedia;
+            if (mediaPath != this.activeMediaPath) {
+                final ImageLabel currentActiveMedia = this.activeMedia == this.backgroundMedia ? this.foregroundMedia : this.backgroundMedia;
+                final ImageLabel recentActiveMedia = this.activeMedia;
 
-            // ...
-            this.activeMedia = currentActiveMedia;
-            this.activeMediaPath = mediaPath;
+                // ...
+                this.activeMedia = currentActiveMedia;
+                this.activeMediaPath = mediaPath;
 
-            // ...
-            this.setComponentZOrder(currentActiveMedia, this.getComponentCount() - 1);
-            this.setComponentZOrder(recentActiveMedia, this.getComponentCount() - 2);
+                // ...
+                this.setComponentZOrder(currentActiveMedia, this.getComponentCount() - 1);
+                this.setComponentZOrder(recentActiveMedia, this.getComponentCount() - 2);
 
-            recentActiveMedia.setIcon(new ImageIcon(mediaPath));
+                recentActiveMedia.setImageIcon(new ImageIcon(mediaPath));
 
-            // ...
-            new Timer().scheduleAtFixedRate(new TimerTask() {
-                @Override public void run() {
-                    int recentActiveMediaXCoordinate = recentActiveMedia.getLocation().x;
+                // ...
+                new Timer().scheduleAtFixedRate(new TimerTask() {
+                    @Override public void run() {
+                        int recentActiveMediaXCoordinate = recentActiveMedia.getLocation().x;
 
-                    if (0 == recentActiveMediaXCoordinate) { currentActiveMedia.setLocation(currentActiveMedia.getParent().getWidth(), 0); cancel(); }
-                    else { recentActiveMediaXCoordinate -= 10; recentActiveMedia.setLocation(recentActiveMediaXCoordinate = recentActiveMediaXCoordinate < 0 ? 0 : recentActiveMediaXCoordinate, 0); }
-                }
-            }, 0, 3);
+                        if (0 == recentActiveMediaXCoordinate) { currentActiveMedia.setLocation(currentActiveMedia.getParent().getWidth(), 0); cancel(); }
+                        else { recentActiveMediaXCoordinate -= 10; recentActiveMedia.setLocation(recentActiveMediaXCoordinate = recentActiveMediaXCoordinate < 0 ? 0 : recentActiveMediaXCoordinate, 0); }
+                    }
+                }, 0, 3);
+            }
         }
     }
 
@@ -389,20 +415,15 @@ class Carousel extends Panel {
 
         if (iterator != length) {
             this.indicators = new CarouselIndicator[length];
-            CarouselIndicator.LAYOUT_CONSTRAINTS.anchor = GridBagConstraints.LAST_LINE_START;
-            CarouselIndicator.LAYOUT_CONSTRAINTS.gridx = 0;
-            CarouselIndicator.LAYOUT_CONSTRAINTS.insets = new Insets(0, 5, 20, 5);
-            CarouselIndicator.LAYOUT_CONSTRAINTS.weightx = 0.0;
-            CarouselIndicator.LAYOUT_CONSTRAINTS.weighty = 1.0;
 
-            while (iterator > length)
-            this.indicatorList.remove(--iterator);
+            while (iterator > length) this.indicatorList.remove(--iterator);
 
-            for (; iterator++ != length; ++CarouselIndicator.LAYOUT_CONSTRAINTS.gridx)
-            this.indicatorList.add(new CarouselIndicator(this), CarouselIndicator.LAYOUT_CONSTRAINTS);
+            for (; iterator++ != length; ++CarouselIndicator.LAYOUT_CONSTRAINTS.gridx) {
+                this.indicatorList.add(new CarouselIndicator(this), CarouselIndicator.LAYOUT_CONSTRAINTS);
+                CarouselIndicator.LAYOUT_CONSTRAINTS.gridx = iterator;
+            }
 
-            for (iterator = length; 0 != iterator--; )
-            this.indicators[iterator] = (CarouselIndicator) this.indicatorList.getComponent(iterator);
+            for (iterator = length; 0 != iterator--; ) this.indicators[iterator] = (CarouselIndicator) this.indicatorList.getComponent(iterator);
         }
     }
 };
@@ -417,7 +438,6 @@ class CarouselIndicator extends RoundedButton {
         this.addActionListener(CarouselIndicator.ACTION_LISTENER);
         this.setBackground(this.carousel.getIndicatorBackground());
 
-        this.setCursor(CarouselIndicator.CURSOR);
         this.setForeground(this.carousel.getIndicatorForeground());
         this.setPreferredSize(this.getPreferredSize());
     }
@@ -437,12 +457,11 @@ class CarouselIndicator extends RoundedButton {
     };
 
     private Carousel carousel;
-    final public static Cursor CURSOR = new Cursor(Cursor.HAND_CURSOR);
     final public static GridBagConstraints LAYOUT_CONSTRAINTS = new GridBagConstraints();
 
     // ...
     @Override public Dimension getPreferredSize() {
-        final int size = (int) (Math.min(this.carousel.getHeight(), this.carousel.getWidth()) / 14.4f);
+        final int size = (int) (Math.min(this.carousel.getHeight(), this.carousel.getWidth()) / 19.2f);
         return new Dimension(size, size);
     }
 };
@@ -475,14 +494,12 @@ class GradientButton extends Button {
     public GradientPaint getGradient() { return this.gradient; }
 
     @Override protected void paintComponent(final Graphics graphics) {
-        final Color color = this.getBackground();
         final GradientPaint gradient = this.getGradient();
         final Graphics2D graphics2D = (Graphics2D) graphics;
 
         if (null != gradient) {
             this.setBackground(new Color(0.0f, 0.0f, 0.0f, 0.0f));
 
-            graphics2D.setColor(this.getModel().isArmed() ? new Color(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha() / 2) : color);
             graphics2D.setPaint(gradient);
             graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
@@ -523,6 +540,47 @@ class GradientPanel extends Panel {
     }
 
     public void setGradient(final GradientPaint gradient) { this.gradient = gradient; }
+};
+
+// : Image Label
+class ImageLabel extends Label {
+    public ImageLabel() { super(); }
+    public ImageLabel(final ImageIcon imageIcon) { super(imageIcon); this.setImageIcon(imageIcon); }
+    public ImageLabel(final ImageIcon imageIcon, final int horizontalAlignment) { super(imageIcon, horizontalAlignment); this.setImageIcon(imageIcon); }
+
+    // ...
+    private Integer height = null;
+    private ImageIcon imageIcon = null;
+    private ImageIcon scaledImageIcon = null;
+    private Integer width = null;
+
+    // ...
+    public ImageIcon getImageIcon() { return null == this.scaledImageIcon ? this.imageIcon : this.scaledImageIcon; }
+    public Dimension getImageSize() { return new Dimension(this.height.intValue(), this.width.intValue()); }
+
+    public void setImageIcon(final ImageIcon imageIcon) { super.setIcon(this.imageIcon = imageIcon); }
+    public void setImageSize(final Dimension size) {
+        final ImageIcon imageIcon = this.imageIcon;
+
+        if (null == size) {
+            this.height = null;
+            this.width = null;
+            this.scaledImageIcon = null;
+
+            this.setImageIcon(this.imageIcon);
+        }
+
+        else {
+            this.height = new Integer(size.height);
+            this.width = new Integer(size.width);
+            this.scaledImageIcon = new ImageIcon(this.imageIcon.getImage().getScaledInstance(this.width.intValue(), this.height.intValue(), Image.SCALE_SMOOTH));
+
+            this.setImageIcon(this.scaledImageIcon);
+        }
+
+        this.imageIcon = imageIcon;
+    }
+
 };
 
 // : Label
@@ -612,21 +670,33 @@ class ShadowedLabel extends Label {
     protected Color getShadowColor() { return this.shadowColor; }
     protected Dimension getShadowSize() { return this.shadowSize; }
 
-    @Override public void paint(final Graphics graphics) {
+    @Override public void paintComponent(final Graphics graphics) {
+        final Point origin = this.getLocationOnScreen();
+        final Point rootPaneOrigin = this.getRootPane().getContentPane().getLocationOnScreen();
+
         final Graphics2D graphics2D = (Graphics2D) graphics;
         final TextLayout textLayout = new TextLayout(this.getText(), this.getFont(), graphics2D.getFontRenderContext());
-        final int x = this.getLocation().x, y = this.getFont().getSize() + this.getLocation().y;
+        final int x = origin.x - rootPaneOrigin.x, y = origin.y - rootPaneOrigin.y;
 
         for (int shadowHeightOffset = this.shadowSize.height, shadowWidthOffset = this.shadowSize.width; 0 != shadowHeightOffset && 0 != shadowWidthOffset; --shadowHeightOffset, --shadowWidthOffset) {
             graphics2D.setPaint(this.shadowColor);
             textLayout.draw(graphics2D, x + shadowWidthOffset, y + shadowHeightOffset);
         }
 
-        super.paint(graphics);
+        super.paintComponent(graphics);
     }
 
     protected void setShadowColor(final Color color) { this.shadowColor = color; }
     protected void setShadowSize(final Dimension size) { this.shadowSize = size; }
+};
+
+// : Text Field
+class TextField extends JTextField {
+    public TextField() { super(); }
+    public TextField(final int columns) { super(columns); }
+    public TextField(final String text) { super(text); }
+    public TextField(final String text, final int columns) { super(text, columns); }
+    public TextField(final Document document, final String text, final int columns) { super(document, text, columns); }
 };
 
 // : Window
@@ -714,17 +784,84 @@ public class Lapys extends Application {
 
     final static Window window = new Window();
         final static Container windowContentPane = window.getContentPane();
-        final static Panel windowPageContainer = new Panel();
+        final static Panel windowPageContainer = new Panel((LayoutManager) null);
 
         final static GradientPanel dummyPage = (GradientPanel) window.addPage(windowPageContainer, new GradientPanel(true));
         final static ScrollPane homePage = (ScrollPane) window.addPage(windowPageContainer, new ScrollPane());
         final static GradientPanel homePageContent = new GradientPanel(true);
-            final static Carousel homeCarousel = new Carousel();
+            final static Carousel homeCarousel = new Carousel(
+                "images/backgrounds/billboard.jpg",
+                "images/backgrounds/campus.jpg",
+                "images/backgrounds/college.jpg",
+                "images/backgrounds/hostel.jpg",
+                "images/backgrounds/senate.jpg",
+                "images/backgrounds/sports.jpg"
+            );
             final static GradientButton homeCarouselButton = new GradientButton();
             final static Panel homeCarouselButtonContainer = new Panel(new BorderLayout());
             final static Panel homeCarouselButtonSubcontainer = new Panel(new FlowLayout(FlowLayout.RIGHT, 40, 0));
 
-            final static Panel homeIntroduction = new Panel();
+            final static Panel homeIntroduction = new Panel(new FlowLayout(FlowLayout.LEADING, 0, 0));
+            final static Panel homeIntroductionCardDescriptionContainer = new Panel(new GridLayout(1, 3, 40, 50));
+            final static Label[] homeIntroductionCardDescriptions = {
+                // [Airplane]
+                new Label(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod" + "\n" +
+                    "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," + "\n" +
+                    "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo" + "\n" +
+                    "consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse" + "\n" +
+                    "cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non" + "\n" +
+                    "proident, sunt in culpa qui officia deserunt mollit anim id est laborum." + "\n"
+                ),
+
+                // [Auction]
+                new Label(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod" + "\n" +
+                    "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," + "\n" +
+                    "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo" + "\n" +
+                    "consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse" + "\n" +
+                    "cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non" + "\n" +
+                    "proident, sunt in culpa qui officia deserunt mollit anim id est laborum." + "\n"
+                ),
+
+                // [Fuel]
+                new Label(
+                    "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod" + "\n" +
+                    "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," + "\n" +
+                    "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo" + "\n" +
+                    "consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse" + "\n" +
+                    "cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non" + "\n" +
+                    "proident, sunt in culpa qui officia deserunt mollit anim id est laborum." + "\n"
+                )
+            };
+            final static Panel homeIntroductionCardIconContainer = new Panel(new GridLayout(1, 3, 40, 50));
+            final static ImageLabel[] homeIntroductionCardIcons = {
+                /* [Airplane] */ new ImageLabel(new ImageIcon("images/icons/airplane.png")),
+                /* [Auction]  */ new ImageLabel(new ImageIcon("images/icons/auction.png")),
+                /* [Fuel]     */ new ImageLabel(new ImageIcon("images/icons/fuel.png"))
+            };
+
+            final static Panel homeFooter = new Panel(new GridBagLayout());
+            final static Panel homeFooterDivider = new Panel();
+            final static GradientButton homeFooterNewsletterButton = new GradientButton();
+            final static Panel homeFooterNewsletterButtonContainer = new Panel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            final static Panel homeFooterNewsletterContainer = new Panel(new GridLayout(2, 1));
+            final static TextField homeFooterNewsletterField = new TextField(1);
+            final static Panel homeFooterNewsletterFieldContainer = new Panel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            final static Panel homeFooterSocialsButtonContainer = new Panel();
+            final static RoundedButton[] homeFooterSocialsButtons = {
+                new RoundedButton(new ImageIcon("images/icons/facebook.png")),
+                new RoundedButton(new ImageIcon("images/icons/linkedin.png")),
+                new RoundedButton(new ImageIcon("images/icons/twitter.png")),
+                new RoundedButton(new ImageIcon("images/icons/youtube.png"))
+            };
+            final static Label homeFooterSocialsCallToAction = new Label();
+            final static Panel homeFooterSocialsContainer = new Panel();
+            final static Label homeFooterSocialsCopyright = new Label();
+
+            final static Panel homeShowcase = new Panel(new GridLayout(2, 1));
+            final static ShadowedLabel homeShowcaseHeader = new ShadowedLabel();
+            final static ShadowedLabel homeShowcaseSubheader = new ShadowedLabel();
 
     /* Phases */
     /* : Initiate */
@@ -740,85 +877,167 @@ public class Lapys extends Application {
         /* [Front-end] ... */ {
             // Constant > ...
             final GridBagConstraints layoutConstraints = new GridBagConstraints();
+
             final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             final Dimension windowSize = new Dimension((int) ((75.0f / 100.0f) * (float) screenSize.width), (int) ((75.0f / 100.0f) * (float) screenSize.height));
 
-            // Insertion
+            // Modification > Layout Constraints > ...
+            layoutConstraints.anchor = GridBagConstraints.CENTER;
+            layoutConstraints.fill = GridBagConstraints.HORIZONTAL;
+
+            layoutConstraints.gridx = 0;
+            layoutConstraints.gridy = 0;
+
+            layoutConstraints.weightx = 1.0f;
+
+            // Insertion > ...
             homeCarousel.add(homeCarouselButtonContainer);
             homeCarouselButtonContainer.add(homeCarouselButtonSubcontainer, BorderLayout.PAGE_END);
             homeCarouselButtonSubcontainer.add(homeCarouselButton);
 
+            homeFooter.add(homeFooterNewsletterContainer, layoutConstraints); { ++layoutConstraints.gridy; layoutConstraints.weighty = 0.45f; }
+            homeFooter.add(homeFooterDivider, layoutConstraints); { ++layoutConstraints.gridy; layoutConstraints.weighty = 0.1f; }
+            homeFooter.add(homeFooterSocialsContainer, layoutConstraints); { ++layoutConstraints.gridy; layoutConstraints.weighty = 0.45f; }
+
+            homeFooterNewsletterButtonContainer.add(homeFooterNewsletterButton);
+
+            homeFooterNewsletterContainer.add(homeFooterNewsletterFieldContainer);
+            homeFooterNewsletterContainer.add(homeFooterNewsletterButtonContainer);
+
+            homeFooterNewsletterFieldContainer.add(homeFooterNewsletterField);
+
+            homeFooterSocialsContainer.add(homeFooterSocialsCallToAction);
+            homeFooterSocialsContainer.add(homeFooterSocialsButtonContainer);
+            homeFooterSocialsContainer.add(homeFooterSocialsCopyright);
+
+            for (final RoundedButton homeFooterSocialsButton : homeFooterSocialsButtons) homeFooterSocialsButtonContainer.add(homeFooterSocialsButton);
+
+            homeIntroduction.add(homeIntroductionCardIconContainer);
+            homeIntroduction.add(homeIntroductionCardDescriptionContainer);
+            for (final Label homeIntroductionCardDescription : homeIntroductionCardDescriptions) homeIntroductionCardDescriptionContainer.add(homeIntroductionCardDescription);
+            for (final ImageLabel homeIntroductionCardIcon : homeIntroductionCardIcons) homeIntroductionCardIconContainer.add(homeIntroductionCardIcon);
+
             homePageContent.add(homeCarousel);
+            homePageContent.add(homeShowcase);
             homePageContent.add(homeIntroduction);
+            homePageContent.add(homeFooter);
+
+            homeShowcase.add(homeShowcaseHeader);
+            homeShowcase.add(homeShowcaseSubheader);
 
             window.add(windowPageContainer);
 
-            // Event
-            // [Home] ...
+            // Event > ...
             homeCarouselButton.addActionListener(new ActionListener() {
                 @Override public void actionPerformed(final ActionEvent event) {
-                    try { java.awt.Desktop.getDesktop().browse(new URI("http://localhost:8080/predict/car-fuel.jsp")); }
-                    catch (final IOException|URISyntaxException error) { System.err.println(error); }
+                    window.switchToPage(homePage == window.activePage ? dummyPage : homePage, 3, 10);
+
+                    // try { java.awt.Desktop.getDesktop().browse(new URI("http://localhost:8080/predict/car-fuel.jsp")); }
+                    // catch (final IOException|URISyntaxException error) { System.err.println(error); }
                 }
             });
 
-            // [Application] ...
+            // ...
+            // : [Application] ...
             application.connectToDatabaseServer();
             application.registerFont(Font.MONOSPACED, "fonts/minecraft.otf");
             application.registerFont(Font.SANS_SERIF, "fonts/open-sans.ttf");
 
-            // [Home Carousel] ...
-            homeCarousel.addMedia(
-                "images/backgrounds/billboard.jpg",
-                "images/backgrounds/campus.jpg",
-                "images/backgrounds/college.jpg",
-                "images/backgrounds/hostel.jpg",
-                "images/backgrounds/senate.jpg",
-                "images/backgrounds/sports.jpg"
-            );
-
+            // : [Home] ...
             homeCarousel.setComponentZOrder(homeCarouselButtonContainer, 2);
             homeCarousel.switchToMedia(0); {
-                new Timer().scheduleAtFixedRate(new TimerTask() {
-                    int homeCarouselCurrentMediaIndex = 0;
+                homeCarousel.header.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 42));
+                homeCarousel.header.setForeground(Color.WHITE);
 
-                    @Override public void run() {
-                        ++homeCarouselCurrentMediaIndex;
-                        homeCarousel.switchToMedia(homeCarouselCurrentMediaIndex = homeCarouselCurrentMediaIndex > homeCarousel.getMediaCount() - 1 ? 0 : homeCarouselCurrentMediaIndex);
-                    }
-                }, 0, 5000);
+                homeCarousel.subheader.setForeground(Color.WHITE);
+                homeCarousel.subheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 24));
             }
-
-            homeCarousel.header.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 42));
-            homeCarousel.header.setForeground(Color.WHITE);
-            homeCarousel.header.setText("Carousel Title");
-
-            homeCarousel.subheader.setForeground(Color.WHITE);
-            homeCarousel.subheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 24));
-            homeCarousel.subheader.setText("Carousel Subtitle");
 
             homeCarouselButton.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 20));
             homeCarouselButton.setForeground(Color.WHITE);
             homeCarouselButton.setMargin(new Insets(5, 10, 5, 10));
-            homeCarouselButton.setText("Login/ Signup");
+            homeCarouselButton.setText("Login / Signup");
+
             homeCarouselButtonContainer.setOpaque(false);
+
             homeCarouselButtonSubcontainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 60, 0));
             homeCarouselButtonSubcontainer.setOpaque(false);
 
-            // [Home Introduction] ...
-            homeIntroduction.setBackground(Color.BLUE);
+            homeFooter.setBackground(application.color);
 
-            // [Home] ...
+            homeFooterDivider.setBackground(Color.GRAY);
+
+            homeFooterNewsletterButton.setForeground(Color.WHITE);
+            homeFooterNewsletterButton.setFont(new Font(application.fonts.sansSerif.getName(), Font.PLAIN, 20));
+            homeFooterNewsletterButton.setPreferredSize(new Dimension(500, 50));
+            homeFooterNewsletterButton.setText("Subscribe");
+
+            homeFooterNewsletterButtonContainer.setOpaque(false);
+
+            homeFooterNewsletterContainer.setOpaque(false);
+
+            homeFooterNewsletterField.setPreferredSize(new Dimension(300, 50));
+
+            homeFooterNewsletterFieldContainer.setOpaque(false);
+
+            homeFooterSocialsCallToAction.setText("or you can check out our other handles");
+
+            homeFooterSocialsContainer.setOpaque(false);
+
+            homeFooterSocialsButtonContainer.setOpaque(false);
+
+            homeFooterSocialsCopyright.setText("&#169; Copyright " + Calendar.getInstance().get(Calendar.YEAR) + " LapysDev");
+
+            homeIntroduction.setBackground(Color.WHITE);
+
+            homeIntroductionCardDescriptionContainer.setOpaque(false);
+
+            homeIntroductionCardIconContainer.setOpaque(false);
+
             homePage.setBorder(null);
             homePage.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            homePage.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             homePage.setViewportView(homePageContent);
 
             homePageContent.setLayout(new BoxLayout(homePageContent, BoxLayout.Y_AXIS));
 
-            // [Window] ...
-            for (final Container windowPage : window.pages)
-            windowPage.setSize(windowPageContainer.getSize());
+            homeShowcase.setOpaque(false);
 
+            homeShowcaseHeader.setBorder(BorderFactory.createEmptyBorder(0, 50, 15, 0));
+            homeShowcaseHeader.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 40));
+            homeShowcaseHeader.setForeground(Color.WHITE);
+            homeShowcaseHeader.setText("Lapys AI");
+            homeShowcaseHeader.setVerticalAlignment(ShadowedLabel.BOTTOM);
+
+            homeShowcaseSubheader.setBorder(BorderFactory.createEmptyBorder(15, 75, 0, 0));
+            homeShowcaseSubheader.setFont(new Font(application.fonts.sansSerif.getName(), Font.BOLD, 30));
+            homeShowcaseSubheader.setForeground(Color.WHITE);
+            homeShowcaseSubheader.setText("Creativity, Development, Innovation");
+            homeShowcaseSubheader.setVerticalAlignment(ShadowedLabel.TOP);
+
+            new Timer().scheduleAtFixedRate(new TimerTask() {
+                int homeCarouselCurrentMediaIndex = 0;
+
+                @Override public void run() {
+                    ++homeCarouselCurrentMediaIndex;
+                    homeCarousel.switchToMedia(homeCarouselCurrentMediaIndex = homeCarouselCurrentMediaIndex > homeCarousel.getMediaCount() - 1 ? 0 : homeCarouselCurrentMediaIndex);
+                }
+            }, 0, 5000);
+
+            for (final Label homeIntroductionCardDescription : homeIntroductionCardDescriptions) {
+                homeIntroductionCardDescription.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
+                homeIntroductionCardDescription.setHorizontalAlignment(Label.LEFT);
+                homeIntroductionCardDescription.setVerticalAlignment(Label.TOP);
+                homeIntroductionCardDescription.setOpaque(false);
+                homeIntroductionCardDescription.setText("<html> " + homeIntroductionCardDescription.getText().replaceAll("\n", "<br/>") + " </html>");
+            }
+
+            for (final ImageLabel homeIntroductionCardIcon : homeIntroductionCardIcons) {
+                homeIntroductionCardIcon.setHorizontalAlignment(ImageLabel.CENTER);
+                homeIntroductionCardIcon.setVerticalAlignment(ImageLabel.CENTER);
+            }
+
+            // : [Window] ...
             window.pack();
             window.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
             window.setDefaultCloseOperation(Window.EXIT_ON_CLOSE);
@@ -831,7 +1050,6 @@ public class Lapys extends Application {
             window.switchToPage(homePage);
 
             windowContentPane.setPreferredSize(windowSize);
-            windowPageContainer.setLayout(null);
         }
 
         /* [Back-end] ... */ {
@@ -949,10 +1167,6 @@ public class Lapys extends Application {
         }
 
         /* Update */
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() { @Override public boolean dispatchKeyEvent(final KeyEvent event) {
-            if (KeyEvent.KEY_PRESSED == event.getID()) window.switchToPage(homePage == window.activePage ? dummyPage : homePage, 3, 10);
-            return false;
-        } });
         Update();
     }
 
@@ -970,17 +1184,28 @@ public class Lapys extends Application {
     protected static void Update() {
         // [Window] ...
         for (final Container windowPage : window.pages) {
-            windowPage.setSize(windowPageContainer.getSize());
+            if (windowPage instanceof GradientPanel) { ((GradientPanel) windowPage).setGradient(new GradientPaint(0.0f, 0.0f, application.color, windowPage.getWidth() / 8.0f, windowPage.getHeight() * 1.25f, Color.BLUE)); }
 
-            if (windowPage instanceof GradientPanel)
-            ((GradientPanel) windowPage).setGradient(new GradientPaint(0.0f, 0.0f, application.color, windowPage.getWidth() / 8.0f, windowPage.getHeight() * 1.25f, Color.BLUE));
+            windowPage.setPreferredSize(windowPageContainer.getSize());
+            windowPage.setSize(windowPageContainer.getSize());
+            windowPage.doLayout();
         }
 
         window.switchToActivePage();
-        for (final Container windowPage : window.pages) windowPage.doLayout();
+
+        // [Home] ...
+        homePageContent.setGradient(new GradientPaint(0.0f, 0.0f, application.color, homePageContent.getWidth() / 8.0f, homePageContent.getHeight() * 1.25f, Color.BLUE));
+        homePageContent.setSize(new Dimension(homePage.getWidth(), homePage.getHeight() * homePageContent.getComponentCount()));
+
+        for (final Component homePageSection : homePageContent.getComponents()) {
+            homePageSection.setPreferredSize(homePage.getSize());
+            homePageSection.setSize(homePage.getSize());
+        }
 
         // [Home Carousel] ...
+        homeCarouselButton.setBackground(application.color);
         homeCarouselButton.setGradient(new GradientPaint(0.0f, 0.0f, application.color, homeCarouselButton.getWidth() / 8.0f, homeCarouselButton.getHeight() * 1.25f, Color.BLUE));
+
         homeCarouselButtonContainer.setSize(homeCarousel.getSize());
         homeCarouselButtonContainer.doLayout();
         homeCarouselButtonSubcontainer.doLayout();
@@ -997,6 +1222,27 @@ public class Lapys extends Application {
         homeCarousel.mediaFilter.setSize(homeCarousel.getSize());
 
         homeCarousel.doLayout();
+        homeCarousel.switchToMedia(0);
+
+        // [Home Footer] ...
+        homeFooterDivider.setMaximumSize(new Dimension(homeFooter.getWidth(), 5));
+        homeFooterNewsletterButton.setGradient(new GradientPaint(0.0f, 0.0f, application.color, homeFooterNewsletterButton.getPreferredSize().width / 8.0f, homeFooterNewsletterButton.getPreferredSize().height * 1.25f, Color.BLUE));
+        homeFooterNewsletterContainer.setMinimumSize(new Dimension(homeFooter.getWidth(), 50 + homeFooterNewsletterButton.getPreferredSize().height + homeFooterNewsletterField.getPreferredSize().height));
+
+        // [Home Introduction] ...
+        homeIntroductionCardDescriptionContainer.setPreferredSize(new Dimension(homeIntroduction.getWidth(), (homeIntroduction.getHeight() * 3) / 5));
+        homeIntroductionCardDescriptionContainer.setSize(new Dimension(homeIntroduction.getWidth(), (homeIntroduction.getHeight() * 3) / 5));
+
+        homeIntroductionCardIconContainer.setPreferredSize(new Dimension(homeIntroduction.getWidth(), (homeIntroduction.getHeight() * 2) / 5));
+        homeIntroductionCardIconContainer.setSize(new Dimension(homeIntroduction.getWidth(), (homeIntroduction.getHeight() * 2) / 5));
+
+        for (final ImageLabel homeIntroductionCardIcon : homeIntroductionCardIcons) {
+            final int homeIntroductionCardIconSize = Math.min((homeIntroductionCardIcon.getHeight() * 4) / 5, (homeIntroductionCardIcon.getWidth() * 4) / 5);
+            homeIntroductionCardIcon.setImageSize(new Dimension(homeIntroductionCardIconSize, homeIntroductionCardIconSize));
+        }
+
+        // [Home Showcase] ...
+        homeShowcase.setPreferredSize(new Dimension(homePage.getWidth(), homePage.getHeight() / 2));
     }
 
     /* Main */
