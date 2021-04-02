@@ -50,7 +50,7 @@
             catch (final InstantiationException error) { System.err.println(error); }
 
             try { databaseConnection = DriverManager.getConnection("jdbc:mysql://localhost:3306/", databaseUser, databasePassword); }
-            catcsh (final SQLException error) { System.err.println(error); }
+            catch (final SQLException error) { System.err.println(error); }
 
             /* [Get Database] ... */
             try {

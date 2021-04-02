@@ -1,0 +1,12 @@
+@relation Project3DataPrediction
+
+@attribute MetColor {TRUE,FALSE}
+@attribute Color {Beige,Blue,Silver,Black,White,Grey,Red,Green}
+@attribute BoardComputer {TRUE,FALSE}
+@attribute CentralLock {TRUE,FALSE}
+@attribute PoweredWindows {TRUE,FALSE}
+@attribute MetallicRim {TRUE,FALSE}
+@attribute FuelType {Diesel,Petrol,CNG}
+
+@data
+FALSE,Blue,FALSE,TRUE,TRUE,TRUE,?

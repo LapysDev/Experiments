@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html charset=UTF-8 dir=ltr encoding=UTF-8 itemtype=http://schema.org/WebPage lang=en-US language=English prefix=og:http://ogp.me/ns>
+    <head prefix=lapys:https://www.lapys.dev/>
+        <!-- Document Metadata -->
+        <meta charset="UTF-8"/>
+        <meta content=chrome=1 http-equiv="X-UA-Compatible"/>
+
+        <!-- Document Stylesheet -->
+        <style media=all type=text/css>
+            @font-face {
+                font-family: "Open Sans";
+                src: url(../fonts/open-sans.ttf)
+            }
+
+            * { user-select: none }
+                :selected { background-color: transparent }
+            [hidden] { display: none }
+
+            body { display: table; margin: 0 }
+            body, html, main { height: 100%; width: 100% }
+
+            div[role=field] {
+                margin: 10px auto;
+                padding: 0 1%;
+                width: 400px
+            }
+
+            div[role=toggle], input, select { float: right }
+
+            div[role=toggle],
+            div[role=toggle] button {
+                background-color: #F0F0F0;
+                border: none;
+                border-radius: 20px;
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+                box-sizing: border-box;
+                cursor: pointer;
+                display: inline-block;
+                height: 20px;
+                overflow: hidden;
+                vertical-align: text-top;
+                width: 40px
+            }
+
+            div[role=toggle][state=on] {
+                background-color: #7F00FF;
+                box-shadow: inset 0 0 0 500px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.25)
+            }
+                /* [State] */
+                div[role=toggle]:focus { box-shadow: inset 0 0 0 1px rgba(127, 0, 255, 0.75); outline: none }
+                div[role=toggle][state=on]:focus { box-shadow: inset 0 0 0 500px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(127, 0, 255, 0.75) }
+
+                /* <button> */
+                div[role=toggle] button {
+                    background-color: #7F00FF;
+                    border: 1px solid transparent;
+                    border-right: none;
+                    box-shadow: none;
+                    display: table-cell;
+                    left: 0px;
+                    pointer-events: none;
+                    position: relative;
+                    touch-action: none;
+                    transition: left 100ms ease-out 0s;
+                    user-drag: none;
+                    user-select: none;
+                    width: 20px
+                }
+
+                div[role=toggle][state=on] button { left: 20px }
+                    div[role=toggle] button:focus { outline: none }
+
+            fieldset {
+                border: none;
+                margin: 0;
+                padding: 0
+            }
+
+            form {
+                background-color: #FAFAFA;
+                border: 1px solid #CCCCCC;
+                border-radius: 5px;
+                box-sizing: border-box;
+                font-family: "Open Sans";
+                height: 75%;
+                margin: auto;
+                padding: 5px 15px;
+                width: 90%
+            }
+
+            input[role=toggle] {
+                opacity: 0;
+                pointer-events: none;
+                position: absolute;
+                touch-action: none;
+                user-drag: none;
+                user-select: none
+            }
+
+            input[type=submit] {
+                background-color: #7F00FF;
+                border: 1px solid rgba(255, 255, 255, 0);
+                border-radius: 30px;
+                box-sizing: content-box;
+                color: #FFFFFF;
+                cursor: pointer;
+                float: right;
+                font-size: larger;
+                font-weight: lighter;
+                margin: 3.75% 0;
+                margin-right: 20%;
+                padding: 5px 5%;
+                transition: all 100ms ease-in 0s
+            }
+                input[type=submit]:focus { outline: none }
+                input[type=submit]:focus, input[type=submit]:hover {
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 0 0 2.5px rgba(127, 0, 255, 0.35), inset 0 0 0 500px rgba(0, 0, 0, 0.1)
+                }
+
+            label { color: #333333 }
+            label, select { font-size: 20px; font-weight: lighter }
+
+            legend {
+                border-bottom: 1px solid #CCCCCC;
+                font-size: 35px;
+                font-weight: 600;
+                margin-bottom: 1%;
+                padding: 5px 0;
+                text-indent: 2.5%
+            }
+
+            main {
+                background: #7F00FF;
+                background: #7F00FF linear-gradient(135deg, #7F00FF, #0000FF, #7F00FF);
+                display: table-cell;
+                vertical-align: middle
+            }
+
+            select {
+                color: #666666;
+                position: relative;
+                width: 35%
+            }
+                select:focus {
+                    border-color: #7F00FF;
+                    outline: none
+                }
+
+            select, #palette {
+                border-color: #CCCCCC;
+                bottom: 2px;
+                padding: 1px 0
+            }
+
+            #palette {
+                background-color: red;
+                border-radius: 3px;
+                border-style: solid;
+                border-width: 1px;
+                box-sizing: content-box;
+                display: inline-block;
+                float: right;
+                height: 20px;
+                margin-right: 2.5%;
+                transition: background-color 100ms ease-in 0s;
+                width: 20px
+            }
+        </style>
+
+        <!-- Document Title -->
+        <title> Predicting Car Fuel Type </title>
+    </head>
+
+    <body>
+        <!-- Main -->
+        <main>
+            <form action=prediction-output.jsp method=POST>
+                <legend> Predict Car Fuel Type </legend>
+
+                <!-- ... -->
+                <fieldset hidden>
+                    <div role=field>
+                        <label for=FuelType> Fuel Type </label>
+                        <select id=FuelType name=FuelType>
+                            <option> Compressed Natural Gas (CNG) </option>
+                            <option selected> Diesel </option>
+                            <option> Petrol </option>
+                        </select>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <div role=field>
+                        <label for=Boardcomputer> On-board Computer </label>
+                        <input id=Boardcomputer name=Boardcomputer role=toggle type="text"/>
+                    </div>
+
+                    <div role=field>
+                        <label for=CentralLock> Central Lock </label>
+                        <input id=CentralLock name=CentralLock role=toggle type="text"/>
+                    </div>
+
+                    <div role=field>
+                        <label for=Color> Color </label>
+
+                        <select id=Color name=Color>
+                            <option> Beige </option>
+                            <option selected> Black </option>
+                            <option> Blue </option>
+                            <option> Gray </option>
+                            <option> Green </option>
+                            <option> Red </option>
+                            <option> Silver </option>
+                            <option> White </option>
+                        </select>
+
+                        <div id=palette> </div>
+                    </div>
+
+                    <div role=field>
+                        <label for=MetColor> Metallic Color </label>
+                        <input id=MetColor name=MetColor role=toggle type="text"/>
+                    </div>
+
+                    <div role=field>
+                        <label for=MetallicRim> Metallic Rim </label>
+                        <input id=MetallicRim name=MetallicRim role=toggle type="text"/>
+                    </div>
+
+                    <div role=field>
+                        <label for=PoweredWindows> Powered Windows </label>
+                        <input id=PoweredWindows name=PoweredWindows role=toggle type="text"/>
+                    </div>
+                </fieldset>
+
+                <fieldset> <input type=submit value="Predict"/> </fieldset>
+            </form>
+        </main>
+
+        <!-- Document Script -->
+        <script language=javascript type=text/javascript>
+            void function() {
+                var color = document.getElementById("Color"), palette = document.getElementById("palette");
+                var inputs = document.getElementsByTagName("input");
+
+                // ...
+                function fill() {
+                    switch (color.value) {
+                        case "Beige": palette.style.backgroundColor = "beige"; break;
+                        case "Black": palette.style.backgroundColor = "black"; break;
+                        case "Blue": palette.style.backgroundColor = "blue"; break;
+                        case "Gray": palette.style.backgroundColor = "gray"; break;
+                        case "Green": palette.style.backgroundColor = "green"; break;
+                        case "Red": palette.style.backgroundColor = "red"; break;
+                        case "Silver": palette.style.backgroundColor = "silver"; break;
+                        case "White": palette.style.backgroundColor = "white"
+                    }
+                }
+
+                // ...
+                color.addEventListener("change", fill);
+
+                for (var iterator = inputs.length - 1; ~iterator; --iterator) {
+                    var input = inputs.item(iterator);
+
+                    if ("toggle" == input.getAttribute("role"))
+                    with (input) {
+                        var toggle = document.createElement("div");
+                        var toggleButton = document.createElement("button");
+
+                        toggle.addEventListener("click", function() {
+                            this.setAttribute("state", "off" == value ? "on" : "off");
+                            value = "off" == value ? "on" : "off"
+                        });
+                        toggle.appendChild(toggleButton);
+                        toggle.setAttribute("role", "toggle");
+                        toggle.setAttribute("state", "off");
+                        toggle.setAttribute("tabindex", iterator + 1);
+
+                        toggleButton.addEventListener("click", function() { return false });
+                        toggleButton.setAttribute("type", "button");
+
+                        if (null !== input.parentElement) {
+                            input.parentElement.appendChild(toggle);
+                            value = "off"
+                        }
+                    }
+                }
+
+                // ...
+                fill()
+            }();
+        </script>
+    </body>
+</html>

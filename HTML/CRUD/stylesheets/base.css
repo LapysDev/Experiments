@@ -1,0 +1,131 @@
+/* CSS At-Rules > ... */
+@font-face {
+    font-family: Roboto;
+    src: url(../fonts/roboto.ttf);
+    src: local(Roboto), url(../fonts/roboto.ttf)
+}
+
+/* DOM Elements */
+    /* [All] */
+    * {
+        box-sizing: content-box;
+        position: static
+    }
+
+    /* <a> */
+    a { text-decoration: none }
+
+    /* <a>, <button>, <input> */
+    a, button, input[type=checkbox], input[type=clear], input[type=radio], input[type=reset], input[type=submit] { cursor: pointer }
+
+    /* <a>, <button>, <input>, <select>, <textarea> */
+        /* [State] > ... */
+        a:focus,
+        button:focus,
+        input:focus,
+        select:focus,
+        textarea:focus { outline: none }
+
+    /* <body> */
+    body { margin: 0 }
+
+    /* <body>, <html>, <main> */
+    body, html, main {
+        height: 100%;
+        width: 100%
+    }
+
+    /* <h1> */
+    h1 { font-size: 200% }
+
+    /* <h1>, <h2>, <h3>, <h4>, <h5>, <h6>, <p> */
+    h1, h2, h3, h4, h5, h6, p { color: inherit }
+        /* [State] > ... */
+        h1:first-child, h2:first-child, h3:first-child, h4:first-child, h5:first-child, h6:first-child, p:first-child { margin-top: 0 }
+        h1:last-child, h2:last-child, h3:last-child, h4:last-child, h5:last-child, h6:last-child, p:last-child { margin-bottom: 0 }
+
+    /* <h2> */
+    h2 { font-size: 175% }
+
+    /* <h3> */
+    h3 { font-size: 167.5% }
+
+    /* <h4> */
+    h4 { font-size: 150% }
+
+    /* <h5> */
+    h5 { font-size: 125% }
+
+    /* <h6> */
+    h6 { font-size: 112.5% }
+
+    /* <main> */
+    main {
+        color: #333333;
+        font-family: Roboto, sans-serif
+    }
+
+    /* <p> */
+    p { font-size: 100% }
+
+    /* <small> */
+    small { font=size: 90% }
+
+/* Components */
+    /* Dialog */
+    .dialog, .error, .information, .success, .warning {
+        background-color: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(0, 0, 0, 0.5);
+        border-left-width: 5px;
+        border-radius: 5px;
+        border-bottom-left-radius: 0;
+        border-top-left-radius: 0;
+        color: rgba(0, 0, 0, 0.8);
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0 auto;
+        padding: 1.25%;
+        position: relative;
+        vertical-align: middle;
+        width: 90%
+    }
+        /* ... */
+        .error { background-color: #FF9999 }
+        .information { background-color: #9999FF }
+        .success { background-color: #99FF99 }
+        .warning { background-color: #FFFF99 }
+
+        /* [All] */
+        .dialog > *, .error > *, .information > *, .success > *, .warning > * { font-size: 90%; font-weight: normal }
+
+        /* <h1>, <h2>, <h3>, <h4>, <h5>, <h6>, <p>, <small> */
+        .dialog h1, .error h1, .information h1, .success h1, .warning h1 { font-size: 125%; font-weight: 500 }
+        .dialog h2, .error h2, .information h2, .success h2, .warning h2 { font-size: 120%; font-weight: 500 }
+        .dialog h3, .error h3, .information h3, .success h3, .warning h3 { font-size: 115%; font-weight: 500 }
+        .dialog h4, .error h4, .information h4, .success h4, .warning h4 { font-size: 110%; font-weight: 500 }
+        .dialog h5, .error h5, .information h5, .success h5, .warning h5 { font-size: 105%; font-weight: 500 }
+        .dialog h6, .error h6, .information h6, .success h6, .warning h6 { font-size: 100%; font-weight: 500 }
+        .dialog p, .error p, .information p, .success p, .warning p { font-size: 90% }
+        .dialog small, .error small, .information small, .success small, .warning small { font-size: 80% }
+
+    /* Emphasis */
+    .emphasis {
+        display: inline-block;
+        transform: skewX(-10deg)
+    }
+
+    /* No (Drag, Select) */
+    .dialog, .error, .information, .no-drag, .no-select, .success, .warning { touch-action: none }
+
+    .no-drag, .no-drag * { user-drag: none }
+    .no-select, .no-select * { user-select: none }
+        /* [State] > Selection */
+        .dialog::selection, .dialog ::selection,
+        .error::selection, .error ::selection,
+        .information::selection, .information ::selection,
+        .no-select::selection, .no-select ::selection,
+        .success::selection, .success ::selection,
+        .warning::selection, .warning ::selection {
+            background-color: transparent;
+            text-shadow: 0 0 0 transparent
+        }
