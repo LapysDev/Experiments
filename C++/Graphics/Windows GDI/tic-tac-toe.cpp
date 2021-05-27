@@ -17,6 +17,7 @@
 #   include <windowsx.h> // Windows Extensions API
 
 /* Definitions > ... */
+#undef UNICODE
 #ifdef _WIN32_WINNT
 #   if _WIN32_WINNT < 0x0500
 #       undef _WIN32_WINNT
@@ -75,7 +76,7 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
 
         /* ... */
         case WM_LBUTTONDOWN: {
-            pointerIsPressed = true;
+            if (false == pointerIsPressed) pointerIsPressed = true;
             ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT | RDW_INVALIDATE);
         } return EXIT_SUCCESS;
 
@@ -397,13 +398,9 @@ void Update(void) {
             }
         }
     }
-
-        // tiles[iterator][iterator]
-        // tiles[3 - iterator - 1][iterator]
 }
 
-/* Function */
-// : Put Pixel
+/* Function > Put Pixel */
 void putPixel(unsigned short const x, unsigned short const y, DWORD const color) { static_cast<UINT32*>(windowMemoryDeviceContextBitmapBits)[x + (windowMemoryDeviceContextBitmap.bmWidth * (windowMemoryDeviceContextBitmap.bmHeight - y - 1L))] = color | (0xFFu << 0x18u); }
 
 /* Main */
@@ -481,7 +478,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
             windowCoordinates.cx = ((workareaRectangle.right - workareaRectangle.left) - windowWidth) / 2L;
             windowCoordinates.cy = ((workareaRectangle.bottom - workareaRectangle.top) - windowHeight) / 2L;
 
-            windowHandle = ::CreateWindowEx(0x0, windowClassInformation.lpszClassName, "Tic-Tac-Toe", WS_POPUP, windowCoordinates.cx, windowCoordinates.cy, windowWidth, windowHeight, HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance)));
+            windowHandle = ::CreateWindowEx(0x0, windowClassInformation.lpszClassName, "Tic-Tac-Toe", WS_OVERLAPPEDWINDOW, windowCoordinates.cx, windowCoordinates.cy, windowWidth, windowHeight, HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance)));
 
             // ...
             if (NULL == windowHandle) exitCode = EXIT_FAILURE;
