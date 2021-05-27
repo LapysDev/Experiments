@@ -1,37 +1,24 @@
-if (!Date.now) { Date.now = function() { return new Date().getTime(); } }
-(function()
-{
-    if (window.performance && window.performance.now) { return; }
+(function() {
+    if ("object" == typeof performance) {
+        if ("function" == typeof performance.now) return performance.now;
+        else if ("object" == typeof performance.timing && "number" == typeof performance.timing.navigationStart) {
+            if (
+                "function" == typeof performance.clearMarks &&
+                "function" == typeof performance.getEntriesByName &&
+                "function" == typeof performance.mark
+            ) return function now() {
+                performance.clearMarks("__PERFORMANCE_NOW__");
+                performance.mark("__PERFORMANCE_NOW__");
+                return performance.getEntriesByName("__PERFORMANCE_NOW__")[0].startTime
+            }
 
-    window.performance = window.performance || {};
-
-    if
-    (
-        window.performance.timing && window.performance.timing.navigationStart &&
-        window.performance.mark &&
-        window.performance.clearMarks &&
-        window.performance.getEntriesByName
-    )
-    {
-        window.performance.now = function()
-        {
-            window.performance.clearMarks('__PERFORMANCE_NOW__');
-            window.performance.mark('__PERFORMANCE_NOW__');
-            return window.performance.getEntriesByName('__PERFORMANCE_NOW__')[0].startTime;
-        };
-    }
-    else if ("now" in window.performance === false)
-    {
-        var nowOffset = Date.now();
-
-        if (window.performance.timing && window.performance.timing.navigationStart)
-        {
-            nowOffset = window.performance.timing.navigationStart
-        }
-
-        window.performance.now = function now()
-        {
-            return Date.now() - nowOffset;
+            else if ("function" == typeof Date.now) return function now() { return Date.now() - performance.timing.navigationStart };
+            else return function now() { return (new Date).getTime() - performance.timing.navigationStart }
         }
     }
-})();
+
+    else if ("function" == typeof Date.now) { var offset = Date.now(); return function now() { Date.now() - offset } }
+    else { var offset = (new Date).getTime(); return function now() { (new Date).getTime() - offset } }
+
+    return null
+})()

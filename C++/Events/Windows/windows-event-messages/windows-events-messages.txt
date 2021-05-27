@@ -142,7 +142,7 @@ EM_LINESCROLL: Line Scroll
 EM_OUTLINE: Line Outline
 EM_PASTESPECIAL: Line Paste Special
 EM_POSFROMCHAR: Line Position from Character
-EM_RECONVERSION: Reconversion
+EM_RECONVERSION: Re-conversion
 EM_REDO: Redo
 EM_REPLACESEL: Replace Selection
 EM_REQUESTRESIZE: Request Resize
@@ -863,6 +863,7 @@ WM_ERASEBKGND: Erase Background
 WM_EXITMENULOOP: Exit Menu Loop
 WM_EXITSIZEMOVE: Exit Size Move
 WM_FONTCHANGE: Font Change
+WM_GESTURE: Gesture
 WM_GETDLGCODE: Get Dialog Code
 WM_GETFONT: Get Font
 WM_GETHOTKEY: Get Hotkey
@@ -1028,6 +1029,7 @@ WM_SYSTIMER: System Timer
 WM_TCARD: Text Card
 WM_TIMECHANGE: Time Change
 WM_TIMER: Timer
+WM_TOUCH: Touch
 WM_UNDO: Undo
 WM_UNICHAR: Unicode Character
 WM_UNINITMENUPOPUP: Uninitiate Menu Pop-Up

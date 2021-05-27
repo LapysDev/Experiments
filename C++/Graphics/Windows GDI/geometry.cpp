@@ -3,7 +3,6 @@
 #include <stdint.h> // Standard Integers
 
 // : [C++ Standard Library]
-#include <cmath>
 #include <cstdarg> // C Standard Arguments
 #include <cstdio>
 #include <cstdlib> // C Standard Library
@@ -27,7 +26,7 @@ static void Draw(void);
 /* Definition > ... */
 inline void drawCircle(unsigned short const, unsigned short const, unsigned short const);
 inline void drawLine(unsigned short const, unsigned short const, unsigned short const, unsigned short const);
-inline void drawSpline(unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned short const);
+inline void drawSpline(unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned char const = 0u, ...);
 
 inline int getPixel(unsigned short const, unsigned short const);
 inline void putPixel(unsigned short const, unsigned short const, DWORD const = 0x000000u);
@@ -114,7 +113,7 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
     return ::DefWindowProc(windowHandle, message, messageParameter, messageSubparameter);
 }
 
-/* Function --- NOTE (Lapys) */
+/* Function */
     // Draw Circle
     void drawCircle(unsigned short const xAnchor, unsigned short const yAnchor, unsigned short const radius) {
         // Initialization > (... Neighbor, X, Y)
@@ -130,7 +129,7 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
 
             bool reversed = false;
 
-            // ... Update > Reversed -> Prevent the Current Neighbor infinitely reversing back onto itself.
+            // ... Update > Reversed ->> Prevent the Current Neighbor infinitely reversing back onto itself.
             switch (currentNeighbor) {
                 case east: reversed = recentNeighbor == northwest || recentNeighbor == southwest || recentNeighbor == west; break;
                 case north: reversed = recentNeighbor == south || recentNeighbor == southeast || recentNeighbor == southwest; break;
@@ -151,7 +150,7 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
             }
 
             else switch (currentNeighbor) {
-                // Update > ... Neighbor -> Assert next neighboring pixel, clock-wise.
+                // Update > ... Neighbor ->> Assert next neighboring pixel, clock-wise.
                 //                          Reset the translation from checking neighboring pixels.
                 case east: --x; currentNeighbor = southeast; break;
                 case north: ++y; currentNeighbor = northeast; break;
@@ -160,10 +159,10 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
                 case south: --y; currentNeighbor = southwest; break;
                 case southeast: --x; --y; currentNeighbor = south; break;
                 case southwest: ++x; --y; currentNeighbor = west; break;
-                case west: return; // -> Checked all neighboring pixels.
+                case west: return; // ->> Checked all neighboring pixels.
             }
 
-            // Update > ... -> Check next neighboring pixel matches circle circumference.
+            // Update > ... ->> Check next neighboring pixel matches circle circumference.
             //                 This works because the circumference is continuous.
             switch (currentNeighbor) {
                 case east: ++x; break;
@@ -178,22 +177,22 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
         } while (false == (x == xAnchor + radius && y == yAnchor));
     }
 
-    // Draw Line
+    // Draw Line --- WARN (Lapys) -> Loops forever if `xOrigin == xTarget && yOrigin == yTarget`.
     void drawLine(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget) {
         // Initialization
         // : ...
         int x = xOrigin;
         int y = yOrigin;
 
-        // : Delta -> Distance between origin & targets.
+        // : Delta ->> Distance between origin & targets.
         unsigned short const xDelta = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget; // -> Run
         unsigned short const yDelta = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget; // -> Rise
 
-        // : Slope -> Determine iterative translation value from origin -- based on how much the X & Y axes are relatively displaced.
+        // : Slope ->> Determine iterative translation value from origin -- based on how much the X & Y axes are relatively displaced.
         float const xSlope = xDelta < yDelta ? static_cast<float>(xDelta) / static_cast<float>(yDelta) : 1.0f;
         float const ySlope = xDelta > yDelta ? static_cast<float>(yDelta) / static_cast<float>(xDelta) : 1.0f;
 
-        // Loop > ... -> Sequentially translate from origin to target based on displacement ratios & relative quadrants.
+        // Loop > ... ->> Sequentially translate from origin to target based on displacement ratios & relative quadrants.
         for (float xSlopeIterator = xSlope, ySlopeIterator = ySlope; xSlopeIterator || ySlopeIterator; ) {
             putPixel(x, y);
 
@@ -205,23 +204,63 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
         }
     }
 
-    // Draw Spline -> Linear Interpolate = A + (ratio * (B - A)); Presumes `long` is 64-bit
-    void drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned short const xAnchor, unsigned short const yAnchor) {
-        // [origin -> target] : anchor
+    // Draw Spline
+    void drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned short const xAnchor, unsigned short const yAnchor, unsigned char const anchorCount, ...) {
+        static unsigned short anchors[250]; // ->> Could be dynamically stack allocated.
+
+        anchors[0] = xAnchor;
+        anchors[1] = yAnchor;
+        if (0u != anchorCount) {
+            std::va_list arguments;
+
+            va_start(arguments, anchorCount);
+            for (unsigned short *iterator = anchors + (anchorCount * 2u); anchors != iterator; iterator -= 2) {
+                iterator[0] = static_cast<unsigned short>(va_arg(arguments, unsigned int));
+                iterator[1] = static_cast<unsigned short>(va_arg(arguments, unsigned int));
+            }
+            va_end(arguments);
+        }
+
+        /* ... */
+        static_cast<void>(xAnchor); static_cast<void>(yAnchor);
+        static_cast<void>(xOrigin); static_cast<void>(yOrigin);
+        static_cast<void>(xTarget); static_cast<void>(yTarget);
+
+        /* ... */
+
+        // int xO = xOrigin; int yO = yOrigin;
+        // int xT = xTarget; int yT = yAnchor;
+
+        // unsigned short const xDelta = xTarget - xOrigin;
+        // unsigned short const yDelta = yTarget - yOrigin;
+
+        // float const xRatio = xDelta < yDelta ? static_cast<float>(xDelta) / static_cast<float>(yDelta) : 1.0f;
+        // float const yRatio = yDelta < xDelta ? static_cast<float>(yDelta) / static_cast<float>(xDelta) : 1.0f;
+
+        unsigned short iterator = 0u, length = 455u;
+        for (; xO != xAnchor && yT != yTarget; ++xO, ++yT) {
+            // ++iterator;
+            // putPixel(
+            //     xO + ((iterator * (xT - xO)) / length),
+            //     yO + ((iterator * (yT - yO)) / length)
+            // );
+            // putPixel(xO, yO, 0xFF0000u);
+            // putPixel(xT, yT, 0x0000FFu);
+        }
     }
 
     // Get Pixel (Color) -> Whitish tone between ~50% - 100% intensity. (based on `x` & `y` coordinates)
     // Put Pixel -> (0 >= x <= windowMemoryDeviceContextBitmap.bmWidth) && (0 >= y <= windowMemoryDeviceContextBitmap.bmHeight)
     int getPixel(unsigned short const x, unsigned short const y) { int const intensity = static_cast<int>(127.0f + (255.0f - 127.0f) * ((1.0f * (static_cast<float>(x + y) / 2.0f)) / windowHeight)); return RGB(intensity, intensity, intensity); }
-    void putPixel(unsigned short const x, unsigned short const y, DWORD const color) { static_cast<UINT32*>(windowMemoryDeviceContextBitmapBits)[x + ((windowMemoryDeviceContextBitmap.bmHeight - y - 1L) * windowMemoryDeviceContextBitmap.bmWidth)] = (0xFFu << 0x18u) | (0x000000u == color ? getPixel(x, y) : color); }
+    void putPixel(unsigned short const x, unsigned short const y, DWORD const color) { static_cast<UINT32*>(windowMemoryDeviceContextBitmapBits)[x + (windowMemoryDeviceContextBitmap.bmWidth * (windowMemoryDeviceContextBitmap.bmHeight - y - 1L))] = (0xFFu << 0x18u) | (0x000000u == color ? getPixel(x, y) : color); }
 
 /* Phase > Draw --- NOTE (Lapys) -> Geometry Demonstration. */
 void Draw(void) {
     // [Window Border]
-    for (int x = windowWidth - 1; ~x; --x) putPixel(x, windowHeight - 1u); // -> Bottom.
-    for (int y = windowHeight - 1; ~y; --y) putPixel(0u, y); // -> Left.
-    for (int y = windowHeight - 1; ~y; --y) putPixel(windowWidth - 1u, y); // -> Right.
-    for (int x = windowWidth - 1; ~x; --x) putPixel(x, 0u); // -> Top.
+    // for (int x = windowWidth - 1; ~x; --x) putPixel(x, windowHeight - 1u); // -> Bottom.
+    // for (int y = windowHeight - 1; ~y; --y) putPixel(0u, y); // -> Left.
+    // for (int y = windowHeight - 1; ~y; --y) putPixel(windowWidth - 1u, y); // -> Right.
+    // for (int x = windowWidth - 1; ~x; --x) putPixel(x, 0u); // -> Top.
 
     // [Right-angled Lines] ...
     // drawLine(windowWidth / 2u, windowHeight / 2u, windowWidth * (000.0f / 100.0f), windowHeight * (000.0f / 100.0f));
@@ -240,11 +279,8 @@ void Draw(void) {
     // drawCircle(windowWidth / 2u, windowHeight / 2u, radius);
 
     // [Splines] ...
-    drawSpline(20u, 20u, 420u, 400u, 400u, 30u);
-    // drawSpline(20u, 20u, 420u, 300u, 400u, 20u);
-    // drawSpline(20u, 20u, 420u, 200u, 400u, 20u);
-    // drawSpline(20u, 20u, 420u, 100u, 400u, 20u);
-    // drawSpline(20u, 20u, 420u, 40u, 400u, 20u);
+    drawSpline(100u, 100u, windowWidth - 100u, windowHeight - 100u, windowWidth - 100u, 100u);
+    // drawSpline(100u, 100u, windowWidth - 100u, windowHeight - 100u, 100u, 200u);
 }
 
 /* Main --- NOTE (Lapys) */
@@ -260,7 +296,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
 
     // Logic > ... -> Detect multiple instances of this program being executed.
     if (NULL != previousInstanceHandle) instanceAlreadyRunning = true;
-    else for (; false;) {
+    else do {
         // Initialization > Lock File (Name, Path)
         CHAR lockFileName[MAX_PATH] = {};
         CHAR lockFilePath[MAX_PATH + 1u] = {};
@@ -291,7 +327,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
                 case ERROR_SUCCESS: instanceAlreadyRunning = false; break;
             }
         }
-    }
+    } while (false);
 
     // Logic > ... -> Create an (application) Window.
     if (instanceAlreadyRunning) exitCode = EXIT_FAILURE;
@@ -335,7 +371,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
                 // ...; Loop > Update ...
                 MSG threadMessage = {};
                 for (
-                    BOOL threadMessageAvailable = FALSE; FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message;
+                    BOOL threadMessageAvailable = TRUE; FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message;
                     threadMessageAvailable = ::PeekMessage(&threadMessage, NULL, 0x0, 0x0, PM_REMOVE)
                 ) ::DispatchMessage(&threadMessage);
 

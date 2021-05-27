@@ -114,6 +114,8 @@
         POINT const cursorPosition = 0x0 == subparameter ? POINT() : *(POINT const*) subparameter;
         HDC const& windowDeviceContextHandle = (HDC const&) parameter;
 
+        static_cast<void>(cursorPosition);
+
         // Logic
         switch (message) {
             // [Create, Destroy]

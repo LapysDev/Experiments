@@ -126,7 +126,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
                 // ...; Loop > Update ...
                 MSG threadMessage = {};
                 for (
-                    BOOL threadMessageAvailable = FALSE; FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message;
+                    BOOL threadMessageAvailable = TRUE; FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message;
                     threadMessageAvailable = ::PeekMessage(&threadMessage, NULL, 0x0, 0x0, PM_REMOVE)
                 ) ::DispatchMessage(&threadMessage);
 
