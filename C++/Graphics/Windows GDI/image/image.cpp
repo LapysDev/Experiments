@@ -104,7 +104,7 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
             ::SelectObject(windowDeviceContextHandle, windowDeviceContextBitmapHandle);
             ::SelectObject(windowMemoryDeviceContextHandle, windowMemoryDeviceContextBitmapHandle);
 
-            if (NULL != consoleWindowHandle) ::ShowWindow(consoleWindowHandle, SW_HIDE);
+            // if (NULL != consoleWindowHandle) ::ShowWindow(consoleWindowHandle, SW_HIDE);
             ::ShowWindow(windowHandle, static_cast<long>(windowAppearance));
         } break;
 
@@ -131,12 +131,69 @@ static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const mess
     return ::DefWindowProc(windowHandle, message, messageParameter, messageSubparameter);
 }
 
-/* Phase > Update */
-void Update(void) {}
+/* Phase > Draw */
+void Draw(void) {
+    // drawBMP("image.bmp");
+    // drawBMP("image.bmz");
+    // drawBMP("image.dib");
+}
 
 /* Function */
 // : Draw Bitmap
-void drawBMP(char const fileName[]) {}
+void drawBMP(char const fileName[]) {
+    HBITMAP const bitmapHandle = static_cast<HBITMAP>(::LoadImage(NULL, fileName, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_DEFAULTCOLOR | LR_LOADFROMFILE));
+
+    if (NULL == bitmapHandle) {
+        /* CHECK IF BMZ = COMPRESSED BMP */
+        /* Read as bitmap */
+    }
+
+    else {
+        BITMAP bitmap;
+        VOID *bitmapBits;
+        HDC const bitmapDeviceContextHandle = ::CreateCompatibleDC(windowDeviceContextHandle);
+        BITMAPINFO bitmapInformation;
+
+        // ...
+        ::SelectObject(bitmapDeviceContextHandle, bitmapHandle);
+        ::GetObject(bitmapHandle, sizeof(BITMAP), &bitmap);
+
+        // ...
+        bitmapInformation.bmiColors -> rgbBlue = 0u;
+        bitmapInformation.bmiColors -> rgbGreen = 0u;
+        bitmapInformation.bmiColors -> rgbRed = 0u;
+        bitmapInformation.bmiColors -> rgbReserved = 0x0u;
+        bitmapInformation.bmiHeader.biBitCount = 32u;
+        bitmapInformation.bmiHeader.biClrUsed = 0u;
+        bitmapInformation.bmiHeader.biClrImportant = 0u;
+        bitmapInformation.bmiHeader.biCompression = BI_RGB;
+        bitmapInformation.bmiHeader.biHeight = bitmap.bmHeight;
+        bitmapInformation.bmiHeader.biPlanes = bitmap.bmPlanes;
+        bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bitmapInformation.bmiHeader.biWidth = bitmap.bmWidth;
+        bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(windowDeviceContextHandle, HORZRES) / ::GetDeviceCaps(windowDeviceContextHandle, HORZSIZE);
+        bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(windowDeviceContextHandle, VERTRES) / ::GetDeviceCaps(windowDeviceContextHandle, VERTSIZE);
+        bitmapInformation.bmiHeader.biSizeImage = bitmapInformation.bmiHeader.biHeight * bitmapInformation.bmiHeader.biWidth * (4u /* -> sizeof(UINT32) */);
+
+        bitmapBits = static_cast<VOID*>(std::malloc(bitmapInformation.bmiHeader.biSizeImage * sizeof(BYTE)));
+
+        // ...
+        if (0 != ::GetDIBits(bitmapDeviceContextHandle, bitmapHandle, 0u, bitmap.bmHeight, bitmapBits, &bitmapInformation, DIB_RGB_COLORS)) {
+            unsigned short const horizontalOffset = (windowWidth - bitmap.bmWidth) / 2u;
+            unsigned short const verticalOffset = (windowHeight - bitmap.bmHeight) / 2u;
+
+            for (unsigned short x = bitmap.bmWidth; x--; )
+            for (unsigned short y = bitmap.bmHeight; y--; ) {
+                putPixel(horizontalOffset + x, verticalOffset + y, static_cast<UINT32*>(bitmapBits)[x + (bitmap.bmWidth * (bitmap.bmHeight - y - 1L))]);
+            }
+        }
+
+        // ...
+        std::free(bitmapBits);
+        ::DeleteObject(bitmapDeviceContextHandle);
+        ::DeleteObject(bitmapHandle);
+    }
+}
 
 // : Draw Exchangeable Image File Format
 void drawExif(char const[]) {}
@@ -246,7 +303,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
             windowCoordinates.cx = ((workareaRectangle.right - workareaRectangle.left) - windowWidth) / 2L;
             windowCoordinates.cy = ((workareaRectangle.bottom - workareaRectangle.top) - windowHeight) / 2L;
 
-            windowHandle = ::CreateWindowEx(0x0, windowClassInformation.lpszClassName, "Font", WS_POPUP, windowCoordinates.cx, windowCoordinates.cy, windowWidth, windowHeight, HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance)));
+            windowHandle = ::CreateWindowEx(0x0, windowClassInformation.lpszClassName, "Image", WS_POPUP, windowCoordinates.cx, windowCoordinates.cy, windowWidth, windowHeight, HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance)));
 
             // ...
             if (NULL == windowHandle) exitCode = EXIT_FAILURE;

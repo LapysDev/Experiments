@@ -1,6 +1,5 @@
 /* Import --> gdi32.dll, kernel32.dll, shell32.dll, user32.dll */
 #include <stdint.h> // Standard Integer
-#include <cstdio>
 #include <cstdlib> // C Standard Library
 
 #include <windef.h> // Windows Definitions
@@ -28,7 +27,7 @@
 static void Initiate(void);
 static void Update(void);
 
-inline void putPixel(unsigned short const, unsigned short const, DWORD const = 0x000000u);
+inline void putPixel(unsigned short const, unsigned short const, DWORD const);
 
 /* Global */
 // : Console
