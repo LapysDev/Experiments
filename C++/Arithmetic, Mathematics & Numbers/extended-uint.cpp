@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <stdint.h>
 
-/* ... */
+/* ... ->> `union` because `final` is unavailable in C++98. */
 template <typename> struct uint_extended_t;
 template <typename> union uint_next_t;
 template <typename> union uint_prev_t;
@@ -15,30 +15,21 @@ template <std::size_t> union uint_width_t;
     - https://www.codeproject.com/Tips/784635/UInt-Bit-Operations
     - http://www.codeproject.com/Tips/785014/UInt-Division-Modulus
 */
-namespace { union conditional_null_t; }
-template <bool, typename = conditional_null_t, typename = conditional_null_t> struct conditional_alias;
-
-template <> struct conditional_alias<false> {};
-template <typename base> struct conditional_alias<false, base> {};
-template <typename true_t, typename false_t> struct conditional_alias<false, true_t, false_t> { public: typedef bool enable; typedef false_t type; };
-
-template <> struct conditional_alias<true> { public: typedef bool enable; };
-template <typename base> struct conditional_alias<true, base> { public: typedef bool enable; typedef base type; };
-template <typename true_t, typename false_t> struct conditional_alias<true, true_t, false_t> { public: typedef bool enable; typedef true_t type; };
-
 template <std::size_t width>
 union uint_width_t {
+    template <bool, typename, typename> union uint_conditional_t;
+    template <typename true_t, typename false_t> union uint_conditional_t<false, true_t, false_t> { typedef false_t type; };
+    template <typename true_t, typename false_t> union uint_conditional_t<true, true_t, false_t> { typedef true_t type; };
+
     typedef
-        typename conditional_alias<
-            (CHAR_BIT * width) <= 255u, uint8_t,
-        typename conditional_alias<
-            (CHAR_BIT * width) <= 65535u, uint16_t,
-        typename conditional_alias<
-            (CHAR_BIT * width) <= 4294967295uL, uint32_t,
+        typename uint_conditional_t<
+            width <= 255u, uint8_t,
+        typename uint_conditional_t<
+            width <= 65535u, uint16_t,
+        typename uint_conditional_t<
+            width <= 4294967295uL, uint32_t,
             uint64_t
-        >::enable
-        >::enable
-        >::enable
+        >::type >::type >::type
     type;
 };
 
@@ -57,7 +48,7 @@ template <> union uint_next_t<uint32_t> { typedef uint64_t type; };
 template <typename uint_t>
 struct uint_extended_t {
     private:
-        static typename uint_width_t<sizeof(uint_t)>::type const WIDTH = CHAR_BIT * sizeof(uint_t); // ->> of the high
+        static typename uint_width_t<CHAR_BIT * sizeof(uint_t)>::type const WIDTH = CHAR_BIT * sizeof(uint_t); // ->> of the high
         static uint_t const MAX_VALUE = ((1u << (WIDTH - 1u)) - 0u) + ((1u << (WIDTH - 1u)) - 1u); // ->> — and low ends.
 
         // ...
@@ -96,9 +87,9 @@ struct uint_extended_t {
             );
         }
 
-        typename uint_width_t<sizeof(uint_t)>::type countLeadingZeroes(void) const {
-            typename uint_width_t<sizeof(uint_t)>::type count = WIDTH * (0u == this -> high);
-            typename uint_width_t<sizeof(uint_t)>::type iterator;
+        typename uint_width_t<WIDTH>::type countLeadingZeroes(void) const {
+            typename uint_width_t<WIDTH>::type count = WIDTH * (0u == this -> high);
+            typename uint_width_t<WIDTH>::type iterator;
 
             for (iterator = WIDTH - count; iterator--; ++count)
             if (0u != this -> high >> iterator) break;
@@ -125,7 +116,7 @@ struct uint_extended_t {
             uint_t low = 0u;
 
             if (-1 != this -> compare(number)) {
-                typename uint_width_t<sizeof(uint_t)>::type shift = number.countLeadingZeroes() - this -> countLeadingZeroes();
+                typename uint_width_t<WIDTH>::type shift = number.countLeadingZeroes() - this -> countLeadingZeroes();
 
                 number.shiftLeft(shift);
                 do {
@@ -179,7 +170,7 @@ struct uint_extended_t {
             }
 
             else {
-                typename uint_width_t<sizeof(uint_t)>::type shift = number.countLeadingZeroes() - this -> countLeadingZeroes();
+                typename uint_width_t<WIDTH>::type shift = number.countLeadingZeroes() - this -> countLeadingZeroes();
 
                 number.shiftLeft(shift);
                 do {
@@ -189,7 +180,7 @@ struct uint_extended_t {
             }
         }
 
-        void shiftLeft(typename uint_width_t<sizeof(uint_t) + sizeof(uint_t)>::type count) {
+        void shiftLeft(typename uint_width_t<WIDTH << 1u>::type count) {
             unsigned char MAX_SHIFT = 0u;
 
             uint_t controlA, controlB;
@@ -208,7 +199,7 @@ struct uint_extended_t {
             this -> high |= ((high << count) | ((low >> (WIDTH - count)) & controlA)) & controlB;
         }
 
-        void shiftRight(typename uint_width_t<sizeof(uint_t) + sizeof(uint_t)>::type count) {
+        void shiftRight(typename uint_width_t<WIDTH << 1u>::type count) {
             unsigned char MAX_SHIFT = 0u;
 
             uint_t controlA, controlB;
@@ -276,8 +267,8 @@ struct uint_extended_t {
         uint_extended_t& operator &=(uint_extended_t<uint_t> const number) { this -> bitwiseAND(number); return *this; }
         uint_extended_t& operator |=(uint_extended_t<uint_t> const number) { this -> bitwiseOR(number); return *this; }
         uint_extended_t& operator ^=(uint_extended_t<uint_t> const number) { this -> bitwiseXOR(number); return *this; }
-        uint_extended_t& operator <<=(typename uint_width_t<sizeof(uint_t) + sizeof(uint_t)>::type const count) { this -> shiftLeft(count); return *this; }
-        uint_extended_t& operator >>=(typename uint_width_t<sizeof(uint_t) + sizeof(uint_t)>::type const count) { this -> shiftRight(count); return *this; }
+        uint_extended_t& operator <<=(typename uint_width_t<WIDTH << 1u>::type const count) { this -> shiftLeft(count); return *this; }
+        uint_extended_t& operator >>=(typename uint_width_t<WIDTH << 1u>::type const count) { this -> shiftRight(count); return *this; }
         uint_extended_t& operator ++(void) { this -> increment(); return *this; }
         uint_extended_t& operator --(void) { this -> decrement(); return *this; }
 
