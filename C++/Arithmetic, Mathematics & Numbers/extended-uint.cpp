@@ -53,8 +53,8 @@ struct uint_extended_t {
     template <typename type> struct is_extended_uint<uint_extended_t<type> > { static bool const value = true; };
 
     private:
-        static typename uint_width_t<uint_t>::type const UINT_WIDTH = CHAR_BIT * sizeof(uint_t);
-        /* constexpr */ inline static uint_t UINT_MAX_VALUE(void) { static uint_t const maximum = 1u; if (1u == maximum) { typename uint_width_t<uint_t>::type width = UINT_WIDTH; while (--width) maximum <<= 1u; } return maximum; }
+        static typename uint_width_t<uint_t>::type const UINT_BIT_WIDTH = CHAR_BIT * sizeof(uint_t);
+        /* constexpr */ inline static uint_t UINT_MAX_VALUE(void) { static uint_t const maximum = 1u; if (1u == maximum) { typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; while (--width) maximum <<= 1u; } return maximum; }
 
         // ...
         uint_t high;
@@ -64,7 +64,7 @@ struct uint_extended_t {
             this -> high += number.high + ((
                 ((this -> low & number.low) & 1u) +
                 ((this -> low >> 1u) + (number.low >> 1u))
-            ) >> (UINT_WIDTH - 1u));
+            ) >> (UINT_BIT_WIDTH - 1u));
             this -> low += number.low;
         }
 
@@ -75,7 +75,7 @@ struct uint_extended_t {
         void decrement(void) {
             uint_t const low = this -> low - 1u;
 
-            this -> high -= ((low ^ (this -> low)) & low) >> (UINT_WIDTH - 1u);
+            this -> high -= ((low ^ (this -> low)) & low) >> (UINT_BIT_WIDTH - 1u);
             this -> low = low;
         }
 
@@ -85,15 +85,15 @@ struct uint_extended_t {
             if (false == this -> isLesser(number)) {
                 typename uint_width_t<uint_t>::type shift;
 
-                typename uint_width_t<uint_t>::type numberLeadingZeroCount = UINT_WIDTH * (0u == number.high);
-                typename uint_width_t<uint_t>::type thisLeadingZeroCount = UINT_WIDTH * (0u == this -> high);
+                typename uint_width_t<uint_t>::type numberLeadingZeroCount = UINT_BIT_WIDTH * (0u == number.high);
+                typename uint_width_t<uint_t>::type thisLeadingZeroCount = UINT_BIT_WIDTH * (0u == this -> high);
 
                 // ...
-                for (typename uint_width_t<uint_t>::type iterator = UINT_WIDTH - numberLeadingZeroCount; iterator--; ++numberLeadingZeroCount) { if (0u != number.high >> iterator) break; }
-                for (typename uint_width_t<uint_t>::type iterator = UINT_WIDTH - thisLeadingZeroCount; iterator--; ++thisLeadingZeroCount) { if (0u != this -> high >> iterator) break; }
+                for (typename uint_width_t<uint_t>::type iterator = UINT_BIT_WIDTH - numberLeadingZeroCount; iterator--; ++numberLeadingZeroCount) { if (0u != number.high >> iterator) break; }
+                for (typename uint_width_t<uint_t>::type iterator = UINT_BIT_WIDTH - thisLeadingZeroCount; iterator--; ++thisLeadingZeroCount) { if (0u != this -> high >> iterator) break; }
 
-                if (UINT_WIDTH == numberLeadingZeroCount) { numberLeadingZeroCount += UINT_WIDTH * (0u == number.low); for (typename uint_width_t<uint_t>::type iterator = (UINT_WIDTH << 1u) - numberLeadingZeroCount; iterator--; ++numberLeadingZeroCount) { if (0u != number.low >> iterator) break; } }
-                if (UINT_WIDTH == thisLeadingZeroCount) { thisLeadingZeroCount += UINT_WIDTH * (0u == this -> low); for (typename uint_width_t<uint_t>::type iterator = (UINT_WIDTH << 1u) - thisLeadingZeroCount; iterator--; ++thisLeadingZeroCount) { if (0u != this -> low >> iterator) break; } }
+                if (UINT_BIT_WIDTH == numberLeadingZeroCount) { numberLeadingZeroCount += UINT_BIT_WIDTH * (0u == number.low); for (typename uint_width_t<uint_t>::type iterator = (UINT_BIT_WIDTH << 1u) - numberLeadingZeroCount; iterator--; ++numberLeadingZeroCount) { if (0u != number.low >> iterator) break; } }
+                if (UINT_BIT_WIDTH == thisLeadingZeroCount) { thisLeadingZeroCount += UINT_BIT_WIDTH * (0u == this -> low); for (typename uint_width_t<uint_t>::type iterator = (UINT_BIT_WIDTH << 1u) - thisLeadingZeroCount; iterator--; ++thisLeadingZeroCount) { if (0u != this -> low >> iterator) break; } }
 
                 // ...
                 shift = numberLeadingZeroCount - thisLeadingZeroCount;
@@ -117,7 +117,7 @@ struct uint_extended_t {
         void increment(void) {
             uint_t const low = this -> low + 1u;
 
-            this -> high += ((this -> low ^ low) & this -> low) >> (UINT_WIDTH - 1u);
+            this -> high += ((this -> low ^ low) & this -> low) >> (UINT_BIT_WIDTH - 1u);
             this -> low = low;
         }
 
@@ -127,7 +127,7 @@ struct uint_extended_t {
         bool isZero(void) const { return 0u == this -> high && 0u == this -> low; }
         void modulo(uint_extended_t<uint_t> const number) { this -> remainder(number); }
         void multiply(uint_extended_t<uint_t> const number) {
-            typename uint_width_t<typename uint_prev_t<uint_t>::type>::type const PREV_WIDTH = UINT_WIDTH >> 1u;
+            typename uint_width_t<typename uint_prev_t<uint_t>::type>::type const PREV_WIDTH = UINT_BIT_WIDTH >> 1u;
             typename uint_prev_t<uint_t>::type PREV_MAX_VALUE = 1u;
                 for (typename uint_width_t<typename uint_prev_t<uint_t>::type>::type width = PREV_WIDTH; --width; ) PREV_MAX_VALUE <<= 1u;
                 PREV_MAX_VALUE += PREV_MAX_VALUE--;
@@ -164,7 +164,7 @@ struct uint_extended_t {
         void remainder(uint_extended_t<uint_t> const number) {
             uint_extended_t<uint_t> divisor = uint_extended_t<uint_t>(number.high, number.low);
 
-            while (0u == (divisor.high >> (UINT_WIDTH - 1u)) && false == this -> isLesser(divisor)) divisor.shiftLeft(1u);
+            while (0u == (divisor.high >> (UINT_BIT_WIDTH - 1u)) && false == this -> isLesser(divisor)) divisor.shiftLeft(1u);
             while (false == this -> isLesser(number)) {
                 while (this -> isLesser(divisor) && false == divisor.isEqual(number)) divisor.shiftRight(1u);
                 this -> subtract(divisor);
@@ -173,14 +173,14 @@ struct uint_extended_t {
 
         void shiftLeft(typename uint_width_t<typename uint_next_t<uint_t>::type>::type count) {
             while (count--) {
-                this -> high = (this -> high << 1u) | (0u != this -> low >> (UINT_WIDTH - 1u));
+                this -> high = (this -> high << 1u) | (0u != this -> low >> (UINT_BIT_WIDTH - 1u));
                 this -> low <<= 1u;
             }
         }
 
         void shiftRight(typename uint_width_t<typename uint_next_t<uint_t>::type>::type count) {
             while (count--) {
-                this -> low = (this -> low >> 1u) | ((this -> high & 1u) << (UINT_WIDTH - 1u));
+                this -> low = (this -> low >> 1u) | ((this -> high & 1u) << (UINT_BIT_WIDTH - 1u));
                 this -> high >>= 1u;
             }
         }
@@ -190,7 +190,7 @@ struct uint_extended_t {
             this -> high -= number.high + ((
                 ((this -> low & number.low) & 1u) +
                 ((this -> low >> 1u) + (number.low >> 1u))
-            ) >> (UINT_WIDTH - 1u));
+            ) >> (UINT_BIT_WIDTH - 1u));
         }
 
     public:
@@ -199,10 +199,10 @@ struct uint_extended_t {
             if (sizeof(number) > sizeof(uint_t)) {
                 typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uint_t, typename uint_next_t<uint_t>::type>::type value = number;
 
-                for (typename uint_width_t<uint_t>::type width = UINT_WIDTH; width; --width) value >>= 1u;
+                for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) value >>= 1u;
                 this -> high = value;
 
-                for (typename uint_width_t<uint_t>::type width = UINT_WIDTH; width; --width) value <<= 1u;
+                for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) value <<= 1u;
                 this -> low = number & ~value;
             }
 
@@ -254,7 +254,7 @@ struct uint_extended_t {
 
             if (sizeof(type) <= sizeof(uint_t)) {
                 number = this -> high;
-                for (typename uint_width_t<uint_t>::type width = UINT_WIDTH; width; --width) number <<= 1u;
+                for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) number <<= 1u;
             }
 
             return this -> low | number;
