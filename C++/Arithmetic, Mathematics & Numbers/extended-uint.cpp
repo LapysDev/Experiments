@@ -52,7 +52,7 @@ struct uint_extended_t {
     template <typename> struct is_extended_uint { static bool const value = false; };
     template <typename type> struct is_extended_uint<uint_extended_t<type> > { static bool const value = true; };
 
-    public:
+    private:
         static typename uint_width_t<uint_t>::type const UINT_WIDTH = CHAR_BIT * sizeof(uint_t);
         /* constexpr */ inline static uint_t UINT_MAX_VALUE(void) { static uint_t const maximum = 1u; if (1u == maximum) { typename uint_width_t<uint_t>::type width = UINT_WIDTH; while (--width) maximum <<= 1u; } return maximum; }
 
@@ -195,7 +195,7 @@ struct uint_extended_t {
 
     public:
         uint_extended_t(uint_t const high, uint_t const low) : high(high), low(low) {}
-        uint_extended_t(typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uint_t, typename uint_next_t<uint_t>::type>::type const number = 0u) {
+        uint_extended_t(typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uintmax_t, typename uint_next_t<uint_t>::type>::type const number = 0u) {
             if (sizeof(number) > sizeof(uint_t)) {
                 typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uint_t, typename uint_next_t<uint_t>::type>::type value = number;
 
@@ -267,11 +267,11 @@ char const* stringify(uint_t number) {
     static char string[1025] = {0};
 
     char *iterator = string + 1024;
-    uint_t const radix = uint_t(0u, 10u), zero = uint_t(0u);
+    uint_t const radix = uint_t(10u), zero = uint_t(0u);
 
     // ...
     for (*--iterator = '0'; number != zero; number /= radix)
-    *(iterator--) = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[static_cast<unsigned char>(number % radix)];
+    *(iterator--) = "0123456789"[static_cast<unsigned char>(number % radix)];
 
     return static_cast<char const*>(iterator + (1024 != iterator - string));
 }
@@ -279,8 +279,8 @@ char const* stringify(uint_t number) {
 /* Main */
 int main(void) {
     // 255
-    // uint8_t const UINT8_MAXIMUM = -1;
-    // std::printf("[1 << 8]: %s" "\r\n", stringify(UINT8_MAXIMUM));
+    uint8_t const UINT8_MAXIMUM = -1;
+    std::printf("[1 << 8]: %s" "\r\n", stringify(UINT8_MAXIMUM));
 
     // 65535
     uint_extended_t<uint8_t> const UINT16_MAXIMUM = -1;
