@@ -1,8 +1,9 @@
-/* ... ->> `union` because `final` is unavailable in C++98. --- CITE (Lapys) ->
-    - http://www.codeproject.com/Tips/617214/UInt-Addition-Subtraction
-    - http://www.codeproject.com/Tips/618570/UInt-Multiplication-Squaring
-    - https://www.codeproject.com/Tips/784635/UInt-Bit-Operations
-    - http://www.codeproject.com/Tips/785014/UInt-Division-Modulus
+/* ... ->> `union` because `final` is unavailable in C++98.
+    --- CITE (Lapys) ->
+        - http://www.codeproject.com/Tips/617214/UInt-Addition-Subtraction
+        - http://www.codeproject.com/Tips/618570/UInt-Multiplication-Squaring
+        - https://www.codeproject.com/Tips/784635/UInt-Bit-Operations
+        - http://www.codeproject.com/Tips/785014/UInt-Division-Modulus
 */
 #include <climits>
 #include <csignal>
@@ -53,55 +54,70 @@ struct uint_extended_t {
     template <typename> struct is_extended_uint { static bool const value = false; };
     template <typename type> struct is_extended_uint<uint_extended_t<type> > { static bool const value = true; };
 
+    template <typename> friend struct uint_extended_t;
     template <typename type> friend char const* stringify(uint_extended_t<type>);
 
     private:
         static typename uint_width_t<uint_t>::type const UINT_BIT_WIDTH = CHAR_BIT * sizeof(uint_t);
-        /* constexpr */ inline static uint_t UINT_MAX_VALUE(void) { static uint_t const maximum = 1u; if (1u == maximum) { typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; while (--width) maximum <<= 1u; } return maximum; }
+        /* constexpr */ inline static uint_t UINT_MAX_VALUE(void) { static uint_t maximum = 1u; if (1u == maximum) { typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; while (--width) maximum <<= 1u; maximum += maximum--; } return maximum; }
 
         // ...
         uint_t high;
         uint_t low;
 
-        void add(uint_extended_t<uint_t> const number) {
-            this -> high += number.high + ((
+        void add(uint_extended_t<uint_t> const& number) {
+            this -> high += number.high;
+            this -> high += (
                 ((this -> low & number.low) & 1u) +
                 ((this -> low >> 1u) + (number.low >> 1u))
-            ) >> (UINT_BIT_WIDTH - 1u));
+            ) >> (UINT_BIT_WIDTH - 1u);
+
             this -> low += number.low;
         }
 
-        void bitwiseAND(uint_extended_t<uint_t> const number) { this -> high &= number.high; this -> low &= number.low; }
+        void bitwiseAND(uint_extended_t<uint_t> const& number) { this -> high &= number.high; this -> low &= number.low; }
         void bitwiseNOT(void) { this -> high = ~(this -> high); this -> low = ~(this -> low); }
-        void bitwiseOR(uint_extended_t<uint_t> const number) { this -> high |= number.high; this -> low |= number.low; }
-        void bitwiseXOR(uint_extended_t<uint_t> const number) { this -> high ^= number.high; this -> low ^= number.low; }
+        void bitwiseOR(uint_extended_t<uint_t> const& number) { this -> high |= number.high; this -> low |= number.low; }
+        void bitwiseXOR(uint_extended_t<uint_t> const& number) { this -> high ^= number.high; this -> low ^= number.low; }
         void decrement(void) {
             uint_t const low = this -> low - 1u;
 
-            this -> high -= ((low ^ (this -> low)) & low) >> (UINT_BIT_WIDTH - 1u);
+            // ...
+            this -> low ^= low; this -> low &= low;
+            this -> low >>= UINT_BIT_WIDTH - 1u;
+            this -> high -= this -> low;
+
             this -> low = low;
         }
 
-        void divide(uint_extended_t<uint_t> const number) { uint_extended_t<uint_t>(this -> high, this -> low).remainder(number, this); }
+        void divide(uint_extended_t<uint_t> const& number) {
+            /* NOTE (Lapys) --> Non-independent implementation. */
+            uint_extended_t<uint_t>(this -> high, this -> low).remainder(number, this);
+        }
+
         void increment(void) {
             uint_t const low = this -> low + 1u;
 
-            this -> high += ((this -> low ^ low) & this -> low) >> (UINT_BIT_WIDTH - 1u);
+            // ...
+            this -> low = (this -> low ^ low) & this -> low;
+            this -> low >>= UINT_BIT_WIDTH - 1u;
+            this -> high += this -> low;
+
             this -> low = low;
         }
 
-        bool isEqual(uint_extended_t<uint_t> const number) const { return this -> high == number.high && this -> low == number.low; }
-        bool isGreater(uint_extended_t<uint_t> const number) const { return this -> high > number.high || (this -> high == number.high && this -> low > number.low); }
-        bool isLesser(uint_extended_t<uint_t> const number) const { return this -> high < number.high || (this -> high == number.high && this -> low < number.low); }
+        bool isEqual(uint_extended_t<uint_t> const& number) const { return this -> high == number.high && this -> low == number.low; }
+        bool isGreater(uint_extended_t<uint_t> const& number) const { return this -> high > number.high || (this -> high == number.high && this -> low > number.low); }
+        bool isLesser(uint_extended_t<uint_t> const& number) const { return this -> high < number.high || (this -> high == number.high && this -> low < number.low); }
         bool isZero(void) const { return 0u == this -> high && 0u == this -> low; }
-        void modulo(uint_extended_t<uint_t> const number) { this -> remainder(number); }
-        void multiply(uint_extended_t<uint_t> const number) {
+        void modulo(uint_extended_t<uint_t> const& number) { this -> remainder(number); }
+        void multiply(uint_extended_t<uint_t> const& number) {
             typename uint_width_t<typename uint_prev_t<uint_t>::type>::type const PREV_WIDTH = UINT_BIT_WIDTH >> 1u;
             typename uint_prev_t<uint_t>::type PREV_MAX_VALUE = 1u;
                 for (typename uint_width_t<typename uint_prev_t<uint_t>::type>::type width = PREV_WIDTH; --width; ) PREV_MAX_VALUE <<= 1u;
                 PREV_MAX_VALUE += PREV_MAX_VALUE--;
 
-            uint_t const lowMultiplication = (number.low & PREV_MAX_VALUE) * (this -> low & PREV_MAX_VALUE);
+            uint_t lowMultiplication = (number.low & PREV_MAX_VALUE) * (this -> low & PREV_MAX_VALUE);
             uint_t numberLow = number.low;
             uint_t thisLow = this -> low;
             uint_t thisLowControl = lowMultiplication;
@@ -109,28 +125,37 @@ struct uint_extended_t {
 
             // ...
             thisLow >>= PREV_WIDTH; {
-                thisLowControl = thisHighControl + (thisLow * (number.low & PREV_MAX_VALUE));
+                thisHighControl += thisLow * (number.low & PREV_MAX_VALUE);
+                thisLowControl = thisHighControl;
+
                 thisHighControl = thisLowControl & PREV_MAX_VALUE;
             }
 
             numberLow >>= PREV_WIDTH; {
-                thisLowControl = thisHighControl + (numberLow * (this -> low & PREV_MAX_VALUE));
+                thisHighControl += numberLow * (this -> low & PREV_MAX_VALUE);
+                thisLowControl = thisHighControl;
+
                 thisHighControl = thisLowControl >> PREV_WIDTH;
             }
 
             // ...
-            this -> low = (thisLowControl << PREV_WIDTH) + (lowMultiplication & PREV_MAX_VALUE);
-            this -> high = thisHighControl + (
-                (numberLow * thisLow) +
-                ((this -> high * number.low) + (this -> low * number.high)) +
-                ((
-                    (lowMultiplication >> PREV_WIDTH) +
-                    (thisLow * (number.low & PREV_MAX_VALUE))
-                ) >> PREV_WIDTH)
-            );
+            thisLowControl <<= PREV_WIDTH;
+            thisLowControl += lowMultiplication & PREV_MAX_VALUE;
+            this -> low = thisLowControl;
+
+            lowMultiplication >>= PREV_WIDTH;
+            numberLow *= thisLow;
+            thisLow *= number.low & PREV_MAX_VALUE;
+            thisLow += lowMultiplication;
+            thisLow >>= PREV_WIDTH;
+            thisHighControl += numberLow;
+            thisHighControl += thisLow;
+            this -> high *= number.low;
+            this -> high += thisHighControl;
+            this -> high += this -> low * number.high;
         }
 
-        void remainder(uint_extended_t<uint_t> const number, uint_extended_t<uint_t>* const quotient = NULL) {
+        void remainder(uint_extended_t<uint_t> const& number, uint_extended_t<uint_t>* const quotient = NULL) {
             if (number.isZero()) {
                 while (0x0 != std::raise(SIGFPE))
                 continue;
@@ -205,12 +230,14 @@ struct uint_extended_t {
             }
         }
 
-        void subtract(uint_extended_t<uint_t> const number) {
+        void subtract(uint_extended_t<uint_t> const& number) {
             this -> low -= number.low;
-            this -> high -= number.high + ((
+
+            this -> high -= number.high;
+            this -> high -= (
                 ((this -> low & number.low) & 1u) +
                 ((this -> low >> 1u) + (number.low >> 1u))
-            ) >> (UINT_BIT_WIDTH - 1u));
+            ) >> (UINT_BIT_WIDTH - 1u);
         }
 
         void zero(void) {
@@ -223,8 +250,7 @@ struct uint_extended_t {
         uint_extended_t(uint_t const high, uint_t const low) : high(high), low(low) {}
 
         uint_extended_t(typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uintmax_t, typename uint_next_t<uint_t>::type>::type const number) {
-            if (!number) this -> zero();
-            else if (sizeof(number) > sizeof(uint_t)) {
+            if (sizeof(number) > sizeof(uint_t)) {
                 typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uintmax_t, typename uint_next_t<uint_t>::type>::type value = number;
 
                 for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) value >>= 1u;
@@ -240,36 +266,65 @@ struct uint_extended_t {
             }
         }
 
+        template <typename type>
+        uint_extended_t(uint_extended_t<type> const& number) {
+            if (sizeof(type) == sizeof(uint_t)) {
+                this -> high = number.high;
+                this -> low = number.low;
+            }
+
+            else if (sizeof(type) > sizeof(uint_t)) {
+                type low = type(number.low);
+                low &= static_cast<type>(uint_extended_t<typename uint_next_t<uint_t>::type>::UINT_MAX_VALUE());
+
+                // ...
+                low >>= UINT_BIT_WIDTH;
+                this -> high = low;
+
+                this -> low = this -> high;
+                this -> low <<= UINT_BIT_WIDTH;
+                this -> low = this -> high & ~(this -> low);
+            }
+
+            else {
+                this -> high = 0u;
+
+                this -> low = static_cast<uint_t>(number.high);
+                this -> low <<= uint_extended_t<type>::UINT_BIT_WIDTH;
+                this -> low |= static_cast<uint_t>(number.low);
+            }
+        }
+
         // ...
         uint_extended_t<uint_t> operator +(void) const { return uint_extended_t<uint_t>(this -> high, this -> low); }
         uint_extended_t<uint_t> operator -(void) const { return uint_extended_t<uint_t>(UINT_MAX_VALUE(), UINT_MAX_VALUE()).subtract(*this); }
-        friend uint_extended_t<uint_t> operator +(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.add(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator -(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.subtract(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator *(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.multiply(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator /(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.divide(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator %(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.modulo(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator &(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.bitwiseAND(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator |(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.bitwiseOR(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator ^(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.bitwiseXOR(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator <<(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.shiftLeftBy(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator >>(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.shiftRightBy(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator +(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator +=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator -(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator -=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator *(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator *=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator /(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator /=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator %(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator %=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator &(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator &=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator |(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator |=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator ^(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator ^=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator <<(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator <<=(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator >>(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const& numberB) { numberA.operator >>=(numberB); return numberA; }
         uint_extended_t<uint_t> operator ~(void) const { uint_extended_t<uint_t> complement = uint_extended_t<uint_t>(this -> high, this -> low); complement.bitwiseNOT(); return complement; }
         bool operator !(void) const { return this -> isZero(); }
-        friend bool operator <(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return numberA.isLesser(numberB); }
-        friend bool operator >(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return numberA.isGreater(numberB); }
-        friend bool operator ==(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return numberA.isEqual(numberB); }
-        friend bool operator !=(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return false == operator ==(numberA, numberB); }
-        friend bool operator <=(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return operator ==(numberA, numberB) || operator <(numberA, numberB); }
-        friend bool operator >=(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return operator ==(numberA, numberB) || operator >(numberA, numberB); }
+        friend bool operator <(uint_extended_t<uint_t> const& numberA, uint_extended_t<uint_t> const& numberB) { return numberA.isLesser(numberB); }
+        friend bool operator >(uint_extended_t<uint_t> const& numberA, uint_extended_t<uint_t> const& numberB) { return numberA.isGreater(numberB); }
+        friend bool operator ==(uint_extended_t<uint_t> const& numberA, uint_extended_t<uint_t> const& numberB) { return numberA.isEqual(numberB); }
+        friend bool operator !=(uint_extended_t<uint_t> const& numberA, uint_extended_t<uint_t> const& numberB) { return false == operator ==(numberA, numberB); }
+        friend bool operator <=(uint_extended_t<uint_t> const& numberA, uint_extended_t<uint_t> const& numberB) { return operator ==(numberA, numberB) || operator <(numberA, numberB); }
+        friend bool operator >=(uint_extended_t<uint_t> const& numberA, uint_extended_t<uint_t> const& numberB) { return operator ==(numberA, numberB) || operator >(numberA, numberB); }
 
-        uint_extended_t& operator +=(uint_extended_t<uint_t> const number) { this -> add(number); return *this; }
-        uint_extended_t& operator -=(uint_extended_t<uint_t> const number) { this -> subtract(number); return *this; }
-        uint_extended_t& operator *=(uint_extended_t<uint_t> const number) { this -> multiply(number); return *this; }
-        uint_extended_t& operator /=(uint_extended_t<uint_t> const number) { this -> divide(number); return *this; }
-        uint_extended_t& operator %=(uint_extended_t<uint_t> const number) { this -> modulo(number); return *this; }
-        uint_extended_t& operator &=(uint_extended_t<uint_t> const number) { this -> bitwiseAND(number); return *this; }
-        uint_extended_t& operator |=(uint_extended_t<uint_t> const number) { this -> bitwiseOR(number); return *this; }
-        uint_extended_t& operator ^=(uint_extended_t<uint_t> const number) { this -> bitwiseXOR(number); return *this; }
+        uint_extended_t& operator +=(uint_extended_t<uint_t> const& number) { this -> add(number); return *this; }
+        uint_extended_t& operator -=(uint_extended_t<uint_t> const& number) { this -> subtract(number); return *this; }
+        uint_extended_t& operator *=(uint_extended_t<uint_t> const& number) { this -> multiply(number); return *this; }
+        uint_extended_t& operator /=(uint_extended_t<uint_t> const& number) { this -> divide(number); return *this; }
+        uint_extended_t& operator %=(uint_extended_t<uint_t> const& number) { this -> modulo(number); return *this; }
+        uint_extended_t& operator &=(uint_extended_t<uint_t> const& number) { this -> bitwiseAND(number); return *this; }
+        uint_extended_t& operator |=(uint_extended_t<uint_t> const& number) { this -> bitwiseOR(number); return *this; }
+        uint_extended_t& operator ^=(uint_extended_t<uint_t> const& number) { this -> bitwiseXOR(number); return *this; }
         uint_extended_t& operator <<=(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) { this -> shiftLeftBy(count); return *this; }
         uint_extended_t& operator >>=(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) { this -> shiftRightBy(count); return *this; }
         uint_extended_t& operator ++(void) { this -> increment(); return *this; }
@@ -285,7 +340,8 @@ struct uint_extended_t {
                 for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) number <<= 1u;
             }
 
-            return this -> low | number;
+            number |= this -> low;
+            return number;
         }
 };
 

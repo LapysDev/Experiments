@@ -1,5 +1,7 @@
 /* Import --> gdi32.dll, kernel32.dll, shell32.dll, user32.dll */
+#include <inttypes.h> // Integer Types
 #include <stdint.h> // Standard Integer
+
 #include <csignal> // C Signal
 #include <cstdio>
 #include <cstdlib> // C Standard Library
@@ -53,14 +55,21 @@ struct Tile /* final */ {
 // : Board
 class Board /* final */ {
     private:
-        uint64_t attribute, locations[6];
+        typedef
+          #if UINT64_MAX > ((1u << 31u) - 0u) + ((1u << 31u) - 1n)
+            uint64_t
+          #else
+            struct uint64_subboard_t {}
+          #endif
+        subboard_t;
+        subboard_t attribute, locations[6];
 
-        static bool hasPiece(uint64_t const subboard, unsigned char const index) { return (subboard >> index) & 1u; }
-        static void removePiece(uint64_t& subboard, unsigned char const index) { subboard &= ~(1u << index); }
-        static void setPiece(uint64_t& subboard, unsigned char const index) { subboard |= 1u << index; }
+        // ...
+        static bool hasPiece(subboard_t const subboard, unsigned char const index) { return (subboard >> index) & 1u; }
+        static void removePiece(subboard_t& subboard, unsigned char const index) { subboard &= ~(1u << index); }
+        static void setPiece(subboard_t& subboard, unsigned char const index) { subboard |= 1u << index; }
 
     public:
-        // ...
         Board(void) : attribute(0u), locations() {
             for (unsigned char iterator = 8u; iterator--; ) {
                 this -> setTile(Piece::PAWN, Color::BLACK, iterator, 1u);
@@ -87,12 +96,12 @@ class Board /* final */ {
 
         // ...
         void clearTile(unsigned char const column, unsigned char const row) {
-            for (uint64_t *location = this -> locations + (sizeof(this -> locations) / sizeof(uint64_t)); location-- != this -> locations; )
+            for (subboard_t *location = this -> locations + (sizeof(this -> locations) / sizeof(subboard_t)); location-- != this -> locations; )
             Board::removePiece(*location, column + (row << 3u));
         }
 
         Tile getTile(unsigned char const column, unsigned char const row) const {
-            for (uint64_t const *location = this -> locations + (sizeof(this -> locations) / sizeof(uint64_t)); location-- != this -> locations; )
+            for (subboard_t const *location = this -> locations + (sizeof(this -> locations) / sizeof(subboard_t)); location-- != this -> locations; )
             if (Board::hasPiece(*location, column + (row << 3u))) return Tile(static_cast<Piece::__CONSTRUCTOR__>((location - (this -> locations)) + 1), Board::hasPiece(this -> attribute, column + (row << 3u)) ? Color::WHITE : Color::BLACK);
 
             return Tile(static_cast<Piece::__CONSTRUCTOR__>(0x0), static_cast<Color::__CONSTRUCTOR__>(0x0));
