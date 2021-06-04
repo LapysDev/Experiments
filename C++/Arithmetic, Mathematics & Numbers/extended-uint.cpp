@@ -5,11 +5,12 @@
     - http://www.codeproject.com/Tips/785014/UInt-Division-Modulus
 */
 #include <climits>
+#include <csignal>
 #include <cstdio>
 #include <stdint.h>
 
 /* ... */
-template <typename type> struct can_sizeof { static std::size_t const size = sizeof(type); };
+template <typename type> union can_sizeof { static std::size_t const size = sizeof(type); };
 
 template <bool, typename, typename> union conditional_t;
 template <typename true_t, typename false_t> union conditional_t<false, true_t, false_t> { typedef false_t type; };
@@ -52,6 +53,8 @@ struct uint_extended_t {
     template <typename> struct is_extended_uint { static bool const value = false; };
     template <typename type> struct is_extended_uint<uint_extended_t<type> > { static bool const value = true; };
 
+    template <typename type> friend char const* stringify(uint_extended_t<type>);
+
     private:
         static typename uint_width_t<uint_t>::type const UINT_BIT_WIDTH = CHAR_BIT * sizeof(uint_t);
         /* constexpr */ inline static uint_t UINT_MAX_VALUE(void) { static uint_t const maximum = 1u; if (1u == maximum) { typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; while (--width) maximum <<= 1u; } return maximum; }
@@ -79,41 +82,7 @@ struct uint_extended_t {
             this -> low = low;
         }
 
-        void divide(uint_extended_t<uint_t> number) {
-            uint_extended_t<uint_t> quotient = uint_extended_t<uint_t>(0u, 0u);
-
-            if (false == this -> isLesser(number)) {
-                typename uint_width_t<uint_t>::type shift;
-
-                typename uint_width_t<uint_t>::type numberLeadingZeroCount = UINT_BIT_WIDTH * (0u == number.high);
-                typename uint_width_t<uint_t>::type thisLeadingZeroCount = UINT_BIT_WIDTH * (0u == this -> high);
-
-                // ...
-                for (typename uint_width_t<uint_t>::type iterator = UINT_BIT_WIDTH - numberLeadingZeroCount; iterator--; ++numberLeadingZeroCount) { if (0u != number.high >> iterator) break; }
-                for (typename uint_width_t<uint_t>::type iterator = UINT_BIT_WIDTH - thisLeadingZeroCount; iterator--; ++thisLeadingZeroCount) { if (0u != this -> high >> iterator) break; }
-
-                if (UINT_BIT_WIDTH == numberLeadingZeroCount) { numberLeadingZeroCount += UINT_BIT_WIDTH * (0u == number.low); for (typename uint_width_t<uint_t>::type iterator = (UINT_BIT_WIDTH << 1u) - numberLeadingZeroCount; iterator--; ++numberLeadingZeroCount) { if (0u != number.low >> iterator) break; } }
-                if (UINT_BIT_WIDTH == thisLeadingZeroCount) { thisLeadingZeroCount += UINT_BIT_WIDTH * (0u == this -> low); for (typename uint_width_t<uint_t>::type iterator = (UINT_BIT_WIDTH << 1u) - thisLeadingZeroCount; iterator--; ++thisLeadingZeroCount) { if (0u != this -> low >> iterator) break; } }
-
-                // ...
-                shift = numberLeadingZeroCount - thisLeadingZeroCount;
-                number.shiftLeft(shift);
-
-                do {
-                    quotient.shiftLeft(1u);
-                    if (false == this -> isLesser(number)) {
-                        this -> subtract(number);
-                        quotient.low |= 1u;
-                    }
-
-                    number.shiftRight(1u);
-                } while (shift--);
-            }
-
-            this -> high = quotient.high;
-            this -> low = quotient.low;
-        }
-
+        void divide(uint_extended_t<uint_t> const number) { uint_extended_t<uint_t>(this -> high, this -> low).remainder(number, this); }
         void increment(void) {
             uint_t const low = this -> low + 1u;
 
@@ -161,27 +130,78 @@ struct uint_extended_t {
             );
         }
 
-        void remainder(uint_extended_t<uint_t> const number) {
-            uint_extended_t<uint_t> divisor = uint_extended_t<uint_t>(number.high, number.low);
+        void remainder(uint_extended_t<uint_t> const number, uint_extended_t<uint_t>* const quotient = NULL) {
+            if (number.isZero()) {
+                while (0x0 != std::raise(SIGFPE))
+                continue;
+            }
 
-            while (0u == (divisor.high >> (UINT_BIT_WIDTH - 1u)) && false == this -> isLesser(divisor)) divisor.shiftLeft(1u);
-            while (false == this -> isLesser(number)) {
-                while (this -> isLesser(divisor) && false == divisor.isEqual(number)) divisor.shiftRight(1u);
-                this -> subtract(divisor);
+            else {
+                uint_extended_t<uint_t> divisor = uint_extended_t<uint_t>(number.high, number.low);
+                uint_extended_t<uint_t> increment = uint_extended_t<uint_t>(0u, 1u);
+
+                if (NULL != quotient) quotient -> zero();
+
+                while (0u == (divisor.high >> (UINT_BIT_WIDTH - 1u)) && false == this -> isLesser(divisor)) {
+                    divisor.shiftLeft();
+                    increment.shiftLeft();
+                }
+
+                while (false == this -> isLesser(number)) {
+                    while (this -> isLesser(divisor) && false == divisor.isEqual(number)) {
+                        divisor.shiftRight();
+                        increment.shiftRight();
+                    }
+
+                    this -> subtract(divisor);
+                    if (NULL != quotient) quotient -> add(increment);
+                }
             }
         }
 
-        void shiftLeft(typename uint_width_t<typename uint_next_t<uint_t>::type>::type count) {
-            while (count--) {
-                this -> high = (this -> high << 1u) | (0u != this -> low >> (UINT_BIT_WIDTH - 1u));
-                this -> low <<= 1u;
+        void shiftLeft(void) {
+            this -> high <<= 1u;
+            this -> high |= this -> low >> (UINT_BIT_WIDTH - 1u);
+
+            this -> low <<= 1u;
+        }
+
+        void shiftLeftBy(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) {
+            if (UINT_BIT_WIDTH > count) {
+                this -> high <<= count;
+                this -> high |= this -> low >> (UINT_BIT_WIDTH - count);
+
+                this -> low <<= count;
+            }
+
+            else {
+                this -> low <<= count - UINT_BIT_WIDTH;
+
+                this -> high = this -> low;
+                this -> low = 0u;
             }
         }
 
-        void shiftRight(typename uint_width_t<typename uint_next_t<uint_t>::type>::type count) {
-            while (count--) {
-                this -> low = (this -> low >> 1u) | ((this -> high & 1u) << (UINT_BIT_WIDTH - 1u));
-                this -> high >>= 1u;
+        void shiftRight(void) {
+            this -> low >>= 1u;
+            this -> low |= (this -> high & 1u) << (UINT_BIT_WIDTH - 1u);
+
+            this -> high >>= 1u;
+        }
+
+        void shiftRightBy(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) {
+            if (UINT_BIT_WIDTH > count) {
+                this -> low >>= count;
+                this -> low |= (this -> high & ~((this -> high >> count) << count)) << (UINT_BIT_WIDTH - count);
+
+                this -> high >>= count;
+            }
+
+            else {
+                this -> high >>= count - UINT_BIT_WIDTH;
+
+                this -> low = this -> high;
+                this -> high = 0u;
             }
         }
 
@@ -193,11 +213,19 @@ struct uint_extended_t {
             ) >> (UINT_BIT_WIDTH - 1u));
         }
 
+        void zero(void) {
+            this -> high = 0u;
+            this -> low = 0u;
+        }
+
     public:
+        uint_extended_t(void) : high(0u), low(0u) {}
         uint_extended_t(uint_t const high, uint_t const low) : high(high), low(low) {}
-        uint_extended_t(typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uintmax_t, typename uint_next_t<uint_t>::type>::type const number = 0u) {
-            if (sizeof(number) > sizeof(uint_t)) {
-                typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uint_t, typename uint_next_t<uint_t>::type>::type value = number;
+
+        uint_extended_t(typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uintmax_t, typename uint_next_t<uint_t>::type>::type const number) {
+            if (!number) this -> zero();
+            else if (sizeof(number) > sizeof(uint_t)) {
+                typename conditional_t<is_extended_uint<typename uint_next_t<uint_t>::type>::value, uintmax_t, typename uint_next_t<uint_t>::type>::type value = number;
 
                 for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) value >>= 1u;
                 this -> high = value;
@@ -223,8 +251,8 @@ struct uint_extended_t {
         friend uint_extended_t<uint_t> operator &(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.bitwiseAND(numberB); return numberA; }
         friend uint_extended_t<uint_t> operator |(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.bitwiseOR(numberB); return numberA; }
         friend uint_extended_t<uint_t> operator ^(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.bitwiseXOR(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator <<(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.shiftLeft(numberB); return numberA; }
-        friend uint_extended_t<uint_t> operator >>(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.shiftRight(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator <<(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.shiftLeftBy(numberB); return numberA; }
+        friend uint_extended_t<uint_t> operator >>(uint_extended_t<uint_t> numberA, uint_extended_t<uint_t> const numberB) { numberA.shiftRightBy(numberB); return numberA; }
         uint_extended_t<uint_t> operator ~(void) const { uint_extended_t<uint_t> complement = uint_extended_t<uint_t>(this -> high, this -> low); complement.bitwiseNOT(); return complement; }
         bool operator !(void) const { return this -> isZero(); }
         friend bool operator <(uint_extended_t<uint_t> const numberA, uint_extended_t<uint_t> const numberB) { return numberA.isLesser(numberB); }
@@ -242,8 +270,8 @@ struct uint_extended_t {
         uint_extended_t& operator &=(uint_extended_t<uint_t> const number) { this -> bitwiseAND(number); return *this; }
         uint_extended_t& operator |=(uint_extended_t<uint_t> const number) { this -> bitwiseOR(number); return *this; }
         uint_extended_t& operator ^=(uint_extended_t<uint_t> const number) { this -> bitwiseXOR(number); return *this; }
-        uint_extended_t& operator <<=(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) { this -> shiftLeft(count); return *this; }
-        uint_extended_t& operator >>=(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) { this -> shiftRight(count); return *this; }
+        uint_extended_t& operator <<=(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) { this -> shiftLeftBy(count); return *this; }
+        uint_extended_t& operator >>=(typename uint_width_t<typename uint_next_t<uint_t>::type>::type const count) { this -> shiftRightBy(count); return *this; }
         uint_extended_t& operator ++(void) { this -> increment(); return *this; }
         uint_extended_t operator ++(int const) { uint_extended_t<uint_t> const increment = uint_extended_t<uint_t>(this -> high, this -> low); this -> increment(); return increment; }
         uint_extended_t& operator --(void) { this -> decrement(); return *this; }
@@ -264,14 +292,28 @@ struct uint_extended_t {
 // ...
 template <typename uint_t>
 char const* stringify(uint_t number) {
+    static char string[21] = {0};
+    char *iterator = string + 20;
+
+    for (*--iterator = '0'; number; number /= 10u)
+    *(iterator--) = "0123456789"[static_cast<unsigned char>(number % 10u)];
+
+    return static_cast<char const*>(iterator + (20 != iterator - string));
+}
+
+template <typename uint_t>
+char const* stringify(uint_extended_t<uint_t> number) {
     static char string[1025] = {0};
 
-    char *iterator = string + 1024;
-    uint_t const radix = uint_t(10u), zero = uint_t(0u);
+    char *iterator = string + (sizeof(string) / sizeof(char));
+    uint_extended_t<uint_t> quotient;
+    uint_extended_t<uint_t> const radix = uint_extended_t<uint_t>(0u, 10u);
 
     // ...
-    for (*--iterator = '0'; number != zero; number /= radix)
-    *(iterator--) = "0123456789"[static_cast<unsigned char>(number % radix)];
+    for (*--iterator = '0'; false == number.isZero(); (number.high = quotient.high), number.low = quotient.low) {
+        number.remainder(radix, &quotient);
+        *(iterator--) = "0123456789"[static_cast<unsigned char>(number.low)];
+    }
 
     return static_cast<char const*>(iterator + (1024 != iterator - string));
 }
@@ -311,6 +353,20 @@ int main(void) {
         uint_extended_t<uint_extended_t<uint64_t> >(uint_extended_t<uint64_t>(-1, -1), uint_extended_t<uint64_t>(-1, -1))
     );
     std::printf("[1 << 512]: %s" "\r\n", stringify(UINT512_MAXIMUM));
+
+    // 179769313486231590772930519078902473361797697894230657273430081157732675805500963132708477322407536021120113879871393357658789768814416622492847430639474124377767893424865485276302219601246094119453082952085005768838150682342462881473913110540827237163350510684586298239947245938479716304835356329624224137215
+    uint_extended_t<uint_extended_t<uint_extended_t<uint_extended_t<uint64_t> > > > const UINT1024_MAXIMUM = uint_extended_t<uint_extended_t<uint_extended_t<uint_extended_t<uint64_t> > > >(
+        uint_extended_t<uint_extended_t<uint_extended_t<uint64_t> > >(
+            uint_extended_t<uint_extended_t<uint64_t> >(uint_extended_t<uint64_t>(-1, -1), uint_extended_t<uint64_t>(-1, -1)),
+            uint_extended_t<uint_extended_t<uint64_t> >(uint_extended_t<uint64_t>(-1, -1), uint_extended_t<uint64_t>(-1, -1))
+        ),
+
+        uint_extended_t<uint_extended_t<uint_extended_t<uint64_t> > >(
+            uint_extended_t<uint_extended_t<uint64_t> >(uint_extended_t<uint64_t>(-1, -1), uint_extended_t<uint64_t>(-1, -1)),
+            uint_extended_t<uint_extended_t<uint64_t> >(uint_extended_t<uint64_t>(-1, -1), uint_extended_t<uint64_t>(-1, -1))
+        )
+    );
+    std::printf("[1 << 1024]: %s" "\r\n", stringify(UINT1024_MAXIMUM));
 
     // ...
     return /* --> EXIT_SUCCESS */ 0x0;
