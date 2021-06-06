@@ -340,7 +340,7 @@ struct uint_extended_t {
                 for (typename uint_width_t<uint_t>::type width = UINT_BIT_WIDTH; width; --width) number <<= 1u;
             }
 
-            number |= this -> low;
+            number |= static_cast<type>(this -> low);
             return number;
         }
 };

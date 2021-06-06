@@ -1,516 +1,249 @@
-/* Import --> gdi32.dll, kernel32.dll, shell32.dll, user32.dll */
-#include <inttypes.h> // Integer Types
-#include <stdint.h> // Standard Integer
+/* ...
+    --- WARN ---
+    #Lapys: Requires a byte to be at least 8 bits.
+*/
 
+/* Import */
+#include <climits> // C Limits
 #include <csignal> // C Signal
-#include <cstdio>
+#include <cstdio> // C Standard Input/ Output
 #include <cstdlib> // C Standard Library
 
-#include <windef.h> // Windows Definitions
-#include <winbase.h> // Window Base
-#include <wincon.h> // Windows Console
-#include <wingdi.h> // Windows Graphics Device Interface
-#include <winnt.h> // Windows New Technologies
-#include <winuser.h> // Windows User
-#   include <basetsd.h> // Base Type Definitions
-#   include <fileapi.h> // File API
-#   include <handleapi.h> // Handle API
-#   include <libloaderapi.h> // Library Loader API
-#   include <processthreadsapi.h> // Process Threads API
-#   include <shellapi.h> // Shell API
-#   include <synchapi.h> // Synchronicity API
-#   include <windowsx.h> // Windows Extensions API
+/* Namespace */
+// : Color, Piece
+namespace Color { enum Color /* : bool */ { BLACK = 0u, WHITE = 1u }; }
+namespace Piece { enum Piece /* : unsigned char */ {
+    KING = 0u,
+      KING_BISHOP = 1u,
+      KING_KNIGHT = 2u,
+      KING_ROOK = 3u,
+    PAWN = 4u,
+    QUEEN = 5u,
+      QUEEN_BISHOP = 6u,
+      QUEEN_KNIGHT = 7u,
+      QUEEN_ROOK = 8u
+}; }
 
-/* Definitions > ... */
-#undef UNICODE
-#ifdef _WIN32_WINNT
-# if _WIN32_WINNT < 0x0500
-#   undef _WIN32_WINNT
-#   define _WIN32_WINNT 0x0500
-# endif
-#endif
+/* : Game ...
+    --- UPDATE ---
+    #Lapys: Could feasibly algorithmically compress the game to a single integer state i.e.: 35 to the 80th possible moves
 
-static void Initiate(HDC const);
-static void Terminate(void);
-static bool Update(void);
+    --- NOTE ---
+    #Lapys: Memory model (with an unimplemented custom 32-turn draw)
 
-inline void putPixel(unsigned short const, unsigned short const, DWORD const);
+     no.                index            flag                             bit
+    [CASTLE STATE (4) | EN-PASSANT (4)] [CAPTURED QUEEN & OFFICERS (14) | TURN (1)]
+    [0000             | 0000          ] [00000000 000000                | - 0     ]
 
-/* Class */
-// : Color
-// : Piece
-union Color { public: enum __CONSTRUCTOR__ { BLACK, WHITE }; };
-union Piece { public: enum __CONSTRUCTOR__ { BISHOP = 0x1, KNIGHT = 0x2, KING = 0x3, PAWN = 0x4, QUEEN = 0x5, ROOK = 0x6 }; };
+     position                pos.             position                 pos.              position                pos.             position                 pos.
+    [BLACK KING ROOK   (6) | BLACK KING (2) | BLACK QUEEN ROOK   (6) | BLACK QUEEN (2) | WHITE KING ROOK   (6) | WHITE KING (2) | WHITE QUEEN ROOK   (6) | WHITE QUEEN (2)]
+    [000000                | 00             | 000000                 | 00              | 000000                | 00             | 000000                 | 00             ]
 
-// : Tile
-struct Tile /* final */ {
-    Piece::__CONSTRUCTOR__ const piece;
-    Color::__CONSTRUCTOR__ const pieceColor;
+     position                pos.             position                 pos.              position                pos.             position                 pos.
+    [BLACK KING KNIGHT (6) | BLACK KING (2) | BLACK QUEEN KNIGHT (6) | BLACK QUEEN (2) | WHITE KING KNIGHT (6) | WHITE KING (2) | WHITE QUEEN KNIGHT (6) | WHITE QUEEN (2)]
+    [000000                | 00             | 000000                 | 00              | 000000                | 00             | 000000                 | 00             ]
 
-    // ...
-    Tile(Piece::__CONSTRUCTOR__ const piece, Color::__CONSTRUCTOR__ const color) : piece(piece), pieceColor(color) {}
-    bool isClear(void) const { return static_cast<Piece::__CONSTRUCTOR__>(0x0) == this -> piece; }
-};
+     position                pos.             position                 pos.              position                pos.             position                 pos.
+    [BLACK KING BISHOP (5) | BLACK KING (2) | BLACK QUEEN BISHOP (5) | BLACK QUEEN (2) | WHITE KING BISHOP (5) | WHITE KING (2) | WHITE QUEEN BISHOP (5) | WHITE QUEEN (2)]
+    [00000 -               | 00             | 00000 -                | 00              | 00000 -               | 00             | 00000 -                | 00             ]
 
-// : Board
-class Board /* final */ {
-    private:
-        typedef
-          #if UINT64_MAX > ((1u << 31u) - 0u) + ((1u << 31u) - 1n)
-            uint64_t
-          #else
-            struct uint64_subboard_t {}
-          #endif
-        subboard_t;
-        subboard_t attribute, locations[6];
+     pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type
+    [BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8)]
+    [000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00     ]
 
-        // ...
-        static bool hasPiece(subboard_t const subboard, unsigned char const index) { return (subboard >> index) & 1u; }
-        static void removePiece(subboard_t& subboard, unsigned char const index) { subboard &= ~(1u << index); }
-        static void setPiece(subboard_t& subboard, unsigned char const index) { subboard |= 1u << index; }
+     flag                      flag
+    [CAPTURED BLACK PAWN (8)] [PROMOTED BLACK PAWN (8)]
+    [00000000               ] [00000000               ]
 
-    public:
-        Board(void) : attribute(0u), locations() {
-            for (unsigned char iterator = 8u; iterator--; ) {
-                this -> setTile(Piece::PAWN, Color::BLACK, iterator, 1u);
-                this -> setTile(Piece::PAWN, Color::WHITE, iterator, 6u);
-            }
+     pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type
+    [WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8)]
+    [000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00     ]
 
-            this -> setTile(Piece::ROOK, Color::WHITE, 0u, 0u);
-            this -> setTile(Piece::KNIGHT, Color::WHITE, 1u, 0u);
-            this -> setTile(Piece::BISHOP, Color::WHITE, 2u, 0u);
-            this -> setTile(Piece::KING, Color::WHITE, 3u, 0u);
-            this -> setTile(Piece::QUEEN, Color::WHITE, 4u, 0u);
-            this -> setTile(Piece::BISHOP, Color::WHITE, 5u, 0u);
-            this -> setTile(Piece::KNIGHT, Color::WHITE, 6u, 0u);
-            this -> setTile(Piece::ROOK, Color::WHITE, 7u, 0u);
-            // this -> locations[0] = 0xFFFFFFFFFFFFFFFFu;
-            // ... ->> Faster than manually modifying each tile.
-            // this -> locations[0] = 0x24000024u;
-            // this -> locations[1] = 0x42000042u;
-            // this -> locations[2] = 0x08000008u;
-            // this -> locations[3] = 0x00FFFF00u;
-            // this -> locations[4] = 0x10000010u;
-            // this -> locations[5] = 0x81000081u;
-        }
+     flag                      flag
+    [CAPTURED WHITE PAWN (8)] [PROMOTED WHITE PAWN (8)]
+    [00000000               ] [00000000               ]
+*/
+namespace Game {
+    namespace MemorySegment { enum MemorySegment /* : unsigned char */ {
+        CAPTURED_BLACK_PAWNS = 0x00u,
+        CAPTURED_PIECES = 0x01u,
+        CAPTURED_WHITE_PAWNS = 0x02u,
+        CASTLE_STATE = 0x03u,
+        EN_PASSANT = 0x04u,
+        PROMOTED_BLACK_PAWNS = 0x05u,
+        PROMOTED_WHITE_PAWNS = 0x06u,
+        TURN = 0x07u,
 
-        // ...
-        void clearTile(unsigned char const column, unsigned char const row) {
-            for (subboard_t *location = this -> locations + (sizeof(this -> locations) / sizeof(subboard_t)); location-- != this -> locations; )
-            Board::removePiece(*location, column + (row << 3u));
-        }
+        BLACK_KING = 0x08u,
+        BLACK_KING_BISHOP = 0x09u,
+        BLACK_KING_KNIGHT = 0x0Au,
+        BLACK_KING_ROOK = 0x0Bu,
+        BLACK_PAWNS = 0x0Cu,
+        BLACK_QUEEN = 0x0Du,
+        BLACK_QUEEN_BISHOP = 0x0Eu,
+        BLACK_QUEEN_KNIGHT = 0x0Fu,
+        BLACK_QUEEN_ROOK = 0x10u,
+        WHITE_KING = 0x11u,
+        WHITE_KING_BISHOP = 0x12u,
+        WHITE_KING_KNIGHT = 0x13u,
+        WHITE_KING_ROOK = 0x14u,
+        WHITE_PAWNS = 0x15u,
+        WHITE_QUEEN = 0x16u,
+        WHITE_QUEEN_BISHOP = 0x17u,
+        WHITE_QUEEN_KNIGHT = 0x18u,
+        WHITE_QUEEN_ROOK = 0x19u
+    }; }
 
-        Tile getTile(unsigned char const column, unsigned char const row) const {
-            for (subboard_t const *location = this -> locations + (sizeof(this -> locations) / sizeof(subboard_t)); location-- != this -> locations; )
-            if (Board::hasPiece(*location, column + (row << 3u))) return Tile(static_cast<Piece::__CONSTRUCTOR__>((location - (this -> locations)) + 1), Board::hasPiece(this -> attribute, column + (row << 3u)) ? Color::WHITE : Color::BLACK);
+    unsigned char MEMORY[35];
 
-            return Tile(static_cast<Piece::__CONSTRUCTOR__>(0x0), static_cast<Color::__CONSTRUCTOR__>(0x0));
-        }
+    // : Capture
+    void capturePiece(Color::Color const, Piece::Piece const);
+    bool pieceIsCaptured(Color::Color const, Piece::Piece const);
 
-        void setTile(Piece::__CONSTRUCTOR__ const piece, Color::__CONSTRUCTOR__ const color, unsigned char const column, unsigned char const row) {
-            Board::setPiece(this -> locations[static_cast<int>(piece) - 1], column + (row << 3u));
-            switch (color) {
-                case Color::BLACK: Board::removePiece(this -> attribute, column + (row << 3u)); break;
-                case Color::WHITE: Board::setPiece(this -> attribute, column + (row << 3u)); break;
-            }
-        }
-};
+    // : Castle
+    bool canCastleKingSide(Color::Color const);
+    bool canCastleQueenSide(Color::Color const);
 
-/* Global */
-// : Console
-static HWND consoleWindowHandle = NULL;
+    void castleKingSide(Color::Color const);
+    void castleQueenSide(Color::Color const);
 
-// : Game
-static Board gameBoard = Board();
-static DWORD gameBoardColor;
-static unsigned short gameBoardSize;
+    // : En-Passant
+    unsigned char getEnPassantPawnIndex(void);
 
-static bool gameHasLoadedPiecesBitmap = false;
-static BITMAP gamePiecesBitmap = BITMAP();
-static unsigned char gamePieceBitmapHeight = 0u;
-static VOID *gamePiecesBitmapBits = NULL;
-static HDC gamePiecesBitmapDeviceContextHandle = NULL;
-static char const *gamePiecesBitmapFilePath = NULL;
-static HBITMAP gamePiecesBitmapHandle = NULL;
-static UINT32 gamePiecesBitmapMaskColor = 0x000000u;
-static unsigned char gamePieceBitmapWidth = 0u;
+    // : Turn
+    Color::Color getTurn(void);
+    void setTurn(Color::Color const);
 
-static DWORD gameTileColors[2] = {0x000000u, 0x000000u};
-static unsigned short gameTileMargin = 0u;
+    // : ...
+    void clearMemory(void);
+    unsigned char getMemorySegment(MemorySegment::MemorySegment const);
+    unsigned char getMemorySegment(Color::Color const, Piece::Piece const);
 
-// : Pointer
-static POINTS pointerCoordinates = POINTS();
-static bool pointerIsPressed = false;
+    MemorySegment::MemorySegment mapToMemorySegment(Color::Color const, Piece::Piece const);
 
-// : Window
-static WNDCLASSEX windowClassInformation = WNDCLASSEX();
-static HBITMAP windowDeviceContextBitmapHandle = NULL;
-static HDC windowDeviceContextHandle = NULL;
-static HWND windowHandle = NULL;
-static int windowHeight = 0, windowWidth = 0;
-static BITMAP windowMemoryDeviceContextBitmap = BITMAP();
-static VOID *windowMemoryDeviceContextBitmapBits = NULL;
-static HBITMAP windowMemoryDeviceContextBitmapHandle = NULL;
-static HDC windowMemoryDeviceContextHandle = NULL;
-static LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const message, WPARAM const messageParameter, LPARAM const messageSubparameter) {
-    switch (message) {
-        /* ... */
-        case WM_CLOSE: ::DestroyWindow(windowHandle); break;
-        case WM_KEYDOWN: if (VK_ESCAPE == messageParameter) ::DestroyWindow(windowHandle); break;
-        case WM_SYSCOMMAND: if (SC_CLOSE == messageParameter) ::DestroyWindow(windowHandle); break;
-        case WM_SYSKEYDOWN: if (VK_F4 == messageParameter) ::DestroyWindow(windowHandle); break;
-
-        /* ... */
-        case WM_LBUTTONDOWN: {
-            if (false == pointerIsPressed) pointerIsPressed = true;
-            ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT | RDW_INVALIDATE);
-        } return EXIT_SUCCESS;
-
-        case WM_LBUTTONUP: {
-            pointerIsPressed = false;
-            ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT | RDW_INVALIDATE);
-        } return EXIT_SUCCESS;
-
-        case WM_MOUSEMOVE: {
-            if (false == pointerIsPressed) {
-                pointerCoordinates.x = GET_X_LPARAM(messageSubparameter);
-                pointerCoordinates.y = GET_Y_LPARAM(messageSubparameter);
-            }
-
-            ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT | RDW_INVALIDATE);
-        } return EXIT_SUCCESS;
-
-        #ifdef WM_TOUCH
-        case WM_TOUCH: {
-            POINT touchCoordinates = POINT();
-            TOUCHINPUT touchInput = TOUCHINPUT();
-
-            ::GetTouchInputInfo(reinterpret_cast<HTOUCHINPUT>(messageSubparameter), 1u, &touchInput, sizeof(TOUCHINPUT));
-            ::CloseTouchInputHandle(reinterpret_cast<HTOUCHINPUT>(messageSubparameter));
-
-            if (false == pointerIsPressed) {
-                touchCoordinates.x = TOUCH_COORD_TO_PIXEL(touchInput.x);
-                touchCoordinates.y = TOUCH_COORD_TO_PIXEL(touchInput.y);
-                ::ScreenToClient(windowHandle, &touchCoordinates);
-
-                pointerIsPressed = true;
-                pointerCoordinates.x = touchCoordinates.x;
-                pointerCoordinates.y = touchCoordinates.y;
-
-                ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT | RDW_INVALIDATE);
-            }
-        } return EXIT_SUCCESS;
-        #endif
-
-        /* ... */
-        case WM_CREATE: {
-            LPVOID const creationParameter = reinterpret_cast<CREATESTRUCTA const*>(messageSubparameter) -> lpCreateParams;
-
-            int const windowAppearance = static_cast<int>(reinterpret_cast<intptr_t>(creationParameter));
-            BITMAPINFO windowMemoryDeviceContextBitmapInformation = BITMAPINFO();
-
-            // ...
-            consoleWindowHandle = ::GetConsoleWindow();
-
-            windowDeviceContextHandle = ::GetDCEx(windowHandle, NULL, CS_OWNDC | DCX_NORESETATTRS);
-            windowDeviceContextBitmapHandle = ::CreateCompatibleBitmap(windowDeviceContextHandle, windowWidth, windowHeight);
-
-            windowMemoryDeviceContextBitmapInformation.bmiColors -> rgbBlue = 0u;
-            windowMemoryDeviceContextBitmapInformation.bmiColors -> rgbGreen = 0u;
-            windowMemoryDeviceContextBitmapInformation.bmiColors -> rgbRed = 0u;
-            windowMemoryDeviceContextBitmapInformation.bmiColors -> rgbReserved = 0x0u;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biBitCount = 32u;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biClrUsed = 0u;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biClrImportant = 0u;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biCompression = BI_RGB;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biHeight = windowHeight;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biPlanes = 1u;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biWidth = windowWidth;
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(windowDeviceContextHandle, HORZRES) / ::GetDeviceCaps(windowDeviceContextHandle, HORZSIZE);
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(windowDeviceContextHandle, VERTRES) / ::GetDeviceCaps(windowDeviceContextHandle, VERTSIZE);
-            windowMemoryDeviceContextBitmapInformation.bmiHeader.biSizeImage = windowMemoryDeviceContextBitmapInformation.bmiHeader.biHeight * windowMemoryDeviceContextBitmapInformation.bmiHeader.biWidth * sizeof(UINT32);
-
-            windowMemoryDeviceContextHandle = ::CreateCompatibleDC(windowDeviceContextHandle);
-            windowMemoryDeviceContextBitmapHandle = ::CreateDIBSection(windowMemoryDeviceContextHandle, &windowMemoryDeviceContextBitmapInformation, DIB_RGB_COLORS, &windowMemoryDeviceContextBitmapBits, NULL, 0u);
-
-            // ...
-            ::GetObject(windowMemoryDeviceContextBitmapHandle, sizeof(BITMAP), &windowMemoryDeviceContextBitmap);
-            ::SelectObject(windowDeviceContextHandle, windowDeviceContextBitmapHandle);
-            ::SelectObject(windowMemoryDeviceContextHandle, windowMemoryDeviceContextBitmapHandle);
-
-            // ...
-            #ifdef WM_TOUCH
-                if (0 != ::GetSystemMetrics(0x5E /*SM_DIGITIZER*/))
-                ::RegisterTouchWindow(windowHandle, 0x0);
-            #endif
-
-            // if (NULL != consoleWindowHandle) ::ShowWindow(consoleWindowHandle, SW_HIDE);
-            ::ShowWindow(windowHandle, static_cast<long>(windowAppearance));
-
-            /* ... */
-            Initiate(windowDeviceContextHandle);
-        } break;
-
-        // ...
-        case WM_DESTROY: {
-            ::DeleteDC(windowMemoryDeviceContextHandle), ::DeleteObject(windowMemoryDeviceContextBitmapHandle);
-            ::ReleaseDC(windowHandle, windowDeviceContextHandle);
-
-            ::PostQuitMessage(EXIT_SUCCESS);
-
-            /* ... */
-            Terminate();
-        } break;
-
-        // ...
-        case WM_PAINT: {
-            if (false == Update()) ::DestroyWindow(windowHandle);
-            else {
-                ::BitBlt(windowDeviceContextHandle, 0, 0, windowWidth, windowHeight, windowMemoryDeviceContextHandle, 0, 0, SRCCOPY);
-                ::ValidateRect(windowHandle, NULL);
-            }
-        } return EXIT_SUCCESS;
-    }
-
-    // ...
-    return ::DefWindowProc(windowHandle, message, messageParameter, messageSubparameter);
+    void setMemorySegment(MemorySegment::MemorySegment const, unsigned char const);
+    void setMemorySegment(Color::Color const, Piece::Piece const, unsigned char const);
+    void reset(void);
 }
 
-/* Function > Put Pixel */
-void putPixel(unsigned short const x, unsigned short const y, DWORD const color) { static_cast<UINT32*>(windowMemoryDeviceContextBitmapBits)[x + (windowMemoryDeviceContextBitmap.bmWidth * (windowMemoryDeviceContextBitmap.bmHeight - y - 1L))] = color | (0xFFu << 0x18u); }
+/* Global > ... */
+/* Functions */
+// : Game
+    /* Castle --- NOTE (Lapys) ->
+        0 ---               ---
+        1 ---               WHITE
+        2 ---               WHITE KING_SIDE
+        3 ---               WHITE QUEEN_SIDE
+
+        4 BLACK             ---
+        5 BLACK             WHITE
+        6 BLACK             WHITE KING_SIDE
+        7 BLACK             WHITE QUEEN_SIDE
+
+        8 BLACK KING_SIDE   ---
+        9 BLACK KING_SIDE   WHITE
+        A BLACK KING_SIDE   WHITE KING_SIDE
+        B BLACK KING_SIDE   WHITE QUEEN_SIDE
+
+        C BLACK QUEEN_SIDE  ---
+        D BLACK QUEEN_SIDE  WHITE
+        E BLACK QUEEN_SIDE  WHITE KING_SIDE
+        F BLACK QUEEN_SIDE  WHITE QUEEN_SIDE
+    */
+    bool Game::canCastleKingSide(Color::Color const color) {
+        unsigned char const state = Game::getMemorySegment(MemorySegment::CASTLE) >> (CHAR_BIT - 4u);
+
+        if (Color::BLACK == color) return state == 0x4u || state == 0x5u || state == 0x6u || state == 0x7u || state == 0x8u || state == 0x9u || state == 0xAu || state == 0xBu;
+        if (Color::WHITE == color) return state == 0x1u || state == 0x2u || state == 0x5u || state == 0x6u || state == 0x9u || state == 0xAu || state == 0xDu || state == 0xEu;
+        return false;
+    }
+
+    bool Game::canCastleQueenSide(Color::Color const color) {
+        unsigned char const state = Game::getMemorySegment(MemorySegment::CASTLE) >> (CHAR_BIT - 4u);
+
+        if (Color::BLACK == color) return state == 0x4u || state == 0x5u || state == 0x6u || state == 0x7u || state == 0xCu || state == 0xDu || state == 0xEu || state == 0xFu;
+        if (Color::WHITE == color) return state == 0x1u || state == 0x3u || state == 0x5u || state == 0x7u || state == 0x9u || state == 0xBu || state == 0xDu || state == 0xFu;
+        return false;
+    }
+
+    void Game::castleKingSide(Color::Color const color) {
+        if (Color::BLACK == color)
+    }
+    void Game::castleQueenSide(Color::Color const);
+
+    // ...
+    void Game::clearMemory(void) { for (unsigned char *iterator = Game::MEMORY + (sizeof(Game::MEMORY) / sizeof(unsigned char)); Game::MEMORY != iterator--; ) *iterator = 0u; }
+
+    unsigned char Game::getMemorySegment(Color::Color const color, Piece::Piece const piece) { return Game::getMemorySegment(Game::mapToMemorySegment(color, piece)); }
+    unsigned char Game::getMemorySegment(MemorySegment::MemorySegment const segment) {
+        Game::MEMORY[35]
+        switch (segment) {
+            case MemorySegment::CAPTURED_BLACK_PAWNS: return Game::MEMORY[0];
+            case MemorySegment::CAPTURED_PIECES: return Game::MEMORY[1] | ;
+            case MemorySegment::CAPTURED_WHITE_PAWNS: return ...;
+            case MemorySegment::CASTLE_STATE: return ...;
+            case MemorySegment::EN_PASSANT: return ...;
+            case MemorySegment::PROMOTED_BLACK_PAWNS: return ...;
+            case MemorySegment::PROMOTED_WHITE_PAWNS: return ...;
+            case MemorySegment::TURN: return ...;
+
+            case MemorySegment::BLACK_KING: return ...;
+            case MemorySegment::BLACK_KING_BISHOP: return ...;
+            case MemorySegment::BLACK_KING_KNIGHT: return ...;
+            case MemorySegment::BLACK_KING_ROOK: return ...;
+            case MemorySegment::BLACK_PAWNS: return ...;
+            case MemorySegment::BLACK_QUEEN: return ...;
+            case MemorySegment::BLACK_QUEEN_BISHOP: return ...;
+            case MemorySegment::BLACK_QUEEN_KNIGHT: return ...;
+            case MemorySegment::BLACK_QUEEN_ROOK: return ...;
+            case MemorySegment::WHITE_KING: return ...;
+            case MemorySegment::WHITE_KING_BISHOP: return ...;
+            case MemorySegment::WHITE_KING_KNIGHT: return ...;
+            case MemorySegment::WHITE_KING_ROOK: return ...;
+            case MemorySegment::WHITE_PAWNS: return ...;
+            case MemorySegment::WHITE_QUEEN: return ...;
+            case MemorySegment::WHITE_QUEEN_BISHOP: return ...;
+            case MemorySegment::WHITE_QUEEN_KNIGHT: return ...;
+            case MemorySegment::WHITE_QUEEN_ROOK: return ...;
+        }
+
+        std::raise(SIGSEGV);
+        return 0x0u;
+    }
+
+    MemorySegment::MemorySegment Game::mapToMemorySegment(Color::Color const color, Piece::Piece const piece) {
+        return static_cast<MemorySegment::MemorySegment>(
+            // ->> Memory region for pieces.
+            static_cast<unsigned char>(MemorySegment::BLACK_KING) +
+
+            // ->> Shift between regions for black/ white pieces.
+            (9u * static_cast<unsigned char>(color)) +
+
+            // ->> Offset from region based on specified piece.
+            static_cast<unsigned char>(piece)
+        );
+    }
+
+    void Game::reset(void) {}
+
+    void Game::setMemorySegment(Color::Color const, Piece::Piece const, unsigned char const, value) { Game::setMemorySegment(Game::mapToMemorySegment(color, piece), value); }
+    void Game::setMemorySegment(MemorySegment::MemorySegment const, unsigned char const) {}
 
 /* Phase */
 // : Initiate
-void Initiate(HDC const windowDeviceContextHandle) {
-    gameBoardColor = 0x006600u;
-    gameBoardSize = ((windowHeight < windowWidth ? windowHeight : windowWidth) * 4u) / 5u;
-
-    gamePieceBitmapHeight = 80u;
-    gamePiecesBitmapFilePath = "pieces.bmp";
-    gamePiecesBitmapHandle = static_cast<HBITMAP>(::LoadImage(NULL, gamePiecesBitmapFilePath, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_DEFAULTCOLOR | LR_LOADFROMFILE));
-    gamePieceBitmapWidth = 83u;
-
-    gameTileColors[0] = 0xFFFFFFu;
-    gameTileColors[1] = 0x00AA00u;
-    gameTileMargin = 3u;
-
-    // ...
-    if (NULL != gamePiecesBitmapHandle) {
-        BITMAPINFO gamePiecesBitmapInformation;
-
-        // ...
-        gamePiecesBitmapDeviceContextHandle = ::CreateCompatibleDC(windowDeviceContextHandle);
-
-        ::SelectObject(gamePiecesBitmapDeviceContextHandle, gamePiecesBitmapHandle);
-        ::GetObject(gamePiecesBitmapHandle, sizeof(BITMAP), &gamePiecesBitmap);
-
-        // ...
-        gamePiecesBitmapInformation.bmiColors -> rgbBlue = 0u;
-        gamePiecesBitmapInformation.bmiColors -> rgbGreen = 0u;
-        gamePiecesBitmapInformation.bmiColors -> rgbRed = 0u;
-        gamePiecesBitmapInformation.bmiColors -> rgbReserved = 0x0u;
-        gamePiecesBitmapInformation.bmiHeader.biBitCount = 32u;
-        gamePiecesBitmapInformation.bmiHeader.biClrUsed = 0u;
-        gamePiecesBitmapInformation.bmiHeader.biClrImportant = 0u;
-        gamePiecesBitmapInformation.bmiHeader.biCompression = BI_RGB;
-        gamePiecesBitmapInformation.bmiHeader.biHeight = gamePiecesBitmap.bmHeight;
-        gamePiecesBitmapInformation.bmiHeader.biPlanes = gamePiecesBitmap.bmPlanes;
-        gamePiecesBitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        gamePiecesBitmapInformation.bmiHeader.biWidth = gamePiecesBitmap.bmWidth;
-        gamePiecesBitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(windowDeviceContextHandle, HORZRES) / ::GetDeviceCaps(windowDeviceContextHandle, HORZSIZE);
-        gamePiecesBitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(windowDeviceContextHandle, VERTRES) / ::GetDeviceCaps(windowDeviceContextHandle, VERTSIZE);
-        gamePiecesBitmapInformation.bmiHeader.biSizeImage = gamePiecesBitmapInformation.bmiHeader.biHeight * gamePiecesBitmapInformation.bmiHeader.biWidth * sizeof(UINT32);
-
-        gamePiecesBitmapBits = static_cast<VOID*>(std::malloc(gamePiecesBitmapInformation.bmiHeader.biSizeImage * sizeof(BYTE)));
-
-        if (NULL != gamePiecesBitmapBits)
-        if (0 != ::GetDIBits(gamePiecesBitmapDeviceContextHandle, gamePiecesBitmapHandle, 0u, gamePiecesBitmap.bmHeight, gamePiecesBitmapBits, &gamePiecesBitmapInformation, DIB_RGB_COLORS)) {
-            gameHasLoadedPiecesBitmap = true;
-            gamePiecesBitmapMaskColor = *static_cast<UINT32*>(gamePiecesBitmapBits);
-        }
-    }
+void Initiate(void) {
+    Game::reset();
+    Game::setTurn(Color::WHITE);
 }
 
-// : Terminate
-static void Terminate(void) {
-    if (NULL != gamePiecesBitmapBits) std::free(gamePiecesBitmapBits);
-    if (NULL != gamePiecesBitmapDeviceContextHandle) ::DeleteObject(gamePiecesBitmapDeviceContextHandle);
-    if (NULL != gamePiecesBitmapHandle) ::DeleteObject(gamePiecesBitmapHandle);
-}
+// : Reset
+void Reset(void) { Initiate(); }
 
 // : Update
-bool Update(void) {
-    if (false == gameHasLoadedPiecesBitmap) return false;
-
-    unsigned short const boardLeftBound = ((windowWidth - gameBoardSize) >> 1u) - ((gameTileMargin * 7u) >> 1u);
-    unsigned short const boardTopBound = ((windowHeight - gameBoardSize) >> 1u) - ((gameTileMargin * 7u) >> 1u);
-    unsigned short const boardRightBound = boardLeftBound + (gameBoardSize + ((gameTileMargin * 7u) >> 1u));
-    unsigned short const boardBottomBound = boardTopBound + (gameBoardSize + ((gameTileMargin * 7u) >> 1u));
-
-    // ...
-    for (unsigned short x = boardRightBound; boardLeftBound != x--; )
-    for (unsigned short y = boardBottomBound; boardTopBound != y--; ) {
-        putPixel(x, y, gameBoardColor);
-    }
-
-    for (unsigned char column = 8u; column--; )
-    for (unsigned char row = 8u; row--; ) {
-        Tile const tile = gameBoard.getTile(column, row);
-
-        unsigned short const tileSize = gameBoardSize >> 3u;
-        unsigned short const tileTopBound = boardTopBound + (tileSize * row) + (row ? gameTileMargin * row : 0u);
-        unsigned short const tileLeftBound = boardLeftBound + (tileSize * column) + (column ? gameTileMargin * column : 0u);
-
-        // ...
-        for (unsigned short x = tileSize; x--; )
-        for (unsigned short y = tileSize; y--; ) {
-            putPixel(tileLeftBound + x, tileTopBound + y, gameTileColors[(column + row) & 1u]);
-        }
-
-        // ...
-        if (false == tile.isClear()) {
-            unsigned short pieceLeftBound = gamePieceBitmapWidth;
-            unsigned short const pieceTopBound = 0u;//gamePieceBitmapHeight * (Color::BLACK == tile.pieceColor);
-
-            switch (tile.piece) { // ->> based on the `gamePiecesBitmap` file.
-                case Piece::BISHOP: pieceLeftBound *= 2u; break;
-                case Piece::KNIGHT: pieceLeftBound *= 1u; break;
-                case Piece::KING: pieceLeftBound *= 3u; break;
-                case Piece::PAWN: pieceLeftBound *= 5u; break;
-                case Piece::QUEEN: pieceLeftBound *= 4u; break;
-                case Piece::ROOK: pieceLeftBound *= 0u; break;
-            }
-
-            /*if (0u == row || 1u == row) */{
-                float const pieceHeightRatio = static_cast<float>(gamePieceBitmapHeight) / static_cast<float>(tileSize);
-                float const pieceWidthRatio = static_cast<float>(gamePieceBitmapWidth) / static_cast<float>(tileSize);
-
-                for (float x = gamePieceBitmapWidth; x > 0; x -= pieceWidthRatio)
-                for (float y = gamePieceBitmapHeight; y > 0; y -= pieceHeightRatio) {
-                    UINT32 const pieceColor = static_cast<UINT32*>(gamePiecesBitmapBits)[
-                        (pieceLeftBound + static_cast<unsigned short>(x)) +
-                        (gamePiecesBitmap.bmWidth * (gamePiecesBitmap.bmHeight - (pieceTopBound + static_cast<unsigned short>(y)) - 1u))
-                    ];
-
-                    if (gamePiecesBitmapMaskColor != pieceColor)
-                    putPixel(
-                        tileLeftBound + static_cast<unsigned short>(x / pieceWidthRatio),
-                        tileTopBound + static_cast<unsigned short>(y / pieceHeightRatio),
-                        pieceColor
-                    );
-                }
-            }
-        }
-    }
-
-    // ...
-    return true;
-}
+// : Terminate
 
 /* Main */
-int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHandle, LPSTR const /* commandLineArguments */, int const appearance) {
-    int exitCode = EXIT_SUCCESS;
-    bool instanceAlreadyRunning = false;
-    static HANDLE instanceLockFile = NULL, instanceLockMutex = NULL;
-    struct instance {
-        static void signalHandler(int const signal) { instance::exitHandler(); static_cast<void (*)(int const)>(SIG_DFL)(signal); }
-        static void exitHandler(void) {
-            if (NULL != instanceLockFile && INVALID_HANDLE_VALUE != instanceLockFile) ::CloseHandle(instanceLockFile);
-            if (NULL != instanceLockMutex) ::CloseHandle(instanceLockMutex);
-        }
-    };
-
-    // ... ->> Prevent multiple program instances.
-    if (false == instanceAlreadyRunning)
-    instanceAlreadyRunning = NULL != previousInstanceHandle;
-
-    if (false == instanceAlreadyRunning) {
-        instanceLockMutex = ::CreateMutex(NULL, TRUE, "ChessLockMutex");
-        if (NULL != instanceLockMutex) instanceAlreadyRunning = ERROR_ALREADY_EXISTS == ::GetLastError();
-    }
-
-    if (false == instanceAlreadyRunning)
-    if (NULL == instanceLockMutex) {
-        CHAR instanceLockFilePath[MAX_PATH + 17];
-        DWORD instanceLockFilePathLength = ::GetTempPath(MAX_PATH + 1u, instanceLockFilePath);
-
-        if (0u != instanceLockFilePathLength) {
-            instanceLockFilePath[instanceLockFilePathLength + 17] = '\0';
-            for (CHAR const *instanceLockFileName = "ChessLockFile.tmp"; '\0' != *instanceLockFileName; ) instanceLockFilePath[instanceLockFilePathLength++] = *(instanceLockFileName++);
-
-            instanceLockFile = ::CreateFile(instanceLockFilePath, DELETE | GENERIC_READ | GENERIC_WRITE, 0x0u, NULL, CREATE_NEW, FILE_FLAG_DELETE_ON_CLOSE, NULL);
-            instanceAlreadyRunning = ERROR_FILE_EXISTS == ::GetLastError();
-        }
-    }
-
-    // ... ->> Capture program termination events.
-    std::atexit(&instance::exitHandler);
-    std::signal(SIGABRT, &instance::signalHandler);
-    std::signal(SIGFPE, &instance::signalHandler);
-    std::signal(SIGILL, &instance::signalHandler);
-    std::signal(SIGINT, &instance::signalHandler);
-    std::signal(SIGSEGV, &instance::signalHandler);
-    std::signal(SIGTERM, &instance::signalHandler);
-
-    // ... ->> Initiate main program loop.
-    if (instanceAlreadyRunning) exitCode = EXIT_FAILURE;
-    else {
-        CHAR instanceFileName[MAX_PATH] = {0};
-
-        // ...
-        ::GetModuleFileName(NULL, instanceFileName, MAX_PATH);
-
-        windowClassInformation.cbClsExtra = 0;
-        windowClassInformation.cbSize = sizeof(WNDCLASSEX);
-        windowClassInformation.cbWndExtra = 0;
-        windowClassInformation.hbrBackground = ::GetSysColorBrush(COLOR_WINDOWTEXT) /* --> ::GetSysColorBrush(COLOR_WINDOW) */;
-        windowClassInformation.hCursor = static_cast<HCURSOR>(::LoadCursor(instanceHandle, IDC_ARROW)) /* --> static_cast<HCURSOR>(::LoadImage(instanceHandle, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE)) */;
-        windowClassInformation.hIcon = static_cast<HICON>(::ExtractIcon(instanceHandle, instanceFileName, 0u));
-        windowClassInformation.hIconSm = static_cast<HICON>(NULL);
-        windowClassInformation.hInstance = instanceHandle;
-        windowClassInformation.lpfnWndProc = &windowProcedure;
-        windowClassInformation.lpszClassName = "window";
-        windowClassInformation.lpszMenuName = static_cast<LPCSTR>(NULL);
-        windowClassInformation.style = CS_GLOBALCLASS | CS_OWNDC;
-
-        // ...
-        if (0x0 == ::RegisterClassEx(static_cast<WNDCLASSEX const*>(&windowClassInformation))) exitCode = EXIT_FAILURE;
-        else {
-            SIZE windowCoordinates = SIZE();
-            RECT workareaRectangle = RECT();
-
-            ::SystemParametersInfo(SPI_GETWORKAREA, 0u, static_cast<PVOID>(&workareaRectangle), 0x0);
-
-            // ...
-            windowWidth = ((workareaRectangle.right - workareaRectangle.left) * 3) / 4;
-            windowHeight = ((workareaRectangle.bottom - workareaRectangle.top) * 3) / 4;
-
-            windowCoordinates.cx = ((workareaRectangle.right - workareaRectangle.left) - windowWidth) / 2L;
-            windowCoordinates.cy = ((workareaRectangle.bottom - workareaRectangle.top) - windowHeight) / 2L;
-
-            windowHandle = ::CreateWindowEx(0x0, windowClassInformation.lpszClassName, "Chess", WS_POPUP, windowCoordinates.cx, windowCoordinates.cy, windowWidth, windowHeight, HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance)));
-
-            // ...
-            if (NULL == windowHandle) exitCode = EXIT_FAILURE;
-            else {
-                MSG threadMessage = MSG();
-                BOOL threadMessageAvailable = TRUE;
-
-                while (FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message) {
-                    ::DispatchMessage(&threadMessage);
-                    threadMessageAvailable = ::PeekMessage(&threadMessage, NULL, 0x0, 0x0, PM_REMOVE);
-                }
-
-                exitCode = threadMessage.wParam;
-            }
-
-            ::UnregisterClass(windowClassInformation.lpszClassName, windowClassInformation.hInstance);
-        }
-
-        ::DestroyCursor(windowClassInformation.hCursor);
-    }
-
-    // ...
-    return exitCode;
+int main(void) {
+    // Return
+    return EXIT_SUCCESS;
 }
