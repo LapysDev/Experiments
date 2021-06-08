@@ -153,6 +153,8 @@ Piece::Type Game::getPawnPromotionType(Piece const pawn) {
         case 0x2u: return Piece::QUEEN;
         case 0x3u: return Piece::ROOK;
     }
+
+    return Piece::PAWN;
 }
 
 Piece Game::getPiece(Piece::Color const color, Piece::Type const type, unsigned char const index) {
@@ -169,11 +171,12 @@ Piece Game::getPiece(Piece::Color const color, Piece::Type const type, unsigned 
 }
 
 Piece::Color Game::getTurn(void) { return static_cast<Piece::Color>(*Game::getMemorySegment(Game::TURN) & 1u); }
-bool Game::isPawnPromoted(Piece const pawn, unsigned char const index) { return (*Game::getMemorySegment(Game::PROMOTED_PAWNS) >> index) & 1u; }
+bool Game::isPawnPromoted(Piece const, unsigned char const index) { return (*Game::getMemorySegment(Game::PROMOTED_PAWNS) >> index) & 1u; }
 bool Game::isPieceCaptured(Piece const piece, unsigned char const index) {
-    if (Piece::PAWN == piece.getType()) return (*Game::getMemorySegment(Game::CAPTURED_PAWNS) >> index) & 1u;
-
     switch (piece.getType()) {
+        case Piece::KING: return false;
+        case Piece::PAWN: return (*Game::getMemorySegment(Game::CAPTURED_PAWNS) >> index) & 1u;
+
         case Piece::BISHOP: return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 0) >> 4u) >> index) & 1u;
         case Piece::KNIGHT: return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 0) >> 0u) >> index) & 1u;
         case Piece::QUEEN : return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 1) >> 2u) >> index) & 1u;
@@ -240,7 +243,7 @@ signed char Piece::getIndex(void) const {
     unsigned char const *const data = this -> data;
     unsigned char iterator;
 
-    for (Type type = Piece::BISHOP; ; type = static_cast<Color>(static_cast<int>(type) + 1)) {
+    for (Type type = Piece::BISHOP; ; type = static_cast<Type>(static_cast<int>(type) + 1)) {
         switch (type) {
             case Piece::BISHOP: case Piece::KNIGHT: case Piece::ROOK: iterator = 2u; break;
             case Piece::KING: case Piece::QUEEN: iterator = 1u; break;
@@ -281,7 +284,7 @@ Piece::Type Piece::getType(void) const {
     unsigned char const *const data = this -> data;
     unsigned char iterator;
 
-    for (Type type = Piece::BISHOP; ; type = static_cast<Color>(static_cast<int>(type) + 1)) {
+    for (Type type = Piece::BISHOP; ; type = static_cast<Type>(static_cast<int>(type) + 1)) {
         switch (type) {
             case Piece::BISHOP: case Piece::KNIGHT: case Piece::ROOK: iterator = 2u; break;
             case Piece::KING: case Piece::QUEEN: iterator = 1u; break;
