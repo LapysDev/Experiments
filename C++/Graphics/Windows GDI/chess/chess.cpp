@@ -25,6 +25,7 @@ struct Piece /* final */ {
 
         Color getColor(void) const;
         unsigned char getColumn(void) const;
+        unsigned char const* getData(void) const;
         signed char getIndex(void) const;
         unsigned char getRow(void) const;
         Type getType(void) const;
@@ -94,9 +95,9 @@ namespace Game {
 
     static unsigned char* getMemorySegment(MemorySegment const);
     unsigned char getPawnEnPassantIndex(void);
-    Type getPawnPromotionType(Piece const);
+    Piece::Type getPawnPromotionType(Piece const);
     static Piece getPiece(Piece::Color const, Piece::Type const, unsigned char const = 0u);
-    Color getTurn(void);
+    Piece::Color getTurn(void);
 
     bool isPawnPromoted(Piece const, unsigned char const);
     bool isPieceCaptured(Piece const, unsigned char const = 0u);
@@ -146,7 +147,7 @@ unsigned char* Game::getMemorySegment(MemorySegment const segment) {
 
 unsigned char Game::getPawnEnPassantIndex(void) { return *Game::getMemorySegment(Game::EN_PASSANT) & ~(~0u << 4u); }
 Piece::Type Game::getPawnPromotionType(Piece const pawn) {
-    switch (*pawn.data >> 6u) {
+    switch (*pawn.getData() >> 6u) {
         case 0x0u: return Piece::BISHOP;
         case 0x1u: return Piece::KNIGHT;
         case 0x2u: return Piece::QUEEN;
@@ -234,6 +235,7 @@ unsigned char Piece::getColumn(void) const {
     return (*(this -> data) >> 3u) & ~(~0u << 3u);
 }
 
+unsigned char const* Piece::getData(void) const { return this -> data; }
 signed char Piece::getIndex(void) const {
     unsigned char const *const data = this -> data;
     unsigned char iterator;
