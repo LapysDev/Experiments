@@ -9,12 +9,12 @@
 /* Global > States --- WARN (Lapys) -> Requires at least two states. */
 static char const *const STATES[] = {
     // "STATE A", "STATE B", "STATE C"
-    "0", "1", "2", "3", "4", "5", "6", "7"//, "8", "9"
+    "0", "1", "2", "3", "4", "5"//, "6", "7", "8", "9"
 };
 
 static std::size_t const STATES_COUNT = sizeof(STATES) / sizeof(char const*);
 
-/* Function > Filter */
+/* Function > ... */
 static bool FILTER(char const* const permutation[]) {
     // ... ->> Modify at will to change what entries are outputted.
     // : Denary counting
@@ -39,6 +39,15 @@ static bool FILTER(char const* const permutation[]) {
     return true;
 }
 
+static void OUTPUT(char const* const permutation[], std::size_t const index) {
+    std::fprintf(stdout, "#%lu\t[", static_cast<unsigned long>(index));
+
+    for (std::size_t iterator = STATES_COUNT; iterator--; )
+    std::fprintf(stdout, "%s%.2s", *(permutation++), iterator ? ", " : "");
+
+    std::fputs("]" "\r\n", stdout);
+}
+
 /* Main */
 int main(void) {
     uintmax_t PERMUTATIONS_COUNT = 0u;
@@ -50,6 +59,8 @@ int main(void) {
 
     std::size_t OUTPUT_LENGTH = 0u;
     char *OUTPUT_BUFFER = NULL;
+
+    void *ARENA = NULL;
 
     // ... ->> Calculate total permutation count.
     for (std::size_t base = STATES_COUNT, iterator = STATES_COUNT; iterator; --iterator) {
@@ -82,14 +93,26 @@ int main(void) {
     }
 
     // ...
-    PERMUTATIONS = static_cast<char const**>(std::malloc((PERMUTATIONS_COUNT * STATES_COUNT) * sizeof(char const*)));
-    if (NULL == PERMUTATIONS) {
-        std::fputs("[Error]: Unable to permute all states" "\r\n", stderr);
-        std::exit(EXIT_FAILURE);
-    }
+    ARENA = std::malloc(
+        /* --> OUTPUT_BUFFER */ (OUTPUT_LENGTH * sizeof(char)) +
+        /* --> PERMUTATIONS  */ ((PERMUTATIONS_COUNT * STATES_COUNT) * sizeof(char const*))
+    );
+
+    OUTPUT_BUFFER = static_cast<char*>(NULL == ARENA ?
+        std::malloc(OUTPUT_LENGTH * sizeof(char)) :
+        (static_cast<unsigned char*>(ARENA) + /* ... */ 0u)
+    );
+
+    PERMUTATIONS = static_cast<char const**>(NULL == ARENA ?
+        std::malloc((PERMUTATIONS_COUNT * STATES_COUNT) * sizeof(char const*)) :
+        (static_cast<unsigned char*>(ARENA) + /* ... */ (OUTPUT_BUFFER * sizeof(char)))
+    );
+
+    PERMUTATIONS_COUNT = 0u;
+
+    std::setbuf(stdout, OUTPUT_BUFFER);
 
     // ... ->> Generate the permutations.
-    PERMUTATIONS_COUNT = 0u;
     while (PERMUTATION_LENGTH != STATES_COUNT + 1u) {
         char const **permutationState = PERMUTATION + (PERMUTATION_LENGTH - 1u);
 
@@ -98,14 +121,21 @@ int main(void) {
             bool const filter = FILTER(PERMUTATION);
             std::size_t iterator = 0u;
 
-            // ... ->> record the current permutation
-            if (filter) {
-                while (PERMUTATION_LENGTH != iterator)
-                PERMUTATIONS[PERMUTATIONS_COUNT++] = PERMUTATION[iterator++];
-            }
+            // ...
+            if (NULL == PERMUTATIONS)
+                // ... ->> output the current permutation during generation
+                OUTPUT(PERMUTATION, ++PERMUTATION_INDEX);
 
-            for (iterator = STATES_COUNT - (filter * PERMUTATION_LENGTH); iterator--; )
-            PERMUTATIONS[PERMUTATIONS_COUNT++] = NULL;
+            else {
+                // ... ->> record the current permutation
+                if (filter) {
+                    while (PERMUTATION_LENGTH != iterator)
+                    PERMUTATIONS[PERMUTATIONS_COUNT++] = PERMUTATION[iterator++];
+                }
+
+                for (iterator = STATES_COUNT - (filter * PERMUTATION_LENGTH); iterator--; )
+                PERMUTATIONS[PERMUTATIONS_COUNT++] = NULL;
+            }
 
             // ... ->> change the permutation
             if (STATES_COUNT != ++state - STATES) *permutationState = *state;
@@ -136,33 +166,38 @@ int main(void) {
         }
     }
 
-    // ... ->> Output the permutations.
-    OUTPUT_BUFFER = static_cast<char*>(std::malloc(OUTPUT_LENGTH * sizeof(char)));
-    std::setbuf(stdout, OUTPUT_BUFFER);
-
+    // ... ->> Output the permutations. (after generating them)
+    if (NULL != PERMUTATIONS)
     for (uintmax_t iterator = 0u; PERMUTATIONS_COUNT != iterator; ) {
-        std::size_t count = 0u; // ... ->> null count
+        std::size_t count = 0u; // ... ->> null count.
+        std::size_t subiterator;
 
-        for (std::size_t subiterator = STATES_COUNT; subiterator--; )
+        for (subiterator = STATES_COUNT; subiterator; --subiterator)
         count += NULL == PERMUTATIONS[iterator++];
 
+        // ... ->> Manual `FILTER(...)` check.
         if (STATES_COUNT != count) {
-            std::fprintf(stdout, "#%lu\t[", static_cast<unsigned long>(++PERMUTATION_INDEX));
-
             iterator -= STATES_COUNT;
 
-            for (std::size_t subiterator = STATES_COUNT; subiterator--; )
-            std::fprintf(stdout, "%s%.2s", PERMUTATIONS[iterator++], subiterator ? ", " : "");
+            while (STATES_COUNT != subiterator)
+            PERMUTATION[subiterator++] = PERMUTATIONS[iterator++];
 
-            std::fprintf(stdout, "%c%.2s", ']', PERMUTATIONS_COUNT == iterator ? "" : "\r\n");
+            // ...
+            OUTPUT(PERMUTATION, ++PERMUTATION_INDEX);
         }
     }
+
+    PERMUTATIONS_COUNT = PERMUTATION_INDEX;
+    std::fprintf(stdout, "Processed %lu permutations!", static_cast<unsigned long>(PERMUTATIONS_COUNT));
 
     std::fflush(stdout);
 
     // ... ->> Clean-up
-    std::free(OUTPUT_BUFFER);
-    std::free(PERMUTATIONS);
+    if (NULL != ARENA) std::free(ARENA);
+    else {
+        std::free(OUTPUT_BUFFER);
+        std::free(PERMUTATIONS);
+    }
 
     // ...
     return EXIT_SUCCESS;
