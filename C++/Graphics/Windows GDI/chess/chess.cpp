@@ -79,7 +79,6 @@ namespace Game {
     enum MemorySegment {
         BISHOPS,
         KNIGHTS,
-
         KINGS,
         PAWNS,
         QUEENS,
@@ -463,11 +462,95 @@ void Update(void) {}
 void Terminate(void) {}
 
 /* Main */
-int main(void) {
-    Initiate();
-    Update();
-    Terminate();
+int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHandle, LPSTR const /* commandLineArguments */, int const appearance) {
+    int exitCode = EXIT_SUCCESS;
+    bool instanceAlreadyRunning = false;
 
     // ...
-    return EXIT_SUCCESS;
+    if (NULL != previousInstanceHandle) instanceAlreadyRunning = true;
+    else {
+        // bool alreadyRunning = false;
+        // static HANDLE lockFile = NULL, lockMutex = NULL;
+        //
+        // // ... ->> Prevent multiple program handlers.
+        // if (false == alreadyRunning) {
+        //   lockMutex = ::CreateMutex(NULL, TRUE, "ChessLockMutex");
+        //   if (NULL != lockMutex) alreadyRunning = ERROR_ALREADY_EXISTS == ::GetLastError();
+        // }
+        //
+        // if (false == alreadyRunning)
+        // if (NULL == lockMutex) {
+        //   CHAR lockFilePath[MAX_PATH + 17] = {0};
+        //   DWORD lockFilePathLength = ::GetTempPath(MAX_PATH + 1u, lockFilePath);
+        //
+        //   if (0u != lockFilePathLength) {
+        //     for (CHAR const *lockFileName = "ChessLockFile.tmp"; '\0' != *lockFileName; )
+        //     lockFilePath[lockFilePathLength++] = *(lockFileName++);
+        //
+        //     // ...
+        //     lockFile = ::CreateFile(lockFilePath, DELETE | GENERIC_READ | GENERIC_WRITE, 0x0u, NULL, CREATE_NEW, FILE_FLAG_DELETE_ON_CLOSE, NULL);
+        //     alreadyRunning = ERROR_FILE_EXISTS == ::GetLastError();
+        //   }
+        // }
+    }
+
+    // ...
+    if (instanceAlreadyRunning) exitCode = EXIT_FAILURE;
+    else {
+        CHAR instanceFileName[MAX_PATH] = {0};
+        ::GetModuleFileName(NULL, instanceFileName, MAX_PATH);
+
+        // ...
+        windowClassInformation.cbClsExtra = 0;
+        windowClassInformation.cbSize = sizeof(WNDCLASSEX);
+        windowClassInformation.cbWndExtra = 0;
+        windowClassInformation.hbrBackground = ::GetSysColorBrush(COLOR_WINDOWTEXT) /* --> ::GetSysColorBrush(COLOR_WINDOW) */;
+        windowClassInformation.hCursor = static_cast<HCURSOR>(::LoadCursor(instanceHandle, IDC_ARROW)) /* --> static_cast<HCURSOR>(::LoadImage(instanceHandle, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE)) */;
+        windowClassInformation.hIcon = static_cast<HICON>(::ExtractIcon(instanceHandle, instanceFileName, 0u));
+        windowClassInformation.hIconSm = static_cast<HICON>(NULL);
+        windowClassInformation.hInstance = instanceHandle;
+        windowClassInformation.lpfnWndProc = &windowProcedure;
+        windowClassInformation.lpszClassName = "window";
+        windowClassInformation.lpszMenuName = static_cast<LPCSTR>(NULL);
+        windowClassInformation.style = CS_GLOBALCLASS | CS_OWNDC;
+
+        // ...
+        if (0x0 == ::RegisterClassEx(static_cast<WNDCLASSEX const*>(&windowClassInformation))) exitCode = EXIT_FAILURE;
+        else {
+            SIZE windowCoordinates = SIZE();
+            RECT workareaRectangle = RECT();
+
+            ::SystemParametersInfo(SPI_GETWORKAREA, 0u, static_cast<PVOID>(&workareaRectangle), 0x0);
+
+            // ...
+            windowWidth = ((workareaRectangle.right - workareaRectangle.left) * 3) / 4;
+            windowHeight = ((workareaRectangle.bottom - workareaRectangle.top) * 3) / 4;
+
+            windowCoordinates.cx = ((workareaRectangle.right - workareaRectangle.left) - windowWidth) / 2L;
+            windowCoordinates.cy = ((workareaRectangle.bottom - workareaRectangle.top) - windowHeight) / 2L;
+
+            windowHandle = ::CreateWindowEx(0x0, windowClassInformation.lpszClassName, "Tic-Tac-Toe", WS_OVERLAPPEDWINDOW, windowCoordinates.cx, windowCoordinates.cy, windowWidth, windowHeight, HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance)));
+
+            // ...
+            if (NULL == windowHandle) exitCode = EXIT_FAILURE;
+            else {
+                MSG threadMessage = MSG();
+                BOOL threadMessageAvailable = TRUE;
+
+                while (FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message) {
+                    ::DispatchMessage(&threadMessage);
+                    threadMessageAvailable = ::PeekMessage(&threadMessage, NULL, 0x0, 0x0, PM_REMOVE);
+                }
+
+                exitCode = threadMessage.wParam;
+            }
+
+            ::UnregisterClass(windowClassInformation.lpszClassName, windowClassInformation.hInstance);
+        }
+
+        ::DestroyCursor(windowClassInformation.hCursor);
+    }
+
+    // ...
+    return exitCode;
 }

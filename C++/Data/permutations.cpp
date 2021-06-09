@@ -100,12 +100,12 @@ int main(void) {
 
     OUTPUT_BUFFER = static_cast<char*>(NULL == ARENA ?
         std::malloc(OUTPUT_LENGTH * sizeof(char)) :
-        (static_cast<unsigned char*>(ARENA) + /* ... */ 0u)
+        (static_cast<unsigned char*>(ARENA) + /* ... */ (0u))
     );
 
     PERMUTATIONS = static_cast<char const**>(NULL == ARENA ?
         std::malloc((PERMUTATIONS_COUNT * STATES_COUNT) * sizeof(char const*)) :
-        (static_cast<unsigned char*>(ARENA) + /* ... */ (OUTPUT_BUFFER * sizeof(char)))
+        (static_cast<unsigned char*>(ARENA) + /* ... */ (OUTPUT_LENGTH * sizeof(char)))
     );
 
     PERMUTATIONS_COUNT = 0u;
