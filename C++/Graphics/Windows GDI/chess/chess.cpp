@@ -16,19 +16,21 @@ typedef struct Piece /* final */ {
     enum Color /* : bool */ { BLACK = 0u, WHITE = 1u };
     enum Type /* : unsigned char */ { BISHOP = 1u, KING = 2u, KNIGHT = 3u, PAWN = 4u, QUEEN = 5u, ROOK = 6u };
 
-    private:
-        unsigned char const *const data;
-        unsigned char getPosition(void) const;
-
+    private: unsigned char *const data;
     public:
-        Piece(unsigned char* const data) : data(const_cast<unsigned char const*>(data)) {}
+        Piece(unsigned char* const data) : data(data) {}
 
         Color getColor(void) const;
         unsigned char getColumn(void) const;
-        unsigned char const* getData(void) const;
+        unsigned char* getData(void) const;
         signed char getIndex(void) const;
+        unsigned char getPosition(void) const;
         unsigned char getRow(void) const;
         Type getType(void) const;
+
+        void setColumn(unsigned char const);
+        void setPosition(unsigned char const, unsigned char const);
+        void setRow(unsigned char const);
 } Bishop, King, Knight, Pawn, Queen, Rook;
 
 /* Global */
@@ -73,9 +75,11 @@ typedef struct Piece /* final */ {
 namespace Game {
     static unsigned char MEMORY[/* 275 / CHAR_BIT */ 35]; // ->> Encoded in terms of recency.
 
+    // ...
     enum MemorySegment {
         BISHOPS,
         KNIGHTS,
+
         KINGS,
         PAWNS,
         QUEENS,
@@ -89,34 +93,74 @@ namespace Game {
         TURN
     };
 
+    enum PiecesEnumerationControl {
+        CONTINUE_ENUMERATING_PIECES,
+        STOP_ENUMERATING_PIECES
+    };
+
     // ...
-    static void capturePiece(Piece const, Piece const);
+    static void capturePiece(Piece, Piece const);
     static void castleRook(Rook const);
-    static void movePiece(Piece const, unsigned char const, unsigned char const);
-    static void promotePawn(Piece const, Piece const);
-
-    static bool isPawnPromoted(Pawn const);
-    static bool isPieceCaptured(Piece const);
-    static bool isRookCastled(Rook const);
+    static PiecesEnumerationControl enumeratePieces(PiecesEnumerationControl (*const)(Piece));
+    static bool hasPiece(unsigned char const, unsigned char const);
+    static void movePiece(Piece, unsigned char const, unsigned char const);
+    static void promotePawn(Pawn const, Piece::Type const);
+    static void removePiece(Piece const);
 
     // ...
+    static unsigned char getColumnCount(void);
     static Pawn getEnPassantPawn(void);
     static unsigned char* getMemorySegment(MemorySegment const);
     static Piece::Type getPawnPromotion(Pawn const);
     static Piece getPiece(Piece::Color const, Piece::Type const, unsigned char const = 0u);
     static unsigned char getPieceCount(Piece::Type const);
+    static unsigned char getRowCount(void);
+    static unsigned char getTileCount(void);
     static Piece::Color getTurn(void);
 
+    static bool isPawnPromoted(Pawn const);
+    static bool isPieceCaptured(Piece const);
+    static bool isRookCastled(Rook const);
+
     static void setEnPassantPawn(Pawn const);
+    static void setPawnPromotion(Pawn, Piece::Type const);
     static void setTurn(Piece::Color const);
 }
 
 /* Functions > ... */
+void Game::capturePiece(Piece capturer, Piece const captured) {
+    unsigned char const column = captured.getColumn();
+    unsigned char const row = captured.getRow();
+
+    Game::removePiece(captured);
+    Game::movePiece(capturer, column, row);
+}
+
 void Game::castleRook(Rook const rook) {
     *Game::getMemorySegment(Game::CASTLE) &= 0xFu | ((
         (*Game::getMemorySegment(Game::CASTLE) >> 4u) |
         (1u << (rook.getIndex() + ((Piece::WHITE == rook.getColor()) << 1u)))
     ) << 4u);
+}
+
+Game::PiecesEnumerationControl Game::enumeratePieces(PiecesEnumerationControl (*const handler)(Piece)) {
+    for (Piece::Type type = Piece::BISHOP; type <= Piece::ROOK; type = static_cast<Piece::Type>(static_cast<int>(type) + 1))
+    for (unsigned char iterator = 0u; iterator != Game::getPieceCount(type); ++iterator) {
+        if (Game::STOP_ENUMERATING_PIECES == handler(Game::getPiece(Piece::BLACK, type, iterator)))
+        return Game::STOP_ENUMERATING_PIECES;
+    }
+
+    for (Piece::Type type = Piece::BISHOP; type <= Piece::ROOK; type = static_cast<Piece::Type>(static_cast<int>(type) + 1))
+    for (unsigned char iterator = 0u; iterator != Game::getPieceCount(type); ++iterator) {
+        if (Game::STOP_ENUMERATING_PIECES == handler(Game::getPiece(Piece::WHITE, type, iterator)))
+        return Game::STOP_ENUMERATING_PIECES;
+    }
+
+    return Game::CONTINUE_ENUMERATING_PIECES;
+}
+
+unsigned char Game::getColumnCount(void) {
+    return 8u;
 }
 
 Pawn Game::getEnPassantPawn(void) {
@@ -180,23 +224,41 @@ unsigned char Game::getPieceCount(Piece::Type const type) {
     return 0u;
 }
 
+unsigned char Game::getRowCount(void) {
+    return 8u;
+}
+
+unsigned char Game::getTileCount(void) {
+    return Game::getColumnCount() * Game::getRowCount();
+}
+
 Piece::Color Game::getTurn(void) {
     return *Game::getMemorySegment(Game::TURN) & 1u ? Piece::WHITE : Piece::BLACK;
 }
 
+bool Game::hasPiece(unsigned char const column, unsigned char const row) {
+    for (Piece::Type type = Piece::BISHOP; type <= Piece::ROOK; type = static_cast<Piece::Type>(static_cast<int>(type) + 1))
+    for (unsigned char iterator = Game::getPieceCount(type); iterator--; ) {
+        Piece const piece = Game::getPiece(Piece::WHITE, type, iterator);
+        if (column == piece.getColumn() && row == piece.getRow()) return true;
+    }
+
+    return false;
+}
+
 bool Game::isPawnPromoted(Pawn const pawn) {
-    return (*Game::getMemorySegment(Game::PROMOTED_PAWNS) >> pawn.getIndex()) & 1u;
+    return (Game::getMemorySegment(Game::PROMOTED_PAWNS)[Piece::WHITE == pawn.getColor()] >> pawn.getIndex()) & 1u;
 }
 
 bool Game::isPieceCaptured(Piece const piece) {
     switch (piece.getType()) {
         case Piece::KING: return false;
-        case Piece::PAWN: return (*Game::getMemorySegment(Game::CAPTURED_PAWNS) >> (piece.getIndex() + (Game::getPieceCount(Piece::PAWN) * (Piece::WHITE == piece.getColor())))) & 1u;
+        case Piece::PAWN: return (Game::getMemorySegment(Game::CAPTURED_PAWNS)[Piece::WHITE == piece.getColor()] >> piece.getIndex()) & 1u;
 
-        case Piece::BISHOP: return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 0L) >> 4u) >> (piece.getIndex() + (Game::getPieceCount(Piece::BISHOP) * (Piece::WHITE == piece.getColor())))) & 1u;
-        case Piece::KNIGHT: return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 0L) >> 0u) >> (piece.getIndex() + (Game::getPieceCount(Piece::KNIGHT) * (Piece::WHITE == piece.getColor())))) & 1u;
-        case Piece::QUEEN : return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 1L) >> 2u) >> (piece.getIndex() + (Game::getPieceCount(Piece::QUEEN ) * (Piece::WHITE == piece.getColor())))) & 1u;
-        case Piece::ROOK  : return ((*(Game::getMemorySegment(Game::CAPTURED_OFFICERS) + 1L) >> 4u) >> (piece.getIndex() + (Game::getPieceCount(Piece::ROOK  ) * (Piece::WHITE == piece.getColor())))) & 1u;
+        case Piece::BISHOP: return ((Game::getMemorySegment(Game::CAPTURED_OFFICERS)[0] >> 4u) >> (piece.getIndex() + (Game::getPieceCount(Piece::BISHOP) * (Piece::WHITE == piece.getColor())))) & 1u;
+        case Piece::KNIGHT: return ((Game::getMemorySegment(Game::CAPTURED_OFFICERS)[0] >> 0u) >> (piece.getIndex() + (Game::getPieceCount(Piece::KNIGHT) * (Piece::WHITE == piece.getColor())))) & 1u;
+        case Piece::QUEEN : return ((Game::getMemorySegment(Game::CAPTURED_OFFICERS)[1] >> 2u) >> (piece.getIndex() + (Game::getPieceCount(Piece::QUEEN ) * (Piece::WHITE == piece.getColor())))) & 1u;
+        case Piece::ROOK  : return ((Game::getMemorySegment(Game::CAPTURED_OFFICERS)[1] >> 4u) >> (piece.getIndex() + (Game::getPieceCount(Piece::ROOK  ) * (Piece::WHITE == piece.getColor())))) & 1u;
     }
 
     return false;
@@ -206,11 +268,46 @@ bool Game::isRookCastled(Rook const rook) {
     return ((*Game::getMemorySegment(Game::CASTLE) >> 4u) >> (rook.getIndex() + (Game::getPieceCount(Piece::ROOK) * (Piece::WHITE == rook.getColor())))) & 1u;
 }
 
+void Game::movePiece(Piece piece, unsigned char const column, unsigned char const row) {
+    piece.setPosition(column, row);
+}
+
+void Game::promotePawn(Pawn const pawn, Piece::Type const type) {
+    Game::getMemorySegment(Game::PROMOTED_PAWNS)[Piece::WHITE == pawn.getColor()] |= 1u << pawn.getIndex();
+    Game::setPawnPromotion(pawn, type);
+}
+
+void Game::removePiece(Piece const piece) {
+    switch (piece.getType()) {
+        case Piece::KING: break;
+        case Piece::PAWN: Game::getMemorySegment(Game::CAPTURED_PAWNS)[Piece::WHITE == piece.getColor()] |= 1u << piece.getIndex(); break;
+
+        case Piece::BISHOP: Game::getMemorySegment(Game::CAPTURED_OFFICERS)[0] |= 1u << ((piece.getIndex() + (Game::getPieceCount(Piece::BISHOP) * (Piece::WHITE == piece.getColor()))) << 4u); break;
+        case Piece::KNIGHT: Game::getMemorySegment(Game::CAPTURED_OFFICERS)[0] |= 1u << ((piece.getIndex() + (Game::getPieceCount(Piece::KNIGHT) * (Piece::WHITE == piece.getColor()))) << 0u); break;
+        case Piece::QUEEN : Game::getMemorySegment(Game::CAPTURED_OFFICERS)[1] |= 1u << ((piece.getIndex() + (Game::getPieceCount(Piece::QUEEN ) * (Piece::WHITE == piece.getColor()))) << 2u); break;
+        case Piece::ROOK  : Game::getMemorySegment(Game::CAPTURED_OFFICERS)[1] |= 1u << ((piece.getIndex() + (Game::getPieceCount(Piece::ROOK  ) * (Piece::WHITE == piece.getColor()))) << 4u); break;
+    }
+}
+
 void Game::setEnPassantPawn(Pawn const pawn) {
     unsigned char *const data = Game::getMemorySegment(Game::EN_PASSANT);
 
     *data &= 0xF0u;
     *data |= pawn.getIndex() << (Piece::WHITE == pawn.getColor());
+}
+
+void Game::setPawnPromotion(Pawn pawn, Piece::Type const type) {
+    unsigned char *const data = pawn.getData();
+
+    *data &= 0x3Fu;
+    switch (type) {
+        case Piece::BISHOP: *data |= 0x0u << 6u; break;
+        case Piece::KNIGHT: *data |= 0x1u << 6u; break;
+        case Piece::QUEEN : *data |= 0x2u << 6u; break;
+        case Piece::ROOK  : *data |= 0x3u << 6u; break;
+
+        case Piece::KING: case Piece::PAWN: break;
+    }
 }
 
 void Game::setTurn(Piece::Color const color) {
@@ -220,7 +317,7 @@ void Game::setTurn(Piece::Color const color) {
 
 // ...
 Piece::Color Piece::getColor(void) const {
-    unsigned char const *const data = this -> data;
+    unsigned char const *const data = this -> getData();
 
     for (Type type = Piece::BISHOP; type <= Piece::ROOK; type = static_cast<Type>(static_cast<int>(type) + 1))
     for (unsigned char iterator = Game::getPieceCount(type); iterator--; ) {
@@ -232,7 +329,7 @@ Piece::Color Piece::getColor(void) const {
 }
 
 unsigned char Piece::getColumn(void) const {
-    if (Piece::BISHOP == this -> getType()) return (this -> getPosition() % 8u) + (this -> getRow() & 1u
+    if (Piece::BISHOP == this -> getType()) return (this -> getPosition() % Game::getColumnCount()) + (this -> getRow() & 1u
         ? 0u == this -> getIndex() || 4u == this -> getIndex()
         : 1u == this -> getIndex() || 2u == this -> getIndex()
     );
@@ -240,7 +337,7 @@ unsigned char Piece::getColumn(void) const {
     return this -> getPosition() >> 3u;
 }
 
-unsigned char const* Piece::getData(void) const {
+unsigned char* Piece::getData(void) const {
     return this -> data;
 }
 
@@ -262,8 +359,8 @@ unsigned char Piece::getPosition(void) const {
     Type const type = this -> getType();
 
     switch (type) {
-        case Piece::BISHOP: return *(this -> data) & 0x1F;
-        case Piece::KNIGHT: case Piece::PAWN: case Piece::ROOK: return *(this -> data) & 0x7F;
+        case Piece::BISHOP: return *(this -> getData()) & 0x1F;
+        case Piece::KNIGHT: case Piece::PAWN: case Piece::ROOK: return *(this -> getData()) & 0x7Fu;
         case Piece::KING: case Piece::QUEEN: {
             Color const color = this -> getColor();
             return (
@@ -294,6 +391,65 @@ Piece::Type Piece::getType(void) const {
     }
 
     return static_cast<Type>(0u);
+}
+
+void Piece::setColumn(unsigned char const column) {
+    this -> setPosition(column, this -> getRow());
+}
+
+void Piece::setPosition(unsigned char const column, unsigned char const row) {
+    unsigned char *const data = this -> getData();
+    Type const type = this -> getType();
+
+    switch (type) {
+        case Piece::BISHOP: {
+            unsigned char const index = this -> getIndex();
+            unsigned char position = 0u;
+
+            while (position < Game::getTileCount()) {
+                unsigned char const positionRow = position >> 3u;
+                unsigned char const positionColumn = (position % Game::getColumnCount()) + (positionRow & 1u
+                    ? 0u == index || 4u == index
+                    : 1u == index || 2u == index
+                );
+
+                if (column == positionColumn && row == positionRow) {
+                    *data &= 0xE0;
+                    *data |= position;
+
+                    break;
+                }
+
+                position += 2u;
+            }
+        } break;
+
+        case Piece::KNIGHT: case Piece::PAWN: case Piece::ROOK: {
+            *data &= 0xC0u;
+            *data |= row | (column << 3u);
+        } break;
+
+        case Piece::KING: case Piece::QUEEN: {
+            Color const color = this -> getColor();
+            unsigned char *const position[3] = {
+                Game::getPiece(color, Piece::BISHOP, Piece::QUEEN == type).getData(),
+                Game::getPiece(color, Piece::KNIGHT, Piece::QUEEN == type).getData(),
+                Game::getPiece(color, Piece::ROOK  , Piece::QUEEN == type).getData()
+            };
+
+            *position[0] &= 0x3Fu;
+            *position[1] &= 0x3Fu;
+            *position[2] &= 0x3Fu;
+
+            *position[0] |= (column >> 1u)                << 6u;
+            *position[1] |= ((column & 1u) | (row >> 2u)) << 6u;
+            *position[2] |= (row & 0x3u)                  << 6u;
+        } break;
+    }
+}
+
+void Piece::setRow(unsigned char const row) {
+    this -> setPosition(this -> getColumn(), row);
 }
 
 /* Phase */
