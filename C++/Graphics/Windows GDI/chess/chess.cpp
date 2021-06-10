@@ -1,4 +1,4 @@
-/* ...
+/* ... --> kernel32.lib, user32.lib
     --- WARN ---
     #Lapys: Requires a byte to be at least 8 bits.
 */
@@ -6,6 +6,8 @@
 /* Import */
 #include <cstdio> // C Standard Input/ Output
 #include <cstdlib> // C Standard Library
+
+#undef UNICODE
 
 /* Definition > ... */
 static void Initiate(void);
@@ -469,33 +471,57 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHand
     // ...
     if (NULL != previousInstanceHandle) instanceAlreadyRunning = true;
     else {
-        // bool alreadyRunning = false;
-        // static HANDLE lockFile = NULL, lockMutex = NULL;
-        //
-        // // ... ->> Prevent multiple program handlers.
-        // if (false == alreadyRunning) {
-        //   lockMutex = ::CreateMutex(NULL, TRUE, "ChessLockMutex");
-        //   if (NULL != lockMutex) alreadyRunning = ERROR_ALREADY_EXISTS == ::GetLastError();
-        // }
-        //
-        // if (false == alreadyRunning)
-        // if (NULL == lockMutex) {
-        //   CHAR lockFilePath[MAX_PATH + 17] = {0};
-        //   DWORD lockFilePathLength = ::GetTempPath(MAX_PATH + 1u, lockFilePath);
-        //
-        //   if (0u != lockFilePathLength) {
-        //     for (CHAR const *lockFileName = "ChessLockFile.tmp"; '\0' != *lockFileName; )
-        //     lockFilePath[lockFilePathLength++] = *(lockFileName++);
-        //
-        //     // ...
-        //     lockFile = ::CreateFile(lockFilePath, DELETE | GENERIC_READ | GENERIC_WRITE, 0x0u, NULL, CREATE_NEW, FILE_FLAG_DELETE_ON_CLOSE, NULL);
-        //     alreadyRunning = ERROR_FILE_EXISTS == ::GetLastError();
-        //   }
-        // }
+        static HANDLE lockFile = NULL, lockMutex = NULL;
+
+        struct instanceEventHandler {
+            static void onexit(void) {
+                if (NULL != lockFile && INVALID_HANDLE_VALUE != lockFile) ::CloseHandle(lockFile);
+                if (NULL != lockMutex) ::CloseHandle(lockMutex);
+            }
+
+            static void onsignal(int const signal) {
+                instanceEventHandler::onexit();
+                static_cast<void (*)(int)>(SIG_DFL)(signal);
+            }
+        };
+
+        // ...
+        if (false == instanceAlreadyRunning) {
+            lockMutex = ::CreateMutex(NULL, TRUE, "ChessLockMutex");
+            if (NULL != lockMutex) instanceAlreadyRunning = ERROR_ALREADY_EXISTS == ::GetLastError();
+        }
+
+        if (false == instanceAlreadyRunning)
+        if (NULL == lockMutex) {
+            CHAR lockFilePath[MAX_PATH + 17u] = {0};
+            DWORD lockFilePathLength = ::GetTempPath(MAX_PATH + 1u, lockFilePath);
+
+            if (0u != lockFilePathLength) {
+                for (CHAR const *lockFileName = "ChessLockFile.tmp"; '\0' != *lockFileName; )
+                lockFilePath[lockFilePathLength++] = *(lockFileName++);
+
+                lockFile = ::CreateFile(lockFilePath, DELETE | GENERIC_READ | GENERIC_WRITE, 0x0u, NULL, CREATE_NEW, FILE_FLAG_DELETE_ON_CLOSE, NULL);
+                instanceAlreadyRunning = ERROR_FILE_EXISTS == ::GetLastError();
+            }
+        }
     }
 
     // ...
-    if (instanceAlreadyRunning) exitCode = EXIT_FAILURE;
+    if (instanceAlreadyRunning) {
+        FLASHWINFO previousInstanceWindowFlashInformation;
+        HWND const previousInstanceWindowHandle = ...;
+
+        previousInstanceWindowFlashInformation.cbSize = sizeof(FLASHWINFO);
+        previousInstanceWindowFlashInformation.dwFlags = FLASHW_CAPTION | FLASHW_TRAY;
+        previousInstanceWindowFlashInformation.dwTimeout = 0u;
+        previousInstanceWindowFlashInformation.hwnd = previousInstanceWindowHandle;
+        previousInstanceWindowFlashInformation.uCount = 2u;
+
+        ::FlashWindowEx(&previousInstanceWindowFlashInformation);
+        if (FALSE != ::ShowWindow(previousInstanceWindowHandle, SW_RESTORE)) ::SetForegroundWindow(previousInstanceWindowHandle);
+        if (NULL != ::SetActiveWindow(previousInstanceWindowHandle)) ::SetFocus(previousInstanceWindowHandle);
+    }
+
     else {
         CHAR instanceFileName[MAX_PATH] = {0};
         ::GetModuleFileName(NULL, instanceFileName, MAX_PATH);
