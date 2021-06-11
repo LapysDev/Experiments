@@ -1,4 +1,4 @@
-/* Import > ... --> kernel32.dll */
+/* Import > ... --> advapi32.dll, kernel32.dll */
 #include <cstdio> // C Standard Input/ Output
 #include <cstdlib> // C Standard Library
 #include <cstring> // C String
@@ -6,12 +6,14 @@
 #undef UNICODE
 #include <windef.h> // Windows Definitions
 #include <winbase.h> // Windows Base
+#include <winnt.h> // Windows New Technologies
 #  include <memoryapi.h> // Memory API
 
 /* Main */
 int main(int const, char* arguments[]) {
-    HANDLE fileMappingHandle;
     LPSTR buffer;
+    HANDLE fileMappingHandle;
+    char const fileMappingName[] = "Local" "\\" "Lapys"; // ->> alternatively `"Global\\Lapys"` or `"Lapys"`
 
     // ...
     if (0 == std::strncmp(*arguments, "first", 5u)) {
@@ -21,11 +23,19 @@ int main(int const, char* arguments[]) {
             PAGE_READWRITE,
             0u, // ->> Maximum object size (high-order word)
             256u, // ->> Maximum object size (low-order word)
-            "Global" "\\" "Lapys" // ->> Name
+            fileMappingName // ->> Name
         );
 
         if (NULL == fileMappingHandle) {
-            std::fprintf(stderr, "[Type Error (%lu)]: Unable to create file mapping object", ::GetLastError());
+            LUID identifier;
+
+            std::fprintf(stderr,
+                FALSE != ::LookupPrivilegeValue(NULL, SE_CREATE_GLOBAL_NAME, &identifier) && 0 == std::strncmp(fileMappingName, "Global", 6u)
+                ? "[Permission Error (%lu)]: Requires permission to create file mapping object"
+                : "[Type Error (%lu)]: Unable to create file mapping object",
+
+                ::GetLastError()
+            );
             std::exit(EXIT_FAILURE);
         }
 
@@ -66,7 +76,7 @@ int main(int const, char* arguments[]) {
         fileMappingHandle = ::OpenFileMapping(
             FILE_MAP_ALL_ACCESS,
             FALSE, // ->> Do not inherit the file mapping object name
-            "Global" "\\" "Lapys" // ->> Name
+            fileMappingName // ->> Name
         );
 
         if (NULL == fileMappingHandle) {

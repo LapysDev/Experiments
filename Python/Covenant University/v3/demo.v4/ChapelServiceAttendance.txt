@@ -1,6 +1,0 @@
-FName	LName	StudentNo	3Nov	10Nov	17Nov	24Nov
-Nnamdi	Chukwu	12CF1122	1	1	0	1
-Aderopo	Ude	12CF2233	0	0	1	1
-Shina	Kudi	11CA4431	1	1	1	1
-Helen	Mike	12CD8877	0	1	1	1
-Kyle	Tunde	12CV7766	0	0	0	1

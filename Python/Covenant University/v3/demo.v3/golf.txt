@@ -1,4 +1,0 @@
-PLAYER NAME, GOLF SCORE
-Lapys, 30
-Jyrsper, 40
-Lapys, 20

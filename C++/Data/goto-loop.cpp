@@ -5,7 +5,7 @@
 /* Main */
 int main(void) {
     // Loop
-    { size_t iterator = 0u; iterate: if (iterator ^ 10u) {
+    { size_t iterator = 0u; iterate: if (iterator != 10u) {
         // ...
         ::printf("%s%u\n\r", "[DEBUG]: ", iterator);
 
