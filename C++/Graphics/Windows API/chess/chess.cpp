@@ -1,16 +1,20 @@
 /* ... --> advapi32.lib, gdi32.lib, kernel32.lib, shell32.lib, user32.lib
     --- WARN ---
-    #Lapys: Requires a byte to be at least 8 bits.
+    #Lapys:
 */
+/* Definition > ... */
+#undef UNICODE
 
 /* Import */
+// : [C Standard Library]
 #include <stdint.h> // Standard Integers
 
+// : [C++ Standard Library]
 #include <csignal> // C Signal
 #include <cstdio> // C Standard Input/ Output
 #include <cstdlib> // C Standard Library
 
-#undef UNICODE
+// : [Windows API]
 #include <windef.h> // Windows Definitions
 #include <winbase.h> // Windows Base
 #include <winerror.h> // Windows Errors
@@ -23,12 +27,19 @@
 #   include <memoryapi.h> // Memory API
 #   include <shellapi.h> // Shell API
 
-/* Definition > ... */
-static void INITIATE(void);
-void RESET(void);
-void UPDATE(void);
-void TERMINATE(void); void TERMINATE(char const[]);
+/* Phase */
+// : Singular `INITIATE` called by entry point;
+// : Definitions for `RESET`, `TERMINATE`, `UPDATE` but more are allowed & callable by programmer
+static void INITIATE (...);
+       void RESET    (   );
+       void TERMINATE(   );
+       void UPDATE   (   );
 
+void TERMINATE(char const[]);
+LRESULT CALLBACK UPDATE(HWND const, UINT const, WPARAM const, LPARAM const);
+
+/* Class */
+// : Piece
 typedef struct Piece /* final */ {
     enum Color /* : bool */ { BLACK = 0u, WHITE = 1u };
     enum Type /* : unsigned char */ { BISHOP = 1u, KING = 2u, KNIGHT = 3u, PAWN = 4u, QUEEN = 5u, ROOK = 6u };
@@ -51,17 +62,10 @@ typedef struct Piece /* final */ {
 } Bishop, King, Knight, Pawn, Queen, Rook;
 
 /* Namespace */
-// : Error
-namespace Error {
-    static char const FAILED_WINDOW_CREATION[] = "Unable to play game";
-}
-
 /* : Game
-    --- UPDATE ---
-    #Lapys: Could feasibly algorithmically compress the game to a single integer state i.e.: 35 to the 80th possible moves
-
-    --- NOTE ---
-    #Lapys: Memory model (with an unimplemented custom 32-turn draw)
+    --- WARNING (Lapys) -> Requires a byte to be at least 8 bits
+    --- UPDATE (Lapys) -> Could feasibly algorithmically compress the game to a single integer state i.e.: 35 to the 80th possible moves
+    --- NOTE (Lapys) -> Memory model (with an unimplemented custom 32-turn draw)
        flag               index            flag                             bit
       [CASTLE STATE (4) | EN-PASSANT (4)] [CAPTURED QUEEN & OFFICERS (14) | TURN (1)]
       [0000             | 0000          ] [00000000 000000                | - 0     ]
@@ -95,28 +99,12 @@ namespace Error {
       [00000000               ] [00000000               ]
 */
 namespace Game {
-    static unsigned char MEMORY[/* 275 / CHAR_BIT */ 35]; // ->> Encoded in terms of recency.
+    static unsigned char MEMORY[/* 275 ÷ CHAR_BIT */ 35] = {0}; // ->> Encoded in terms of recency.
 
-    // ...
+    enum PiecesEnumerationControl { CONTINUE_ENUMERATING_PIECES, STOP_ENUMERATING_PIECES };
     enum MemorySegment {
-        BISHOPS,
-        KNIGHTS,
-        KINGS,
-        PAWNS,
-        QUEENS,
-        ROOKS,
-
-        CAPTURED_OFFICERS,
-        CAPTURED_PAWNS,
-        CASTLE,
-        EN_PASSANT,
-        PROMOTED_PAWNS,
-        TURN
-    };
-
-    enum PiecesEnumerationControl {
-        CONTINUE_ENUMERATING_PIECES,
-        STOP_ENUMERATING_PIECES
+        BISHOPS, KNIGHTS, KINGS, PAWNS, QUEENS, ROOKS,
+        CAPTURED_OFFICERS, CAPTURED_PAWNS, CASTLE, EN_PASSANT, PROMOTED_PAWNS, TURN
     };
 
     // ...
@@ -148,22 +136,20 @@ namespace Game {
     static void setTurn(Piece::Color const);
 }
 
-// : Program
+// : Program ->> Pre-defined for use by the programmer; Setup (partially) in entry point
 namespace Program {
     namespace Lock {
-        static HANDLE BUFFER;
-        static HANDLE FILE;
-        static HANDLE MUTEX;
+        static HANDLE FILE = NULL;
+        static HANDLE MUTEX = NULL;
 
-        static char const BUFFER_NAME[] = "Local" "\\" "ChessLockFileMapping";
-        static char const FILE_NAME[] = "ChessLockFile.tmp";
-        static char const MUTEX_NAME[] = "ChessLockMutex";
+        static char const *FILE_NAME = NULL;
+        static char const *MUTEX_NAME = NULL;
     }
 
     static LPSTR ARGUMENTS = NULL;
     static int EXIT_CODE = EXIT_SUCCESS;
     static CHAR FILE_NAME[MAX_PATH] = {0};
-    static HINSTANCE HANDLE;
+    static HINSTANCE HANDLE = NULL;
     static HINSTANCE PREVIOUS_HANDLE = NULL;
     static MSG THREAD_MESSAGE = MSG();
 
@@ -181,26 +167,30 @@ namespace Program {
     static void (*onterminate)(void) = NULL;
 }
 
-// : Window ->> Interested in a single window only
+// : Window ->> Pre-defined for use by the programmer; Setup (partially) in entry point
 namespace Window {
     static int APPEARANCE = SW_SHOW;
+    static HBRUSH BACKGROUND = NULL;
     static LPCSTR const CLASS_NAME = "window";
-    static WNDCLASSEX CLASS_INFORMATION;
+    static UINT const CLASS_STYLE = CS_GLOBALCLASS | CS_OWNDC;
+    static HCURSOR CURSOR = NULL;
+    static HICON FAVICON = NULL;
+    static HICON ICON = NULL;
     static int LEFT = -1, HEIGHT = -1, TOP = -1, WIDTH = -1;
     static HWND HANDLE = NULL;
-    static LRESULT CALLBACK PROCEDURE(HWND const, UINT const, WPARAM const, LPARAM const);
-    static DWORD const STYLE = WS_POPUP;
-    static DWORD const STYLE_EXTENSION = 0x0u;
-    static LPCSTR const TITLE = "Chess";
+    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = ::DefWindowProc;
+    static DWORD STYLE = WS_OVERLAPPEDWINDOW;
+    static DWORD STYLE_EXTENSION = 0x0u;
+    static LPCSTR TITLE = "";
 
     // ...
-    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE;
-    static HDC DEVICE_CONTEXT_HANDLE;
+    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
+    static HDC DEVICE_CONTEXT_HANDLE = NULL;
 
-    static BITMAP MEMORY_DEVICE_CONTEXT_BITMAP;
-    static VOID *MEMORY_DEVICE_CONTEXT_BITMAP_BITS;
-    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE;
-    static HDC MEMORY_DEVICE_CONTEXT_HANDLE;
+    static BITMAP MEMORY_DEVICE_CONTEXT_BITMAP = BITMAP();
+    static VOID *MEMORY_DEVICE_CONTEXT_BITMAP_BITS = NULL;
+    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
+    static HDC MEMORY_DEVICE_CONTEXT_HANDLE = NULL;
 }
 
 /* Functions */
@@ -551,7 +541,7 @@ void Program::raise(int const signal) {
 
 /* Main */
 int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle, LPSTR const commandLineArguments, int const appearance) {
-    // ... ->> Setup before calling `INITIATE()`.
+    // ... ->> Setup before calling `INITIATE`.
     Program::ARGUMENTS = commandLineArguments;
     Program::HANDLE = programHandle;
     Program::PREVIOUS_HANDLE = programPreviousHandle;
@@ -566,22 +556,34 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
     std::signal(SIGTERM, &Program::raise);
 
     // ...
-    return INITIATE(), Program::EXIT_CODE;
+    INITIATE();
+    return Program::EXIT_CODE;
 }
 
 /* Phase --- WARN (Lapys) -> All phases except `INITIATE()` can be invoked by the user. */
 /* : Initiate */
-void INITIATE(void) {
+void INITIATE(...) {
     bool programAlreadyRunning = false;
+    HANDLE const currentProcessHandle = ::GetCurrentProcess();
 
-    // Event > Program > Exit
+    // ... ->> Configuration
     Program::onexit = static_cast<void (*)(void)>(&TERMINATE);
+    Program::FILE_NAME = ::GetModuleFileName(NULL, Program::FILE_NAME, MAX_PATH), Program::FILE_NAME;
+    Program::Lock::FILE_NAME = "ChessLockFile.tmp";
+    Program::Lock::MUTEX_NAME = "ChessLockMutex";
+
+    Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOWTEXT); // --> ::GetSysColorBrush(COLOR_WINDOW)
+    Window::CURSOR = static_cast<HCURSOR>(::LoadCursor(static_cast<HINSTANCE>(currentProcessHandle), IDC_ARROW)); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
+    Window::ICON = static_cast<HICON>(::ExtractIcon(static_cast<HINSTANCE>(currentProcessHandle), Program::FILE_NAME, 0u));
+    Window::STYLE = WS_POPUP;
+    Window::TITLE = "Chess";
 
     // Logic ->> Assert previous program instance
     if (NULL != Program::PREVIOUS_HANDLE) programAlreadyRunning = true;
     else do {
         // ... ->> Mutex lock
-        if (false == programAlreadyRunning) {
+        if (false == programAlreadyRunning)
+        if (NULL != Program::Lock::MUTEX_NAME) {
             Program::Lock::MUTEX = ::CreateMutex(NULL, TRUE, Program::Lock::MUTEX_NAME);
 
             if (NULL != Program::Lock::MUTEX) {
@@ -591,7 +593,8 @@ void INITIATE(void) {
         }
 
         // ... ->> File lock
-        if (false == programAlreadyRunning) {
+        if (false == programAlreadyRunning)
+        if (NULL != Program::Lock::FILE_NAME) {
             DWORD length;
             CHAR path[MAX_PATH + 17u] = {0};
 
@@ -611,8 +614,9 @@ void INITIATE(void) {
     // Logic ... ->> Create or focus the program window
     if (programAlreadyRunning) {
         FLASHWINFO flashInformation;
-        HWND programPreviousWindowHandle;
+        HWND const programPreviousWindowHandle = ::FindWindowEx(NULL /* --> HWND_DESKTOP */, NULL, Window::CLASS_NAME, Window::TITLE);
 
+        // ...
         flashInformation.cbSize = sizeof(FLASHWINFO);
         flashInformation.dwFlags = FLASHW_CAPTION | FLASHW_TRAY;
         flashInformation.dwTimeout = 0u;
@@ -625,33 +629,29 @@ void INITIATE(void) {
     }
 
     else {
-        HANDLE const currentProcessHandle = ::GetCurrentProcess();
+        WNDCLASSEX classInformation;
 
         // ...
-        ::GetModuleFileName(NULL, Program::FILE_NAME, MAX_PATH);
-        Program::Lock::BUFFER = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0u, 64u, Program::Lock::BUFFER_NAME);
-
-        Window::CLASS_INFORMATION.cbClsExtra = 0;
-        Window::CLASS_INFORMATION.cbSize = sizeof(WNDCLASSEX);
-        Window::CLASS_INFORMATION.cbWndExtra = 0;
-        Window::CLASS_INFORMATION.hbrBackground = ::GetSysColorBrush(COLOR_WINDOWTEXT); // --> ::GetSysColorBrush(COLOR_WINDOW)
-        Window::CLASS_INFORMATION.hCursor = static_cast<HCURSOR>(::LoadCursor(static_cast<HINSTANCE>(currentProcessHandle), IDC_ARROW)); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
-        Window::CLASS_INFORMATION.hIcon = static_cast<HICON>(::ExtractIcon(static_cast<HINSTANCE>(currentProcessHandle), Program::FILE_NAME, 0u));
-        Window::CLASS_INFORMATION.hIconSm = static_cast<HICON>(NULL);
-        Window::CLASS_INFORMATION.hInstance = Program::HANDLE;
-        Window::CLASS_INFORMATION.lpfnWndProc = &Window::PROCEDURE;
-        Window::CLASS_INFORMATION.lpszClassName = Window::CLASS_NAME;
-        Window::CLASS_INFORMATION.lpszMenuName = static_cast<LPCSTR>(NULL);
-        Window::CLASS_INFORMATION.style = CS_GLOBALCLASS | CS_OWNDC;
+        classInformation.cbClsExtra = 0;
+        classInformation.cbSize = sizeof(WNDCLASSEX);
+        classInformation.cbWndExtra = 0;
+        classInformation.hbrBackground = Window::BACKGROUND;
+        classInformation.hCursor = Window::CURSOR;
+        classInformation.hIcon = Window::ICON;
+        classInformation.hIconSm = Window::FAVICON;
+        classInformation.hInstance = Program::HANDLE;
+        classInformation.lpfnWndProc = &Window::PROCEDURE;
+        classInformation.lpszClassName = Window::CLASS_NAME;
+        classInformation.lpszMenuName = static_cast<LPCSTR>(NULL);
+        classInformation.style = Window::CLASS_STYLE;
 
         // ...
-        if (0x0 == ::RegisterClassEx(const_cast<WNDCLASSEX const*>(&Window::CLASS_INFORMATION)))
-            TERMINATE(Error::FAILED_WINDOW_CREATION);
+        if (0x0 == ::RegisterClassEx(const_cast<WNDCLASSEX const*>(&classInformation)))
+            TERMINATE("Unable to setup game window");
 
         else {
             if (Window::HEIGHT == -1 || Window::LEFT == -1 || Window::TOP == -1 || Window::WIDTH == -1) {
-                RECT workareaBounds;
-                ::SystemParametersInfo(SPI_GETWORKAREA, 0u, static_cast<PVOID>(&workareaBounds), 0x0);
+                RECT workareaBounds; ::SystemParametersInfo(SPI_GETWORKAREA, 0u, static_cast<PVOID>(&workareaBounds), 0x0);
 
                 // ...
                 Window::WIDTH = ((workareaBounds.right - workareaBounds.left) * 3) / 4;
@@ -662,26 +662,19 @@ void INITIATE(void) {
             }
 
             Window::HANDLE = ::CreateWindowEx(
-                Window::STYLE_EXTENSION, Window::CLASS_INFORMATION.lpszClassName, Window::TITLE, Window::STYLE,
+                Window::STYLE_EXTENSION, Window::CLASS_NAME, Window::TITLE, Window::STYLE,
                 Window::LEFT, Window::TOP, Window::WIDTH, Window::HEIGHT,
-                HWND_DESKTOP, static_cast<HMENU>(NULL), Window::CLASS_INFORMATION.hInstance,
+                NULL /* --> HWND_DESKTOP */, static_cast<HMENU>(NULL), Program::HANDLE,
                 reinterpret_cast<LPVOID>(static_cast<LPARAM>(Window::APPEARANCE))
             );
 
             // ...
-            if (NULL == Window::HANDLE) TERMINATE(Error::FAILED_WINDOW_CREATION);
-            else {
-                char *lockBuffer = static_cast<char*>(NULL == Program::Lock::BUFFER ? NULL : ::MapViewOfFile(Program::Lock::BUFFER, FILE_MAP_WRITE, 0u, 0u, 64u));
+            if (NULL == Window::HANDLE)
+                TERMINATE("Unable to create game window");
 
-                // ...
-                for (uintptr_t address = reinterpret_cast<uintptr_t>(Window::HANDLE); address && NULL != lockBuffer; address >>= 4uL)
-                *(lockBuffer++) = "0123456789ABCDEF"[address % 16uL];
-
-                // ...
-                for (BOOL threadMessageAvailable; WM_QUIT != Program::THREAD_MESSAGE.message; UPDATE()) {
-                    threadMessageAvailable = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0, 0x0, PM_REMOVE);
-                    if (FALSE != threadMessageAvailable) ::DispatchMessage(&Program::THREAD_MESSAGE);
-                }
+            else for (BOOL threadMessageAvailable; WM_QUIT != Program::THREAD_MESSAGE.message; UPDATE()) {
+                threadMessageAvailable = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0, 0x0, PM_REMOVE);
+                if (FALSE != threadMessageAvailable) ::DispatchMessage(&Program::THREAD_MESSAGE);
 
                 Program::EXIT_CODE = Program::THREAD_MESSAGE.wParam;
             }
@@ -690,7 +683,12 @@ void INITIATE(void) {
 }
 
 /* : Update */
-void UPDATE(void) {}
+void UPDATE(void) {
+}
+
+LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
+    return ::DefWindowProc(windowHandle, message, parameter, subparameter);
+}
 
 /* : Terminate */
 void TERMINATE(void) { TERMINATE(NULL); }
@@ -698,8 +696,8 @@ void TERMINATE(char const message[]) {
     if (NULL != Program::Lock::BUFFER) ::CloseHandle(Program::Lock::BUFFER);
     if (NULL != Program::Lock::FILE && INVALID_HANDLE_VALUE != Program::Lock::FILE) ::CloseHandle(Program::Lock::FILE);
     if (NULL != Program::Lock::MUTEX) ::CloseHandle(Program::Lock::MUTEX);
-    if (NULL != Window::CLASS_INFORMATION.hCursor) ::DestroyCursor(Window::CLASS_INFORMATION.hCursor);
 
+    if (NULL != Window::CURSOR) ::DestroyCursor(Window::CURSOR);
     ::UnregisterClass(Window::CLASS_NAME, Program::HANDLE);
 
     // Logic ->> `TERMINATE(...)` called by the user.
