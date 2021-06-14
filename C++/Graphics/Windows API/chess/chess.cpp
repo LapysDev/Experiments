@@ -17,6 +17,7 @@
 // : [Windows API]
 #include <windef.h> // Windows Definitions
 #include <winbase.h> // Windows Base
+#include <wincon.h> // Windows Console
 #include <winerror.h> // Windows Errors
 #include <wingdi.h> // Windows GDI
 #include <winnt.h> // Windows New Technologies
@@ -152,6 +153,7 @@ namespace Program {
     static HINSTANCE HANDLE = NULL;
     static HINSTANCE PREVIOUS_HANDLE = NULL;
     static MSG THREAD_MESSAGE = MSG();
+    static BOOL THREAD_MESSAGE_AVAILABLE = FALSE;
 
     // ...
     static void exit(void);
@@ -178,7 +180,7 @@ namespace Window {
     static HICON ICON = NULL;
     static int LEFT = -1, HEIGHT = -1, TOP = -1, WIDTH = -1;
     static HWND HANDLE = NULL;
-    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = ::DefWindowProc;
+    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
     static DWORD STYLE = WS_OVERLAPPEDWINDOW;
     static DWORD STYLE_EXTENSION = 0x0u;
     static LPCSTR TITLE = "";
@@ -188,8 +190,8 @@ namespace Window {
     static HDC DEVICE_CONTEXT_HANDLE = NULL;
 
     static BITMAP MEMORY_DEVICE_CONTEXT_BITMAP = BITMAP();
-    static VOID *MEMORY_DEVICE_CONTEXT_BITMAP_BITS = NULL;
     static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
+    static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
     static HDC MEMORY_DEVICE_CONTEXT_HANDLE = NULL;
 }
 
@@ -539,9 +541,16 @@ void Program::raise(int const signal) {
     } Program::exit(Program::EXIT_CODE);
 }
 
+// : ...
+void putPixel(unsigned short const x, unsigned short const y, DWORD const color) {
+    Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[
+        x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)
+    ] = color | (0xFFu << 0x18u);
+}
+
 /* Main */
 int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle, LPSTR const commandLineArguments, int const appearance) {
-    // ... ->> Setup before calling `INITIATE`.
+    // ...
     Program::ARGUMENTS = commandLineArguments;
     Program::HANDLE = programHandle;
     Program::PREVIOUS_HANDLE = programPreviousHandle;
@@ -567,14 +576,15 @@ void INITIATE(...) {
     HANDLE const currentProcessHandle = ::GetCurrentProcess();
 
     // ... ->> Configuration
+    ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
     Program::onexit = static_cast<void (*)(void)>(&TERMINATE);
-    Program::FILE_NAME = ::GetModuleFileName(NULL, Program::FILE_NAME, MAX_PATH), Program::FILE_NAME;
     Program::Lock::FILE_NAME = "ChessLockFile.tmp";
     Program::Lock::MUTEX_NAME = "ChessLockMutex";
 
-    Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOWTEXT); // --> ::GetSysColorBrush(COLOR_WINDOW)
+    Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOW);
     Window::CURSOR = static_cast<HCURSOR>(::LoadCursor(static_cast<HINSTANCE>(currentProcessHandle), IDC_ARROW)); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
     Window::ICON = static_cast<HICON>(::ExtractIcon(static_cast<HINSTANCE>(currentProcessHandle), Program::FILE_NAME, 0u));
+    Window::PROCEDURE = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
     Window::STYLE = WS_POPUP;
     Window::TITLE = "Chess";
 
@@ -613,25 +623,26 @@ void INITIATE(...) {
 
     // Logic ... ->> Create or focus the program window
     if (programAlreadyRunning) {
-        FLASHWINFO flashInformation;
         HWND const programPreviousWindowHandle = ::FindWindowEx(NULL /* --> HWND_DESKTOP */, NULL, Window::CLASS_NAME, Window::TITLE);
 
-        // ...
-        flashInformation.cbSize = sizeof(FLASHWINFO);
-        flashInformation.dwFlags = FLASHW_CAPTION | FLASHW_TRAY;
-        flashInformation.dwTimeout = 0u;
-        flashInformation.hwnd = programPreviousWindowHandle;
-        flashInformation.uCount = 2u;
+        if (NULL != programPreviousWindowHandle) {
+            FLASHWINFO flashInformation;
 
-        ::FlashWindowEx(&flashInformation);
-        if (FALSE != ::ShowWindow(programPreviousWindowHandle, SW_RESTORE)) ::SetForegroundWindow(programPreviousWindowHandle);
-        if (NULL != ::SetActiveWindow(programPreviousWindowHandle)) ::SetFocus(programPreviousWindowHandle);
+            flashInformation.cbSize = sizeof(FLASHWINFO);
+            flashInformation.dwFlags = FLASHW_CAPTION | FLASHW_TRAY;
+            flashInformation.dwTimeout = 0u;
+            flashInformation.hwnd = programPreviousWindowHandle;
+            flashInformation.uCount = 2u;
+
+            ::FlashWindowEx(&flashInformation);
+            if (FALSE != ::ShowWindow(programPreviousWindowHandle, SW_RESTORE)) ::SetForegroundWindow(programPreviousWindowHandle);
+            if (NULL != ::SetActiveWindow(programPreviousWindowHandle)) ::SetFocus(programPreviousWindowHandle);
+        }
     }
 
     else {
         WNDCLASSEX classInformation;
 
-        // ...
         classInformation.cbClsExtra = 0;
         classInformation.cbSize = sizeof(WNDCLASSEX);
         classInformation.cbWndExtra = 0;
@@ -640,7 +651,7 @@ void INITIATE(...) {
         classInformation.hIcon = Window::ICON;
         classInformation.hIconSm = Window::FAVICON;
         classInformation.hInstance = Program::HANDLE;
-        classInformation.lpfnWndProc = &Window::PROCEDURE;
+        classInformation.lpfnWndProc = Window::PROCEDURE;
         classInformation.lpszClassName = Window::CLASS_NAME;
         classInformation.lpszMenuName = static_cast<LPCSTR>(NULL);
         classInformation.style = Window::CLASS_STYLE;
@@ -672,9 +683,9 @@ void INITIATE(...) {
             if (NULL == Window::HANDLE)
                 TERMINATE("Unable to create game window");
 
-            else for (BOOL threadMessageAvailable; WM_QUIT != Program::THREAD_MESSAGE.message; UPDATE()) {
-                threadMessageAvailable = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0, 0x0, PM_REMOVE);
-                if (FALSE != threadMessageAvailable) ::DispatchMessage(&Program::THREAD_MESSAGE);
+            else while (WM_QUIT != Program::THREAD_MESSAGE.message) {
+                Program::THREAD_MESSAGE_AVAILABLE = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0, 0x0, PM_REMOVE);
+                if (FALSE != Program::THREAD_MESSAGE_AVAILABLE) { UPDATE(); ::DispatchMessage(&Program::THREAD_MESSAGE); }
 
                 Program::EXIT_CODE = Program::THREAD_MESSAGE.wParam;
             }
@@ -684,16 +695,101 @@ void INITIATE(...) {
 
 /* : Update */
 void UPDATE(void) {
+    if (WM_PAINT == Program::THREAD_MESSAGE.message) {
+        // Program::THREAD_MESSAGE.pt;
+        // Program::THREAD_MESSAGE.wParam;
+        // Program::THREAD_MESSAGE.lParam;
+        for (unsigned short x = Window::WIDTH >> 1; x--; )
+        for (unsigned short y = Window::HEIGHT >> 1; y--; ) {
+            putPixel(x, y, 0x0000FF);
+        }
+    }
 }
 
 LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
+    Window::HANDLE = windowHandle;
+    switch (message) {
+        /* ... */
+        case WM_CLOSE     :                             ::DestroyWindow(Window::HANDLE); break;
+        case WM_KEYDOWN   : if (VK_ESCAPE == parameter) ::DestroyWindow(Window::HANDLE); break;
+        case WM_SYSCOMMAND: if (SC_CLOSE == parameter ) ::DestroyWindow(Window::HANDLE); break;
+        case WM_SYSKEYDOWN: if (VK_F4 == parameter    ) ::DestroyWindow(Window::HANDLE); break;
+
+        /* ... */
+        case WM_CREATE: {
+            BITMAPINFO bitmapInformation;
+            LPVOID const creationParameter = reinterpret_cast<CREATESTRUCTA const*>(subparameter) -> lpCreateParams;
+
+            // ...
+            Window::DEVICE_CONTEXT_HANDLE = ::GetDCEx(Window::HANDLE, static_cast<HRGN>(NULL), DCX_LOCKWINDOWUPDATE | DCX_NORESETATTRS | DCX_WINDOW);
+            if (NULL == Window::DEVICE_CONTEXT_HANDLE) TERMINATE("Unable to paint game window");
+
+            Window::DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateCompatibleBitmap(Window::DEVICE_CONTEXT_HANDLE, Window::WIDTH, Window::HEIGHT);
+            if (NULL == Window::DEVICE_CONTEXT_BITMAP_HANDLE) TERMINATE("Unable to draw on game window");
+
+            // ...
+            bitmapInformation.bmiColors -> rgbBlue = 0u;
+            bitmapInformation.bmiColors -> rgbGreen = 0u;
+            bitmapInformation.bmiColors -> rgbRed = 0u;
+            bitmapInformation.bmiColors -> rgbReserved = 0x0u;
+            bitmapInformation.bmiHeader.biBitCount = 32u;
+            bitmapInformation.bmiHeader.biClrUsed = 0u;
+            bitmapInformation.bmiHeader.biClrImportant = 0u;
+            bitmapInformation.bmiHeader.biCompression = BI_RGB;
+            bitmapInformation.bmiHeader.biHeight = -Window::HEIGHT;
+            bitmapInformation.bmiHeader.biPlanes = 1u;
+            bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            bitmapInformation.bmiHeader.biSizeImage = Window::HEIGHT * Window::WIDTH * sizeof(UINT32);
+            bitmapInformation.bmiHeader.biWidth = Window::WIDTH;
+            bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZSIZE);
+            bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTSIZE);
+
+            // ...
+            Window::MEMORY_DEVICE_CONTEXT_HANDLE = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
+            if (NULL == Window::MEMORY_DEVICE_CONTEXT_HANDLE) TERMINATE("Unable to render on game window");
+
+            Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateDIBSection(Window::MEMORY_DEVICE_CONTEXT_HANDLE, &bitmapInformation, DIB_RGB_COLORS,
+                static_cast<VOID**>(static_cast<void*>(&Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY)),
+                NULL, 0u);
+            if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE && NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY) TERMINATE("Unable to render on game window");
+
+            // ...
+            ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
+
+            ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
+            ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+
+            // ...
+            #ifdef WM_TOUCH
+                if (0 != ::GetSystemMetrics(0x5E /*SM_DIGITIZER*/))
+                ::RegisterTouchWindow(Window::HANDLE, 0x0);
+            #endif
+
+            ::FreeConsole();
+            ::ShowWindow(Window::HANDLE, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
+        } break;
+
+        // ...
+        case WM_DESTROY: {
+            ::DeleteDC(Window::MEMORY_DEVICE_CONTEXT_HANDLE); ::DeleteObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+            ::ReleaseDC(Window::HANDLE, Window::DEVICE_CONTEXT_HANDLE);
+
+            ::PostQuitMessage(EXIT_SUCCESS);
+        } break;
+
+        // ...
+        case WM_PAINT: {
+            ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
+            ::ValidateRect(Window::HANDLE, NULL);
+        } return EXIT_SUCCESS;
+    }
+
     return ::DefWindowProc(windowHandle, message, parameter, subparameter);
 }
 
 /* : Terminate */
 void TERMINATE(void) { TERMINATE(NULL); }
 void TERMINATE(char const message[]) {
-    if (NULL != Program::Lock::BUFFER) ::CloseHandle(Program::Lock::BUFFER);
     if (NULL != Program::Lock::FILE && INVALID_HANDLE_VALUE != Program::Lock::FILE) ::CloseHandle(Program::Lock::FILE);
     if (NULL != Program::Lock::MUTEX) ::CloseHandle(Program::Lock::MUTEX);
 
