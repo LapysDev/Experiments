@@ -831,7 +831,7 @@ WM_CONVERTRESULT: Convert Result
 WM_COPY: Copy
 WM_COPYDATA: Copy Data
 WM_COPYGLOBALDATA: Copy Global Data
-WM_CPL_LAUNCH: Control Panel Launched
+WM_CPL_LAUNCH: Control Panel Launch
 WM_CPL_LAUNCHED: Control Panel Launched
 WM_CREATE: Create
 WM_CTLCOLOR: Control Color

@@ -100,13 +100,28 @@ typedef struct Piece /* final */ {
       [00000000               ] [00000000               ]
 */
 namespace Game {
-    static unsigned char MEMORY[/* 275 ÷ CHAR_BIT */ 35] = {0}; // ->> Encoded in terms of recency.
-
     enum PiecesEnumerationControl { CONTINUE_ENUMERATING_PIECES, STOP_ENUMERATING_PIECES };
     enum MemorySegment {
         BISHOPS, KNIGHTS, KINGS, PAWNS, QUEENS, ROOKS,
         CAPTURED_OFFICERS, CAPTURED_PAWNS, CASTLE, EN_PASSANT, PROMOTED_PAWNS, TURN
     };
+
+    // ...
+    namespace Board {
+        static unsigned short HEIGHT = 0u, WIDTH = 0u;
+    }
+
+    namespace Pieces {
+        static LPCSTR BITMAP_FILE_NAME = NULL;
+
+        static BITMAP BITMAP = BITMAP();
+        static HDC BITMAP_DEVICE_CONTEXT = NULL;
+        static HBITMAP BITMAP_HANDLE = NULL;
+        static UINT32 *BITMAP_MEMORY = NULL;
+    }
+
+    static bool LOADED = false;
+    static unsigned char MEMORY[/* 275 ÷ CHAR_BIT */ 35] = {0}; // ->> Encoded in terms of recency.
 
     // ...
     static void capturePiece(Piece, Piece const);
@@ -572,10 +587,14 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
 /* Phase --- WARN (Lapys) -> All phases except `INITIATE()` can be invoked by the user. */
 /* : Initiate */
 void INITIATE(...) {
-    bool programAlreadyRunning = false;
     HANDLE const currentProcessHandle = ::GetCurrentProcess();
+    bool programAlreadyRunning = false;
 
     // ... ->> Configuration
+    Game::Board::HEIGHT = 500u;
+    Game::Board::WIDTH = 500u;
+    Game::Pieces::BITMAP_FILE_NAME = "pieces.bmp";
+
     ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
     Program::onexit = static_cast<void (*)(void)>(&TERMINATE);
     Program::Lock::FILE_NAME = "ChessLockFile.tmp";
@@ -583,7 +602,7 @@ void INITIATE(...) {
 
     Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOW);
     Window::CURSOR = static_cast<HCURSOR>(::LoadCursor(static_cast<HINSTANCE>(currentProcessHandle), IDC_ARROW)); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
-    Window::ICON = static_cast<HICON>(::ExtractIcon(static_cast<HINSTANCE>(currentProcessHandle), Program::FILE_NAME, 0u));
+    Window::ICON = ::ExtractIcon(static_cast<HINSTANCE>(currentProcessHandle), Program::FILE_NAME, 0u);
     Window::PROCEDURE = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
     Window::STYLE = WS_POPUP;
     Window::TITLE = "Chess";
@@ -695,14 +714,61 @@ void INITIATE(...) {
 
 /* : Update */
 void UPDATE(void) {
-    if (WM_PAINT == Program::THREAD_MESSAGE.message) {
-        // Program::THREAD_MESSAGE.pt;
-        // Program::THREAD_MESSAGE.wParam;
-        // Program::THREAD_MESSAGE.lParam;
-        for (unsigned short x = Window::WIDTH >> 1; x--; )
-        for (unsigned short y = Window::HEIGHT >> 1; y--; ) {
-            putPixel(x, y, 0x0000FF);
+    if (false == Game::LOADED) {
+        Game::LOADED = true;
+
+        Game::Board::HEIGHT = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9u) / 10u;
+        Game::Board::WIDTH = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9u) / 10u;
+        Game::Pieces::BITMAP_HANDLE = static_cast<HBITMAP>(::LoadImage(static_cast<HINSTANCE>(NULL), Game::Pieces::BITMAP_FILE_NAME, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_DEFAULTCOLOR | LR_LOADFROMFILE));
+
+        // ...
+        if (NULL != Game::Pieces::BITMAP_HANDLE) Game::Pieces::BITMAP_DEVICE_CONTEXT = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
+        if (NULL != Game::Pieces::BITMAP_DEVICE_CONTEXT) {
+            BITMAPINFO bitmapInformation;
+
+            // ...
+            ::GetObject(Game::Pieces::BITMAP_HANDLE, sizeof(BITMAP), &Game::Pieces::BITMAP);
+            Game::Pieces::BITMAP_MEMORY = static_cast<UINT32*>(std::malloc(Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32)));
+
+            bitmapInformation.bmiColors -> rgbBlue = 0u;
+            bitmapInformation.bmiColors -> rgbGreen = 0u;
+            bitmapInformation.bmiColors -> rgbRed = 0u;
+            bitmapInformation.bmiColors -> rgbReserved = 0x0u;
+            bitmapInformation.bmiHeader.biBitCount = 32u;
+            bitmapInformation.bmiHeader.biClrUsed = 0u;
+            bitmapInformation.bmiHeader.biClrImportant = 0u;
+            bitmapInformation.bmiHeader.biCompression = BI_RGB;
+            bitmapInformation.bmiHeader.biHeight = -Game::Pieces::BITMAP.bmHeight;
+            bitmapInformation.bmiHeader.biPlanes = Game::Pieces::BITMAP.bmPlanes;
+            bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            bitmapInformation.bmiHeader.biSizeImage = Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32);
+            bitmapInformation.bmiHeader.biWidth = Game::Pieces::BITMAP.bmWidth;
+            bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZSIZE);
+            bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTSIZE);
+
+            ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
+
+            // ...
+            ::SelectObject(Game::Pieces::BITMAP_DEVICE_CONTEXT, Game::Pieces::BITMAP_HANDLE);
         }
+    }
+
+    // Logic ... ->> Only paint when necessary.
+    if (WM_PAINT == Program::THREAD_MESSAGE.message) {
+        // LPARAM Program::THREAD_MESSAGE.lParam;
+        // LONG Program::THREAD_MESSAGE.pt.x;
+        // LONG Program::THREAD_MESSAGE.pt.y;
+        // WPARAM Program::THREAD_MESSAGE.wParam;
+
+        for (unsigned short left = (Window::WIDTH - Game::Board::WIDTH) / 2u, x = Game::Board::WIDTH; x--; )
+        for (unsigned short top = (Window::HEIGHT - Game::Board::HEIGHT) / 2u, y = Game::Board::HEIGHT; y--; ) {
+            putPixel(left + x, top + y, 0x0000FFu);
+        }
+
+        // for (unsigned short x = Game::Pieces::BITMAP.bmWidth; x--; )
+        // for (unsigned short y = Game::Pieces::BITMAP.bmHeight; y--; ) {
+        //     putPixel(x, y, Game::Pieces::BITMAP_MEMORY[x + (y * Game::Pieces::BITMAP.bmWidth)]);
+        // }
     }
 }
 
@@ -748,25 +814,22 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             Window::MEMORY_DEVICE_CONTEXT_HANDLE = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
             if (NULL == Window::MEMORY_DEVICE_CONTEXT_HANDLE) TERMINATE("Unable to render on game window");
 
-            Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateDIBSection(Window::MEMORY_DEVICE_CONTEXT_HANDLE, &bitmapInformation, DIB_RGB_COLORS,
-                static_cast<VOID**>(static_cast<void*>(&Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY)),
-                NULL, 0u);
+            Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateDIBSection(Window::MEMORY_DEVICE_CONTEXT_HANDLE, &bitmapInformation, DIB_RGB_COLORS, static_cast<VOID**>(static_cast<void*>(&Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY)), NULL, 0u);
             if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE && NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY) TERMINATE("Unable to render on game window");
 
             // ...
             ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
 
+            // ...
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
 
-            // ...
+            ::FreeConsole();
+            ::ShowWindow(Window::HANDLE, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
             #ifdef WM_TOUCH
                 if (0 != ::GetSystemMetrics(0x5E /*SM_DIGITIZER*/))
                 ::RegisterTouchWindow(Window::HANDLE, 0x0);
             #endif
-
-            ::FreeConsole();
-            ::ShowWindow(Window::HANDLE, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
         } break;
 
         // ...
@@ -790,11 +853,15 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
 /* : Terminate */
 void TERMINATE(void) { TERMINATE(NULL); }
 void TERMINATE(char const message[]) {
+    std::free(Game::Pieces::BITMAP_MEMORY);
+    if (NULL != Game::Pieces::BITMAP_DEVICE_CONTEXT) ::DeleteObject(Game::Pieces::BITMAP_DEVICE_CONTEXT);
+    if (NULL != Game::Pieces::BITMAP_HANDLE) ::DeleteObject(Game::Pieces::BITMAP_HANDLE);
+
     if (NULL != Program::Lock::FILE && INVALID_HANDLE_VALUE != Program::Lock::FILE) ::CloseHandle(Program::Lock::FILE);
     if (NULL != Program::Lock::MUTEX) ::CloseHandle(Program::Lock::MUTEX);
 
-    if (NULL != Window::CURSOR) ::DestroyCursor(Window::CURSOR);
     ::UnregisterClass(Window::CLASS_NAME, Program::HANDLE);
+    if (NULL != Window::CURSOR) ::DestroyCursor(Window::CURSOR);
 
     // Logic ->> `TERMINATE(...)` called by the user.
     if (NULL != message) {
