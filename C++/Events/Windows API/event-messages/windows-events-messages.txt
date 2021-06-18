@@ -864,6 +864,7 @@ WM_EXITMENULOOP: Exit Menu Loop
 WM_EXITSIZEMOVE: Exit Size Move
 WM_FONTCHANGE: Font Change
 WM_GESTURE: Gesture
+WM_GESTURENOTIFY: Gesture Notify
 WM_GETDLGCODE: Get Dialog Code
 WM_GETFONT: Get Font
 WM_GETHOTKEY: Get Hotkey
@@ -935,6 +936,7 @@ WM_MENUSELECT: Menu Select
 WM_MOUSEACTIVATE: Mouse Activate
 WM_MOUSEHOVER: Mouse Hover
 WM_MOUSELEAVE: Mouse Leave
+WM_MOUSEMOTION: Mouse Motion
 WM_MOUSEMOVE (WM_MOUSEFIRST): Mouse Move
 WM_MOUSEWHEEL: Mouse Wheel
 WM_MOVE: Move
@@ -978,6 +980,22 @@ WM_PENMISC: Pen Miscellaneous
 WM_PENMISCINFO: Pen Miscellaneous Information
 WM_PENWINFIRST: Pen First
 WM_PENWINLAST: Pen Last
+WM_POINTER: Pointer
+WM_POINTERACTIVATE: Pointer Activate
+WM_POINTERCAPTURECHANGED: Pointer Capture Changed
+WM_POINTERDEVICECHANGED: Pointer Device Changed
+WM_POINTERDEVICEINRANGE: Pointer Device In Range
+WM_POINTERDEVICEOUTOFRANGE: Pointer Device Out Of Range
+WM_POINTERDOWN: Pointer Down
+WM_POINTERENTER: Pointer Enter
+WM_POINTERHWHEEL: Pointer (Horizontal Update)
+WM_POINTERLEAVE: Pointer Leave
+WM_POINTERROUTEDAWAY: Pointer Routed Away
+WM_POINTERROUTEDRELEASED: Pointer Routed Released
+WM_POINTERROUTEDTO: Pointer Routed To
+WM_POINTERUP: Pointer Up
+WM_POINTERUPDATE: Pointer Update
+WM_POINTERWHEEL: Pointer Wheel
 WM_POWER: Power
 WM_POWERBROADCAST: Power Broadcast
 WM_PRINT: Print

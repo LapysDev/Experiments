@@ -3,6 +3,9 @@
     #Lapys:
 */
 /* Definition > ... */
+#ifndef MOUSEEVENTF_FROMTOUCH
+#   define MOUSEEVENTF_FROMTOUCH 0xFF515700
+#endif
 #undef UNICODE
 
 /* Import */
@@ -108,19 +111,31 @@ namespace Game {
 
     // ...
     namespace Board {
-        static unsigned short HEIGHT = 0u, WIDTH = 0u;
+        static DWORD COLOR = 0x000000u;
+        static unsigned short HEIGHT = 0u;
+        static unsigned short WIDTH = 0u;
     }
 
     namespace Pieces {
         static LPCSTR BITMAP_FILE_NAME = NULL;
 
-        static BITMAP BITMAP = BITMAP();
+        static BITMAP BITMAP = ::BITMAP();
         static HDC BITMAP_DEVICE_CONTEXT = NULL;
         static HBITMAP BITMAP_HANDLE = NULL;
         static UINT32 *BITMAP_MEMORY = NULL;
     }
 
-    static bool LOADED = false;
+    namespace Tiles {
+        static DWORD BEVEL_COLORS[2] = {0x000000u, 0x000000u};
+        static DWORD BEVEL_ACTIVATION_COLOR = 0x000000u;
+        static DWORD BEVEL_SELECTION_COLOR = 0x000000u;
+        static unsigned char BEVEL_SIZE = 0u;
+        static DWORD COLORS[2] = {0x000000u, 0x000000u};
+        static unsigned char COLUMN_COUNT = 0u;
+        static unsigned char MARGIN = 0u;
+        static unsigned char ROW_COUNT = 0u;
+    }
+
     static unsigned char MEMORY[/* 275 ÷ CHAR_BIT */ 35] = {0}; // ->> Encoded in terms of recency.
 
     // ...
@@ -133,14 +148,11 @@ namespace Game {
     static void removePiece(Piece const);
 
     // ...
-    static unsigned char getColumnCount(void);
     static Pawn getEnPassantPawn(void);
     static unsigned char* getMemorySegment(MemorySegment const);
     static Piece::Type getPawnPromotion(Pawn const);
     static Piece getPiece(Piece::Color const, Piece::Type const, unsigned char const = 0u);
     static unsigned char getPieceCount(Piece::Type const);
-    static unsigned char getRowCount(void);
-    static unsigned char getTileCount(void);
     static Piece::Color getTurn(void);
 
     static bool isPawnPromoted(Pawn const);
@@ -243,10 +255,6 @@ Game::PiecesEnumerationControl Game::enumeratePieces(PiecesEnumerationControl (*
     return Game::CONTINUE_ENUMERATING_PIECES;
 }
 
-unsigned char Game::getColumnCount(void) {
-    return 8u;
-}
-
 Pawn Game::getEnPassantPawn(void) {
     unsigned char const count = Game::getPieceCount(Piece::PAWN);
     unsigned char const index = *Game::getMemorySegment(Game::EN_PASSANT) & 0xF;
@@ -306,14 +314,6 @@ unsigned char Game::getPieceCount(Piece::Type const type) {
     }
 
     return 0u;
-}
-
-unsigned char Game::getRowCount(void) {
-    return 8u;
-}
-
-unsigned char Game::getTileCount(void) {
-    return Game::getColumnCount() * Game::getRowCount();
 }
 
 Piece::Color Game::getTurn(void) {
@@ -413,7 +413,7 @@ Piece::Color Piece::getColor(void) const {
 }
 
 unsigned char Piece::getColumn(void) const {
-    if (Piece::BISHOP == this -> getType()) return (this -> getPosition() % Game::getColumnCount()) + (this -> getRow() & 1u
+    if (Piece::BISHOP == this -> getType()) return (this -> getPosition() % Game::Tiles::COLUMN_COUNT) + (this -> getRow() & 1u
         ? 0u == this -> getIndex() || 4u == this -> getIndex()
         : 1u == this -> getIndex() || 2u == this -> getIndex()
     );
@@ -490,9 +490,9 @@ void Piece::setPosition(unsigned char const column, unsigned char const row) {
             unsigned char const index = this -> getIndex();
             unsigned char position = 0u;
 
-            while (position < Game::getTileCount()) {
+            while (position < (Game::Tiles::COLUMN_COUNT * Game::Tiles::ROW_COUNT)) {
                 unsigned char const positionRow = position >> 3u;
-                unsigned char const positionColumn = (position % Game::getColumnCount()) + (positionRow & 1u
+                unsigned char const positionColumn = (position % Game::Tiles::COLUMN_COUNT) + (positionRow & 1u
                     ? 0u == index || 4u == index
                     : 1u == index || 2u == index
                 );
@@ -587,13 +587,23 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
 /* Phase --- WARN (Lapys) -> All phases except `INITIATE()` can be invoked by the user. */
 /* : Initiate */
 void INITIATE(...) {
-    HANDLE const currentProcessHandle = ::GetCurrentProcess();
     bool programAlreadyRunning = false;
 
     // ... ->> Configuration
-    Game::Board::HEIGHT = 500u;
-    Game::Board::WIDTH = 500u;
+    Game::Board::COLOR = 0xC0C0C0u;
+    Game::Board::HEIGHT = 512u;
+    Game::Board::WIDTH = 512u;
     Game::Pieces::BITMAP_FILE_NAME = "pieces.bmp";
+    Game::Tiles::BEVEL_COLORS[0] = 0xCFCFCFu;
+    Game::Tiles::BEVEL_COLORS[1] = 0x006600u;
+    Game::Tiles::BEVEL_ACTIVATION_COLOR = 0x006FFFu;
+    Game::Tiles::BEVEL_SELECTION_COLOR = 0x333333u;
+    Game::Tiles::BEVEL_SIZE = 4u;
+    Game::Tiles::COLORS[0] = 0xF0F0F0u;
+    Game::Tiles::COLORS[1] = 0x009900u;
+    Game::Tiles::COLUMN_COUNT = 8u;
+    Game::Tiles::MARGIN = 2u;
+    Game::Tiles::ROW_COUNT = 8u;
 
     ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
     Program::onexit = static_cast<void (*)(void)>(&TERMINATE);
@@ -601,8 +611,8 @@ void INITIATE(...) {
     Program::Lock::MUTEX_NAME = "ChessLockMutex";
 
     Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOW);
-    Window::CURSOR = static_cast<HCURSOR>(::LoadCursor(static_cast<HINSTANCE>(currentProcessHandle), IDC_ARROW)); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
-    Window::ICON = ::ExtractIcon(static_cast<HINSTANCE>(currentProcessHandle), Program::FILE_NAME, 0u);
+    Window::CURSOR = static_cast<HCURSOR>(::LoadCursor(NULL, IDC_ARROW)); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
+    Window::ICON = ::ExtractIcon(static_cast<HINSTANCE>(::GetCurrentProcess()), Program::FILE_NAME, 0u);
     Window::PROCEDURE = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
     Window::STYLE = WS_POPUP;
     Window::TITLE = "Chess";
@@ -703,8 +713,8 @@ void INITIATE(...) {
                 TERMINATE("Unable to create game window");
 
             else while (WM_QUIT != Program::THREAD_MESSAGE.message) {
-                Program::THREAD_MESSAGE_AVAILABLE = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0, 0x0, PM_REMOVE);
-                if (FALSE != Program::THREAD_MESSAGE_AVAILABLE) { UPDATE(); ::DispatchMessage(&Program::THREAD_MESSAGE); }
+                Program::THREAD_MESSAGE_AVAILABLE = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0u, 0x0u, PM_REMOVE);
+                if (FALSE != Program::THREAD_MESSAGE_AVAILABLE) { ::DispatchMessage(&Program::THREAD_MESSAGE); UPDATE(); }
 
                 Program::EXIT_CODE = Program::THREAD_MESSAGE.wParam;
             }
@@ -714,72 +724,170 @@ void INITIATE(...) {
 
 /* : Update */
 void UPDATE(void) {
-    if (false == Game::LOADED) {
-        Game::LOADED = true;
+    static bool pointerIsActive = false;
+    static int  pointerX, pointerY;
 
-        Game::Board::HEIGHT = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9u) / 10u;
-        Game::Board::WIDTH = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9u) / 10u;
-        Game::Pieces::BITMAP_HANDLE = static_cast<HBITMAP>(::LoadImage(static_cast<HINSTANCE>(NULL), Game::Pieces::BITMAP_FILE_NAME, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_DEFAULTCOLOR | LR_LOADFROMFILE));
+    static signed char   tileActivated = -1;
+    static HCURSOR       tileCursor    = NULL;
+    unsigned short const tileHeight    = Game::Board::HEIGHT / Game::Tiles::ROW_COUNT   ;
+    unsigned short const tileWidth     = Game::Board::WIDTH  / Game::Tiles::COLUMN_COUNT;
+    signed char          tileSelected  = -1;
 
-        // ...
-        if (NULL != Game::Pieces::BITMAP_HANDLE) Game::Pieces::BITMAP_DEVICE_CONTEXT = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
-        if (NULL != Game::Pieces::BITMAP_DEVICE_CONTEXT) {
-            BITMAPINFO bitmapInformation;
-
-            // ...
-            ::GetObject(Game::Pieces::BITMAP_HANDLE, sizeof(BITMAP), &Game::Pieces::BITMAP);
-            Game::Pieces::BITMAP_MEMORY = static_cast<UINT32*>(std::malloc(Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32)));
-
-            bitmapInformation.bmiColors -> rgbBlue = 0u;
-            bitmapInformation.bmiColors -> rgbGreen = 0u;
-            bitmapInformation.bmiColors -> rgbRed = 0u;
-            bitmapInformation.bmiColors -> rgbReserved = 0x0u;
-            bitmapInformation.bmiHeader.biBitCount = 32u;
-            bitmapInformation.bmiHeader.biClrUsed = 0u;
-            bitmapInformation.bmiHeader.biClrImportant = 0u;
-            bitmapInformation.bmiHeader.biCompression = BI_RGB;
-            bitmapInformation.bmiHeader.biHeight = -Game::Pieces::BITMAP.bmHeight;
-            bitmapInformation.bmiHeader.biPlanes = Game::Pieces::BITMAP.bmPlanes;
-            bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-            bitmapInformation.bmiHeader.biSizeImage = Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32);
-            bitmapInformation.bmiHeader.biWidth = Game::Pieces::BITMAP.bmWidth;
-            bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZSIZE);
-            bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTSIZE);
-
-            ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
-
-            // ...
-            ::SelectObject(Game::Pieces::BITMAP_DEVICE_CONTEXT, Game::Pieces::BITMAP_HANDLE);
-        }
+    // Update > Pointer ...
+    if (false == pointerIsActive) {
+        pointerX = static_cast<int>(Program::THREAD_MESSAGE.pt.x) - Window::LEFT;
+        pointerY = static_cast<int>(Program::THREAD_MESSAGE.pt.y) - Window::TOP ;
     }
 
-    // Logic ... ->> Only paint when necessary.
-    if (WM_PAINT == Program::THREAD_MESSAGE.message) {
-        // LPARAM Program::THREAD_MESSAGE.lParam;
-        // LONG Program::THREAD_MESSAGE.pt.x;
-        // LONG Program::THREAD_MESSAGE.pt.y;
-        // WPARAM Program::THREAD_MESSAGE.wParam;
+    // Logic ...
+    switch (Program::THREAD_MESSAGE.message) {
+        /* ... */
+        case WM_CREATE: {
+            Game::Board::HEIGHT = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9u) / 10u;
+            Game::Board::WIDTH = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9u) / 10u;
+            Game::Pieces::BITMAP_HANDLE = static_cast<HBITMAP>(::LoadImage(static_cast<HINSTANCE>(NULL), Game::Pieces::BITMAP_FILE_NAME, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_DEFAULTCOLOR | LR_LOADFROMFILE));
 
-        for (unsigned short left = (Window::WIDTH - Game::Board::WIDTH) / 2u, x = Game::Board::WIDTH; x--; )
-        for (unsigned short top = (Window::HEIGHT - Game::Board::HEIGHT) / 2u, y = Game::Board::HEIGHT; y--; ) {
-            putPixel(left + x, top + y, 0x0000FFu);
-        }
+            // ...
+            if (NULL != Game::Pieces::BITMAP_HANDLE) Game::Pieces::BITMAP_DEVICE_CONTEXT = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
+            if (NULL != Game::Pieces::BITMAP_DEVICE_CONTEXT) {
+                BITMAPINFO bitmapInformation;
 
-        // for (unsigned short x = Game::Pieces::BITMAP.bmWidth; x--; )
-        // for (unsigned short y = Game::Pieces::BITMAP.bmHeight; y--; ) {
-        //     putPixel(x, y, Game::Pieces::BITMAP_MEMORY[x + (y * Game::Pieces::BITMAP.bmWidth)]);
-        // }
+                // ...
+                ::GetObject(Game::Pieces::BITMAP_HANDLE, sizeof(BITMAP), &Game::Pieces::BITMAP);
+                Game::Pieces::BITMAP_MEMORY = static_cast<UINT32*>(std::malloc(Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32)));
+
+                bitmapInformation.bmiColors -> rgbBlue = 0u;
+                bitmapInformation.bmiColors -> rgbGreen = 0u;
+                bitmapInformation.bmiColors -> rgbRed = 0u;
+                bitmapInformation.bmiColors -> rgbReserved = 0x0u;
+                bitmapInformation.bmiHeader.biBitCount = 32u;
+                bitmapInformation.bmiHeader.biClrUsed = 0u;
+                bitmapInformation.bmiHeader.biClrImportant = 0u;
+                bitmapInformation.bmiHeader.biCompression = BI_RGB;
+                bitmapInformation.bmiHeader.biHeight = -Game::Pieces::BITMAP.bmHeight;
+                bitmapInformation.bmiHeader.biPlanes = Game::Pieces::BITMAP.bmPlanes;
+                bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                bitmapInformation.bmiHeader.biSizeImage = Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32);
+                bitmapInformation.bmiHeader.biWidth = Game::Pieces::BITMAP.bmWidth;
+                bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZSIZE);
+                bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTSIZE);
+
+                ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
+
+                // ...
+                ::SelectObject(Game::Pieces::BITMAP_DEVICE_CONTEXT, Game::Pieces::BITMAP_HANDLE);
+            }
+        } break;
+
+        /* ... */
+        case WM_LBUTTONDOWN: if (MOUSEEVENTF_FROMTOUCH != (::GetMessageExtraInfo() & MOUSEEVENTF_FROMTOUCH)) pointerIsActive = true; break;
+        case WM_LBUTTONUP: /* ->> Called by `WM_TOUCH` afterward */ pointerIsActive = false; break;
+        #ifdef WM_TOUCH
+          case WM_TOUCH: {
+            TOUCHINPUT touchInputs[10];
+            UINT touchInputsCount = static_cast<UINT>(LOWORD(Program::THREAD_MESSAGE.wParam));
+
+            // ...
+            if (touchInputsCount > 10u)
+            touchInputsCount = 10u;
+
+            if (FALSE != ::GetTouchInputInfo(reinterpret_cast<HTOUCHINPUT>(Program::THREAD_MESSAGE.lParam), touchInputsCount, static_cast<PTOUCHINPUT>(touchInputs), sizeof(TOUCHINPUT)))
+            ::CloseTouchInputHandle(reinterpret_cast<HTOUCHINPUT>(Program::THREAD_MESSAGE.lParam));
+
+            // ...
+            pointerIsActive = true;
+
+            pointerX = TOUCH_COORD_TO_PIXEL(touchInputs[touchInputsCount - 1u].x) - Window::LEFT;
+            pointerY = TOUCH_COORD_TO_PIXEL(touchInputs[touchInputsCount - 1u].y) - Window::TOP ;
+          } break;
+        #endif
+
+        /* ... */
+        case WM_PAINT: {
+            unsigned short const boardLeft    = (Window::WIDTH  - Game::Board::WIDTH ) / 2u;
+            unsigned short const boardTop     = (Window::HEIGHT - Game::Board::HEIGHT) / 2u;
+
+            unsigned short const tileBottom = tileHeight - Game::Tiles::MARGIN;
+            unsigned short const tileLeft   = 0u + Game::Tiles::MARGIN;
+            unsigned short const tileRight  = tileWidth  - Game::Tiles::MARGIN;
+            unsigned short const tileTop    = 0u + Game::Tiles::MARGIN;
+
+            // ...
+            for (unsigned char tileColumn = Game::Tiles::COLUMN_COUNT; tileColumn--; )
+            for (unsigned char tileRow    = Game::Tiles::ROW_COUNT   ; tileRow--   ; ) {
+                unsigned char const tileIndex = tileColumn + (tileRow * Game::Tiles::COLUMN_COUNT);
+
+                for (unsigned short tileX = tileWidth ; tileX--; )
+                for (unsigned short tileY = tileHeight; tileY--; ) {
+                    DWORD color = Game::Tiles::COLORS[(tileColumn + tileRow) % 2u];
+
+                    unsigned short const left = boardLeft + (tileColumn * tileWidth );
+                    unsigned short const top  = boardTop  + (tileRow    * tileHeight);
+                    unsigned short const x    = left + tileX;
+                    unsigned short const y    = top  + tileY;
+
+                    // ... ->> Board color
+                    if (
+                        (tileX > tileRight  || tileX < tileLeft) ||
+                        (tileY > tileBottom || tileY < tileTop )
+                    ) color = Game::Board::COLOR;
+
+                    // ...
+                    else {
+                        // ... ->> Active cursor
+                        if (
+                            (pointerX > left && pointerX < left + tileWidth ) &&
+                            (pointerY > top  && pointerY < top  + tileHeight)
+                        ) {
+                            tileActivated = pointerIsActive ? tileIndex : tileActivated;
+                            tileSelected = tileIndex;
+
+                            if (NULL == tileCursor || Window::CURSOR == tileCursor)
+                            ::SetCursor(tileCursor = ::LoadCursor(NULL, IDC_HAND));
+                        }
+
+                        // ... ->> Bevel color
+                        if (
+                            (tileX > tileRight  - Game::Tiles::BEVEL_SIZE || tileX < tileLeft + Game::Tiles::BEVEL_SIZE) ||
+                            (tileY > tileBottom - Game::Tiles::BEVEL_SIZE || tileY < tileTop  + Game::Tiles::BEVEL_SIZE)
+                        ) {
+                            color = tileActivated == tileIndex ? Game::Tiles::BEVEL_ACTIVATION_COLOR : Game::Tiles::BEVEL_COLORS[(tileColumn + tileRow) % 2u];
+
+                            if (tileIndex == tileActivated) color = Game::Tiles::BEVEL_ACTIVATION_COLOR;
+                            if (tileIndex == tileSelected ) color = tileActivated == tileIndex ? Game::Tiles::BEVEL_ACTIVATION_COLOR | Game::Tiles::BEVEL_SELECTION_COLOR : Game::Tiles::BEVEL_SELECTION_COLOR;
+                        }
+                    }
+
+                    // ...
+                    putPixel(x, y, color);
+                }
+            }
+
+            // ...
+            if (tileSelected == -1) {
+                if (NULL != tileCursor && Window::CURSOR != tileCursor)
+                ::SetCursor(tileCursor = Window::CURSOR);
+            }
+        } break;
     }
 }
 
 LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
+    Program::THREAD_MESSAGE.message = message; // ->> Not recommended
     Window::HANDLE = windowHandle;
+
     switch (message) {
         /* ... */
         case WM_CLOSE     :                             ::DestroyWindow(Window::HANDLE); break;
         case WM_KEYDOWN   : if (VK_ESCAPE == parameter) ::DestroyWindow(Window::HANDLE); break;
-        case WM_SYSCOMMAND: if (SC_CLOSE == parameter ) ::DestroyWindow(Window::HANDLE); break;
-        case WM_SYSKEYDOWN: if (VK_F4 == parameter    ) ::DestroyWindow(Window::HANDLE); break;
+        case WM_SYSCOMMAND: if (SC_CLOSE  == parameter) ::DestroyWindow(Window::HANDLE); break;
+        case WM_SYSKEYDOWN: if (VK_F4     == parameter) ::DestroyWindow(Window::HANDLE); break;
+
+        /* ... ->> Allow programmer to handle messages */
+        case WM_SETCURSOR: return TRUE;
+        #ifdef WM_TOUCH
+            case WM_TOUCH: return EXIT_SUCCESS;
+        #endif
 
         /* ... */
         case WM_CREATE: {
@@ -821,10 +929,12 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
 
             // ...
+            // ::FreeConsole();
+
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
 
-            ::FreeConsole();
+            ::SetCursor(Window::CURSOR);
             ::ShowWindow(Window::HANDLE, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
             #ifdef WM_TOUCH
                 if (0 != ::GetSystemMetrics(0x5E /*SM_DIGITIZER*/))
@@ -843,7 +953,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         // ...
         case WM_PAINT: {
             ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
-            ::ValidateRect(Window::HANDLE, NULL);
+            if (FALSE != ::GetUpdateRect(Window::HANDLE, NULL, FALSE)) ::RedrawWindow(Window::HANDLE, NULL, NULL, RDW_INTERNALPAINT);
         } return EXIT_SUCCESS;
     }
 
@@ -861,7 +971,6 @@ void TERMINATE(char const message[]) {
     if (NULL != Program::Lock::MUTEX) ::CloseHandle(Program::Lock::MUTEX);
 
     ::UnregisterClass(Window::CLASS_NAME, Program::HANDLE);
-    if (NULL != Window::CURSOR) ::DestroyCursor(Window::CURSOR);
 
     // Logic ->> `TERMINATE(...)` called by the user.
     if (NULL != message) {
