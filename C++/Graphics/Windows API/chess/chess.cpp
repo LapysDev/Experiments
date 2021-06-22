@@ -87,16 +87,30 @@ union Piece {
         Piece(bit<8u>* const address) : self(address) {}
 
     public:
-        Color         getColor   (void) const;
-        bit<3u>       getColumn  (void) const;
-        bit<3u>       getIndex   (void) const;
-        bit<6u>       getPosition(void) const;
-        bit<3u>       getRow     (void) const;
-        Type          getType    (void) const;
+        // ...
+        static unsigned char countTotal(Piece::Type const);
 
-        void          setColumn  (bit<3u> const);
-        void          setPosition(bit<3u> const, bit<3u> const);
-        void          setRow     (bit<3u> const);
+        void capture(Piece const) const;
+        void castle (void) const;
+        void promote(Type const) const;
+
+        // ...
+        Color   getColor        (void) const;
+        bit<3u> getColumn       (void) const;
+        bit<3u> getIndex        (void) const;
+        bit<6u> getPosition     (void) const;
+        Type    getPromotionType(void) const;
+        bit<3u> getRow          (void) const;
+        Type    getType         (void) const;
+
+        bool    isCaptured      (void) const;
+        bool    isCastled       (void) const;
+        bool    isIncidental    (void) const; // ->> en passant
+        bool    isPromoted      (void) const;
+
+        void    setColumn       (bit<3u> const);
+        void    setPosition     (bit<3u> const, bit<3u> const);
+        void    setRow          (bit<3u> const);
 };
 
 /* Definition > ... */
@@ -159,11 +173,73 @@ struct Game {
     static bit<8u>* addressPromotedPawnData   (void);
     static bit<8u>* addressTurnData           (void);
 
-    // ... ->> Getter
-    static Pawn        getEnPassantPawn    (void);
-    static Piece       getPiece            (Color const, Piece::Type const, bit<3u> const = 0u);
-    static Piece::Type getPawnPromotionType(Pawn const);
+    // ... ->> Getter/ Setter
+    static Piece       getPiece     (Color const, Piece::Type const, bit<3u> const = 0u);
+    static Color       getPlayerTurn(void);
+
+    static void        setPlayerTurn(Color const);
 };
+
+// : Program
+namespace Program {
+    namespace Lock {
+        static HANDLE      FILE       = NULL;
+        static char const *FILE_NAME  = NULL;
+
+        static HANDLE      MUTEX      = NULL;
+        static char const *MUTEX_NAME = NULL;
+    }
+
+    static LPSTR     ARGUMENTS           = NULL;
+    static int       EXIT_CODE           = EXIT_SUCCESS;
+    static CHAR      FILE_NAME[MAX_PATH] = {0};
+    static HINSTANCE HANDLE              = NULL;
+    static HINSTANCE PREVIOUS_HANDLE     = NULL;
+    static MSG       THREAD_MESSAGE      = MSG();
+
+    // ... ->> Program termination handlers
+    static void exit (void);
+    static void exit (int const);
+    static void raise(int const);
+
+    // ... ->> Program termination listeners
+    static void (*onabort       )(void) = NULL;
+    static void (*onexit        )(void) = NULL;
+    static void (*oninterrupt   )(void) = NULL;
+    static void (*oninvalidfault)(void) = NULL;
+    static void (*onmathfault   )(void) = NULL;
+    static void (*onsegfault    )(void) = NULL;
+    static void (*onterminate   )(void) = NULL;
+}
+
+// : Window
+namespace Window {
+    static int     APPEARANCE      = SW_SHOW;
+    static HBRUSH  BACKGROUND      = EXIT_SUCCESS;
+    static LPCSTR  CLASS_NAME      = "window";
+    static UINT    CLASS_STYLE     = CS_GLOBALCLASS | CS_OWNDC;
+    static HCURSOR CURSOR          = NULL;
+    static HICON   FAVICON         = NULL;
+    static HWND    HANDLE          = NULL;
+    static int     HEIGHT          = -1;
+    static HICON   ICON            = NULL;
+    static int     LEFT            = -1;
+    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
+    static DWORD   STYLE           = WS_OVERLAPPEDWINDOW;
+    static DWORD   STYLE_EXTENSION = 0x0u;
+    static LPCSTR  TITLE           = "";
+    static int     TOP             = -1;
+    static int     WIDTH           = -1;
+
+    // ... ->> Renderers
+    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE        = NULL;
+    static HDC     DEVICE_CONTEXT_HANDLE               = NULL;
+
+    static BITMAP  MEMORY_DEVICE_CONTEXT_BITMAP        = BITMAP();
+    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
+    static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
+    static HDC     MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
+}
 
 /* Global > ... */
 bit<8u> Game::MEMORY[sizeof(Game::MEMORY) / sizeof(bit<8u>)] = {0};
@@ -183,6 +259,50 @@ bit<8u>* Game::addressCastleData         (void) { return Game::MEMORY + 32; }
 bit<8u>* Game::addressEnPassantData      (void) { return Game::MEMORY + 32; }
 bit<8u>* Game::addressPromotedPawnData   (void) { return Game::MEMORY + 18; }
 bit<8u>* Game::addressTurnData           (void) { return Game::MEMORY + 34; }
+
+// : Piece
+void Piece::capture(Piece const piece) const {
+    this -> setPosition(piece.getColumn(), piece.getRow());
+    switch (piece.getType()) {
+        // ... ->> Mark the `piece` as captured
+        case Piece::KING  : break;
+        case Piece::PAWN  : Game::addressCapturedPawnData   ()[Piece::WHITE == piece.getColor() ? 1u : 0u] |= 1u << piece.getIndex(); break;
+
+        case Piece::BISHOP: Game::addressCapturedOfficerData()[0] |= 1u << ((piece.getIndex() + (Piece::WHITE == piece.getColor() ? Piece::countTotal(Piece::BISHOP) : 0u)) << 4u); break;
+        case Piece::KNIGHT: Game::addressCapturedOfficerData()[0] |= 1u << ((piece.getIndex() + (Piece::WHITE == piece.getColor() ? Piece::countTotal(Piece::KNIGHT) : 0u)) << 0u); break;
+        case Piece::QUEEN : Game::addressCapturedOfficerData()[1] |= 1u << ((piece.getIndex() + (Piece::WHITE == piece.getColor() ? Piece::countTotal(Piece::QUEEN ) : 0u)) << 2u); break;
+        case Piece::ROOK  : Game::addressCapturedOfficerData()[1] |= 1u << ((piece.getIndex() + (Piece::WHITE == piece.getColor() ? Piece::countTotal(Piece::ROOK  ) : 0u)) << 4u); break;
+    }
+}
+
+unsigned char Piece::countTotal(Piece::Type const type) {
+    switch (type) {
+        case Piece::BISHOP: case Piece::KNIGHT: case Piece::ROOK: return 2u;
+        case Piece::KING: case Piece::QUEEN: return 1u;
+        case Piece::PAWN: return 8u;
+    }
+
+    return 0u;
+}
+
+void Rook::castle(void) const {
+}
+
+// Color Piece::getColor(void) const {}
+// bit<3u> Piece::getColumn(void) const {}
+// bit<3u> Piece::getIndex(void) const {}
+// bit<6u> Piece::getPosition(void) const {}
+// Piece::Type Piece::getPromotionType(void) const {}
+// bit<3u> Piece::getRow(void) const {}
+// Piece::Type Piece::getType(void) const {}
+// bool Piece::isCaptured(void) const {}
+// bool Piece::isCastled(void) const {}
+// bool Piece::isIncidental(void) const {}
+// bool Piece::isPromoted(void) const {}
+// void Piece::promote(Piece::Type const type) const {}
+// void Piece::setColumn(bit<3u> const column) {}
+// void Piece::setPosition(bit<3u> const column, bit<3u> const row) {}
+// void Piece::setRow(bit<3u> const row) {}
 
 /* Main */
 int main(void) {}
