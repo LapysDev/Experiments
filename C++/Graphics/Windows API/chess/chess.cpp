@@ -90,9 +90,9 @@ union Piece {
         // ...
         static unsigned char countTotal(Piece::Type const);
 
-        void capture(Piece const) const;
-        void castle (void) const;
-        void promote(Type const) const;
+        void capture(Piece const);
+        void castle (void);
+        void promote(Type const);
 
         // ...
         Color   getColor        (void) const;
@@ -169,15 +169,15 @@ struct Game {
     static bit<8u>* addressCapturedOfficerData(void);
     static bit<8u>* addressCapturedPawnData   (void);
     static bit<8u>* addressCastleData         (void);
-    static bit<8u>* addressEnPassantData      (void);
+    static bit<8u>* addressIncidentalPawnData (void);
     static bit<8u>* addressPromotedPawnData   (void);
     static bit<8u>* addressTurnData           (void);
 
-    // ... ->> Getter/ Setter
-    static Piece       getPiece     (Color const, Piece::Type const, bit<3u> const = 0u);
-    static Color       getPlayerTurn(void);
+    // ...
+    static Piece getPiece     (Color const, Piece::Type const, bit<3u> const = 0u);
+    static Color getPlayerTurn(void);
 
-    static void        setPlayerTurn(Color const);
+    static void  setPlayerTurn(Color const);
 };
 
 // : Program
@@ -256,15 +256,15 @@ bit<8u>* Game::addressRookData  (void) { return Game::MEMORY + 28; }
 bit<8u>* Game::addressCapturedOfficerData(void) { return Game::MEMORY + 16; }
 bit<8u>* Game::addressCapturedPawnData   (void) { return Game::MEMORY + 33; }
 bit<8u>* Game::addressCastleData         (void) { return Game::MEMORY + 32; }
-bit<8u>* Game::addressEnPassantData      (void) { return Game::MEMORY + 32; }
+bit<8u>* Game::addressIncidentalPawnData (void) { return Game::MEMORY + 32; }
 bit<8u>* Game::addressPromotedPawnData   (void) { return Game::MEMORY + 18; }
 bit<8u>* Game::addressTurnData           (void) { return Game::MEMORY + 34; }
 
 // : Piece
-void Piece::capture(Piece const piece) const {
+void Piece::capture(Piece const piece) {
     this -> setPosition(piece.getColumn(), piece.getRow());
     switch (piece.getType()) {
-        // ... ->> Mark the `piece` as captured
+        // ... ->> Mark the `piece` as "captured"
         case Piece::KING  : break;
         case Piece::PAWN  : Game::addressCapturedPawnData   ()[Piece::WHITE == piece.getColor() ? 1u : 0u] |= 1u << piece.getIndex(); break;
 
@@ -285,10 +285,35 @@ unsigned char Piece::countTotal(Piece::Type const type) {
     return 0u;
 }
 
-void Rook::castle(void) const {
+template <typename type, unsigned char length>
+union array {
+    private: type value[length];
+    public:
+        array(void) : value() {}
+};
+
+array<Piece::Type const, 6u> Piece::collatePieceTypes(void) {
+    Piece::Type const types[6] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN};
+    return array<Piece::Types const, 6u>(types);
 }
 
-// Color Piece::getColor(void) const {}
+Color Piece::getColor(void) const {
+    Piece const (&pieces)[] = Piece::collatePieces();
+    Piece::Type const (&types)[] = Piece::collateTypes();
+    Piece::Type const types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN};
+
+    for (Piece::Type const
+        types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN},
+        *type   = types + (sizeof(types) / sizeof(Piece::Type));
+    type-- != types; )
+    for (unsigned char iterator = Piece::countTotal(type); iterator--; ) {
+        if (this -> self == Game::getPiece(Color::BLACK, type, iterator)) return Color::BLACK;
+        if (this -> self == Game::getPiece(Color::WHITE, type, iterator)) return Color::WHITE;
+    }
+
+    return static_cast<Color>(0x0u);
+}
+
 // bit<3u> Piece::getColumn(void) const {}
 // bit<3u> Piece::getIndex(void) const {}
 // bit<6u> Piece::getPosition(void) const {}
@@ -303,6 +328,9 @@ void Rook::castle(void) const {
 // void Piece::setColumn(bit<3u> const column) {}
 // void Piece::setPosition(bit<3u> const column, bit<3u> const row) {}
 // void Piece::setRow(bit<3u> const row) {}
+
+// : Rook
+void Rook::castle(void) { *Game::addressCastleData() |= (1u << (this -> getIndex() + (Piece::WHITE == this -> getColor() ? 2u : 0u))) << 4u; }
 
 /* Main */
 int main(void) {}

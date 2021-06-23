@@ -17,7 +17,7 @@ namespace                                                                       
                                                                                                 \
     template<class Object>                                                                      \
     struct has_##name<Object, void_t<sizeof(&Xor##name<Object>::method)>> : std::false_type {}; \
-}                                                                                               \
+}
 
 //first parameter is name and usage is has_##name
 //second parameter is method for example operator+
