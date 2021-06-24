@@ -57,6 +57,7 @@ union bit {
         bit(uint8_t const value = 0u) : value(value) {}
 
         // ...
+        friend bit<count>& operator =  (bit<count>& a, bit<count> const b) { a.value =   b.value; return a; }
         friend bit<count>& operator += (bit<count>& a, bit<count> const b) { a.value +=  b.value; return a; }
         friend bit<count>& operator -= (bit<count>& a, bit<count> const b) { a.value -=  b.value; return a; }
         friend bit<count>& operator *= (bit<count>& a, bit<count> const b) { a.value *=  b.value; return a; }
@@ -299,8 +300,7 @@ array<Piece::Type const, 6u> Piece::collatePieceTypes(void) {
 
 Color Piece::getColor(void) const {
     Piece const (&pieces)[] = Piece::collatePieces();
-    Piece::Type const (&types)[] = Piece::collateTypes();
-    Piece::Type const types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN};
+    array<Piece::Type const, 6u> types = Piece::collatePieceTypes();
 
     for (Piece::Type const
         types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN},
