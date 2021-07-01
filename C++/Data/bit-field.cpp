@@ -8,17 +8,13 @@ namespace {
     template <bool, typename, typename> union uint_conditional_t;
     template <typename true_t, typename false_t> union uint_conditional_t<true , true_t, false_t> { typedef true_t  type; };
     template <typename true_t, typename false_t> union uint_conditional_t<false, true_t, false_t> { typedef false_t type; };
-}
 
-template <std::size_t> union bit;
-typedef bit<8u> byte; // octet
-
-template <std::size_t count>
-union bit {
-    private:
+    // ...
+    template <std::size_t count>
+    union bit_t {
         typedef
           typename uint_conditional_t<
-            count <= (CHAR_BIT * sizeof(uint8_t)), uint8_t,
+            count <= (CHAR_BIT * sizeof(uint8_t )), uint8_t ,
           typename uint_conditional_t<
             count <= (CHAR_BIT * sizeof(uint16_t)), uint16_t,
           typename uint_conditional_t<
@@ -27,13 +23,29 @@ union bit {
             count <= (CHAR_BIT * sizeof(uint64_t)), uint64_t,
             unsigned char [(count / CHAR_BIT) + (count % CHAR_BIT)]
           >::type >::type >::type >::type
-        bit_t;
+        type;
 
-        bit_t value : count;
+        type value : count;
+        bit_t(type const value) : value(value) {}
+    };
+
+    template <> union bit_t<8u>  { typedef uint8_t  type; uint8_t  value; bit_t(uint8_t  const value) : value(value) {} };
+    template <> union bit_t<16u> { typedef uint16_t type; uint16_t value; bit_t(uint16_t const value) : value(value) {} };
+    template <> union bit_t<32u> { typedef uint32_t type; uint32_t value; bit_t(uint32_t const value) : value(value) {} };
+    template <> union bit_t<64u> { typedef uint64_t type; uint64_t value; bit_t(uint64_t const value) : value(value) {} };
+}
+
+template <std::size_t> struct bit;
+typedef bit<8u> byte; // octet
+
+template <std::size_t count>
+struct bit {
+    private:
+        bit_t<count> value;
 
     public:
         bit(void) : value() {}
-        bit(bit_t const value) : value(value) {}
+        bit(typename bit_t<count>::type const value) : value(value) {}
 
         // ...
         // friend bit<count>& operator += (bit<count>& a, bit<count> const b);
@@ -41,18 +53,18 @@ union bit {
         // friend bit<count>& operator *= (bit<count>& a, bit<count> const b);
         // friend bit<count>& operator /= (bit<count>& a, bit<count> const b);
         // friend bit<count>& operator %= (bit<count>& a, bit<count> const b);
-        friend bit<count>& operator &= (bit<count>& a, bit<count> const b) { a.value &=  b.value; return a; }
-        friend bit<count>& operator |= (bit<count>& a, bit<count> const b) { a.value |=  b.value; return a; }
-        friend bit<count>& operator ^= (bit<count>& a, bit<count> const b) { a.value ^=  b.value; return a; }
-        friend bit<count>& operator <<=(bit<count>& a, bit<count> const b) { a.value <<= b.value; return a; }
-        friend bit<count>& operator >>=(bit<count>& a, bit<count> const b) { a.value >>= b.value; return a; }
+        friend bit<count>& operator &= (bit<count>& a, bit<count> const b) { a.value.value &=  b.value.value; return a; }
+        friend bit<count>& operator |= (bit<count>& a, bit<count> const b) { a.value.value |=  b.value.value; return a; }
+        friend bit<count>& operator ^= (bit<count>& a, bit<count> const b) { a.value.value ^=  b.value.value; return a; }
+        friend bit<count>& operator <<=(bit<count>& a, bit<count> const b) { a.value.value <<= b.value.value; return a; }
+        friend bit<count>& operator >>=(bit<count>& a, bit<count> const b) { a.value.value >>= b.value.value; return a; }
         // friend bit<count>& operator ++ (bit<count>&)           ;
         // friend bit<count>  operator ++ (bit<count>&, int const);
         // friend bit<count>& operator -- (bit<count>&)           ;
         // friend bit<count>  operator -- (bit<count>&, int const);
 
-        /* explicit */ operator bit_t(void) { return this -> value; }
-        /* explicit */ operator bit_t(void) const { return this -> value; }
+        /* explicit */ operator typename bit_t<count>::type(void)       { return this -> value.value; }
+        /* explicit */ operator typename bit_t<count>::type(void) const { return this -> value.value; }
 };
 
 /* Main */

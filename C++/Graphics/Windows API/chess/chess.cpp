@@ -286,16 +286,9 @@ unsigned char Piece::countTotal(Piece::Type const type) {
     return 0u;
 }
 
-template <typename type, unsigned char length>
-union array {
-    private: type value[length];
-    public:
-        array(void) : value() {}
-};
-
-array<Piece::Type const, 6u> Piece::collatePieceTypes(void) {
+Piece::Type const[6] Piece::collatePieceTypes(void) {
     Piece::Type const types[6] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN};
-    return array<Piece::Types const, 6u>(types);
+    return types;
 }
 
 Color Piece::getColor(void) const {
