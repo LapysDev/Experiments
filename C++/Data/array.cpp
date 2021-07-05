@@ -103,7 +103,7 @@ namespace {
     #endif
 
     template <typename> struct lengthof;
-    template <typename base, std::size_t length> struct lengthof<base (&)[length]> { static std::size_t const value = length; };
+    template <typename base, std::size_t length> struct lengthof<base [length]> { static std::size_t const value = length; };
 
     template <typename base> union to_mutable_t             { typedef base type; };
     template <typename base> union to_mutable_t<base const> { typedef base type; };
@@ -128,14 +128,26 @@ struct array {
 
         template <std::size_t length>
         base (&cast(typename conditional_t<(capacity == length && false == is_scalar_t<base>::value) || (capacity > length)>::type = typename conditional_t<true>::type()) const)[length] {
-            base (*evaluation)[length] = NULL;
+            base (*evaluation)[length];
             array_t *value = const_cast<array_t*>(&(this -> value));
 
-            for (unsigned char*destination = static_cast<unsigned char*>(static_cast<void*>(&evaluation)) + sizeof(void*), *source = static_cast<unsigned char*>(static_cast<void*>(&value)) + sizeof(void*); source != static_cast<void*>(&value); )
+            for (unsigned char *destination = static_cast<unsigned char*>(static_cast<void*>(&evaluation)) + sizeof(void*), *source = static_cast<unsigned char*>(static_cast<void*>(&value)) + sizeof(void*); source != static_cast<void*>(&value); )
             *--destination = *--source;
 
             return *evaluation;
         }
+
+        // ...
+        template <typename type>
+        void destruct(typename conditional_t<false == is_scalar_t<type>::value>::type = typename conditional_t<true>::type()) {
+            unsigned char *value = this -> value;
+
+            for (std::size_t iterator = capacity; iterator--; value += sizeof(base))
+            static_cast<base*>(static_cast<void*>(value)) -> ~base();
+        }
+
+        template <typename type>
+        void destruct(typename conditional_t<true  == is_scalar_t<type>::value>::type = typename conditional_t<true>::type()) {}
 
         // ...
         template <typename type>
@@ -155,8 +167,12 @@ struct array {
         #if defined(__cplusplus) && __cplusplus == 199711L
           template <typename type>
           void instantiate(std::va_list const array, typename conditional_t<false == is_scalar_t<type>::value, std::size_t>::type length) {
-            for (unsigned char *value = this -> value; length--; value += sizeof(base))
-            new (value) base(va_arg(array, base));
+            for (unsigned char *value = this -> value; length--; value += sizeof(base)) {
+                base *element;
+                new (value) base(
+                    *static_cast<base*>(static_cast<void*>(va_arg(array, unsigned char[sizeof(base)])))
+                );
+            }
           }
 
           template <typename type>
@@ -190,10 +206,66 @@ struct array {
           }
         #endif
 
+        ~array(void) { this -> destruct<base>(); }
+
         // ...
+        #if defined(__cplusplus) && __cplusplus > 199711L
+          base* begin(void) const { return this -> cast<capacity>(); }
+          base* end(void) const { return this -> cast<capacity>() + capacity; }
+        #endif
+
+        // ...
+        base* operator ->(void) const { return this -> cast<capacity>(); }
+
         operator base*(void) const { return this -> cast<capacity>(); }
-        template <typename type> operator type&(void) const { return this -> cast<lengthof<type&>::value>(); }
+        template <typename type> operator type&(void) const { return this -> cast<lengthof<type>::value>(); }
 };
 
 /* Main */
-int main(void) {}
+#include <cstdio>
+#include <string>
+
+// ...
+class String {
+    private: char const *const value;
+    public:
+        String(char const value[]) : value(value) {}
+        operator char const*(void) const { return this -> value; }
+};
+
+// ...
+int main(void) {
+    // : [Conversions]
+    // std::printf("[char const*]    : \"%s\"" "\r\n", static_cast<char const*>(array<char const, 14u>("Hello, World!")));
+    // std::printf("[char const [5]] : \"%s\"" "\r\n", static_cast<char const (&)[5]>(array<char const, 14u>("Hello, World!")));
+    // std::printf("[char const [14]]: \"%s\"" "\r\n", static_cast<char const (&)[14]>(array<char const, 14u>("Hello, World!")));
+
+    // std::printf("[String]         : \"%s\"" "\r\n", (*array<String, 1u>(1u, "Hello, World!")).operator char const*());
+    // std::printf("[String]         : \"%s\"" "\r\n", array<String, 1u>(1u, "Hello, World!") -> operator char const*());
+    // std::printf("[String]         : \"%s\"" "\r\n", array<String, 1u>(1u, "Hello, World!")[0].operator char const*());
+
+    array<std::string, 1u>(1u, "Hello, World!");
+    // std::printf("[std::string]    : \"%s\"" "\r\n", (*array<std::string, 1u>(1u, "Hello, World!")).c_str());
+    // std::printf("[std::string]    : \"%s\"" "\r\n", array<std::string, 1u>(1u, "Hello, World!") -> c_str());
+    // std::printf("[std::string]    : \"%s\"" "\r\n", array<std::string, 1u>(1u, "Hello, World!")[0].c_str());
+
+    // : [Iteration] ->> The `iterable` is immutable, but its `const`-ness doesn't apply to its elements/ members (it respects the cv-qualification of its specified type)
+    array<int, 10> const iterable = array<int, 10>(10u, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+
+    std::printf("%13s", "[int [10]]: {");
+      for (std::size_t iterator = 0u; iterator != 10u; ++iterator) iterable[iterator] += 1;
+      for (std::size_t iterator = 0u; iterator != 10u; ++iterator) std::printf("%i%.2s", iterable[iterator], iterator == 10u - 1u ? "" : ", ");
+    std::printf("%3s", "}" "\r\n");
+
+    std::printf("%13s", "[int [10]]: {");
+      for (int *iterator = iterable; iterator - iterable != 10L; ++iterator) *iterator += 1;
+      for (int *iterator = iterable; iterator - iterable != 10L; ++iterator) std::printf("%i%.2s", *iterator, iterator - iterable == 10L - 1L ? "" : ", ");
+    std::printf("%3s", "}" "\r\n");
+
+    #if defined(__cplusplus) && __cplusplus > 199711L
+      std::printf("%13s", "[int [10]]: {");
+        for (int& element : iterable) element += 1;
+        for (int  element : iterable) std::printf("%i, ", element);
+      std::printf("%3s", "}" "\r\n");
+    #endif
+}

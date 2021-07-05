@@ -1,6 +1,9 @@
 #include <cstdio>
 
-/* ... --> sizeof...() */
+/* ... */
+#define count_macro_argument(...) count_macro_argument_select(__VA_ARGS__, 2u, 1u, 0u)
+#define count_macro_argument_select(argument1, argument2, count, ...) count
+
 unsigned char count_function_argument(void) { return 0u; }
 template <typename type> unsigned char count_function_argument(type&&) { return 1u; }
 template <typename type, typename... types> unsigned char count_function_argument(type&&, types&&... arguments) { return 1u + count_function_argument(static_cast<types&&>(arguments)...); }
@@ -16,9 +19,16 @@ template <int... arguments> struct count_nontype_trait { template <int> union du
 
 /* Main */
 int main(void) {
-  std::printf("[function argument]          : %hu" "\r\n", count_function_argument());
-  std::printf("[function argument]          : %hu" "\r\n", count_function_argument(0));
-  std::printf("[function argument]          : %hu" "\r\n", count_function_argument(0, 0));
+  // ...
+  std::printf("[function argument]          : %hu" "\r\n", ::count_function_argument());
+  std::printf("[function argument]          : %hu" "\r\n", ::count_function_argument(0));
+  std::printf("[function argument]          : %hu" "\r\n", ::count_function_argument(0, 0));
+  std::puts("");
+
+  // ...
+  std::printf("[macro argument]             : %hu" "\r\n", count_macro_argument());
+  std::printf("[macro argument]             : %hu" "\r\n", count_macro_argument(0));
+  std::printf("[macro argument]             : %hu" "\r\n", count_macro_argument(0, 0));
   std::puts("");
 
   // ... ->> also extends to templated template arguments
