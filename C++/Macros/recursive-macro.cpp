@@ -53,92 +53,37 @@
 // }
 
 // ======================================================================================
-
-// #include <cstdio>
-
-// /* ... */
-// #define argument_end() 0
-// #define boolean(x) negate(negate(x))
-// #define concatenate(a, b) a ## b
-// #define first(a, ...) a
-// #define has_arguments(...) boolean(first(argument_end __VA_ARGS__)())
-
-// #define negate(x) negate_select(concatenate(negate_select_, x), 0)
-// # define negate_select(...) second(__VA_ARGS__, 0)
-// #   define negate_select_0 ~, 1
-
-// #define second(a, b, ...) b
-
-// // ...
-// #define sus(c, ...) has_arguments(__VA_ARGS__)
-
-// #define variadic(...) variadic_select(__VA_ARGS__, variadic_n, variadic_3, variadic_2, variadic_1, variadic_0)(__VA_ARGS__)
-// # define variadic_select(argument0, argument1, argument2, argument3, argument4, macro, ...) macro
-// #   define variadic_0()                                "[]: no arguments"
-// #   define variadic_1(argument)                        "[" #argument "]: 1 argument"
-// #   define variadic_2(argument1, argument2)            "[" #argument1 ", " #argument2 "]: 2 arguments"
-// #   define variadic_3(argument1, argument2, argument3) "[" #argument1 ", " #argument2 ", " #argument3 "]: 3 arguments"
-// #   define variadic_n(...)                             "[" #__VA_ARGS__ "]: variable arguments"
-
-// /* Main */
-// int main(void) {
-//     std::printf("%i", sus(~, ));
-//     std::printf("%i", sus(~, A));
-//     std::printf("%i", sus(~, A, B));
-//     std::printf("%i", sus(~, A, B, C));
-//     std::printf("%i", sus(~, A, B, C, D));
-// }
-
 #include <cstdio>
 
 /* ... */
-#define count_macro_argument(...) (count_macro_argument_select(__VA_ARGS__, 1u, 0u, ~) + has_arguments(__VA_ARGS__))
-#define count_macro_argument_select(argument1, argument2, count, ...) count
-# define boolean(x) negate(negate(x))
-# define concatenate(a, b) a ## b
-# define first(a, ...) a
-# define has_arguments(...) boolean(first(has_arguments_select __VA_ARGS__)())
-#   define has_arguments_select() 0
-# define negate(x) negate_select(concatenate(negate_select_, x), 0)
-#   define negate_select(...) second(__VA_ARGS__, 0)
-#     define negate_select_0 ~, 1
-# define second(a, b, ...) b
+#define boolean(x) negate(negate(x))
+#define concatenate(a, b) a ## b
+#define first(a, ...) a
+#define has_arguments(...) boolean(first(no_arguments __VA_ARGS__)())
+#define no_arguments() 0
 
-unsigned char count_function_argument(void) { return 0u; }
-template <typename type> unsigned char count_function_argument(type&&) { return 1u; }
-template <typename type, typename... types> unsigned char count_function_argument(type&&, types&&... arguments) { return 1u + count_function_argument(static_cast<types&&>(arguments)...); }
+#define negate(x) negate_select(concatenate(negate_select_, x), 0)
+# define negate_select(...) second(__VA_ARGS__, 0)
+#   define negate_select_0 ~, 1
+
+#define second(a, b, ...) b
 
 // ...
-namespace { union nonaccessible_t; }
+#define sus(c, ...) has_arguments(__VA_ARGS__)
 
-template <typename = nonaccessible_t, typename... types> struct count_type_trait { static unsigned short const value = 1u + count_type_trait<types...>::value; };
-template <> struct count_type_trait<> { static unsigned short const value = 0u; };
-
-// ...
-template <int... arguments> struct count_nontype_trait { template <int> union dummy_t; static unsigned short const value = count_type_trait<dummy_t<arguments>...>::value; };
+#define variadic(...) variadic_select(__VA_ARGS__, variadic_n, variadic_3, variadic_2, variadic_1, variadic_0)(__VA_ARGS__)
+# define variadic_select(argument0, argument1, argument2, argument3, argument4, macro, ...) macro
+#   define variadic_0()                                "[]: no arguments"
+#   define variadic_1(argument)                        "[" #argument "]: 1 argument"
+#   define variadic_2(argument1, argument2)            "[" #argument1 ", " #argument2 "]: 2 arguments"
+#   define variadic_3(argument1, argument2, argument3) "[" #argument1 ", " #argument2 ", " #argument3 "]: 3 arguments"
+#   define variadic_n(...)                             "[" #__VA_ARGS__ "]: variable arguments"
 
 /* Main */
 int main(void) {
-  // ...
-  std::printf("[function argument]          : %hu" "\r\n", ::count_function_argument());
-  std::printf("[function argument]          : %hu" "\r\n", ::count_function_argument(0));
-  std::printf("[function argument]          : %hu" "\r\n", ::count_function_argument(0, 0));
-  std::puts("");
-
-  // ...
-  std::printf("[macro argument]             : %hu" "\r\n", count_macro_argument());
-  std::printf("[macro argument]             : %hu" "\r\n", count_macro_argument(0));
-  std::printf("[macro argument]             : %hu" "\r\n", count_macro_argument(0, 0));
-  std::puts("");
-
-  // ... ->> also extends to templated template arguments
-  std::printf("[template non-typed argument]: %hu" "\r\n", count_nontype_trait<>::value);
-  std::printf("[template non-typed argument]: %hu" "\r\n", count_nontype_trait<0>::value);
-  std::printf("[template non-typed argument]: %hu" "\r\n", count_nontype_trait<0, 0>::value);
-  std::puts("");
-
-  std::printf("[template typed argument]    : %hu" "\r\n", count_type_trait<>::value);
-  std::printf("[template typed argument]    : %hu" "\r\n", count_type_trait<int>::value);
-  std::printf("[template typed argument]    : %hu" "\r\n", count_type_trait<int, int>::value);
-  std::puts("");
+    std::printf("%i", sus(~, ));
+    std::printf("%i", sus(~, A));
+    std::printf("%i", sus(~, A, B));
+    std::printf("%i", sus(~, A, B, C));
+    std::printf("%i", sus(~, A, B, C, D));
 }
