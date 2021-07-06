@@ -69,10 +69,12 @@
 #define second(a, b, ...) b
 
 // ...
-#define sus(c, ...) has_arguments(__VA_ARGS__)
-
-#define variadic(...) variadic_select(__VA_ARGS__, variadic_n, variadic_3, variadic_2, variadic_1, variadic_0)(__VA_ARGS__)
-# define variadic_select(argument0, argument1, argument2, argument3, argument4, macro, ...) macro
+#define variadic(...) variadic_defer(has_arguments(__VA_ARGS__))(__VA_ARGS__, variadic_n, variadic_3, variadic_2, variadic_1)(__VA_ARGS__)
+#define variadic_defer(x) concatenate(variadic_defer, x)
+#define variadic_defer0 variable_nil
+#define variadic_defer1 variadic_select
+# define variable_nil(...) variadic_0
+# define variadic_select(argument1, argument2, argument3, argument4, macro, ...) macro
 #   define variadic_0()                                "[]: no arguments"
 #   define variadic_1(argument)                        "[" #argument "]: 1 argument"
 #   define variadic_2(argument1, argument2)            "[" #argument1 ", " #argument2 "]: 2 arguments"
@@ -81,9 +83,9 @@
 
 /* Main */
 int main(void) {
-    std::printf("%i", sus(~, ));
-    std::printf("%i", sus(~, A));
-    std::printf("%i", sus(~, A, B));
-    std::printf("%i", sus(~, A, B, C));
-    std::printf("%i", sus(~, A, B, C, D));
+    std::puts(variadic());
+    std::puts(variadic(A));
+    std::puts(variadic(A, B));
+    std::puts(variadic(A, B, C));
+    std::puts(variadic(A, B, C, D));
 }
