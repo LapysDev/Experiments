@@ -1,6 +1,8 @@
 #include <cstddef>
 #include <cstdio>
-#if defined(__cplusplus) && __cplusplus == 199711L
+#if defined(__cplusplus) && __cplusplus > 199711L
+# include <initializer_list>
+#else
 # include <cstdarg>
 #endif
 
@@ -68,38 +70,41 @@ namespace {
     #if defined(__cplusplus) && __cplusplus > 199711L
       template <> struct is_scalar_t<long long>                                                                                          { static bool const value = true; };
       template <> struct is_scalar_t<unsigned long long>                                                                                 { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*)(...) noexcept>                                                                { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*const)(...) noexcept>                                                           { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*const volatile)(...) noexcept>                                                  { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*volatile)(...) noexcept>                                                        { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*)(void) noexcept>                                                               { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*const)(void) noexcept>                                                          { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*const volatile)(void) noexcept>                                                 { static bool const value = true; };
-      template <typename base> struct is_scalar_t<base (*volatile)(void) noexcept>                                                       { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*)(...) noexcept>                                       { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*const)(...) noexcept>                                  { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*const volatile)(...) noexcept>                         { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*volatile)(...) noexcept>                               { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*)(void) noexcept>                                      { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*const)(void) noexcept>                                 { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*const volatile)(void) noexcept>                        { static bool const value = true; };
-      template <typename base, typename object> struct is_scalar_t<base (object::*volatile)(void) noexcept>                              { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*)(types...)>                                                 { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*)(types...) noexcept>                                        { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*const)(types...)>                                            { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*const)(types...) noexcept>                                   { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*const volatile)(types...)>                                   { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*const volatile)(types...) noexcept>                          { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*volatile)(types...)>                                         { static bool const value = true; };
-      template <typename base, typename... types> struct is_scalar_t<base (*volatile)(types...) noexcept>                                { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*)(types...)>                        { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*)(types...) noexcept>               { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const)(types...)>                   { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const)(types...) noexcept>          { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const volatile)(types...)>          { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const volatile)(types...) noexcept> { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*volatile)(types...)>                { static bool const value = true; };
-      template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*volatile)(types...) noexcept>       { static bool const value = true; };
+    # if __cplusplus > 201402L
+        template <typename base> struct is_scalar_t<base (*)(...) noexcept>                                                                { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*const)(...) noexcept>                                                           { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*const volatile)(...) noexcept>                                                  { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*volatile)(...) noexcept>                                                        { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*)(void) noexcept>                                                               { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*const)(void) noexcept>                                                          { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*const volatile)(void) noexcept>                                                 { static bool const value = true; };
+        template <typename base> struct is_scalar_t<base (*volatile)(void) noexcept>                                                       { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*)(...) noexcept>                                       { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*const)(...) noexcept>                                  { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*const volatile)(...) noexcept>                         { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*volatile)(...) noexcept>                               { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*)(void) noexcept>                                      { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*const)(void) noexcept>                                 { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*const volatile)(void) noexcept>                        { static bool const value = true; };
+        template <typename base, typename object> struct is_scalar_t<base (object::*volatile)(void) noexcept>                              { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*)(types...) noexcept>                                        { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*const)(types...) noexcept>                                   { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*const volatile)(types...) noexcept>                          { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*volatile)(types...) noexcept>                                { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*)(types...) noexcept>               { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const)(types...) noexcept>          { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const volatile)(types...) noexcept> { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*volatile)(types...) noexcept>       { static bool const value = true; };
+    # else
+        template <typename base, typename... types> struct is_scalar_t<base (*)(types...)>                                                 { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*const)(types...)>                                            { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*const volatile)(types...)>                                   { static bool const value = true; };
+        template <typename base, typename... types> struct is_scalar_t<base (*volatile)(types...)>                                         { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*)(types...)>                        { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const)(types...)>                   { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*const volatile)(types...)>          { static bool const value = true; };
+        template <typename base, typename object, typename... types> struct is_scalar_t<base (object::*volatile)(types...)>                { static bool const value = true; };
+    # endif
     #endif
 
     template <typename> struct lengthof;
@@ -164,19 +169,33 @@ struct array {
             *--value = *--array;
         }
 
-        #if defined(__cplusplus) && __cplusplus == 199711L
+        #if defined(__cplusplus) && __cplusplus > 199711L
           template <typename type>
-          void instantiate(std::va_list const array, typename conditional_t<false == is_scalar_t<type>::value, std::size_t>::type length) {
-            for (unsigned char *value = this -> value; length--; value += sizeof(base)) {
-                base *element;
-                new (value) base(
-                    *static_cast<base*>(static_cast<void*>(va_arg(array, unsigned char[sizeof(base)])))
-                );
+          void instantiate(std::initializer_list<type> const array, typename conditional_t<false == is_scalar_t<type>::value, std::size_t>::type const) {
+            unsigned char *value = this -> value;
+
+            for (type &element : array) {
+                new (value) base(element);
+                value += sizeof(base);
             }
           }
 
           template <typename type>
-          void instantiate(std::va_list const array, typename conditional_t<true  == is_scalar_t<type>::value, std::size_t>::type length) {
+          void instantiate(std::initializer_list<type> const array, typename conditional_t<true  == is_scalar_t<type>::value, std::size_t>::type const) {
+            typename to_mutable_t<base>::type *value = const_cast<typename to_mutable_t<base>::type*>(this -> value);
+
+            for (type element : array)
+            *(value++) = element;
+          }
+        #else
+          template <typename type>
+          void instantiate(std::va_list array, typename conditional_t<false == is_scalar_t<type>::value, std::size_t>::type length) {
+            for (unsigned char *value = this -> value; length--; value += sizeof(base))
+            new (value) base(va_arg(array, base));
+          }
+
+          template <typename type>
+          void instantiate(std::va_list array, typename conditional_t<true  == is_scalar_t<type>::value, std::size_t>::type length) {
             for (typename to_mutable_t<base>::type *value = const_cast<typename to_mutable_t<base>::type*>(this -> value); length--; ++value)
             *value = va_arg(array, base);
           }
@@ -185,24 +204,32 @@ struct array {
     public:
         array(void) : value() {}
 
-        template <std::size_t length>
-        array(typename conditional_t<(capacity >= length), base>::type (&array)[length]) : value() {
-            this -> instantiate<base>(array, length);
+        array(array<base, capacity> const& array) : value() {
+            this -> instantiate<base>(array.operator base*(), capacity);
         }
 
-        #if defined(__cplusplus) && __cplusplus == 199711L
+        template <typename type>
+        array(type& array) : value() {
+            this -> instantiate<base>(array, typename conditional_t<(capacity >= lengthof<type>::value), std::size_t>::type(lengthof<type>::value));
+        }
+
+        #if defined(__cplusplus) && __cplusplus > 199711L
+          array(std::initializer_list<base> const list) {
+            this -> instantiate<base>(list, list.size());
+          }
+
+          template <typename... types>
+          array(typename conditional_t<(capacity >= sizeof...(types)), std::size_t>::type const count, types&&... elements) : value{} {
+            base array[sizeof...(types)] = {static_cast<base>(elements)...};
+            this -> instantiate<base>(array, count);
+          }
+        #else
           array(std::size_t const count, ...) : value() {
             std::va_list elements;
 
             va_start(elements, count);
             this -> instantiate<base>(elements, count);
             va_end(elements);
-          }
-        #else
-          template <typename... types>
-          array(typename conditional_t<(capacity >= sizeof...(types)), std::size_t>::type const count, types&&... elements) : value{} {
-            base array[sizeof...(types)] = {static_cast<base>(elements)...};
-            this -> instantiate<base>(array, count);
           }
         #endif
 
@@ -215,7 +242,13 @@ struct array {
         #endif
 
         // ...
+        friend std::ptrdiff_t operator +(base* const pointer, array<base, capacity> const& array) { return pointer + array.cast<capacity>(); }
+        friend std::ptrdiff_t operator +(array<base, capacity> const& array, base* const pointer) { return array.cast<capacity>() + pointer; }
+        friend std::ptrdiff_t operator -(base* const pointer, array<base, capacity> const& array) { return pointer - array.cast<capacity>(); }
+        friend std::ptrdiff_t operator -(array<base, capacity> const& array, base* const pointer) { return array.cast<capacity>() - pointer; }
+        friend base& operator *(array<base, capacity> const& array) { return *array.cast<capacity>(); }
         base* operator ->(void) const { return this -> cast<capacity>(); }
+        base& operator [](int const index) const { return this -> cast<capacity>()[index]; }
 
         operator base*(void) const { return this -> cast<capacity>(); }
         template <typename type> operator type&(void) const { return this -> cast<lengthof<type>::value>(); }
@@ -236,18 +269,17 @@ class String {
 // ...
 int main(void) {
     // : [Conversions]
-    // std::printf("[char const*]    : \"%s\"" "\r\n", static_cast<char const*>(array<char const, 14u>("Hello, World!")));
-    // std::printf("[char const [5]] : \"%s\"" "\r\n", static_cast<char const (&)[5]>(array<char const, 14u>("Hello, World!")));
-    // std::printf("[char const [14]]: \"%s\"" "\r\n", static_cast<char const (&)[14]>(array<char const, 14u>("Hello, World!")));
+    std::printf("[char const*]    : \"%s\"" "\r\n", static_cast<char const*>(array<char const, 14u>("Hello, World!")));
+    std::printf("[char const [5]] : \"%s\"" "\r\n", static_cast<char const (&)[5]>(array<char const, 14u>("Hello, World!")));
+    std::printf("[char const [14]]: \"%s\"" "\r\n", static_cast<char const (&)[14]>(array<char const, 14u>("Hello, World!")));
 
-    // std::printf("[String]         : \"%s\"" "\r\n", (*array<String, 1u>(1u, "Hello, World!")).operator char const*());
-    // std::printf("[String]         : \"%s\"" "\r\n", array<String, 1u>(1u, "Hello, World!") -> operator char const*());
-    // std::printf("[String]         : \"%s\"" "\r\n", array<String, 1u>(1u, "Hello, World!")[0].operator char const*());
+    std::printf("[String]         : \"%s\"" "\r\n", (*array<String, 1u>(1u, "Hello, World!")).operator char const*());
+    std::printf("[String]         : \"%s\"" "\r\n", array<String, 1u>(1u, "Hello, World!") -> operator char const*());
+    std::printf("[String]         : \"%s\"" "\r\n", array<String, 1u>(1u, "Hello, World!")[0].operator char const*());
 
-    array<std::string, 1u>(1u, "Hello, World!");
-    // std::printf("[std::string]    : \"%s\"" "\r\n", (*array<std::string, 1u>(1u, "Hello, World!")).c_str());
-    // std::printf("[std::string]    : \"%s\"" "\r\n", array<std::string, 1u>(1u, "Hello, World!") -> c_str());
-    // std::printf("[std::string]    : \"%s\"" "\r\n", array<std::string, 1u>(1u, "Hello, World!")[0].c_str());
+    std::printf("[std::string]    : \"%s\"" "\r\n", (*array<std::string, 1u>(1u, std::string("Hello, World!"))).c_str());
+    std::printf("[std::string]    : \"%s\"" "\r\n", array<std::string, 1u>(1u, std::string("Hello, World!")) -> c_str());
+    std::printf("[std::string]    : \"%s\"" "\r\n", array<std::string, 1u>(1u, std::string("Hello, World!"))[0].c_str());
 
     // : [Iteration] ->> The `iterable` is immutable, but its `const`-ness doesn't apply to its elements/ members (it respects the cv-qualification of its specified type)
     array<int, 10> const iterable = array<int, 10>(10u, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);

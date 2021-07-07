@@ -7,12 +7,12 @@
 #define second(argument1, argument2, ...) argument2
 
 #define map(...) map_parse(map_begin(__VA_ARGS__))
-# define map_arity_pass(...) __VA_ARGS__
 # define map_arity_fail(...)
+# define map_arity_pass(...) __VA_ARGS__
+# define map_begin(function, separator, argument, ...) function(argument) map_check(map_separator, first(map_niladic_check __VA_ARGS__)())(separator) map_check(map_arity, first(map_niladic_check __VA_ARGS__)())(map_stall(map_recurse)()(function, separator, __VA_ARGS__))
 # define map_check(macro, argument) defer(concatenate, macro ## _, defer(second, concatenate(map_check_, argument), pass))
 #   define map_check_fail ~, fail
 #   define map_check_pass
-# define map_begin(function, separator, argument, ...) function(argument) map_check(map_separator, first(map_niladic_check __VA_ARGS__)())(separator) map_check(map_arity, first(map_niladic_check __VA_ARGS__)())(map_stall(map_recurse)()(function, separator, __VA_ARGS__))
 # define map_niladic_check() fail
 # define map_parse(...) map_parse_8(__VA_ARGS__)
 #   define map_parse_1(...) __VA_ARGS__
@@ -23,8 +23,8 @@
 #   define map_parse_6(...) map_parse_5(map_parse_5(__VA_ARGS__))
 #   define map_parse_7(...) map_parse_6(map_parse_6(__VA_ARGS__))
 #   define map_parse_8(...) map_parse_7(map_parse_7(__VA_ARGS__))
-# define map_separator_pass(separator) separator()
 # define map_separator_fail(separator)
+# define map_separator_pass(separator) separator()
 # define map_stall(argument) map_stall_8(argument)
 # define map_stall_null()
 #   define map_stall_1(argument) argument map_stall_null()
