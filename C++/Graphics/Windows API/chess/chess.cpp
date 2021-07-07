@@ -207,21 +207,21 @@ struct Game {
 };
 
 // : Program
-namespace Program {
-    namespace Lock {
-        static HANDLE      FILE       = NULL;
-        static char const *FILE_NAME  = NULL;
+struct Program {
+    struct Lock {
+        static HANDLE      FILE;
+        static char const *FILE_NAME;
 
-        static HANDLE      MUTEX      = NULL;
-        static char const *MUTEX_NAME = NULL;
-    }
+        static HANDLE      MUTEX;
+        static char const *MUTEX_NAME;
+    };
 
-    static LPSTR     ARGUMENTS           = NULL;
-    static int       EXIT_CODE           = EXIT_SUCCESS;
-    static CHAR      FILE_NAME[MAX_PATH] = {0};
-    static HINSTANCE HANDLE              = NULL;
-    static HINSTANCE PREVIOUS_HANDLE     = NULL;
-    static MSG       THREAD_MESSAGE      = MSG();
+    static LPSTR     ARGUMENTS;
+    static int       EXIT_CODE;
+    static CHAR      FILE_NAME[MAX_PATH];
+    static HINSTANCE HANDLE;
+    static HINSTANCE PREVIOUS_HANDLE;
+    static MSG       THREAD_MESSAGE;
 
     // ... ->> Program termination handlers
     static void exit ();
@@ -229,14 +229,14 @@ namespace Program {
     static void raise(int const);
 
     // ... ->> Program termination listeners
-    static void (*onabort       )() = NULL;
-    static void (*onexit        )() = NULL;
-    static void (*oninterrupt   )() = NULL;
-    static void (*oninvalidfault)() = NULL;
-    static void (*onmathfault   )() = NULL;
-    static void (*onsegfault    )() = NULL;
-    static void (*onterminate   )() = NULL;
-}
+    static void (*onabort       )();
+    static void (*onexit        )();
+    static void (*oninterrupt   )();
+    static void (*oninvalidfault)();
+    static void (*onmathfault   )();
+    static void (*onsegfault    )();
+    static void (*onterminate   )();
+};
 
 // : Window
 struct Window {
@@ -287,6 +287,25 @@ unsigned char       Game::Tiles::MARGIN                 = 0u;
 unsigned char const Game::Tiles::ROW_COUNT              = 8u;
 DWORD               Game::Tiles::SELECTION_COLOR[2]     = {0x000000u, 0x000000u};
 
+
+HANDLE      Program::Lock::FILE       = NULL;
+char const *Program::Lock::FILE_NAME  = NULL;
+HANDLE      Program::Lock::MUTEX      = NULL;
+char const *Program::Lock::MUTEX_NAME = NULL;
+LPSTR     Program::ARGUMENTS           = NULL;
+int       Program::EXIT_CODE           = EXIT_SUCCESS;
+CHAR      Program::FILE_NAME[MAX_PATH] = {0};
+HINSTANCE Program::HANDLE              = NULL;
+HINSTANCE Program::PREVIOUS_HANDLE     = NULL;
+MSG       Program::THREAD_MESSAGE      = MSG();
+void (*Program::onabort       )() = NULL;
+void (*Program::onexit        )() = NULL;
+void (*Program::oninterrupt   )() = NULL;
+void (*Program::oninvalidfault)() = NULL;
+void (*Program::onmathfault   )() = NULL;
+void (*Program::onsegfault    )() = NULL;
+void (*Program::onterminate   )() = NULL;
+
 int     Window::APPEARANCE                          = SW_SHOW;
 HBRUSH  Window::BACKGROUND                          = EXIT_SUCCESS;
 LPCSTR  Window::CLASS_NAME                          = "window";
@@ -299,13 +318,13 @@ HWND    Window::HANDLE                              = NULL;
 int     Window::HEIGHT                              = -1;
 HICON   Window::ICON                                = NULL;
 int     Window::LEFT                                = -1;
-BITMAP  Window::MEMORY_DEVICE_CONTEXT_BITMAP        = BITMAP();
+BITMAP  Window::MEMORY_DEVICE_CONTEXT_BITMAP        = ::BITMAP();
 HBITMAP Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
 UINT32 *Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
 HDC     Window::MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
 LRESULT CALLBACK (*Window::PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
 DWORD   Window::STYLE                               = WS_OVERLAPPEDWINDOW;
-DWORD   Window::STYLE_EXTENSION                     = 0x0u;
+DWORD   Window::STYLE_EXTENSION                     = 0x00000000L;
 LPCSTR  Window::TITLE                               = "";
 int     Window::TOP                                 = -1;
 int     Window::WIDTH                               = -1;
