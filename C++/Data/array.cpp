@@ -36,9 +36,9 @@ namespace {
     template <> struct is_scalar_t<unsigned long>                                                      { static bool const value = true ; };
     template <> struct is_scalar_t<unsigned short>                                                     { static bool const value = true ; };
     template <> struct is_scalar_t<wchar_t>                                                            { static bool const value = true ; };
-    template <typename base> struct is_scalar_t<base const>                                            { static bool const value = true ; };
-    template <typename base> struct is_scalar_t<base const volatile>                                   { static bool const value = true ; };
-    template <typename base> struct is_scalar_t<base volatile>                                         { static bool const value = true ; };
+    template <typename base> struct is_scalar_t<base const>                                            { static bool const value = is_scalar_t<base>::value; };
+    template <typename base> struct is_scalar_t<base const volatile>                                   { static bool const value = is_scalar_t<base>::value; };
+    template <typename base> struct is_scalar_t<base volatile>                                         { static bool const value = is_scalar_t<base>::value; };
     template <typename base> struct is_scalar_t<base*>                                                 { static bool const value = true ; };
     template <typename base> struct is_scalar_t<base* const>                                           { static bool const value = true ; };
     template <typename base> struct is_scalar_t<base* const volatile>                                  { static bool const value = true ; };

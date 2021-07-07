@@ -1,10 +1,7 @@
-/* ... --> advapi32.lib, gdi32.lib, kernel32.lib, shell32.lib, user32.lib
-    --- WARN ---
-    #Lapys:
-*/
+/* ... --> advapi32.lib, gdi32.lib, kernel32.lib, shell32.lib, user32.lib */
 /* Definition > ... */
 #ifndef MOUSEEVENTF_FROMTOUCH
-#   define MOUSEEVENTF_FROMTOUCH 0xFF515700
+# define MOUSEEVENTF_FROMTOUCH 0xFF515700
 #endif
 #define _MAC
 #define INC_OLE1
@@ -31,11 +28,11 @@
 #include <wingdi.h>   // Windows GDI
 #include <winnt.h>    // Windows New Technologies
 #include <winuser.h>  // Windows User
-#   include <basetsd.h>        // Base Types & Definitions
-#   include <errhandlingapi.h> // Error Handling API
-#   include <libloaderapi.h>   // Library Loader API
-#   include <memoryapi.h>      // Memory API
-#   include <shellapi.h>       // Shell API
+# include <basetsd.h>        // Base Types & Definitions
+# include <errhandlingapi.h> // Error Handling API
+# include <libloaderapi.h>   // Library Loader API
+# include <memoryapi.h>      // Memory API
+# include <shellapi.h>       // Shell API
 
 /* Phase */
 // : Singular `INITIATE` called by entry point;
@@ -73,22 +70,22 @@ struct bit {
         friend bit<count>& operator -- (bit<count>& bits)            { ++bits.value; return bits; }
         friend bit<count>  operator -- (bit<count>& bits, int const) { return bit<count>(bits.value++); }
 
-        operator uint8_t(void) const { return this -> value; }
+        operator uint8_t() const { return this -> value; }
 };
 
 // : Piece ->> Pointer-to-implementation structure; Implementation is `Game::MEMORY`
 union Piece {
     friend struct Game;
 
+    enum Type { BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK };
     struct Color {
         private: unsigned char const value;
         public:
             static Color const BLACK, WHITE;
 
             Color(unsigned char const value) : value(value) {}
-            operator unsigned char(void) const { return this -> value; }
+            operator unsigned char() const { return this -> value; }
     };
-    enum Type { BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK };
 
     private:
         bit<8u> *const self;
@@ -99,22 +96,22 @@ union Piece {
         static unsigned char countTotal(Type const);
 
         void capture(Piece const);
-        void castle (void);
+        void castle ();
         void promote(Type const);
 
         // ...
-        Color   getColor        (void) const;
-        bit<3u> getColumn       (void) const;
-        bit<3u> getIndex        (void) const;
-        bit<6u> getPosition     (void) const;
-        Type    getPromotionType(void) const;
-        bit<3u> getRow          (void) const;
-        Type    getType         (void) const;
+        Color   getColor        () const;
+        bit<3u> getColumn       () const;
+        bit<3u> getIndex        () const;
+        bit<6u> getPosition     () const;
+        Type    getPromotionType() const;
+        bit<3u> getRow          () const;
+        Type    getType         () const;
 
-        bool    isCaptured      (void) const;
-        bool    isCastled       (void) const;
-        bool    isIncidental    (void) const; // ->> en passant
-        bool    isPromoted      (void) const;
+        bool    isCaptured      () const;
+        bool    isCastled       () const;
+        bool    isIncidental    () const; // ->> en passant
+        bool    isPromoted      () const;
 
         void    setColumn       (bit<3u> const);
         void    setPosition     (bit<3u> const, bit<3u> const);
@@ -127,8 +124,7 @@ typedef Piece::Color Color;
 
 /* Namespace */
 /* : Game
-    --- WARNING (Lapys) -> Requires a byte to be at least 8 bits
-    --- UPDATE (Lapys) -> Could feasibly algorithmically compress the game to a single integer state i.e.: 35 to the 80th possible moves
+    --- UPDATE (Lapys) -> Could feasibly algorithmically compress the game to a single (big) integer i.e.: 35 to the 80th possible states
     --- NOTE (Lapys) -> Memory model (with an unimplemented custom 32-turn draw)
        flag               index            flag                             bit
       [CASTLE STATE (4) | EN-PASSANT (4)] [CAPTURED QUEEN & OFFICERS (14) | TURN (1)]
@@ -178,36 +174,35 @@ struct Game {
     };
 
     struct Tiles {
-        static DWORD               COLORS[2];
+        static DWORD               COLOR[2];
         static unsigned char const COLUMN_COUNT;
-        static DWORD               HOVER_COLORS[2];
+        static DWORD               HOVER_COLOR[2];
         static unsigned char       MARGIN;
         static unsigned char const ROW_COUNT;
-        static DWORD               SELECTION_COLORS[2];
+        static DWORD               SELECTION_COLOR[2];
     };
 
     // ...
     static bit<8u> MEMORY[/* 275 ÷ 8 */ 35];
 
     // ... ->> Address memory segments
-    static bit<8u>* addressBishopData(void);
-    static bit<8u>* addressKnightData(void);
-    static bit<8u>* addressKingData  (void);
-    static bit<8u>* addressPawnData  (void);
-    static bit<8u>* addressQueenData (void);
-    static bit<8u>* addressRookData  (void);
+    static bit<8u>* addressBishopData();
+    static bit<8u>* addressKnightData();
+    static bit<8u>* addressKingData  ();
+    static bit<8u>* addressPawnData  ();
+    static bit<8u>* addressQueenData ();
+    static bit<8u>* addressRookData  ();
 
-    static bit<8u>* addressCapturedOfficerData(void);
-    static bit<8u>* addressCapturedPawnData   (void);
-    static bit<8u>* addressCastleData         (void);
-    static bit<8u>* addressIncidentalPawnData (void);
-    static bit<8u>* addressPromotedPawnData   (void);
-    static bit<8u>* addressTurnData           (void);
+    static bit<8u>* addressCapturedOfficerData();
+    static bit<8u>* addressCapturedPawnData   ();
+    static bit<8u>* addressCastleData         ();
+    static bit<8u>* addressIncidentalPawnData ();
+    static bit<8u>* addressPromotedPawnData   ();
+    static bit<8u>* addressTurnData           ();
 
     // ...
     static Piece getPiece     (Color const, Piece::Type const, bit<3u> const = 0u);
-    static Color getPlayerTurn(void);
-
+    static Color getPlayerTurn();
     static void  setPlayerTurn(Color const);
 };
 
@@ -229,87 +224,107 @@ namespace Program {
     static MSG       THREAD_MESSAGE      = MSG();
 
     // ... ->> Program termination handlers
-    static void exit (void);
+    static void exit ();
     static void exit (int const);
     static void raise(int const);
 
     // ... ->> Program termination listeners
-    static void (*onabort       )(void) = NULL;
-    static void (*onexit        )(void) = NULL;
-    static void (*oninterrupt   )(void) = NULL;
-    static void (*oninvalidfault)(void) = NULL;
-    static void (*onmathfault   )(void) = NULL;
-    static void (*onsegfault    )(void) = NULL;
-    static void (*onterminate   )(void) = NULL;
+    static void (*onabort       )() = NULL;
+    static void (*onexit        )() = NULL;
+    static void (*oninterrupt   )() = NULL;
+    static void (*oninvalidfault)() = NULL;
+    static void (*onmathfault   )() = NULL;
+    static void (*onsegfault    )() = NULL;
+    static void (*onterminate   )() = NULL;
 }
 
 // : Window
-namespace Window {
-    static int     APPEARANCE      = SW_SHOW;
-    static HBRUSH  BACKGROUND      = EXIT_SUCCESS;
-    static LPCSTR  CLASS_NAME      = "window";
-    static UINT    CLASS_STYLE     = CS_GLOBALCLASS | CS_OWNDC;
-    static HCURSOR CURSOR          = NULL;
-    static HICON   FAVICON         = NULL;
-    static HWND    HANDLE          = NULL;
-    static int     HEIGHT          = -1;
-    static HICON   ICON            = NULL;
-    static int     LEFT            = -1;
-    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
-    static DWORD   STYLE           = WS_OVERLAPPEDWINDOW;
-    static DWORD   STYLE_EXTENSION = 0x0u;
-    static LPCSTR  TITLE           = "";
-    static int     TOP             = -1;
-    static int     WIDTH           = -1;
+struct Window {
+    static int     APPEARANCE;
+    static HBRUSH  BACKGROUND;
+    static LPCSTR  CLASS_NAME;
+    static UINT    CLASS_STYLE;
+    static HCURSOR CURSOR;
+    static HICON   FAVICON;
+    static HWND    HANDLE;
+    static int     HEIGHT;
+    static HICON   ICON;
+    static int     LEFT;
+    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const);
+    static DWORD   STYLE;
+    static DWORD   STYLE_EXTENSION;
+    static LPCSTR  TITLE;
+    static int     TOP;
+    static int     WIDTH;
 
     // ... ->> Renderers
-    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE        = NULL;
-    static HDC     DEVICE_CONTEXT_HANDLE               = NULL;
+    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE;
+    static HDC     DEVICE_CONTEXT_HANDLE;
 
-    static BITMAP  MEMORY_DEVICE_CONTEXT_BITMAP        = BITMAP();
-    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
-    static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
-    static HDC     MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
-}
+    static BITMAP  MEMORY_DEVICE_CONTEXT_BITMAP;
+    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE;
+    static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY;
+    static HDC     MEMORY_DEVICE_CONTEXT_HANDLE;
+};
 
 /* Global > ... */
 Color const Color::BLACK = 0u;
 Color const Color::WHITE = 1u;
 
 bit<8u>             Game::MEMORY[sizeof(Game::MEMORY) / sizeof(bit<8u>)] = {0};
-DWORD               Game::Board::COLOR        = 0x000000u;
-unsigned short      Game::Board::HEIGHT       = 0u;
-unsigned short      Game::Board::WIDTH        = 0u;
-unsigned char const Game::Tiles::COLUMN_COUNT = 8u;
-unsigned char const Game::Tiles::ROW_COUNT    = 8u;
+DWORD               Game::Board::COLOR                  = 0x000000u;
+unsigned short      Game::Board::HEIGHT                 = 0u;
+unsigned short      Game::Board::WIDTH                  = 0u;
+BITMAP              Game::Pieces::BITMAP                = ::BITMAP();
+LPCSTR              Game::Pieces::BITMAP_FILE_NAME      = NULL;
+HDC                 Game::Pieces::BITMAP_DEVICE_CONTEXT = NULL;
+HBITMAP             Game::Pieces::BITMAP_HANDLE         = NULL;
+UINT32             *Game::Pieces::BITMAP_MEMORY         = NULL;
+DWORD               Game::Tiles::COLOR[2]               = {0x000000u, 0x000000u};
+unsigned char const Game::Tiles::COLUMN_COUNT           = 8u;
+DWORD               Game::Tiles::HOVER_COLOR[2]         = {0x000000u, 0x000000u};
+unsigned char       Game::Tiles::MARGIN                 = 0u;
+unsigned char const Game::Tiles::ROW_COUNT              = 8u;
+DWORD               Game::Tiles::SELECTION_COLOR[2]     = {0x000000u, 0x000000u};
 
-BITMAP         Game::Pieces::BITMAP;
-LPCSTR         Game::Pieces::BITMAP_FILE_NAME;
-HDC            Game::Pieces::BITMAP_DEVICE_CONTEXT;
-HBITMAP        Game::Pieces::BITMAP_HANDLE;
-UINT32        *Game::Pieces::BITMAP_MEMORY;
-
-DWORD          Game::Tiles::COLORS[2];
-DWORD          Game::Tiles::HOVER_COLORS[2];
-unsigned char  Game::Tiles::MARGIN;
-DWORD          Game::Tiles::SELECTION_COLORS[2];
-bit<8u>        Game::MEMORY[/* 275 ÷ 8 */ 35];
+int     Window::APPEARANCE                          = SW_SHOW;
+HBRUSH  Window::BACKGROUND                          = EXIT_SUCCESS;
+LPCSTR  Window::CLASS_NAME                          = "window";
+UINT    Window::CLASS_STYLE                         = CS_GLOBALCLASS | CS_OWNDC;
+HCURSOR Window::CURSOR                              = NULL;
+HBITMAP Window::DEVICE_CONTEXT_BITMAP_HANDLE        = NULL;
+HDC     Window::DEVICE_CONTEXT_HANDLE               = NULL;
+HICON   Window::FAVICON                             = NULL;
+HWND    Window::HANDLE                              = NULL;
+int     Window::HEIGHT                              = -1;
+HICON   Window::ICON                                = NULL;
+int     Window::LEFT                                = -1;
+BITMAP  Window::MEMORY_DEVICE_CONTEXT_BITMAP        = BITMAP();
+HBITMAP Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
+UINT32 *Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
+HDC     Window::MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
+LRESULT CALLBACK (*Window::PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
+DWORD   Window::STYLE                               = WS_OVERLAPPEDWINDOW;
+DWORD   Window::STYLE_EXTENSION                     = 0x0u;
+LPCSTR  Window::TITLE                               = "";
+int     Window::TOP                                 = -1;
+int     Window::WIDTH                               = -1;
 
 /* Function */
 // : Game
-bit<8u>* Game::addressBishopData(void) { return Game::MEMORY + 20; }
-bit<8u>* Game::addressKnightData(void) { return Game::MEMORY + 24; }
-bit<8u>* Game::addressKingData  (void) { return Game::MEMORY - 1; }
-bit<8u>* Game::addressPawnData  (void) { return Game::MEMORY + 0; }
-bit<8u>* Game::addressQueenData (void) { return Game::MEMORY - 3; }
-bit<8u>* Game::addressRookData  (void) { return Game::MEMORY + 28; }
+bit<8u>* Game::addressBishopData() { return Game::MEMORY + 20; }
+bit<8u>* Game::addressKnightData() { return Game::MEMORY + 24; }
+bit<8u>* Game::addressKingData  () { return Game::MEMORY - 1; }
+bit<8u>* Game::addressPawnData  () { return Game::MEMORY + 0; }
+bit<8u>* Game::addressQueenData () { return Game::MEMORY - 3; }
+bit<8u>* Game::addressRookData  () { return Game::MEMORY + 28; }
 
-bit<8u>* Game::addressCapturedOfficerData(void) { return Game::MEMORY + 16; }
-bit<8u>* Game::addressCapturedPawnData   (void) { return Game::MEMORY + 33; }
-bit<8u>* Game::addressCastleData         (void) { return Game::MEMORY + 32; }
-bit<8u>* Game::addressIncidentalPawnData (void) { return Game::MEMORY + 32; }
-bit<8u>* Game::addressPromotedPawnData   (void) { return Game::MEMORY + 18; }
-bit<8u>* Game::addressTurnData           (void) { return Game::MEMORY + 34; }
+bit<8u>* Game::addressCapturedOfficerData() { return Game::MEMORY + 16; }
+bit<8u>* Game::addressCapturedPawnData   () { return Game::MEMORY + 33; }
+bit<8u>* Game::addressCastleData         () { return Game::MEMORY + 32; }
+bit<8u>* Game::addressIncidentalPawnData () { return Game::MEMORY + 32; }
+bit<8u>* Game::addressPromotedPawnData   () { return Game::MEMORY + 18; }
+bit<8u>* Game::addressTurnData           () { return Game::MEMORY + 34; }
 
 Piece Game::getPiece(Color const color, Piece::Type const type, bit<3u> const index) {
     switch (type) {
@@ -324,7 +339,7 @@ Piece Game::getPiece(Color const color, Piece::Type const type, bit<3u> const in
     return Piece(NULL);
 }
 
-Color Game::getPlayerTurn(void) {
+Color Game::getPlayerTurn() {
     return *Game::addressTurnData() & 0x01u ? Color::WHITE : Color::BLACK;
 }
 
@@ -334,7 +349,7 @@ void Game::setPlayerTurn(Color const color) {
 }
 
 // : Pawn
-Piece::Type Pawn::getPromotionType(void) const {
+Piece::Type Pawn::getPromotionType() const {
     switch (*(this -> self) & 0xC0u) {
         case 0x0u: return Piece::BISHOP;
         case 0x1u: return Piece::KNIGHT;
@@ -345,7 +360,7 @@ Piece::Type Pawn::getPromotionType(void) const {
     return Piece::PAWN;
 }
 
-bool Pawn::isPromoted(void) const {
+bool Pawn::isPromoted() const {
     return (Game::addressPromotedPawnData()[Color::WHITE == this -> getColor() ? 1 : 0] >> this -> getIndex()) & 0x1u;
 }
 
@@ -389,7 +404,7 @@ unsigned char Piece::countTotal(Type const type) {
     return 0u;
 }
 
-Color Piece::getColor(void) const {
+Color Piece::getColor() const {
     for (Type const
         types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN},
         *type   = types + (sizeof(types) / sizeof(Type));
@@ -402,7 +417,7 @@ Color Piece::getColor(void) const {
     return static_cast<Color>(0x0u);
 }
 
-bit<3u> Piece::getColumn(void) const {
+bit<3u> Piece::getColumn() const {
     return Piece::BISHOP != this -> getType() ? this -> getPosition() & 0xF8u : (
         ((this -> getPosition() * 2u) % Game::Tiles::COLUMN_COUNT) + (this -> getRow() % 2u
             ? this -> getIndex() == (Color::WHITE == this -> getColor() ? 0u : 1u)
@@ -411,7 +426,7 @@ bit<3u> Piece::getColumn(void) const {
     );
 }
 
-bit<3u> Piece::getIndex(void) const {
+bit<3u> Piece::getIndex() const {
     for (Type const
         types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN},
         *type   = types + (sizeof(types) / sizeof(Type));
@@ -426,7 +441,7 @@ bit<3u> Piece::getIndex(void) const {
     return 0u;
 }
 
-bit<6u> Piece::getPosition(void) const {
+bit<6u> Piece::getPosition() const {
     Type const type = this -> getType();
 
     switch (type) {
@@ -445,13 +460,13 @@ bit<6u> Piece::getPosition(void) const {
     return 0u;
 }
 
-bit<3u> Piece::getRow(void) const {
+bit<3u> Piece::getRow() const {
     return Piece::BISHOP != this -> getType() ? this -> getPosition() & 0x07u : (
         this -> getPosition() / (Game::Tiles::COLUMN_COUNT / 2u)
     );
 }
 
-Piece::Type Piece::getType(void) const {
+Piece::Type Piece::getType() const {
     for (Type const
         types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::QUEEN},
         *type   = types + (sizeof(types) / sizeof(Type));
@@ -466,7 +481,7 @@ Piece::Type Piece::getType(void) const {
     return static_cast<Type>(0x0u);
 }
 
-bool Piece::isCaptured(void) const {
+bool Piece::isCaptured() const {
     switch (this -> getType()) {
         case Piece::KING  : return false;
         case Piece::PAWN  : return (Game::addressCapturedPawnData()[Color::WHITE == this -> getColor() ? 1 : 0] >> this -> getIndex()) & 0x01u;
@@ -480,7 +495,7 @@ bool Piece::isCaptured(void) const {
     return false;
 }
 
-bool Piece::isIncidental(void) const {
+bool Piece::isIncidental() const {
     unsigned char const count = Piece::countTotal(Piece::PAWN);
     unsigned char const index = *Game::addressIncidentalPawnData() & 0x0Fu;
 
@@ -544,18 +559,45 @@ void Piece::setRow(bit<3u> const row) {
     this -> setPosition(this -> getColumn(), row);
 }
 
+// : Program
+void Program::exit() { Program::exit(Program::EXIT_CODE); }
+void Program::exit(int const code) {
+    Program::EXIT_CODE = code;
+
+    if (NULL != Program::onexit) (*Program::onexit)();
+    std::exit(Program::EXIT_CODE);
+}
+
+void Program::raise(int const signal) {
+    switch (signal) {
+        case SIGABRT: if (NULL != Program::onabort       ) (*Program::onabort)()       ; break;
+        case SIGFPE : if (NULL != Program::onmathfault   ) (*Program::onmathfault)()   ; break;
+        case SIGILL : if (NULL != Program::oninvalidfault) (*Program::oninvalidfault)(); break;
+        case SIGINT : if (NULL != Program::oninterrupt   ) (*Program::oninterrupt)()   ; break;
+        case SIGSEGV: if (NULL != Program::onsegfault    ) (*Program::onsegfault)()    ; break;
+        case SIGTERM: if (NULL != Program::onterminate   ) (*Program::onterminate)()   ; break;
+    } Program::exit(Program::EXIT_CODE);
+}
+
 // : Rook
-void Rook::castle(void) {
+void Rook::castle() {
     *Game::addressCastleData() |= (1u << (
         this -> getIndex() + (Color::WHITE == this -> getColor() ? Piece::countTotal(Piece::ROOK) : 0u)
     )) << 4u;
 }
 
-bool Rook::isCastled(void) const {
+bool Rook::isCastled() const {
     return (
         (*Game::addressCastleData() >> 4u) >>
         (this -> getIndex() + (Color::WHITE == this -> getColor() ? Piece::countTotal(Piece::ROOK) : 0u))
     ) & 0x01u;
+}
+
+// : ...
+void putPixel(unsigned short const x, unsigned short const y, DWORD const color) {
+    Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[
+        x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)
+    ] = color | (0xFFu << 0x18u);
 }
 
 /* Main */
@@ -566,7 +608,7 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
     Program::PREVIOUS_HANDLE = programPreviousHandle;
     Window::APPEARANCE = appearance;
 
-    std::atexit(static_cast<void (*)(void)>(&Program::exit));
+    std::atexit(static_cast<void (*)()>(&Program::exit));
     std::signal(SIGABRT, &Program::raise);
     std::signal(SIGFPE, &Program::raise);
     std::signal(SIGILL, &Program::raise);
@@ -579,79 +621,59 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
     return Program::EXIT_CODE;
 }
 
-/* Phase --- WARN (Lapys) -> All phases except `INITIATE()` can be invoked by the user. */
+/* Phase --- WARN (Lapys) -> Phases (except `INITIATE`) can be invoked by the user. */
 /* : Initiate */
 void INITIATE(...) {
     bool programAlreadyRunning = false;
 
     // ... ->> Configuration
-    DWORD          Game::Board::COLOR;
-    unsigned short Game::Board::HEIGHT;
-    unsigned short Game::Board::WIDTH;
-    BITMAP         Game::Pieces::BITMAP;
-    LPCSTR         Game::Pieces::BITMAP_FILE_NAME;
-    HDC            Game::Pieces::BITMAP_DEVICE_CONTEXT;
-    HBITMAP        Game::Pieces::BITMAP_HANDLE;
-    UINT32        *Game::Pieces::BITMAP_MEMORY;
-
-    DWORD          Game::Tiles::COLORS[2];
-    DWORD          Game::Tiles::HOVER_COLORS[2];
-    unsigned char  Game::Tiles::MARGIN;
-    DWORD          Game::Tiles::SELECTION_COLORS[2];
-    bit<8u>        Game::MEMORY[/* 275 ÷ 8 */ 35];
-
-    // ... ->> Configuration
-    Game::Board::COLOR = 0xC0C0C0u;
-    Game::Board::HEIGHT = 512u;
-    Game::Board::WIDTH = 512u;
-    Game::Pieces::BITMAP_FILE_NAME = "pieces.bmp";
-    Game::Tiles::BEVEL_COLORS[0] = 0xCFCFCFu;
-    Game::Tiles::BEVEL_COLORS[1] = 0x006600u;
-    Game::Tiles::BEVEL_ACTIVATION_COLOR = 0x006FFFu;
-    Game::Tiles::BEVEL_SELECTION_COLOR = 0x333333u;
-    Game::Tiles::BEVEL_SIZE = 4u;
-    Game::Tiles::COLORS[0] = 0xF0F0F0u;
-    Game::Tiles::COLORS[1] = 0x009900u;
-    Game::Tiles::COLUMN_COUNT = 8u;
-    Game::Tiles::MARGIN = 2u;
-    Game::Tiles::ROW_COUNT = 8u;
+    for (bit<8u> *data = Game::MEMORY + (sizeof(Game::MEMORY) / sizeof(bit<8u>)); data-- != Game::MEMORY; ) *data = 0x0u;
+    Game::Board::COLOR              = 0xF0F0F0u;
+    Game::Board::HEIGHT             = 512u;
+    Game::Board::WIDTH              = 512u;
+    Game::Pieces::BITMAP_FILE_NAME  = "pieces.bmp";
+    Game::Tiles::COLOR[0]           = 0xF9F9F9u;
+    Game::Tiles::COLOR[1]           = 0x006900u;
+    Game::Tiles::HOVER_COLOR[0]     = 0xCFCFCFu;
+    Game::Tiles::HOVER_COLOR[1]     = 0x006000u;
+    Game::Tiles::MARGIN             = 2u;
+    Game::Tiles::SELECTION_COLOR[0] = 0xFAFA00u;
+    Game::Tiles::SELECTION_COLOR[1] = 0x006FFFu;
 
     ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
-    Program::onexit = static_cast<void (*)(void)>(&TERMINATE);
-    Program::Lock::FILE_NAME = "ChessLockFile.tmp";
+    Program::onexit           = static_cast<void (*)()>(&TERMINATE);
+    Program::Lock::FILE_NAME  = "ChessLockFile.tmp";
     Program::Lock::MUTEX_NAME = "ChessLockMutex";
 
     Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOW);
-    Window::CURSOR = ::LoadCursor(NULL, IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
-    Window::ICON = ::ExtractIcon(static_cast<HINSTANCE>(::GetCurrentProcess()), Program::FILE_NAME, 0u);
-    Window::PROCEDURE = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
-    Window::STYLE = WS_POPUP;
-    Window::TITLE = "Chess";
+    Window::CURSOR     = ::LoadCursor(NULL, IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
+    Window::ICON       = ::ExtractIcon(static_cast<HINSTANCE>(::GetCurrentProcess()), Program::FILE_NAME, 0u);
+    Window::PROCEDURE  = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
+    Window::STYLE      = WS_POPUP;
+    Window::TITLE      = "Chess";
 
     // ... ->> Setup
-    Game::clearData();
+    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::getPiece(Color::WHITE, Piece::PAWN, iterator).setPosition(iterator, 1u);
+    Game::getPiece(Color::WHITE, Piece::ROOK  , 0u).setPosition(0u, 0u);
+    Game::getPiece(Color::WHITE, Piece::KNIGHT, 0u).setPosition(1u, 0u);
+    Game::getPiece(Color::WHITE, Piece::BISHOP, 0u).setPosition(2u, 0u);
+    Game::getPiece(Color::WHITE, Piece::KING      ).setPosition(3u, 0u);
+    Game::getPiece(Color::WHITE, Piece::QUEEN     ).setPosition(4u, 0u);
+    Game::getPiece(Color::WHITE, Piece::BISHOP, 1u).setPosition(5u, 0u);
+    Game::getPiece(Color::WHITE, Piece::KNIGHT, 1u).setPosition(6u, 0u);
+    Game::getPiece(Color::WHITE, Piece::ROOK  , 1u).setPosition(7u, 0u);
 
-    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::movePiece(Game::getPiece(Piece::WHITE, Piece::PAWN, iterator), iterator, 1u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::ROOK  , 0u), 0u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::KNIGHT, 0u), 1u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::BISHOP, 0u), 2u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::KING      ), 3u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::QUEEN     ), 4u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::BISHOP, 1u), 5u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::KNIGHT, 1u), 6u, 0u);
-    Game::movePiece(Game::getPiece(Piece::WHITE, Piece::ROOK  , 1u), 7u, 0u);
+    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::getPiece(Color::BLACK, Piece::PAWN, iterator).setPosition(iterator, 6u);
+    Game::getPiece(Color::BLACK, Piece::ROOK  , 0u).setPosition(0u, 7u);
+    Game::getPiece(Color::BLACK, Piece::KNIGHT, 0u).setPosition(1u, 7u);
+    Game::getPiece(Color::BLACK, Piece::BISHOP, 0u).setPosition(2u, 7u);
+    Game::getPiece(Color::BLACK, Piece::KING      ).setPosition(3u, 7u);
+    Game::getPiece(Color::BLACK, Piece::QUEEN     ).setPosition(4u, 7u);
+    Game::getPiece(Color::BLACK, Piece::BISHOP, 1u).setPosition(5u, 7u);
+    Game::getPiece(Color::BLACK, Piece::KNIGHT, 1u).setPosition(6u, 7u);
+    Game::getPiece(Color::BLACK, Piece::ROOK  , 1u).setPosition(7u, 7u);
 
-    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::movePiece(Game::getPiece(Piece::BLACK, Piece::PAWN, iterator), iterator, 6u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::ROOK  , 0u), 0u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::KNIGHT, 0u), 1u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::BISHOP, 0u), 2u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::KING      ), 3u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::QUEEN     ), 4u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::BISHOP, 1u), 5u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::KNIGHT, 1u), 6u, 7u);
-    Game::movePiece(Game::getPiece(Piece::BLACK, Piece::ROOK  , 1u), 7u, 7u);
-
-    Game::setTurn(Piece::WHITE);
+    Game::setPlayerTurn(Color::WHITE);
 
     // Logic ->> Assert previous program instance
     if (NULL != Program::PREVIOUS_HANDLE) programAlreadyRunning = true;
@@ -730,11 +752,11 @@ void INITIATE(...) {
                 RECT workareaBounds; ::SystemParametersInfo(SPI_GETWORKAREA, 0u, static_cast<PVOID>(&workareaBounds), 0x0);
 
                 // ...
-                Window::WIDTH = ((workareaBounds.right - workareaBounds.left) * 3) / 4;
+                Window::WIDTH  = ((workareaBounds.right - workareaBounds.left) * 3) / 4;
                 Window::HEIGHT = ((workareaBounds.bottom - workareaBounds.top) * 3) / 4;
 
-                Window::LEFT = (((workareaBounds.right - workareaBounds.left) - Window::WIDTH) * 1) / 2;
-                Window::TOP = (((workareaBounds.bottom - workareaBounds.top) - Window::HEIGHT) * 1) / 2;
+                Window::LEFT = (((workareaBounds.right - workareaBounds.left) - Window::WIDTH ) * 1) / 2;
+                Window::TOP  = (((workareaBounds.bottom - workareaBounds.top) - Window::HEIGHT) * 1) / 2;
             }
 
             Window::HANDLE = ::CreateWindowEx(
@@ -745,15 +767,130 @@ void INITIATE(...) {
             );
 
             // ...
-            if (NULL == Window::HANDLE)
-                TERMINATE("Unable to create game window");
-
-            else while (WM_QUIT != Program::THREAD_MESSAGE.message) {
-                Program::THREAD_MESSAGE_AVAILABLE = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0u, 0x0u, PM_REMOVE);
-                if (FALSE != Program::THREAD_MESSAGE_AVAILABLE) { ::DispatchMessage(&Program::THREAD_MESSAGE); UPDATE(); }
+            if (NULL == Window::HANDLE) TERMINATE("Unable to create game window");
+            else for (bool available = false; WM_QUIT != Program::THREAD_MESSAGE.message; ) {
+                available = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0u, 0x0u, PM_REMOVE);
+                if (FALSE != available) { ::DispatchMessage(&Program::THREAD_MESSAGE); UPDATE(); }
 
                 Program::EXIT_CODE = Program::THREAD_MESSAGE.wParam;
             }
         }
+    }
+}
+
+/* : Update */
+void UPDATE() {
+    Game::Board::HEIGHT = (Window::HEIGHT * 9) / 10;
+    Game::Board::WIDTH  = (Window::WIDTH  * 9) / 10;
+}
+
+LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
+    Program::THREAD_MESSAGE.message = message; // ->> Not recommended
+    Window::HANDLE = windowHandle;
+
+    switch (message) {
+        /* ... */
+        case WM_CLOSE     :                             ::DestroyWindow(Window::HANDLE); break;
+        case WM_KEYDOWN   : if (VK_ESCAPE == parameter) ::DestroyWindow(Window::HANDLE); break;
+        case WM_SYSCOMMAND: if (SC_CLOSE  == parameter) ::DestroyWindow(Window::HANDLE); break;
+        case WM_SYSKEYDOWN: if (VK_F4     == parameter) ::DestroyWindow(Window::HANDLE); break;
+
+        /* ... ->> Allow programmer to handle messages */
+        case WM_SETCURSOR: return TRUE;
+        #ifdef WM_TOUCH
+            case WM_TOUCH: return EXIT_SUCCESS;
+        #endif
+
+        /* ... */
+        case WM_CREATE: {
+            BITMAPINFO bitmapInformation;
+            LPVOID const creationParameter = reinterpret_cast<CREATESTRUCTA const*>(subparameter) -> lpCreateParams;
+
+            // ...
+            Window::DEVICE_CONTEXT_HANDLE = ::GetDCEx(Window::HANDLE, static_cast<HRGN>(NULL), DCX_LOCKWINDOWUPDATE | DCX_NORESETATTRS | DCX_WINDOW);
+            if (NULL == Window::DEVICE_CONTEXT_HANDLE) TERMINATE("Unable to paint game window");
+
+            Window::DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateCompatibleBitmap(Window::DEVICE_CONTEXT_HANDLE, Window::WIDTH, Window::HEIGHT);
+            if (NULL == Window::DEVICE_CONTEXT_BITMAP_HANDLE) TERMINATE("Unable to draw on game window");
+
+            // ...
+            bitmapInformation.bmiColors -> rgbBlue = 0u;
+            bitmapInformation.bmiColors -> rgbGreen = 0u;
+            bitmapInformation.bmiColors -> rgbRed = 0u;
+            bitmapInformation.bmiColors -> rgbReserved = 0x0u;
+            bitmapInformation.bmiHeader.biBitCount = 32u;
+            bitmapInformation.bmiHeader.biClrUsed = 0u;
+            bitmapInformation.bmiHeader.biClrImportant = 0u;
+            bitmapInformation.bmiHeader.biCompression = BI_RGB;
+            bitmapInformation.bmiHeader.biHeight = -Window::HEIGHT;
+            bitmapInformation.bmiHeader.biPlanes = 1u;
+            bitmapInformation.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            bitmapInformation.bmiHeader.biSizeImage = Window::HEIGHT * Window::WIDTH * sizeof(UINT32);
+            bitmapInformation.bmiHeader.biWidth = Window::WIDTH;
+            bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZSIZE);
+            bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTSIZE);
+
+            // ...
+            Window::MEMORY_DEVICE_CONTEXT_HANDLE = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
+            if (NULL == Window::MEMORY_DEVICE_CONTEXT_HANDLE) TERMINATE("Unable to render on game window");
+
+            Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateDIBSection(Window::MEMORY_DEVICE_CONTEXT_HANDLE, &bitmapInformation, DIB_RGB_COLORS, static_cast<VOID**>(static_cast<void*>(&Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY)), NULL, 0u);
+            if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE && NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY) TERMINATE("Unable to render on game window");
+
+            // ...
+            ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
+
+            // ...
+            // ::FreeConsole();
+
+            ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
+            ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+
+            ::SetCursor(Window::CURSOR);
+            ::ShowWindow(Window::HANDLE, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
+            #ifdef WM_TOUCH
+                if (0 != ::GetSystemMetrics(0x5E /*SM_DIGITIZER*/))
+                ::RegisterTouchWindow(Window::HANDLE, 0x0);
+            #endif
+        } break;
+
+        // ...
+        case WM_DESTROY: {
+            ::DeleteDC(Window::MEMORY_DEVICE_CONTEXT_HANDLE); ::DeleteObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+            ::ReleaseDC(Window::HANDLE, Window::DEVICE_CONTEXT_HANDLE);
+            Window::HANDLE = NULL;
+
+            ::PostQuitMessage(EXIT_SUCCESS);
+        } break;
+
+        // ...
+        case WM_PAINT: {
+            ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
+            if (FALSE != ::GetUpdateRect(Window::HANDLE, NULL, FALSE)) ::RedrawWindow(Window::HANDLE, NULL, NULL, RDW_INTERNALPAINT);
+        } return EXIT_SUCCESS;
+    }
+
+    return ::DefWindowProc(windowHandle, message, parameter, subparameter);
+}
+
+/* : Terminate */
+void TERMINATE() { TERMINATE(NULL); }
+void TERMINATE(char const message[]) {
+    std::free(Game::Pieces::BITMAP_MEMORY);
+    if (NULL != Game::Pieces::BITMAP_DEVICE_CONTEXT) ::DeleteObject(Game::Pieces::BITMAP_DEVICE_CONTEXT);
+    if (NULL != Game::Pieces::BITMAP_HANDLE) ::DeleteObject(Game::Pieces::BITMAP_HANDLE);
+
+    if (NULL != Program::Lock::FILE && INVALID_HANDLE_VALUE != Program::Lock::FILE) ::CloseHandle(Program::Lock::FILE);
+    if (NULL != Program::Lock::MUTEX) ::CloseHandle(Program::Lock::MUTEX);
+
+    if (NULL != Window::HANDLE) ::DestroyWindow(Window::HANDLE);
+    ::UnregisterClass(Window::CLASS_NAME, Program::HANDLE);
+
+    // Logic ->> `TERMINATE(...)` called by the user.
+    if (NULL != message) {
+        Program::EXIT_CODE = EXIT_FAILURE;
+
+        ::MessageBox(NULL, message, NULL /* --> "Error" */, MB_APPLMODAL | MB_DEFBUTTON1 | MB_ICONERROR | MB_OK | MB_SETFOREGROUND);
+        Program::exit();
     }
 }
