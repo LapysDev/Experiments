@@ -21,6 +21,7 @@
 
 static void Draw(void);
 
+inline void drawAVIF(char const[]);
 inline void drawBMP(char const[]);
 inline void drawExif(char const[]);
 inline void drawGIF(char const[]);
@@ -139,6 +140,9 @@ void Draw(void) {
 }
 
 /* Function */
+// : Draw AOMedia Video 1 Image File Format
+void drawAVIF(char const[]) {}
+
 // : Draw Bitmap
 void drawBMP(char const fileName[]) {
     HBITMAP const bitmapHandle = static_cast<HBITMAP>(::LoadImage(NULL, fileName, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_DEFAULTCOLOR | LR_LOADFROMFILE));
