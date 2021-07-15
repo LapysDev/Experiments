@@ -344,8 +344,8 @@ bit<8u>* Game::addressTurnData           () { return Game::MEMORY + 34; }
 bit<8u>* Game::addressPieceData(Piece::Type const type) {
     switch (type) {
         case Piece::BISHOP: return Game::MEMORY + 20;
-        case Piece::KNIGHT: return Game::MEMORY + 24;
         case Piece::KING  : return Game::MEMORY - 2;
+        case Piece::KNIGHT: return Game::MEMORY + 24;
         case Piece::PAWN  : return Game::MEMORY + 0;
         case Piece::QUEEN : return Game::MEMORY - 4;
         case Piece::ROOK  : return Game::MEMORY + 28;
@@ -437,7 +437,7 @@ unsigned char Piece::countTotal(Type const type) {
 }
 
 Color Piece::getColor() const {
-    for (Type const types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; )
+    for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; )
     for (unsigned char index = Piece::countTotal(*type); index--; ) {
         if (this -> self == Game::getPiece(Color::DARK , *type, index).self) return Color::DARK;
         if (this -> self == Game::getPiece(Color::LIGHT, *type, index).self) return Color::LIGHT;
@@ -456,7 +456,7 @@ bit<3u> Piece::getColumn() const {
 }
 
 bit<3u> Piece::getIndex() const {
-    for (Type const types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; ) {
+    for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; ) {
         for (unsigned char index = Piece::countTotal(*type); index--; )
         if (
             this -> self == Game::getPiece(Color::DARK , *type, index).self ||
@@ -493,7 +493,7 @@ bit<3u> Piece::getRow() const {
 }
 
 Piece::Type Piece::getType() const {
-    for (Type const types[] = {Piece::BISHOP, Piece::KING, Piece::KNIGHT, Piece::PAWN, Piece::QUEEN, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; ) {
+    for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; ) {
         for (unsigned char index = Piece::countTotal(*type); index--; )
         if (
             this -> self == Game::getPiece(Color::DARK , *type, index).self ||
@@ -616,13 +616,6 @@ bool Rook::isCastled() const {
     ) & 0x01u;
 }
 
-// : ...
-void putPixel(unsigned short const x, unsigned short const y, DWORD const color) {
-    Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[
-        x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)
-    ] = color | (/* ->> Alpha component */ 0xFFu << 0x18u);
-}
-
 /* Main */
 int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle, LPSTR const commandLineArguments, int const appearance) {
     Program::ARGUMENTS       = commandLineArguments;
@@ -652,7 +645,7 @@ void INITIATE(...) {
 
     // ... ->> Configuration
     for (bit<8u> *data = Game::MEMORY + (sizeof(Game::MEMORY) / sizeof(bit<8u>)); data-- != Game::MEMORY; ) *data = 0x00u;
-    Game::Board::COLOR              = 0xF0F0F0u;
+    Game::Board::COLOR              = 0x300F00u;
     Game::Board::HEIGHT             = 512u;
     Game::Board::WIDTH              = 512u;
     Game::Pieces::BITMAP_FILE_NAME  = "pieces.bmp";
@@ -915,17 +908,18 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                     ::GetObject(Game::Pieces::BITMAP_HANDLE, sizeof(BITMAP), &Game::Pieces::BITMAP);
                     Game::Pieces::BITMAP_MEMORY = static_cast<UINT32*>(std::malloc(Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32)));
 
-                    // ...
-                    bitmapInformation.bmiHeader.biHeight        = -Game::Pieces::BITMAP.bmHeight;
-                    bitmapInformation.bmiHeader.biPlanes        = Game::Pieces::BITMAP.bmPlanes;
-                    bitmapInformation.bmiHeader.biSizeImage     = Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32);
-                    bitmapInformation.bmiHeader.biWidth         = Game::Pieces::BITMAP.bmWidth;
-                    bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, HORZSIZE);
-                    bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, VERTSIZE);
+                    if (NULL != Game::Pieces::BITMAP_MEMORY) {
+                        bitmapInformation.bmiHeader.biHeight        = -Game::Pieces::BITMAP.bmHeight;
+                        bitmapInformation.bmiHeader.biPlanes        = Game::Pieces::BITMAP.bmPlanes;
+                        bitmapInformation.bmiHeader.biSizeImage     = Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32);
+                        bitmapInformation.bmiHeader.biWidth         = Game::Pieces::BITMAP.bmWidth;
+                        bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, HORZSIZE);
+                        bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, VERTSIZE);
 
-                    // ...
-                    ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
-                    ::SelectObject(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE);
+                        // ...
+                        ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
+                        ::SelectObject(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE);
+                    }
                 }
             }
 
@@ -934,7 +928,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             Game::Board::WIDTH  = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9) / 10;
 
             ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
-            // ::FreeConsole();
+            ::FreeConsole();
 
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
@@ -966,10 +960,11 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         } break;
 
         case WM_PAINT: {
-            Piece const *const pieces = Game::getPieces();
+            Piece const *const  pieces = Game::getPieces();
+            unsigned short const tileContentHeight = tileHeight - Game::Tiles::MARGIN;
+            unsigned short const tileContentWidth  = tileWidth  - Game::Tiles::MARGIN;
 
-            static_cast<void>(pieces);
-            // std::setbuf(stdout, new char[1024 * 1024]);
+            // ... ->> Board & Tiles
             for (unsigned short boardY = (tileHeight + Game::Tiles::MARGIN) * Game::Tiles::ROW_COUNT   ; boardY--; )
             for (unsigned short boardX = (tileWidth  + Game::Tiles::MARGIN) * Game::Tiles::COLUMN_COUNT; boardX--; ) {
                 DWORD                tileColor;
@@ -978,32 +973,32 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                 unsigned short const tileX      = boardX - (tileColumn * (tileWidth + Game::Tiles::MARGIN));
                 unsigned short const tileY      = boardY - (tileRow    * (tileWidth + Game::Tiles::MARGIN));
 
-                // // for (Piece const *piece = pieces + (2u * (
-                // //     Piece::countTotal(Piece::BISHOP) +
-                // //     Piece::countTotal(Piece::KNIGHT) +
-                // //     Piece::countTotal(Piece::KING  ) +
-                // //     Piece::countTotal(Piece::PAWN  ) +
-                // //     Piece::countTotal(Piece::QUEEN ) +
-                // //     Piece::countTotal(Piece::ROOK  )
-                // // )); piece-- != pieces; )
+                // ... ->> Board
+                x = boardLeft + boardX;
+                y = boardTop  + boardY;
 
-                // ...
+                if ((x > -1 && x < Window::WIDTH) && (y > -1 && y < Window::HEIGHT))
+                Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | Game::Board::COLOR;
+
+                // ... ->> Tiles
                 tileColor = Game::Tiles::COLOR[(tileColumn + tileRow) % 2u];
                 x = boardLeft + tileX + (tileColumn * (tileWidth  + Game::Tiles::MARGIN));
                 y = boardTop  + tileY + (tileRow    * (tileHeight + Game::Tiles::MARGIN));
-
-                int susx = boardLeft + boardX, susy = boardTop + boardY;
-                if ((susx > -1 && susx < Window::WIDTH) && (susy > -1 && susy < Window::HEIGHT)) putPixel(susx, susy, 0x000033u);
 
                 if (
                     (tileX >= Game::Tiles::MARGIN && tileX < tileWidth ) &&
                     (tileY >= Game::Tiles::MARGIN && tileY < tileHeight)
                 ) {
-                    unsigned short const tileContentHeight = tileHeight - Game::Tiles::MARGIN;
-                    unsigned short const tileContentWidth  = tileWidth  - Game::Tiles::MARGIN;
                     unsigned short const tileContentX = tileX - Game::Tiles::MARGIN;
                     unsigned short const tileContentY = tileY - Game::Tiles::MARGIN;
 
+                    // ... ->> Hovered
+                    if (
+                        tileColumn == Game::Tiles::HOVERED_TILE % Game::Tiles::COLUMN_COUNT &&
+                        tileRow    == Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT
+                    ) tileColor = Game::Tiles::HOVER_COLOR[(tileColumn + tileRow) % 2u];
+
+                    // ... ->> Beveled
                     if (
                         (tileContentX > tileContentWidth  - Game::Tiles::BEVEL || tileContentX < 0u + Game::Tiles::BEVEL) ||
                         (tileContentY > tileContentHeight - Game::Tiles::BEVEL || tileContentY < 0u + Game::Tiles::BEVEL)
@@ -1013,30 +1008,60 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                         (((((tileColor >> 0x00u) & 0xFFu) * 2u) / 3u) << 0x00u)
                     );
 
-                    if (
-                        tileColumn == Game::Tiles::HOVERED_TILE % Game::Tiles::COLUMN_COUNT &&
-                        tileRow    == Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT
-                    ) tileColor = 0x000FFFu;//Game::Tiles::HOVER_COLOR[(tileColumn + tileRow) % 2u];
-
                     // ...
-                    // DWORD               COLOR[2];
-                    // HCURSOR             CURSOR;
-                    // DWORD               HOVER_COLOR[2];
-                    // signed char         SELECTED_TILE;
-                    // DWORD               SELECTION_COLOR[2];
-
-                    if (
-                        (x > -1 && x < Window::WIDTH ) &&
-                        (y > -1 && y < Window::HEIGHT)
-                    ) putPixel(x, y, tileColor);
+                    if ((x > -1 && x < Window::WIDTH) && (y > -1 && y < Window::HEIGHT))
+                    Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | tileColor;
                 }
             }
-            // std::fflush(stdout);
-            // TERMINATE(NULL);
+
+            // ... ->> Pieces
+            for (Piece const *piece = pieces + (2u * (Piece::countTotal(Piece::BISHOP) + Piece::countTotal(Piece::KING) + Piece::countTotal(Piece::KNIGHT) + Piece::countTotal(Piece::PAWN) + Piece::countTotal(Piece::QUEEN) + Piece::countTotal(Piece::ROOK))); piece-- != pieces; ) {
+                unsigned short const pieceBitmapHeight = Game::Pieces::BITMAP.bmHeight / 2u;
+                unsigned short const pieceBitmapWidth  = Game::Pieces::BITMAP.bmWidth  / 6u;
+                DWORD const          pieceColor  = piece -> getColor();
+                unsigned char const  pieceColumn = piece -> getColumn();
+                unsigned char const  pieceRow    = piece -> getRow();
+                Piece::Type const    pieceType   = piece -> getType();
+
+                // ...
+                for (unsigned short pieceY = tileContentHeight; pieceY--; )
+                for (unsigned short pieceX = tileContentWidth ; pieceX--; ) {
+                    DWORD          pieceBitmapColor;
+                    unsigned short pieceBitmapX = pieceBitmapWidth;
+                    unsigned short pieceBitmapY = Color::LIGHT == pieceColor ? pieceBitmapHeight : 0u;
+
+                    // ...
+                    switch (pieceType) {
+                        case Piece::BISHOP: pieceBitmapX *= 0u; break;
+                        case Piece::KING  : pieceBitmapX *= 1u; break;
+                        case Piece::KNIGHT: pieceBitmapX *= 2u; break;
+                        case Piece::PAWN  : pieceBitmapX *= 3u; break;
+                        case Piece::QUEEN : pieceBitmapX *= 4u; break;
+                        case Piece::ROOK  : pieceBitmapX *= 5u; break;
+                    }
+
+                    y = boardTop  + pieceY + (pieceRow    * tileHeight) + ((pieceRow    + 1u) * Game::Tiles::MARGIN);
+                    x = boardLeft + pieceX + (pieceColumn * tileWidth ) + ((pieceColumn + 1u) * Game::Tiles::MARGIN);
+                    // pieceBitmapY += (pieceY * pieceBitmapHeight) / ((tileContentHeight * 2u) / 3u);
+                    // pieceBitmapX += (pieceX * pieceBitmapWidth ) / ((tileContentWidth  * 2u) / 3u);
+
+                    pieceBitmapY += (pieceY * pieceBitmapHeight) / tileContentHeight;
+                    pieceBitmapX += (pieceX * pieceBitmapWidth ) / tileContentWidth;
+                    pieceBitmapColor = Game::Pieces::BITMAP_MEMORY[pieceBitmapX + (pieceBitmapY * Game::Pieces::BITMAP.bmWidth)];
+
+                    // ... ->> Bitmap/ computed
+                    if (NULL == Game::Pieces::BITMAP_HANDLE) {}
+                    else {
+                        if (pieceBitmapX < Game::Pieces::BITMAP.bmWidth && pieceBitmapY < Game::Pieces::BITMAP.bmHeight)
+                        if (pieceBitmapColor != Game::Pieces::BITMAP_MEMORY[0] && (x > -1 && x < Window::WIDTH) && (y > -1 && y < Window::HEIGHT))
+                        Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | Game::Pieces::BITMAP_MEMORY[pieceBitmapX + (pieceBitmapY * Game::Pieces::BITMAP.bmWidth)];
+                    }
+                }
+            }
 
             /* ... */
             ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
-            if (FALSE != ::GetUpdateRect(windowHandle, NULL, FALSE)) ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
+            // if (FALSE != ::GetUpdateRect(windowHandle, NULL, FALSE)) ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
         } return 0x0L;
     }
 
