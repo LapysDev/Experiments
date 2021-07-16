@@ -807,11 +807,40 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
     switch (message) {
         /* ... */
         case WM_CLOSE     :                             ::DestroyWindow(windowHandle); break;
-        case WM_KEYDOWN   : if (VK_ESCAPE == parameter) ::DestroyWindow(windowHandle); break;
         case WM_SYSCOMMAND: if (SC_CLOSE  == parameter) ::DestroyWindow(windowHandle); break;
         case WM_SYSKEYDOWN: if (VK_F4     == parameter) ::DestroyWindow(windowHandle); break;
 
         /* ... */
+        case WM_KEYDOWN: {
+            if (VK_ESCAPE == parameter) ::DestroyWindow(windowHandle);
+            else switch (parameter) {
+                case VK_DOWN : Game::Tiles::HOVERED_TILE = (Game::Tiles::HOVERED_TILE != -1) * (
+                    0u
+                ); break;
+
+                case VK_LEFT : Game::Tiles::HOVERED_TILE = (Game::Tiles::HOVERED_TILE != -1) * (
+                    0u == Game::Tiles::HOVERED_TILE % Game::Tiles::COLUMN_COUNT ? (
+                        0u != Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT
+                        ? (
+                            (Game::Tiles::COLUMN_COUNT - 1u) +
+                            (((Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT) - 1u) * Game::Tiles::COLUMN_COUNT)
+                        ) : (Game::Tiles::COLUMN_COUNT * Game::Tiles::ROW_COUNT) - 1u
+                    ) : Game::Tiles::HOVERED_TILE - 1u
+                ); break;
+
+                case VK_RIGHT: Game::Tiles::HOVERED_TILE = (Game::Tiles::HOVERED_TILE != -1) * (
+                    Game::Tiles::COLUMN_COUNT - 1u == Game::Tiles::HOVERED_TILE % Game::Tiles::COLUMN_COUNT ? (
+                        (((Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT) + 1u) != Game::Tiles::ROW_COUNT   ) *
+                        (((Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT) + 1u) *  Game::Tiles::COLUMN_COUNT)
+                    ) : Game::Tiles::HOVERED_TILE + 1u
+                ); break;
+
+                case VK_UP   : Game::Tiles::HOVERED_TILE = (Game::Tiles::HOVERED_TILE != -1) * (
+                    0u
+                ); break;
+            }
+        } break;
+
         case WM_LBUTTONDOWN: {
             if (MOUSEEVENTF_FROMTOUCH != (::GetMessageExtraInfo() & MOUSEEVENTF_FROMTOUCH)) {
                 Game::Pointer::ACTIVE = true;
@@ -823,9 +852,10 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         case WM_MOUSEMOVE: {
             signed char const hoveredTile = Game::Tiles::HOVERED_TILE;
 
+            // ...
+            Game::Tiles::HOVERED_TILE = -1;
             Game::Pointer::X = GET_X_LPARAM(subparameter);
             Game::Pointer::Y = GET_Y_LPARAM(subparameter);
-            Game::Tiles::HOVERED_TILE = -1;
 
             for (unsigned char row    = Game::Tiles::ROW_COUNT   ; row--    && !~Game::Tiles::HOVERED_TILE; )
             for (unsigned char column = Game::Tiles::COLUMN_COUNT; column-- && !~Game::Tiles::HOVERED_TILE; ) {
@@ -838,6 +868,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                 ) Game::Tiles::HOVERED_TILE = column + (row * Game::Tiles::COLUMN_COUNT);
             }
 
+            // ...
             if (hoveredTile != Game::Tiles::HOVERED_TILE)
             ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
         } break;
@@ -928,7 +959,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             Game::Board::WIDTH  = ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 9) / 10;
 
             ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
-            ::FreeConsole();
+            // ::FreeConsole();
 
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
@@ -950,17 +981,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         } break;
 
         /* ... */
-        case WM_KEYUP: {
-            switch (parameter) {
-                case VK_DOWN : Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).setRow   (Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).getRow   () + 1u); break;
-                case VK_LEFT : Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).setColumn(Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).getColumn() - 1u); break;
-                case VK_RIGHT: Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).setColumn(Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).getColumn() + 1u); break;
-                case VK_UP   : Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).setRow   (Game::getPiece(Color::LIGHT, Piece::QUEEN, 0u).getRow   () - 1u); break;
-            }
-        } break;
-
         case WM_PAINT: {
-            Piece const *const  pieces = Game::getPieces();
+            Piece const *const pieces = Game::getPieces();
             unsigned short const tileContentHeight = tileHeight - Game::Tiles::MARGIN;
             unsigned short const tileContentWidth  = tileWidth  - Game::Tiles::MARGIN;
 
@@ -996,7 +1018,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                     if (
                         tileColumn == Game::Tiles::HOVERED_TILE % Game::Tiles::COLUMN_COUNT &&
                         tileRow    == Game::Tiles::HOVERED_TILE / Game::Tiles::COLUMN_COUNT
-                    ) tileColor = Game::Tiles::HOVER_COLOR[(tileColumn + tileRow) % 2u];
+                    ) tileColor = 0x000FFFu;//Game::Tiles::HOVER_COLOR[(tileColumn + tileRow) % 2u];
 
                     // ... ->> Beveled
                     if (
@@ -1020,41 +1042,50 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                 unsigned short const pieceBitmapWidth  = Game::Pieces::BITMAP.bmWidth  / 6u;
                 DWORD const          pieceColor  = piece -> getColor();
                 unsigned char const  pieceColumn = piece -> getColumn();
+                unsigned short const pieceHeight = (tileHeight * 2u) / 3u;
                 unsigned char const  pieceRow    = piece -> getRow();
                 Piece::Type const    pieceType   = piece -> getType();
+                unsigned short const pieceWidth  = (tileWidth  * 2u) / 3u;
 
                 // ...
-                for (unsigned short pieceY = tileContentHeight; pieceY--; )
-                for (unsigned short pieceX = tileContentWidth ; pieceX--; ) {
-                    DWORD          pieceBitmapColor;
-                    unsigned short pieceBitmapX = pieceBitmapWidth;
-                    unsigned short pieceBitmapY = Color::LIGHT == pieceColor ? pieceBitmapHeight : 0u;
+                for (unsigned short pieceY = tileHeight; pieceY--; )
+                for (unsigned short pieceX = tileWidth ; pieceX--; ) {
+                    x = pieceX + (boardLeft + (pieceColumn * (tileWidth  + Game::Tiles::MARGIN)) - ((tileWidth  - pieceWidth ) / 2u));
+                    y = pieceY + (boardTop  + (pieceRow    * (tileHeight + Game::Tiles::MARGIN)) - ((tileHeight - pieceHeight) / 2u));
 
-                    // ...
-                    switch (pieceType) {
-                        case Piece::BISHOP: pieceBitmapX *= 0u; break;
-                        case Piece::KING  : pieceBitmapX *= 1u; break;
-                        case Piece::KNIGHT: pieceBitmapX *= 2u; break;
-                        case Piece::PAWN  : pieceBitmapX *= 3u; break;
-                        case Piece::QUEEN : pieceBitmapX *= 4u; break;
-                        case Piece::ROOK  : pieceBitmapX *= 5u; break;
-                    }
+                    if (
+                        (x > -1 && x < Window::WIDTH) && (y > -1 && y < Window::HEIGHT) &&
+                        (pieceWidth > tileWidth - pieceX) && (pieceHeight > tileHeight - pieceY)
+                    ) {
+                        // ... ->> Bitmap/ computed
+                        if (NULL == Game::Pieces::BITMAP_HANDLE) {}
+                        else {
+                            DWORD          pieceBitmapColor;
+                            DWORD const    pieceBitmapMaskColor = *Game::Pieces::BITMAP_MEMORY;
+                            unsigned short pieceBitmapX = pieceBitmapWidth;
+                            unsigned short pieceBitmapY = Color::LIGHT == pieceColor ? pieceBitmapHeight : 0u;
 
-                    y = boardTop  + pieceY + (pieceRow    * tileHeight) + ((pieceRow    + 1u) * Game::Tiles::MARGIN);
-                    x = boardLeft + pieceX + (pieceColumn * tileWidth ) + ((pieceColumn + 1u) * Game::Tiles::MARGIN);
-                    // pieceBitmapY += (pieceY * pieceBitmapHeight) / ((tileContentHeight * 2u) / 3u);
-                    // pieceBitmapX += (pieceX * pieceBitmapWidth ) / ((tileContentWidth  * 2u) / 3u);
+                            // ...
+                            switch (pieceType) {
+                                case Piece::BISHOP: pieceBitmapX *= 0u; break;
+                                case Piece::KING  : pieceBitmapX *= 1u; break;
+                                case Piece::KNIGHT: pieceBitmapX *= 2u; break;
+                                case Piece::PAWN  : pieceBitmapX *= 3u; break;
+                                case Piece::QUEEN : pieceBitmapX *= 4u; break;
+                                case Piece::ROOK  : pieceBitmapX *= 5u; break;
+                            }
 
-                    pieceBitmapY += (pieceY * pieceBitmapHeight) / tileContentHeight;
-                    pieceBitmapX += (pieceX * pieceBitmapWidth ) / tileContentWidth;
-                    pieceBitmapColor = Game::Pieces::BITMAP_MEMORY[pieceBitmapX + (pieceBitmapY * Game::Pieces::BITMAP.bmWidth)];
+                            pieceBitmapX += ((pieceX - (((tileWidth  - pieceWidth ) / 2u) + ((tileWidth  - pieceWidth ) / 2u))) * pieceBitmapWidth ) / pieceWidth;
+                            pieceBitmapY += ((pieceY - (((tileHeight - pieceHeight) / 2u) + ((tileHeight - pieceHeight) / 2u))) * pieceBitmapHeight) / pieceHeight;
 
-                    // ... ->> Bitmap/ computed
-                    if (NULL == Game::Pieces::BITMAP_HANDLE) {}
-                    else {
-                        if (pieceBitmapX < Game::Pieces::BITMAP.bmWidth && pieceBitmapY < Game::Pieces::BITMAP.bmHeight)
-                        if (pieceBitmapColor != Game::Pieces::BITMAP_MEMORY[0] && (x > -1 && x < Window::WIDTH) && (y > -1 && y < Window::HEIGHT))
-                        Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | Game::Pieces::BITMAP_MEMORY[pieceBitmapX + (pieceBitmapY * Game::Pieces::BITMAP.bmWidth)];
+                            // ...
+                            if (pieceBitmapX < Game::Pieces::BITMAP.bmWidth && pieceBitmapY < Game::Pieces::BITMAP.bmHeight) {
+                                pieceBitmapColor = Game::Pieces::BITMAP_MEMORY[pieceBitmapX + (pieceBitmapY * Game::Pieces::BITMAP.bmWidth)];
+
+                                if (pieceBitmapColor != pieceBitmapMaskColor)
+                                Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | pieceBitmapColor;
+                            }
+                        }
                     }
                 }
             }
