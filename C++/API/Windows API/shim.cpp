@@ -999,7 +999,7 @@
 # endif
 #endif
 
-/* Telephony API --> `<tapi.h>` */
+/* Telephony API --> <tapi.h> */
 #ifndef TAPI_REPLY
 # define TAPI_REPLY 0x0463
 #endif
@@ -1324,48 +1324,56 @@
 #endif
 
 /* ... --> windows.h */
-#define _MAC                // ..?
-#define NOATOM              // Atom Manager routines
-#define NOCLIPBOARD         // Clipboard routines
-#define NOCOLOR             // Screen colors
-#define NOCOMM              // COMM Driver routines
-#define NOCRYPT             // Cryptographic API
-#define NOCTLMGR            // Control and Dialog routines
-#define NODEFERWINDOWPOS    // `DeferWindowPos(...)` macros
-#define NODRAWTEXT          // `DrawText(...)` and `DT_*` macros
-#define NOGDI               // GDI defines and routines
-#define NOGDICAPMASKS       // `CC_*`, `CP_*`, `LC_*`, `PC_*`, `RC_`, and `TC_*` macros
-#define NOHELP              // Help Engine interface
-#define NOICONS             // `IDI_*` macros
-#define NOKANJI             // Kanji support features
-#define NOKERNEL            // Kernel macros and routines
-#define NOKEYSTATES         // `MK_*`
-#define NOMCX               // Modem Configuration Extensions
-#define NOMEMMGR            // `GHND`, `GMEM_*`, `LHND`, and `LMEM_*` macros and routines
-#define NOMENUS             // `MF_*`
-#define NOMETAFILE          // `typedef ... METAFILEPICT;`
-#define NOMINMAX            // `max(...)`, and `min(...)` macros
-#define NOOPENFILE          // `AnsiToOem`, `OpenFile(...)`, `OemToAnsi`, and `OF_*` macros
-#define NOPROFILER          // Profiler interface
-#define NORASTEROPS         // Binary & Tertiary Raster operations
-#define NOSCROLL            // `SB_*` and Scrolling routines
-#define NOSERVICE           // Service Controller routines, `SERVICE_` equates, etc...
-#define NOSOUND             // Sound Driver routines
-#define NOSYSCOMMANDS       // `SC_*` macros
-#define NOSYSMETRICS        // `SM_*` macros
-#define NOTEXTMETRIC        // `typedef ... TEXTMETRIC;`, and associated routines
-#define NOVIRTUALKEYCODES   // `VK_*` macros
-#define NOWH                // `SetWindowsHook(...)`, and `WH_*` macros
-#define OEMRESOURCE         // OEM Resource values
-#define UNICODE             // Unicode feature variations
-#define STRICT              // ..?
-#define WIN32_LEAN_AND_MEAN // Minimal imports from the Windows API
+#define _MAC                // ->> ..?
+#define NOATOM              // ->> Atom Manager routines
+#define NOCLIPBOARD         // ->> Clipboard routines
+#define NOCOLOR             // ->> Screen colors
+#define NOCOMM              // ->> COMM Driver routines
+#define NOCRYPT             // ->> Cryptographic API
+#define NOCTLMGR            // ->> Control and Dialog routines
+#define NODEFERWINDOWPOS    // ->> `DeferWindowPos(...)` macros
+#define NODRAWTEXT          // ->> `DrawText(...)` and `DT_*` macros
+#define NOGDI               // ->> GDI defines and routines
+#define NOGDICAPMASKS       // ->> `CC_*`, `CP_*`, `LC_*`, `PC_*`, `RC_`, and `TC_*` macros
+#define NOHELP              // ->> Help Engine interface
+#define NOICONS             // ->> `IDI_*` macros
+#define NOKANJI             // ->> Kanji support features
+#define NOKERNEL            // ->> Kernel macros and routines
+#define NOKEYSTATES         // ->> `MK_*`
+#define NOMCX               // ->> Modem Configuration Extensions
+#define NOMEMMGR            // ->> `GHND`, `GMEM_*`, `LHND`, and `LMEM_*` macros and routines
+#define NOMENUS             // ->> `MF_*`
+#define NOMETAFILE          // ->> `typedef ... METAFILEPICT`
+#define NOMINMAX            // ->> `max(...)`, and `min(...)` macros
+#define NOOPENFILE          // ->> `AnsiToOem`, `OpenFile(...)`, `OemToAnsi`, and `OF_*` macros
+#define NOPROFILER          // ->> Profiler interface
+#define NORASTEROPS         // ->> Binary & Tertiary Raster operations
+#define NOSCROLL            // ->> `SB_*` and Scrolling routines
+#define NOSERVICE           // ->> Service Controller routines, `SERVICE_` equates, etc...
+#define NOSOUND             // ->> Sound Driver routines
+#define NOSYSCOMMANDS       // ->> `SC_*` macros
+#define NOSYSMETRICS        // ->> `SM_*` macros
+#define NOTEXTMETRIC        // ->> `typedef ... TEXTMETRIC`, and associated routines
+#define NOVIRTUALKEYCODES   // ->> `VK_*` macros
+#define NOWH                // ->> `SetWindowsHook(...)`, and `WH_*` macros
+#define OEMRESOURCE         // ->> OEM Resource values
+#define UNICODE             // ->> Unicode feature variations
+#define STRICT              // ->> ..?
+#define WIN32_LEAN_AND_MEAN // ->> Minimal imports from the Windows API
 
 #ifndef MOUSEEVENTF_FROMTOUCH
 # define MOUSEEVENTF_FROMTOUCH 0xFF515700
 #endif
 
 /* ... */
+#ifndef CLOCKS_PER_SEC
+# define CLOCKS_PER_SEC CLK_TCK
+#endif
+
+#ifndef VK_HANGUL
+# define VK_HANGUL VK_HANGUEL
+#endif
+
 #ifndef WIZ_NEXT
 # define WIZ_NEXT 0x040B
 #endif

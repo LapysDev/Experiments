@@ -1,22 +1,20 @@
 #include <cstdio>
 
-/* ... */
-class Person {
-  private: char const *const name;
-  public:
-    Person(char const name[]) : name(name) {}
-    char const* getName(void) const;
-};
+int main() {
+  using std::printf;
 
-char const* Person::getName(void) const {
-  static Person const *const that = this;
-  struct lambda { static char const* call(void) { return that -> name; } };
+  /* ... */
+  int copyable = 1;
+  static int persistent = 2;
+  int referable = 3;
 
-  return lambda::call();
-}
+  // ...
+  struct { int copy; void operator ()() { printf("[cpy]: %i" "\r\n", copy); } } copycapture = {copyable};
+  struct { void operator ()() { printf("[nil]: %i" "\r\n", persistent); } } nocapture;
+  struct { int *reference; void operator ()() { printf("[ref]: %i" "\r\n", *reference); } } refcapture = {&referable};
 
-/* Main */
-int main(void) {
-  Person const person = Person("Lapys");
-  std::printf("[]: \"%s\"", person.getName());
+  /* ... */
+  copycapture();
+  nocapture();
+  refcapture();
 }
