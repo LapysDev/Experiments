@@ -23,41 +23,34 @@
 /* Phase */
 // : Singular `INITIATE` called by entry point;
 // : Definitions for `RESET`, `TERMINATE`, `UPDATE`, more definitions are allowed & callable by programmer
-static void INITIATE (...);
-       void RESET    (   );
-       void TERMINATE(   );
-       void UPDATE   (   );
+static void INITIATE ();
+       void RESET    ();
+       void TERMINATE();
+       void UPDATE   ();
 
 void TERMINATE(char const[]);
 LRESULT CALLBACK UPDATE(HWND const, UINT const, WPARAM const, LPARAM const);
 
 /* Class ->> Each class ideally does not have a persistent instance within the program memory */
-template <unsigned char> struct bit;
-struct Piece;
-struct Tile;
-
 // : Bit
 template <unsigned char count>
 struct bit {
     template <unsigned char> friend struct bit;
 
-    protected: uint8_t value : count;
+    protected: uintmax_t value : count;
     public:
         bit() : value() {}
-        bit(uint8_t const value) : value(value) {}
+        bit(uintmax_t const value) : value(value) {}
 
         // ...
         friend bit<count>& operator &=(bit<count>& a, bit<count> const b) { a.value &= b.value; return a; }
         friend bit<count>& operator |=(bit<count>& a, bit<count> const b) { a.value |= b.value; return a; }
 
-        operator uint8_t() const { return this -> value; }
+        operator uintmax_t() const { return this -> value; }
 };
 
 // : Piece ->> Pointer-to-implementation structure; Implementation is `Game::MEMORY`
 struct Piece {
-    friend struct Game;
-
-    enum Type { BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK };
     typedef struct Enumeration {
         private: unsigned char value : 5;
         public:
@@ -67,284 +60,174 @@ struct Piece {
             // ...
             Enumeration(unsigned char const value) : value(value) {}
             operator unsigned char() const { return this -> value; }
-    } Color, Movement;
+    } Movement, Player;
+    typedef enum Type { BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK } Type;
 
-    private:
-        bit<8u> *const self;
-        Piece(bit<8u>* const address) : self(address) {}
-
-    public:
-        // ...
-        static unsigned char count(Type const);
-        static unsigned char countTotal();
-
-        void capture(Piece const);
-        void castle ();
-        void promote(Type const);
-
-        // ...
-        Color   getColor        () const;
-        bit<3u> getColumn       () const;
-        bit<3u> getIndex        () const;
-        Tile    getPosition     () const;
-        Type    getPromotionType() const;
-        bit<3u> getRow          () const;
-        Type    getType         () const;
-
-        bool    isCaptured      () const;
-        bool    isCastled       () const;
-        bool    isIncidental    () const; // ->> en passant
-        bool    isPromoted      () const;
-
-        void    setColumn       (bit<3u> const);
-        void    setPosition     (bit<3u> const, bit<3u> const);
-        void    setRow          (bit<3u> const);
-};
-
-// : Tile
-struct Tile : public bit<6u> {
-    // Tile() : bit<6u>() {}
-    Tile(uint8_t const value) : bit<6u>(value) {}
+    bit<8u> *data;
+    Piece(bit<8u>* const address) : data(address) {}
 
     // ...
-    bit<3u> getColumn() const;
-    bit<3u> getRow   () const;
+    static unsigned char count(Type const);
+    static unsigned char countTotal(); // ->> per player
 
-    operator uint8_t() const { return this -> bit<6u>::operator uint8_t(); }
+    void capture(Piece const);
+    void castle ();
+    void promote(Type const);
+
+    // ...
+    bit<3u> getColumn       () const;
+    bit<3u> getIndex        () const;
+    bit<6u> getPosition     () const;
+    Player  getPlayer       () const;
+    Type    getPromotionType() const;
+    bit<3u> getRow          () const;
+    Type    getType         () const;
+
+    bool    isCaptured      () const;
+    bool    isCastled       () const;
+    bool    isIncidental    () const; // ->> en passant
+    bool    isPromoted      () const;
+
+    void    setColumn       (bit<3u> const);
+    void    setPosition     (bit<3u> const, bit<3u> const);
+    void    setRow          (bit<3u> const);
 };
 
 /* Definition > ... */
-typedef Piece::Color Color;
 typedef Piece Bishop, King, Knight, Pawn, Queen, Rook;
+typedef Piece::Player Player;
 
 /* Namespace */
 /* : Game
     --- UPDATE (Lapys) -> Could feasibly algorithmically compress the game to a single (big) integer i.e.: 35 to the 80th possible states
-    --- NOTE (Lapys) -> Memory model (with an unimplemented custom 32-turn draw)
-       flag               index            flag                             bit
-      [CASTLE STATE (4) | EN-PASSANT (4)] [CAPTURED QUEEN & OFFICERS (14) | TURN (1)]
-      [0000             | 0000          ] [00000000 000000                | - 0     ]
-
-       position                pos.             position                 pos.              position                pos.             position                 pos.
-      [BLACK KING ROOK   (6) | BLACK KING (2) | BLACK QUEEN ROOK   (6) | BLACK QUEEN (2) | WHITE KING ROOK   (6) | WHITE KING (2) | WHITE QUEEN ROOK   (6) | WHITE QUEEN (2)]
-      [000000                | 00             | 000000                 | 00              | 000000                | 00             | 000000                 | 00             ]
-
-       position                pos.             position                 pos.              position                pos.             position                 pos.
-      [BLACK KING KNIGHT (6) | BLACK KING (2) | BLACK QUEEN KNIGHT (6) | BLACK QUEEN (2) | WHITE KING KNIGHT (6) | WHITE KING (2) | WHITE QUEEN KNIGHT (6) | WHITE QUEEN (2)]
-      [000000                | 00             | 000000                 | 00              | 000000                | 00             | 000000                 | 00             ]
-
-       position                pos.             position                 pos.              position                pos.             position                 pos.
-      [BLACK KING BISHOP (5) | BLACK KING (2) | BLACK QUEEN BISHOP (5) | BLACK QUEEN (2) | WHITE KING BISHOP (5) | WHITE KING (2) | WHITE QUEEN BISHOP (5) | WHITE QUEEN (2)]
-      [00000 -               | 00             | 00000 -                | 00              | 00000 -               | 00             | 00000 -                | 00             ]
-
-       pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type
-      [BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8) | BLACK PAWN (8)]
-      [000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00     ]
-
-       flag                      flag
-      [CAPTURED BLACK PAWN (8)] [PROMOTED BLACK PAWN (8)]
-      [00000000               ] [00000000               ]
-
-       pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type      pos.   type
-      [WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8) | WHITE PAWN (8)]
-      [000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00      | 000000 00     ]
-
-       flag                      flag
-      [CAPTURED WHITE PAWN (8)] [PROMOTED WHITE PAWN (8)]
-      [00000000               ] [00000000               ]
+    --- UPDATE (Lapys) -> Unimplemented custom 32-turn draw
 */
-struct Game {
-    struct Board {
-        static DWORD          COLOR;
-        static int            LEFT;
-        static unsigned short HEIGHT;
-        static int            TOP;
-        static unsigned short WIDTH;
-    };
+namespace Game {
+    namespace Board {
+        static DWORD          COLOR  = 0x000000u;
+        static int            LEFT   = 0;
+        static unsigned short HEIGHT = 0u;
+        static int            TOP    = 0;
+        static unsigned short WIDTH  = 0u;
+    }
 
-    struct Pieces {
-        static BITMAP  BITMAP;
-        static LPCSTR  BITMAP_FILE_NAME;
-        static HDC     BITMAP_DEVICE_CONTEXT_HANDLE;
-        static HBITMAP BITMAP_HANDLE;
-        static UINT32 *BITMAP_MEMORY;
-    };
+    namespace Pieces {
+        static BITMAP  BITMAP                       = ::BITMAP();
+        static LPCSTR  BITMAP_FILE_NAME             = NULL;
+        static HDC     BITMAP_DEVICE_CONTEXT_HANDLE = NULL;
+        static HBITMAP BITMAP_HANDLE                = NULL;
+        static UINT32 *BITMAP_MEMORY                = NULL;
+    }
 
-    struct Tiles {
-        static DWORD               ANTICIPATED_COLOR;
-        static unsigned char       BEVEL;
-        static unsigned char const COLUMN_COUNT;
-        static HCURSOR             CURSOR;
-        static DWORD               DARK_COLOR;
-        static DWORD               LIGHT_COLOR;
-        static Tile                HOVERED;
-        static DWORD               HOVERED_COLOR;
-        static bool                HOVERING;
-        static unsigned char       MARGIN;
-        static unsigned char const ROW_COUNT;
-        static Tile                SELECTED;
-        static DWORD               SELECTED_COLOR;
-        static bool                SELECTING;
-    };
+    namespace Tiles {
+        static DWORD               ANTICIPATE_COLOR  = 0x000000u;
+        static unsigned char       BEVEL             = 0u;
+        static unsigned char const COLUMN_COUNT      = 8u;
+        static HCURSOR             CURSOR            = NULL;
+        static DWORD               DARK_COLOR        = 0x000000u;
+        static DWORD               LIGHT_COLOR       = 0x000000u;
+        static unsigned char       HOVER             = 0u;
+        static DWORD               HOVER_COLOR       = 0x000000u;
+        static bool                HOVERED           = false;
+        static unsigned char       MARGIN            = 0u;
+        static unsigned char const ROW_COUNT         = 8u;
+        static unsigned char       SELECT            = 0u;
+        static DWORD               SELECT_COLOR      = 0x000000u;
+        static bool                SELECTED          = false;
+    }
 
     // ...
-    static bit<8u> MEMORY[/* 275 ÷ 8 */ 35];
+    static bit<8u> MEMORY[/* 275 ÷ 8 */ 35] = {0};
 
     // ... ->> Address memory segments
     static bit<8u>* addressCapturedOfficerData();
     static bit<8u>* addressCapturedPawnData   ();
     static bit<8u>* addressCastleData         ();
     static bit<8u>* addressIncidentalPawnData ();
-    static bit<8u>* addressPieceData(Piece::Type const);
+    static bit<8u>* addressPieceData          (Piece::Type const);
     static bit<8u>* addressPromotedPawnData   ();
     static bit<8u>* addressTurnData           ();
 
     // ...
-    static Piece          getPiece (Color const, Piece::Type const, bit<3u> const = 0u);
-    static Piece const*   getPieces();
-    static Color          getPlayerTurn();
+    static Piece          getFirstPiece();
+    static Piece          getNextPiece (Piece const);
+    static Piece          getPiece     (Player const, Piece::Type const, bit<3u> const = 0u);
     static unsigned short getTileHeight();
-    static unsigned short getTileWidth();
-    static bool           retrievePointedTile(Tile* const, int const, int const);
-    static void           setPlayerTurn(Color const);
-};
+    static unsigned short getTileWidth ();
+    static Player         getTurn      ();
+    static void           setPlayerTurn(Player const);
+}
 
 // : Program
-struct Program {
-    struct Lock {
-        static HANDLE      FILE;
-        static char const *FILE_NAME;
+namespace Program {
+    namespace Lock {
+        static HANDLE      FILE       = NULL;
+        static char const *FILE_NAME  = NULL;
 
-        static HANDLE      MUTEX;
-        static char const *MUTEX_NAME;
-    };
+        static HANDLE      MUTEX      = NULL;
+        static char const *MUTEX_NAME = NULL;
+    }
 
-    static LPSTR     ARGUMENTS;
-    static int       EXIT_CODE;
-    static CHAR      FILE_NAME[MAX_PATH];
-    static HINSTANCE HANDLE;
-    static HINSTANCE PREVIOUS_HANDLE;
-    static MSG       THREAD_MESSAGE;
+    // ...
+    static LPSTR     ARGUMENTS           = NULL;
+    static int       EXIT_CODE           = EXIT_SUCCESS;
+    static CHAR      FILE_NAME[MAX_PATH] = {'\0'};
+    static HINSTANCE HANDLE              = NULL;
+    static HINSTANCE PREVIOUS_HANDLE     = NULL;
+    static MSG       THREAD_MESSAGE      = MSG();
 
-    // ... ->> Program termination handlers
+    // ... ->> Termination handlers
     static void exit ();
     static void exit (int const);
     static void raise(int const);
 
-    // ... ->> Program termination listeners
-    static void (*onabort       )();
-    static void (*onexit        )();
-    static void (*oninterrupt   )();
-    static void (*oninvalidfault)();
-    static void (*onmathfault   )();
-    static void (*onsegfault    )();
-    static void (*onterminate   )();
-};
+    // ... ->> Termination listeners
+    static void (*onabort       )() = NULL;
+    static void (*onexit        )() = NULL;
+    static void (*oninterrupt   )() = NULL;
+    static void (*oninvalidfault)() = NULL;
+    static void (*onmathfault   )() = NULL;
+    static void (*onsegfault    )() = NULL;
+    static void (*onterminate   )() = NULL;
+}
 
 // : Window
-struct Window {
-    static int     APPEARANCE;
-    static HBRUSH  BACKGROUND;
-    static LPCSTR  CLASS_NAME;
-    static UINT    CLASS_STYLE;
-    static HCURSOR CURSOR;
-    static HICON   FAVICON;
-    static HWND    HANDLE;
-    static int     HEIGHT;
-    static HICON   ICON;
-    static int     LEFT;
-    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const);
-    static DWORD   STYLE;
-    static DWORD   STYLE_EXTENSION;
-    static LPCSTR  TITLE;
-    static int     TOP;
-    static int     WIDTH;
+namespace Window {
+    static int     APPEARANCE      = SW_SHOW;
+    static HBRUSH  BACKGROUND      = NULL;
+    static LPCSTR  CLASS_NAME      = "window";
+    static UINT    CLASS_STYLE     = CS_GLOBALCLASS | CS_OWNDC;
+    static HCURSOR CURSOR          = NULL;
+    static HICON   FAVICON         = NULL;
+    static HWND    HANDLE          = NULL;
+    static int     HEIGHT          = -1;
+    static HICON   ICON            = NULL;
+    static int     LEFT            = -1;
+    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
+    static DWORD   STYLE           = WS_OVERLAPPEDWINDOW;
+    static DWORD   STYLE_EXTENSION = 0x00000000L;
+    static LPCSTR  TITLE           = "";
+    static int     TOP             = -1;
+    static int     WIDTH           = -1;
 
     // ... ->> Renderers
-    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE;
-    static HDC     DEVICE_CONTEXT_HANDLE;
+    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE        = NULL;
+    static HDC     DEVICE_CONTEXT_HANDLE               = NULL;
 
-    static BITMAP  MEMORY_DEVICE_CONTEXT_BITMAP;
-    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE;
-    static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY;
-    static HDC     MEMORY_DEVICE_CONTEXT_HANDLE;
-};
+    static BITMAP  MEMORY_DEVICE_CONTEXT_BITMAP        = ::BITMAP();
+    static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
+    static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
+    static HDC     MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
+}
 
 /* Global > ... */
-bit<8u>             Game::MEMORY[sizeof(Game::MEMORY) / sizeof(bit<8u>)] = {0};
-DWORD               Game::Board::COLOR                         = 0x000000u;
-int                 Game::Board::LEFT                          = 0;
-unsigned short      Game::Board::HEIGHT                        = 0u;
-int                 Game::Board::TOP                           = 0;
-unsigned short      Game::Board::WIDTH                         = 0u;
-BITMAP              Game::Pieces::BITMAP                       = ::BITMAP();
-LPCSTR              Game::Pieces::BITMAP_FILE_NAME             = NULL;
-HDC                 Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE = NULL;
-HBITMAP             Game::Pieces::BITMAP_HANDLE                = NULL;
-UINT32             *Game::Pieces::BITMAP_MEMORY                = NULL;
-DWORD               Game::Tiles::ANTICIPATED_COLOR             = 0x000000u;
-unsigned char       Game::Tiles::BEVEL                         = 0u;
-unsigned char const Game::Tiles::COLUMN_COUNT                  = 8u;
-HCURSOR             Game::Tiles::CURSOR                        = NULL;
-DWORD               Game::Tiles::DARK_COLOR                    = 0x000000u;
-DWORD               Game::Tiles::LIGHT_COLOR                   = 0x000000u;
-Tile                Game::Tiles::HOVERED                       = Tile(0u);
-DWORD               Game::Tiles::HOVERED_COLOR                 = 0x000000u;
-bool                Game::Tiles::HOVERING                      = false;
-unsigned char       Game::Tiles::MARGIN                        = 0u;
-unsigned char const Game::Tiles::ROW_COUNT                     = 8u;
-Tile                Game::Tiles::SELECTED                      = Tile(0u);
-DWORD               Game::Tiles::SELECTED_COLOR                = 0x000000u;
-bool                Game::Tiles::SELECTING                     = false;
-
-Piece::Color const    Piece::Color::DARK        = 0u;
-Piece::Color const    Piece::Color::LIGHT       = 1u;
+Piece::Player const   Piece::Player::DARK  = 0u;
+Piece::Player const   Piece::Player::LIGHT = 1u;
 Piece::Movement const Piece::Movement::ADJACENT = 0x01u;
 Piece::Movement const Piece::Movement::CROSS    = 0x02u;
 Piece::Movement const Piece::Movement::FORWARD  = 0x04u;
 Piece::Movement const Piece::Movement::JUMP     = 0x08u;
 Piece::Movement const Piece::Movement::SALTIRE  = 0x10u;
-
-HANDLE      Program::Lock::FILE          = NULL;
-char const *Program::Lock::FILE_NAME     = NULL;
-HANDLE      Program::Lock::MUTEX         = NULL;
-char const *Program::Lock::MUTEX_NAME    = NULL;
-LPSTR       Program::ARGUMENTS           = NULL;
-int         Program::EXIT_CODE           = EXIT_SUCCESS;
-CHAR        Program::FILE_NAME[MAX_PATH] = {0};
-HINSTANCE   Program::HANDLE              = NULL;
-HINSTANCE   Program::PREVIOUS_HANDLE     = NULL;
-MSG         Program::THREAD_MESSAGE      = MSG();
-void        (*Program::onabort       )() = NULL;
-void        (*Program::onexit        )() = NULL;
-void        (*Program::oninterrupt   )() = NULL;
-void        (*Program::oninvalidfault)() = NULL;
-void        (*Program::onmathfault   )() = NULL;
-void        (*Program::onsegfault    )() = NULL;
-void        (*Program::onterminate   )() = NULL;
-
-int     Window::APPEARANCE                          = SW_SHOW;
-HBRUSH  Window::BACKGROUND                          = EXIT_SUCCESS;
-LPCSTR  Window::CLASS_NAME                          = "window";
-UINT    Window::CLASS_STYLE                         = CS_GLOBALCLASS | CS_OWNDC;
-HCURSOR Window::CURSOR                              = NULL;
-HBITMAP Window::DEVICE_CONTEXT_BITMAP_HANDLE        = NULL;
-HDC     Window::DEVICE_CONTEXT_HANDLE               = NULL;
-HICON   Window::FAVICON                             = NULL;
-HWND    Window::HANDLE                              = NULL;
-int     Window::HEIGHT                              = -1;
-HICON   Window::ICON                                = NULL;
-int     Window::LEFT                                = -1;
-BITMAP  Window::MEMORY_DEVICE_CONTEXT_BITMAP        = ::BITMAP();
-HBITMAP Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
-UINT32 *Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
-HDC     Window::MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
-LRESULT CALLBACK (*Window::PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
-DWORD   Window::STYLE                               = WS_OVERLAPPEDWINDOW;
-DWORD   Window::STYLE_EXTENSION                     = 0x00000000L;
-LPCSTR  Window::TITLE                               = "";
-int     Window::TOP                                 = -1;
-int     Window::WIDTH                               = -1;
 
 /* Function */
 // : Game
@@ -365,27 +248,65 @@ bit<8u>* Game::addressPieceData(Piece::Type const type) {
     } return NULL;
 }
 
-Piece Game::getPiece(Color const color, Piece::Type const type, bit<3u> const index) {
-    return Piece(Game::addressPieceData(type) + index + (Color::LIGHT == color ? Piece::count(type) : 0u));
-}
+Piece Game::getFirstPiece() { return Game::getNextPiece(Piece(NULL)); }
+Piece Game::getNextPiece (Piece const piece) {
+    // if (NULL == piece.data) return Game::getPiece(Player::DARK, Piece::BISHOP, 0u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::BISHOP, 0u).data) return Game::getPiece(Player::DARK, Piece::BISHOP, 1u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::BISHOP, 1u).data) return Game::getPiece(Player::LIGHT, Piece::BISHOP, 0u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::BISHOP, 0u).data) return Game::getPiece(Player::LIGHT, Piece::BISHOP, 1u);
 
-Piece const* Game::getPieces() {
-    static unsigned char pieces[32u * sizeof(Piece)];
-    unsigned char *iterator = pieces;
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::BISHOP, 1u).data) return Game::getPiece(Player::DARK, Piece::KNIGHT, 0u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::KNIGHT, 0u).data) return Game::getPiece(Player::DARK, Piece::KNIGHT, 1u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::KNIGHT, 1u).data) return Game::getPiece(Player::LIGHT, Piece::KNIGHT, 0u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::KNIGHT, 0u).data) return Game::getPiece(Player::LIGHT, Piece::KNIGHT, 1u);
+
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::KNIGHT, 1u).data) return Game::getPiece(Player::DARK, Piece::ROOK, 0u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::ROOK, 0u).data) return Game::getPiece(Player::DARK, Piece::ROOK, 1u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::ROOK, 1u).data) return Game::getPiece(Player::LIGHT, Piece::ROOK, 0u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::ROOK, 0u).data) return Game::getPiece(Player::LIGHT, Piece::ROOK, 1u);
+
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::ROOK, 1u).data) return Game::getPiece(Player::DARK, Piece::KING);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::KING).data) return Game::getPiece(Player::LIGHT, Piece::KING);
+
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::KING).data) return Game::getPiece(Player::DARK, Piece::QUEEN);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::QUEEN).data) return Game::getPiece(Player::LIGHT, Piece::QUEEN);
+
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::QUEEN).data) return Game::getPiece(Player::DARK, Piece::PAWN, 0u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 0u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 1u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 1u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 2u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 2u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 3u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 3u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 4u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 4u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 5u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 5u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 6u);
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 6u).data) return Game::getPiece(Player::DARK, Piece::PAWN, 7u);
+
+    // if (piece.data == Game::getPiece(Player::DARK, Piece::PAWN, 7u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 0u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 0u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 1u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 1u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 2u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 2u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 3u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 3u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 4u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 4u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 5u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 5u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 6u);
+    // if (piece.data == Game::getPiece(Player::LIGHT, Piece::PAWN, 6u).data) return Game::getPiece(Player::LIGHT, Piece::PAWN, 7u);
+
+    // return Piece(NULL);
+    bool nextPieceFound = NULL == piece.data;
+    bit<3u> const     pieceIndex  = piece.getIndex();
+    Player const      piecePlayer = piece.getPlayer();
+    Piece::Type const pieceType   = piece.getType();
 
     for (Piece::Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Piece::Type)); type-- != types; )
-    for (unsigned char index = 2u * Piece::count(*type); index--; iterator += sizeof(Piece)) {
-        Piece const piece = Piece(Game::addressPieceData(*type) + index);
-
-        for (unsigned char subiterator = sizeof(Piece); subiterator--; )
-        iterator[subiterator] = static_cast<unsigned char const*>(static_cast<void const*>(&piece))[subiterator];
+    for (Player const players[] = {Player::DARK, Player::LIGHT}, *player = players + (sizeof(players) / sizeof(Player)); player-- != players; )
+    for (unsigned char index = Piece::count(*type); index--; ) {
+        if (nextPieceFound) return Game::getPiece(*player, *type, index);
+        nextPieceFound = pieceIndex == index && piecePlayer == *player && pieceType == *type;
     }
 
-    return static_cast<Piece const*>(static_cast<void*>(pieces));
+    return Piece(NULL);
 }
 
-Color Game::getPlayerTurn() {
-    return *Game::addressTurnData() & 0x01u ? Color::LIGHT : Color::DARK;
+Piece Game::getPiece(Player const player, Piece::Type const type, bit<3u> const index) {
+    return Piece(Game::addressPieceData(type) + index + (Player::LIGHT == player ? Piece::count(type) : 0u));
 }
 
 unsigned short Game::getTileHeight() {
@@ -396,29 +317,18 @@ unsigned short Game::getTileWidth() {
     return Game::Board::WIDTH / Game::Tiles::COLUMN_COUNT;
 }
 
-bool Game::retrievePointedTile(Tile* const tile, int const pointerX, int const pointerY) {
-    for (unsigned char row    = Game::Tiles::ROW_COUNT   ; row--   ; )
-    for (unsigned char column = Game::Tiles::COLUMN_COUNT; column--; ) {
-        int const x = Game::Board::LEFT + (column * (Game::getTileWidth()  + Game::Tiles::MARGIN));
-        int const y = Game::Board::TOP  + (row    * (Game::getTileHeight() + Game::Tiles::MARGIN));
-
-        if (
-            (pointerX >= x + Game::Tiles::MARGIN && pointerX < x + Game::getTileWidth() ) &&
-            (pointerY >= y + Game::Tiles::MARGIN && pointerY < y + Game::getTileHeight())
-        ) { *tile = Tile(column + (row * Game::Tiles::COLUMN_COUNT)); return true; }
-    }
-
-    return false;
+Player Game::getTurn() {
+    return *Game::addressTurnData() & 0x01u ? Player::LIGHT : Player::DARK;
 }
 
-void Game::setPlayerTurn(Color const color) {
-    if (Color::DARK  == color) *Game::addressTurnData() &= 0xFEu;
-    if (Color::LIGHT == color) *Game::addressTurnData() |= 0x01u;
+void Game::setPlayerTurn(Player const color) {
+    if (Player::DARK  == color) *Game::addressTurnData() &= 0xFEu;
+    if (Player::LIGHT == color) *Game::addressTurnData() |= 0x01u;
 }
 
 // : Pawn
 Piece::Type Pawn::getPromotionType() const {
-    switch (*(this -> self) & 0xC0u) {
+    switch (*(this -> data) & 0xC0u) {
         case 0x0u: return Piece::BISHOP;
         case 0x1u: return Piece::KNIGHT;
         case 0x2u: return Piece::QUEEN;
@@ -428,22 +338,29 @@ Piece::Type Pawn::getPromotionType() const {
     return Piece::PAWN;
 }
 
+bool Pawn::isIncidental() const {
+    unsigned char const count = Piece::count(Piece::PAWN);
+    unsigned char const index = *Game::addressIncidentalPawnData() & 0x0Fu;
+
+    return this -> data == Game::getPiece(count > index ? Player::DARK : Player::LIGHT, Piece::PAWN, index % count).data;
+}
+
 bool Pawn::isPromoted() const {
-    return (Game::addressPromotedPawnData()[Color::LIGHT == this -> getColor() ? 1 : 0] >> this -> getIndex()) & 0x1u;
+    return (Game::addressPromotedPawnData()[Player::LIGHT == this -> getPlayer() ? 1 : 0] >> this -> getIndex()) & 0x1u;
 }
 
 void Pawn::promote(Type const type) {
-    Game::addressPromotedPawnData()[Color::LIGHT == this -> getColor() ? 1 : 0] |= 1u << this -> getIndex();
+    Game::addressPromotedPawnData()[Player::LIGHT == this -> getPlayer() ? 1 : 0] |= 0x1u << this -> getIndex();
 
-    *(this -> self) &= 0x3Fu;
+    *(this -> data) &= 0x3Fu;
     switch (type) {
         case Piece::KING  : break;
         case Piece::PAWN  : break;
 
-        case Piece::BISHOP: *(this -> self) |= 0x0u << 6u; break;
-        case Piece::KNIGHT: *(this -> self) |= 0x1u << 6u; break;
-        case Piece::QUEEN : *(this -> self) |= 0x2u << 6u; break;
-        case Piece::ROOK  : *(this -> self) |= 0x3u << 6u; break;
+        case Piece::BISHOP: *(this -> data) |= 0x0u << 6u; break;
+        case Piece::KNIGHT: *(this -> data) |= 0x1u << 6u; break;
+        case Piece::QUEEN : *(this -> data) |= 0x2u << 6u; break;
+        case Piece::ROOK  : *(this -> data) |= 0x3u << 6u; break;
     }
 }
 
@@ -453,12 +370,12 @@ void Piece::capture(Piece const piece) {
     switch (piece.getType()) {
         // ... ->> Mark the `piece` as "captured"
         case Piece::KING  : break;
-        case Piece::PAWN  : Game::addressCapturedPawnData   ()[Color::LIGHT == piece.getColor() ? 1 : 0] |= 1u << piece.getIndex(); break;
+        case Piece::PAWN  : Game::addressCapturedPawnData   ()[Player::LIGHT == piece.getPlayer() ? 1 : 0] |= 1u << piece.getIndex(); break;
 
-        case Piece::BISHOP: Game::addressCapturedOfficerData()[0] |= 1u << ((piece.getIndex() + (Color::LIGHT == piece.getColor() ? Piece::count(Piece::BISHOP) : 0u)) << 4u); break;
-        case Piece::KNIGHT: Game::addressCapturedOfficerData()[0] |= 1u << ((piece.getIndex() + (Color::LIGHT == piece.getColor() ? Piece::count(Piece::KNIGHT) : 0u)) << 0u); break;
-        case Piece::QUEEN : Game::addressCapturedOfficerData()[1] |= 1u << ((piece.getIndex() + (Color::LIGHT == piece.getColor() ? Piece::count(Piece::QUEEN ) : 0u)) << 2u); break;
-        case Piece::ROOK  : Game::addressCapturedOfficerData()[1] |= 1u << ((piece.getIndex() + (Color::LIGHT == piece.getColor() ? Piece::count(Piece::ROOK  ) : 0u)) << 4u); break;
+        case Piece::BISHOP: Game::addressCapturedOfficerData()[0] |= 1u << ((piece.getIndex() + (Player::LIGHT == piece.getPlayer() ? Piece::count(Piece::BISHOP) : 0u)) << 4u); break;
+        case Piece::KNIGHT: Game::addressCapturedOfficerData()[0] |= 1u << ((piece.getIndex() + (Player::LIGHT == piece.getPlayer() ? Piece::count(Piece::KNIGHT) : 0u)) << 0u); break;
+        case Piece::QUEEN : Game::addressCapturedOfficerData()[1] |= 1u << ((piece.getIndex() + (Player::LIGHT == piece.getPlayer() ? Piece::count(Piece::QUEEN ) : 0u)) << 2u); break;
+        case Piece::ROOK  : Game::addressCapturedOfficerData()[1] |= 1u << ((piece.getIndex() + (Player::LIGHT == piece.getPlayer() ? Piece::count(Piece::ROOK  ) : 0u)) << 4u); break;
     }
 }
 
@@ -475,29 +392,19 @@ unsigned char Piece::count(Type const type) {
 unsigned char Piece::countTotal() {
     return (
         Piece::count(Piece::BISHOP) +
-        Piece::count(Piece::KING) +
+        Piece::count(Piece::KING  ) +
         Piece::count(Piece::KNIGHT) +
-        Piece::count(Piece::PAWN) +
-        Piece::count(Piece::QUEEN) +
-        Piece::count(Piece::ROOK)
+        Piece::count(Piece::PAWN  ) +
+        Piece::count(Piece::QUEEN ) +
+        Piece::count(Piece::ROOK  )
     );
 }
 
-Color Piece::getColor() const {
-    for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; )
-    for (unsigned char index = Piece::count(*type); index--; ) {
-        if (this -> self == Game::getPiece(Color::DARK , *type, index).self) return Color::DARK;
-        if (this -> self == Game::getPiece(Color::LIGHT, *type, index).self) return Color::LIGHT;
-    }
-
-    return static_cast<Color>(0x0u);
-}
-
 bit<3u> Piece::getColumn() const {
-    return Piece::BISHOP != this -> getType() ? (this -> getPosition() & 0x38u) >> 3u : (
+    return Piece::BISHOP != this -> getType() ? (this -> getPosition() & 0x38u) >> 0x3u : (
         ((this -> getPosition() * 2u) % Game::Tiles::COLUMN_COUNT) + (this -> getRow() % 2u
-            ? this -> getIndex() == (Color::LIGHT == this -> getColor() ? 0u : 1u)
-            : this -> getIndex() == (Color::LIGHT == this -> getColor() ? 1u : 0u)
+            ? this -> getIndex() == (Player::LIGHT == this -> getPlayer() ? 0u : 1u)
+            : this -> getIndex() == (Player::LIGHT == this -> getPlayer() ? 1u : 0u)
         )
     );
 }
@@ -506,26 +413,26 @@ bit<3u> Piece::getIndex() const {
     for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; ) {
         for (unsigned char index = Piece::count(*type); index--; )
         if (
-            this -> self == Game::getPiece(Color::DARK , *type, index).self ||
-            this -> self == Game::getPiece(Color::LIGHT, *type, index).self
+            this -> data == Game::getPiece(Player::DARK , *type, index).data ||
+            this -> data == Game::getPiece(Player::LIGHT, *type, index).data
         ) return index;
     }
 
     return 0u;
 }
 
-Tile Piece::getPosition() const {
+bit<6u> Piece::getPosition() const {
     Type const type = this -> getType();
 
     switch (type) {
-        case Piece::BISHOP: return *(this -> self) & 0x1Fu;
-        case Piece::KNIGHT: case Piece::PAWN: case Piece::ROOK: return *(this -> self) & 0x3Fu;
+        case Piece::BISHOP: return *(this -> data) & 0x1Fu;
+        case Piece::KNIGHT: case Piece::PAWN: case Piece::ROOK: return *(this -> data) & 0x3Fu;
         case Piece::KING: case Piece::QUEEN: {
-            Color const color = this -> getColor();
+            Player const color = this -> getPlayer();
             return (
-                ((*Game::getPiece(color, Piece::BISHOP, Piece::QUEEN == type ? 1u : 0u).self >> 6u) << 4u) |
-                ((*Game::getPiece(color, Piece::KNIGHT, Piece::QUEEN == type ? 1u : 0u).self >> 6u) << 2u) |
-                ((*Game::getPiece(color, Piece::ROOK  , Piece::QUEEN == type ? 1u : 0u).self >> 6u) << 0u)
+                ((*Game::getPiece(color, Piece::BISHOP, Piece::QUEEN == type ? 1u : 0u).data >> 6u) << 4u) |
+                ((*Game::getPiece(color, Piece::KNIGHT, Piece::QUEEN == type ? 1u : 0u).data >> 6u) << 2u) |
+                ((*Game::getPiece(color, Piece::ROOK  , Piece::QUEEN == type ? 1u : 0u).data >> 6u) << 0u)
             );
         } break;
     }
@@ -533,8 +440,18 @@ Tile Piece::getPosition() const {
     return 0u;
 }
 
+Player Piece::getPlayer() const {
+    for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; )
+    for (unsigned char index = Piece::count(*type); index--; ) {
+        if (this -> data == Game::getPiece(Player::DARK , *type, index).data) return Player::DARK;
+        if (this -> data == Game::getPiece(Player::LIGHT, *type, index).data) return Player::LIGHT;
+    }
+
+    return static_cast<Player>(0x0u);
+}
+
 bit<3u> Piece::getRow() const {
-    return Piece::BISHOP != this -> getType() ? (this -> getPosition() & 0x07u) >> 0u : (
+    return Piece::BISHOP != this -> getType() ? (this -> getPosition() & 0x07u) >> 0x0u : (
         this -> getPosition() / (Game::Tiles::COLUMN_COUNT / 2u)
     );
 }
@@ -543,8 +460,8 @@ Piece::Type Piece::getType() const {
     for (Type const types[] = {Piece::QUEEN, Piece::KING, Piece::PAWN, Piece::BISHOP, Piece::KNIGHT, Piece::ROOK}, *type = types + (sizeof(types) / sizeof(Type)); type-- != types; ) {
         for (unsigned char index = Piece::count(*type); index--; )
         if (
-            this -> self == Game::getPiece(Color::DARK , *type, index).self ||
-            this -> self == Game::getPiece(Color::LIGHT, *type, index).self
+            this -> data == Game::getPiece(Player::DARK , *type, index).data ||
+            this -> data == Game::getPiece(Player::LIGHT, *type, index).data
         ) return *type;
     }
 
@@ -554,22 +471,15 @@ Piece::Type Piece::getType() const {
 bool Piece::isCaptured() const {
     switch (this -> getType()) {
         case Piece::KING  : return false;
-        case Piece::PAWN  : return (Game::addressCapturedPawnData()[Color::LIGHT == this -> getColor() ? 1 : 0] >> this -> getIndex()) & 0x01u;
+        case Piece::PAWN  : return (Game::addressCapturedPawnData()[Player::LIGHT == this -> getPlayer() ? 1 : 0] >> this -> getIndex()) & 0x01u;
 
-        case Piece::BISHOP: return ((Game::addressCapturedOfficerData()[0] >> 4u) >> (this -> getIndex() + (Color::LIGHT == this -> getColor() ? Piece::count(Piece::BISHOP) : 0u))) & 0x01u;
-        case Piece::KNIGHT: return ((Game::addressCapturedOfficerData()[0] >> 0u) >> (this -> getIndex() + (Color::LIGHT == this -> getColor() ? Piece::count(Piece::KNIGHT) : 0u))) & 0x01u;
-        case Piece::QUEEN : return ((Game::addressCapturedOfficerData()[1] >> 2u) >> (this -> getIndex() + (Color::LIGHT == this -> getColor() ? Piece::count(Piece::QUEEN ) : 0u))) & 0x01u;
-        case Piece::ROOK  : return ((Game::addressCapturedOfficerData()[1] >> 4u) >> (this -> getIndex() + (Color::LIGHT == this -> getColor() ? Piece::count(Piece::ROOK  ) : 0u))) & 0x01u;
+        case Piece::BISHOP: return ((Game::addressCapturedOfficerData()[0] >> 4u) >> (this -> getIndex() + (Player::LIGHT == this -> getPlayer() ? Piece::count(Piece::BISHOP) : 0u))) & 0x01u;
+        case Piece::KNIGHT: return ((Game::addressCapturedOfficerData()[0] >> 0u) >> (this -> getIndex() + (Player::LIGHT == this -> getPlayer() ? Piece::count(Piece::KNIGHT) : 0u))) & 0x01u;
+        case Piece::QUEEN : return ((Game::addressCapturedOfficerData()[1] >> 2u) >> (this -> getIndex() + (Player::LIGHT == this -> getPlayer() ? Piece::count(Piece::QUEEN ) : 0u))) & 0x01u;
+        case Piece::ROOK  : return ((Game::addressCapturedOfficerData()[1] >> 4u) >> (this -> getIndex() + (Player::LIGHT == this -> getPlayer() ? Piece::count(Piece::ROOK  ) : 0u))) & 0x01u;
     }
 
     return false;
-}
-
-bool Piece::isIncidental() const {
-    unsigned char const count = Piece::count(Piece::PAWN);
-    unsigned char const index = *Game::addressIncidentalPawnData() & 0x0Fu;
-
-    return this -> self == Game::getPiece(count > index ? Color::DARK : Color::LIGHT, Piece::PAWN, index % count).self;
 }
 
 void Piece::setColumn(bit<3u> const column) {
@@ -581,20 +491,20 @@ void Piece::setPosition(bit<3u> const column, bit<3u> const row) {
 
     switch (type) {
         case Piece::BISHOP: {
-            Color const color = this -> getColor();
+            Player const color = this -> getPlayer();
             unsigned char const index = this -> getIndex();
             unsigned char position = (Game::Tiles::COLUMN_COUNT * Game::Tiles::ROW_COUNT) / 2u;
 
             while (position--) {
                 unsigned char const positionRow = position / (Game::Tiles::COLUMN_COUNT / 2u);
                 unsigned char const positionColumn = ((position * 2u) % Game::Tiles::COLUMN_COUNT) + (positionRow % 2u
-                    ? index == (Color::LIGHT == color ? 0u : 1u)
-                    : index == (Color::LIGHT == color ? 1u : 0u)
+                    ? index == (Player::LIGHT == color ? 0u : 1u)
+                    : index == (Player::LIGHT == color ? 1u : 0u)
                 );
 
                 if (column == positionColumn && row == positionRow) {
-                    *(this -> self) &= 0xE0u;
-                    *(this -> self) |= position;
+                    *(this -> data) &= 0xE0u;
+                    *(this -> data) |= position;
 
                     break;
                 }
@@ -602,16 +512,16 @@ void Piece::setPosition(bit<3u> const column, bit<3u> const row) {
         } break;
 
         case Piece::KNIGHT: case Piece::PAWN: case Piece::ROOK: {
-            *(this -> self) &= 0xC0u;
-            *(this -> self) |= (column << 3u) | (row << 0u);
+            *(this -> data) &= 0xC0u;
+            *(this -> data) |= (column << 3u) | (row << 0u);
         } break;
 
         case Piece::KING: case Piece::QUEEN: {
-            Color const color = this -> getColor();
+            Player const color = this -> getPlayer();
             bit<8u> *const position[3] = {
-                Game::getPiece(color, Piece::BISHOP, Piece::QUEEN == type ? 1u : 0u).self,
-                Game::getPiece(color, Piece::KNIGHT, Piece::QUEEN == type ? 1u : 0u).self,
-                Game::getPiece(color, Piece::ROOK  , Piece::QUEEN == type ? 1u : 0u).self
+                Game::getPiece(color, Piece::BISHOP, Piece::QUEEN == type ? 1u : 0u).data,
+                Game::getPiece(color, Piece::KNIGHT, Piece::QUEEN == type ? 1u : 0u).data,
+                Game::getPiece(color, Piece::ROOK  , Piece::QUEEN == type ? 1u : 0u).data
             };
 
             *position[0] &= 0x3Fu;
@@ -652,20 +562,17 @@ void Program::raise(int const signal) {
 // : Rook
 void Rook::castle() {
     *Game::addressCastleData() |= (1u << (
-        this -> getIndex() + (Color::LIGHT == this -> getColor() ? Piece::count(Piece::ROOK) : 0u)
+        this -> getIndex() +
+        (Player::LIGHT == this -> getPlayer() ? Piece::count(Piece::ROOK) : 0u)
     )) << 4u;
 }
 
 bool Rook::isCastled() const {
-    return (
-        (*Game::addressCastleData() >> 4u) >>
-        (this -> getIndex() + (Color::LIGHT == this -> getColor() ? Piece::count(Piece::ROOK) : 0u))
-    ) & 0x01u;
+    return ((*Game::addressCastleData() >> 4u) >> (
+        this -> getIndex() +
+        (Player::LIGHT == this -> getPlayer() ? Piece::count(Piece::ROOK) : 0u)
+    )) & 0x01u;
 }
-
-// : Tile
-bit<3u> Tile::getColumn() const { return this -> value % Game::Tiles::COLUMN_COUNT; }
-bit<3u> Tile::getRow   () const { return this -> value / Game::Tiles::COLUMN_COUNT; }
 
 /* Main */
 int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle, LPSTR const commandLineArguments, int const appearance) {
@@ -691,7 +598,7 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
 
 /* Phase --- WARN (Lapys) -> Phases (except `INITIATE`) can be invoked by the user. */
 /* : Initiate */
-void INITIATE(...) {
+void INITIATE() {
     bool programAlreadyRunning = false;
 
     // ... ->> Configuration
@@ -702,13 +609,13 @@ void INITIATE(...) {
     Game::Board::TOP               = 0;
     Game::Board::WIDTH             = 512u;
     Game::Pieces::BITMAP_FILE_NAME = "pieces.bmp";
-    Game::Tiles::ANTICIPATED_COLOR = 0xF0F000u;
+    Game::Tiles::ANTICIPATE_COLOR  = 0xF0F000u;
     Game::Tiles::BEVEL             = 5u;
     Game::Tiles::DARK_COLOR        = 0x006900u;
     Game::Tiles::LIGHT_COLOR       = 0xF9F9F9u;
-    Game::Tiles::HOVERED_COLOR     = 0x006FFFu;
+    Game::Tiles::HOVER_COLOR       = 0x006FFFu;
     Game::Tiles::MARGIN            = 2u;
-    Game::Tiles::SELECTED_COLOR    = 0x000FFFu;
+    Game::Tiles::SELECT_COLOR      = 0x000FFFu;
 
     ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
     Program::onexit           = static_cast<void (*)()>(&TERMINATE);
@@ -723,26 +630,26 @@ void INITIATE(...) {
     Window::TITLE      = "Chess";
 
     // ... ->> Setup
-    Game::getPiece(Color::DARK , Piece::ROOK  , 0u).setPosition(0u, 7u);
-    Game::getPiece(Color::DARK , Piece::KNIGHT, 0u).setPosition(1u, 7u);
-    Game::getPiece(Color::DARK , Piece::BISHOP, 0u).setPosition(2u, 7u);
-    Game::getPiece(Color::DARK , Piece::KING      ).setPosition(3u, 7u);
-    Game::getPiece(Color::DARK , Piece::QUEEN     ).setPosition(4u, 7u);
-    Game::getPiece(Color::DARK , Piece::BISHOP, 1u).setPosition(5u, 7u);
-    Game::getPiece(Color::DARK , Piece::KNIGHT, 1u).setPosition(6u, 7u);
-    Game::getPiece(Color::DARK , Piece::ROOK  , 1u).setPosition(7u, 7u);
-    Game::getPiece(Color::LIGHT, Piece::ROOK  , 0u).setPosition(0u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::KNIGHT, 0u).setPosition(1u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::BISHOP, 0u).setPosition(2u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::KING      ).setPosition(3u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::QUEEN     ).setPosition(4u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::BISHOP, 1u).setPosition(5u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::KNIGHT, 1u).setPosition(6u, 0u);
-    Game::getPiece(Color::LIGHT, Piece::ROOK  , 1u).setPosition(7u, 0u);
-    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::getPiece(Color::LIGHT, Piece::PAWN, iterator).setPosition(iterator, 1u);
-    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::getPiece(Color::DARK , Piece::PAWN, iterator).setPosition(iterator, 6u);
+    Game::getPiece(Player::DARK , Piece::ROOK  , 0u).setPosition(0u, 7u);
+    Game::getPiece(Player::DARK , Piece::KNIGHT, 0u).setPosition(1u, 7u);
+    Game::getPiece(Player::DARK , Piece::BISHOP, 0u).setPosition(2u, 7u);
+    Game::getPiece(Player::DARK , Piece::KING      ).setPosition(3u, 7u);
+    Game::getPiece(Player::DARK , Piece::QUEEN     ).setPosition(4u, 7u);
+    Game::getPiece(Player::DARK , Piece::BISHOP, 1u).setPosition(5u, 7u);
+    Game::getPiece(Player::DARK , Piece::KNIGHT, 1u).setPosition(6u, 7u);
+    Game::getPiece(Player::DARK , Piece::ROOK  , 1u).setPosition(7u, 7u);
+    Game::getPiece(Player::LIGHT, Piece::ROOK  , 0u).setPosition(0u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::KNIGHT, 0u).setPosition(1u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::BISHOP, 0u).setPosition(2u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::KING      ).setPosition(3u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::QUEEN     ).setPosition(4u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::BISHOP, 1u).setPosition(5u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::KNIGHT, 1u).setPosition(6u, 0u);
+    Game::getPiece(Player::LIGHT, Piece::ROOK  , 1u).setPosition(7u, 0u);
+    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::getPiece(Player::LIGHT, Piece::PAWN, iterator).setPosition(iterator, 1u);
+    for (unsigned char iterator = Game::Tiles::COLUMN_COUNT; iterator--; ) Game::getPiece(Player::DARK , Piece::PAWN, iterator).setPosition(iterator, 6u);
 
-    Game::setPlayerTurn(Color::LIGHT);
+    Game::setPlayerTurn(Player::LIGHT);
 
     // Logic ->> Assert previous program instance
     if (NULL != Program::PREVIOUS_HANDLE) programAlreadyRunning = true;
@@ -848,8 +755,33 @@ void INITIATE(...) {
 
 /* : Update */
 void UPDATE() {
-    // Game::Tiles::HOVERED; Game::Tiles::SELECTED;
+    if (false == Game::Tiles::SELECTED) {
+        unsigned char const column = Game::Tiles::HOVER % Game::Tiles::COLUMN_COUNT;
+        unsigned char const row    = Game::Tiles::HOVER / Game::Tiles::COLUMN_COUNT;
+
+        for (Piece piece = Game::getFirstPiece(); NULL != piece.data; piece = Game::getNextPiece(piece)) {
+            if (column == piece.getColumn() && row == piece.getRow())
+            switch (piece.getType()) {
+                case Piece::BISHOP: break;
+                case Piece::KING  : break;
+                case Piece::KNIGHT: break;
+                case Piece::PAWN  : {
+                    if (Player::LIGHT == piece.getPlayer()) {}
+                    else {}
+                } break;
+                case Piece::QUEEN : break;
+                case Piece::ROOK  : break;
+            }
+        }
+    }
+
+    else {}
+
+    /* if (FALSE != ::GetUpdateRect(Window::HANDLE, NULL, FALSE)) */
     ::RedrawWindow(Window::HANDLE, NULL, NULL, RDW_INTERNALPAINT);
+
+    static_cast<void>(Game::getTurn);
+    static_cast<void>(Game::Tiles::CURSOR);
 }
 
 LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
@@ -863,72 +795,94 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         case WM_KEYDOWN: {
             switch (parameter) {
                 /* ... */
-                case VK_ESCAPE: {
-                    if (false == Game::Tiles::SELECTING) Game::Tiles::HOVERING = false;
-                    else Game::Tiles::SELECTING = false;
-                } break;
-
+                case VK_ESCAPE: Game::Tiles::SELECTED ? Game::Tiles::SELECTED = false : Game::Tiles::HOVERED = false; break;
                 case VK_RETURN: case VK_SPACE: {
-                    Game::Tiles::SELECTED = Game::Tiles::HOVERED;
+                    if (Game::Tiles::HOVERED) {
+                        UPDATE();
 
-                    if (Game::Tiles::SELECTING) UPDATE();
-                    else Game::Tiles::SELECTING = true;
+                        if (false == Game::Tiles::SELECTED) {
+                            Game::Tiles::SELECT  = Game::Tiles::HOVER;
+                            Game::Tiles::SELECTED = true;
+                        }
+                    }
                 } break;
 
                 /* ... */
                 case VK_DOWN : {
-                    Game::Tiles::HOVERED = Tile(Game::Tiles::HOVERING * (
-                        (((Game::Tiles::HOVERED.getColumn() - 0u) % Game::Tiles::COLUMN_COUNT)) +
-                        (((Game::Tiles::HOVERED.getRow()    + 1u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT)
-                    )); Game::Tiles::HOVERING = true;
-                } break;
+                    Game::Tiles::HOVER = Game::Tiles::HOVERED * (
+                        (((Game::Tiles::HOVER % Game::Tiles::COLUMN_COUNT) - 0u) % Game::Tiles::COLUMN_COUNT) +
+                        (((Game::Tiles::HOVER / Game::Tiles::COLUMN_COUNT) + 1u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT
+                    );
+                    Game::Tiles::HOVERED = true;
+                } UPDATE(); break;
 
                 case VK_LEFT : {
-                    Game::Tiles::HOVERED = Tile(Game::Tiles::HOVERING * (
-                        (((Game::Tiles::HOVERED.getColumn() - 1u) % Game::Tiles::COLUMN_COUNT)) +
-                        (((Game::Tiles::HOVERED.getRow()    + 0u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT)
-                    )); Game::Tiles::HOVERING = true;
-                } break;
+                    Game::Tiles::HOVER = Game::Tiles::HOVERED * (
+                        (((Game::Tiles::HOVER % Game::Tiles::COLUMN_COUNT) - 1u) % Game::Tiles::COLUMN_COUNT) +
+                        (((Game::Tiles::HOVER / Game::Tiles::COLUMN_COUNT) + 0u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT
+                    );
+                    Game::Tiles::HOVERED = true;
+                } UPDATE(); break;
 
                 case VK_RIGHT: {
-                    Game::Tiles::HOVERED = Tile(Game::Tiles::HOVERING * (
-                        (((Game::Tiles::HOVERED.getColumn() + 1u) % Game::Tiles::COLUMN_COUNT)) +
-                        (((Game::Tiles::HOVERED.getRow()    - 0u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT)
-                    )); Game::Tiles::HOVERING = true;
-                } break;
+                    Game::Tiles::HOVER = Game::Tiles::HOVERED * (
+                        (((Game::Tiles::HOVER % Game::Tiles::COLUMN_COUNT) + 1u) % Game::Tiles::COLUMN_COUNT) +
+                        (((Game::Tiles::HOVER / Game::Tiles::COLUMN_COUNT) - 0u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT
+                    );
+                    Game::Tiles::HOVERED = true;
+                } UPDATE(); break;
 
                 case VK_UP   : {
-                    Game::Tiles::HOVERED = Tile(Game::Tiles::HOVERING * (
-                        (((Game::Tiles::HOVERED.getColumn() + 0u) % Game::Tiles::COLUMN_COUNT)) +
-                        (((Game::Tiles::HOVERED.getRow()    - 1u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT)
-                    )); Game::Tiles::HOVERING = true;
-                } break;
+                    Game::Tiles::HOVER = Game::Tiles::HOVERED * (
+                        (((Game::Tiles::HOVER % Game::Tiles::COLUMN_COUNT) + 0u) % Game::Tiles::COLUMN_COUNT) +
+                        (((Game::Tiles::HOVER / Game::Tiles::COLUMN_COUNT) - 1u) % Game::Tiles::ROW_COUNT   ) * Game::Tiles::COLUMN_COUNT
+                    );
+                    Game::Tiles::HOVERED = true;
+                } UPDATE(); break;
             }
         } break;
 
         case WM_LBUTTONDOWN: {
-            if (MOUSEEVENTF_FROMTOUCH != (::GetMessageExtraInfo() & MOUSEEVENTF_FROMTOUCH)) {
-                if (false == Game::Tiles::SELECTING) {
-                    Game::Tiles::HOVERING  = false;
-                    Game::Tiles::SELECTING = Game::retrievePointedTile(&Game::Tiles::SELECTED, GET_X_LPARAM(subparameter), GET_Y_LPARAM(subparameter));
-                }
+            if (MOUSEEVENTF_FROMTOUCH == (::GetMessageExtraInfo() & MOUSEEVENTF_FROMTOUCH)) break;
+            if (Game::Tiles::HOVERED) {
+                UPDATE();
 
-                else {
-                    Game::Tiles::HOVERING = Game::retrievePointedTile(&Game::Tiles::HOVERED, GET_X_LPARAM(subparameter), GET_Y_LPARAM(subparameter));
-                    if (Game::Tiles::HOVERING) UPDATE(); else Game::Tiles::SELECTING = false;
+                if (false == Game::Tiles::SELECTED) {
+                    Game::Tiles::SELECT  = Game::Tiles::HOVERED;
+                    Game::Tiles::SELECTED = true;
                 }
             }
         } break;
 
         case WM_MOUSEMOVE: {
-            bool const hasHoveredTile = Game::Tiles::HOVERING;
-            Tile const hoveredTile    = Game::Tiles::HOVERED;
+            if (MOUSEEVENTF_FROMTOUCH != (::GetMessageExtraInfo() & MOUSEEVENTF_FROMTOUCH)) {
+                unsigned char const hovered  = Game::Tiles::HOVER;
+                bool const          hovering = Game::Tiles::HOVERED;
+                int const pointerX = GET_X_LPARAM(subparameter);
+                int const pointerY = GET_Y_LPARAM(subparameter);
 
-            // ...
-            Game::Tiles::HOVERING = Game::retrievePointedTile(&Game::Tiles::HOVERED, GET_X_LPARAM(subparameter), GET_Y_LPARAM(subparameter));
+                // ...
+                Game::Tiles::HOVERED = false;
+                for (unsigned char row    = Game::Tiles::ROW_COUNT   ; row--   ; )
+                for (unsigned char column = Game::Tiles::COLUMN_COUNT; column--; ) {
+                    int const x = Game::Board::LEFT + (column * (Game::getTileWidth()  + Game::Tiles::MARGIN));
+                    int const y = Game::Board::TOP  + (row    * (Game::getTileHeight() + Game::Tiles::MARGIN));
 
-            if (hasHoveredTile != Game::Tiles::HOVERING && hoveredTile != Game::Tiles::HOVERED)
-            ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
+                    if (
+                        (pointerX >= x + Game::Tiles::MARGIN && pointerX < x + Game::getTileWidth() ) &&
+                        (pointerY >= y + Game::Tiles::MARGIN && pointerY < y + Game::getTileHeight())
+                    ) {
+                        Game::Tiles::HOVER  = column + (row * Game::Tiles::COLUMN_COUNT);
+                        Game::Tiles::HOVERED = true;
+                    }
+                }
+
+                // ...
+                if (
+                    hovered  != Game::Tiles::HOVER &&
+                    hovering != Game::Tiles::HOVERED
+                ) UPDATE();
+            }
         } break;
 
         case WM_LBUTTONUP  : /* ->> Called by `WM_TOUCH` afterward */ break;
@@ -1049,10 +1003,49 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
 
         /* ... */
         case WM_PAINT: {
-            Piece const *const pieces = Game::getPieces();
+            unsigned char anticipate[27], anticipateCount = 0u;
             unsigned short const tileContentHeight = Game::getTileHeight() - Game::Tiles::MARGIN;
             unsigned short const tileContentWidth  = Game::getTileWidth()  - Game::Tiles::MARGIN;
             int x, y;
+
+            // ... ->> Anticipated Spaces
+            for (Piece piece = Game::getFirstPiece(); NULL != piece.data; piece = Game::getNextPiece(piece)) {
+                unsigned char const pieceColumn = piece.getColumn();
+                Player const        piecePlayer = piece.getPlayer();
+                unsigned char const pieceRow    = piece.getRow();
+
+                if (Game::Tiles::SELECTED && (
+                    pieceColumn == Game::Tiles::SELECT % Game::Tiles::COLUMN_COUNT &&
+                    pieceRow    == Game::Tiles::SELECT / Game::Tiles::COLUMN_COUNT
+                )) {
+                    bool anticipated = false;
+                    switch (piece.getType()) {
+                        case Piece::BISHOP: {
+                            for (unsigned char column = pieceColumn, row = pieceRow; false == anticipated && column-- != 0u                        && row-- != 0u                    ; ) {
+                                anticipate[anticipateCount++] = column + (row * Game::Tiles::COLUMN_COUNT);
+
+                                for (Piece gamePiece = Game::getFirstPiece(); NULL != gamePiece.data; gamePiece = Game::getNextPiece(gamePiece))
+                                if (column == gamePiece.getColumn() && row == gamePiece.getRow()) {
+                                    anticipateCount -= piecePlayer == gamePiece.getPlayer();
+                                    anticipated = true;
+
+                                    break;
+                                }
+                            }
+                            for (unsigned char column = pieceColumn, row = pieceRow; false == anticipated && column-- != 0u                        && ++row != Game::Tiles::ROW_COUNT; ) anticipate[anticipateCount++] = column + (row * Game::Tiles::COLUMN_COUNT);
+                            for (unsigned char column = pieceColumn, row = pieceRow; false == anticipated && ++column != Game::Tiles::COLUMN_COUNT && row-- != 0u                    ; ) anticipate[anticipateCount++] = column + (row * Game::Tiles::COLUMN_COUNT);
+                            for (unsigned char column = pieceColumn, row = pieceRow; false == anticipated && ++column != Game::Tiles::COLUMN_COUNT && ++row != Game::Tiles::ROW_COUNT; ) anticipate[anticipateCount++] = column + (row * Game::Tiles::COLUMN_COUNT);
+                        } break;
+                        case Piece::KING  : break;
+                        case Piece::KNIGHT: break;
+                        case Piece::PAWN  : break;
+                        case Piece::QUEEN : break;
+                        case Piece::ROOK  : break;
+                    }
+
+                    break;
+                }
+            }
 
             // ... ->> Board & Tiles
             for (unsigned short boardY = (Game::getTileHeight() + Game::Tiles::MARGIN) * Game::Tiles::ROW_COUNT   ; boardY--; )
@@ -1093,15 +1086,22 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                             (((((tileColor >> 0x00u) & 0xFFu) * 2u) / 3u) << 0x00u)
                         );
 
-                        if (Game::Tiles::HOVERING  && (
-                            tileColumn == Game::Tiles::HOVERED % Game::Tiles::COLUMN_COUNT &&
-                            tileRow    == Game::Tiles::HOVERED / Game::Tiles::COLUMN_COUNT
-                        )) tileColor = Game::Tiles::HOVERED_COLOR;
+                        // ...
+                        for (unsigned char anticipateIterator = anticipateCount; anticipateIterator--; )
+                        if (
+                            tileColumn == anticipate[anticipateIterator] % Game::Tiles::COLUMN_COUNT &&
+                            tileRow    == anticipate[anticipateIterator] / Game::Tiles::COLUMN_COUNT
+                        ) tileColor = Game::Tiles::ANTICIPATE_COLOR;
 
-                        if (Game::Tiles::SELECTING && (
-                            tileColumn == Game::Tiles::SELECTED % Game::Tiles::COLUMN_COUNT &&
-                            tileRow    == Game::Tiles::SELECTED / Game::Tiles::COLUMN_COUNT
-                        )) tileColor = Game::Tiles::SELECTED_COLOR;
+                        if (Game::Tiles::HOVERED  && (
+                            tileColumn == Game::Tiles::HOVER % Game::Tiles::COLUMN_COUNT &&
+                            tileRow    == Game::Tiles::HOVER / Game::Tiles::COLUMN_COUNT
+                        )) tileColor = Game::Tiles::HOVER_COLOR;
+
+                        if (Game::Tiles::SELECTED && (
+                            tileColumn == Game::Tiles::SELECT % Game::Tiles::COLUMN_COUNT &&
+                            tileRow    == Game::Tiles::SELECT / Game::Tiles::COLUMN_COUNT
+                        )) tileColor = Game::Tiles::SELECT_COLOR;
                     }
 
                     // ...
@@ -1111,14 +1111,14 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             }
 
             // ... ->> Pieces
-            for (Piece const *piece = pieces + (2u * Piece::countTotal()); piece-- != pieces; ) {
+            for (Piece piece = Game::getFirstPiece(); NULL != piece.data; piece = Game::getNextPiece(piece)) {
                 unsigned short const pieceBitmapHeight = Game::Pieces::BITMAP.bmHeight / 2u;
                 unsigned short const pieceBitmapWidth  = Game::Pieces::BITMAP.bmWidth  / 6u;
-                DWORD const          pieceColor  = piece -> getColor();
-                unsigned char const  pieceColumn = piece -> getColumn();
+                DWORD const          pieceColor  = piece.getPlayer();
+                unsigned char const  pieceColumn = piece.getColumn();
                 unsigned short const pieceHeight = (Game::getTileHeight() * 2u) / 3u;
-                unsigned char const  pieceRow    = piece -> getRow();
-                Piece::Type const    pieceType   = piece -> getType();
+                unsigned char const  pieceRow    = piece.getRow();
+                Piece::Type const    pieceType   = piece.getType();
                 unsigned short const pieceWidth  = (Game::getTileWidth()  * 2u) / 3u;
 
                 // ...
@@ -1137,7 +1137,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                             DWORD          pieceBitmapColor;
                             DWORD const    pieceBitmapMaskColor = *Game::Pieces::BITMAP_MEMORY;
                             unsigned short pieceBitmapX = pieceBitmapWidth;
-                            unsigned short pieceBitmapY = Color::LIGHT == pieceColor ? pieceBitmapHeight : 0u;
+                            unsigned short pieceBitmapY = Player::LIGHT == pieceColor ? pieceBitmapHeight : 0u;
 
                             // ...
                             switch (pieceType) {
@@ -1164,9 +1164,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                 }
             }
 
-            /* ... */
+            // ...
             ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
-            // if (FALSE != ::GetUpdateRect(windowHandle, NULL, FALSE)) ::RedrawWindow(windowHandle, NULL, NULL, RDW_INTERNALPAINT);
         } return 0x0L;
     }
 
