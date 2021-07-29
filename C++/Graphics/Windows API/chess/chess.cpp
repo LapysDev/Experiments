@@ -20,9 +20,7 @@
 #include <windows.h>  // Windows
 #include <windowsx.h> // Windows Extensions
 
-/* Phase */
-// : Singular `INITIATE` called by entry point;
-// : Definitions for `RESET`, `TERMINATE`, `UPDATE`, more definitions are allowed & callable by programmer
+/* Phase > ... */
 static void INITIATE ();
        void RESET    ();
        void TERMINATE();
@@ -596,7 +594,7 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const programPreviousHandle
     return Program::EXIT_CODE;
 }
 
-/* Phase --- WARN (Lapys) -> Phases (except `INITIATE`) can be invoked by the user. */
+/* Phase */
 /* : Initiate */
 void INITIATE() {
     bool programAlreadyRunning = false;
@@ -984,7 +982,6 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
 
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
-            ::SetCursor(Window::CURSOR);
             ::ShowWindow(windowHandle, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
             #ifdef WM_TOUCH
               if (0 != ::GetSystemMetrics(0x5E /* --> SM_DIGITIZER */))

@@ -1,148 +1,161 @@
-/* Import --> kernel32.dll, shell32.dll, user32.dll */
+/* ... --> advapi32.lib, gdi32.lib, kernel32.lib, shell32.lib, user32.lib */
+/* Definition > ... */
+#undef UNICODE
+
+/* Import */
 // : [C Standard Library]
-#include <stdint.h> // Standard Integers
+#include <stdbool.h> // Standard Boolean
+#include <stdint.h>  // Standard Integers
 
 // : [C++ Standard Library]
-#include <cstdlib> // C Standard Library
+#include <cstdio> // C Standard Input/ Output
 
 // : [Windows API]
-#include <windef.h> // Windows Definitions
-#include <winbase.h> // Windows Base
-#include <winnt.h> // Windows New Technologies
-#include <winuser.h> // Windows User
+#include <windows.h> // Windows
 
-#include <basetsd.h> // Base Type Definitions
-#include <fileapi.h> // File API
-#include <libloaderapi.h> // Library Loader API
-#include <processthreadsapi.h> // Process & Threads API
-#include <shellapi.h> // Shell API
+/* Phase */
+// : Singular `INITIATE` called by entry point;
+// : Definitions for `RESET`, `TERMINATE`, `UPDATE`, more definitions are allowed & callable by programmer
+static void INITIATE ();
+       void RESET    ();
+       void TERMINATE();
+       void UPDATE   ();
 
-/* Function > Window Procedure */
-LRESULT CALLBACK windowProcedure(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
-    // Logic
+LRESULT CALLBACK UPDATE(HWND const, UINT const, WPARAM const, LPARAM const);
+
+/* Namespace */
+// : Program
+namespace Program {
+    static int       EXIT_CODE           = EXIT_SUCCESS;
+    static CHAR      FILE_NAME[MAX_PATH] = {'\0'};
+    static HINSTANCE HANDLE              = NULL;
+    static MSG       THREAD_MESSAGE      = MSG();
+}
+
+// : Window
+namespace Window {
+    static int     APPEARANCE      = SW_SHOW;
+    static HBRUSH  BACKGROUND      = NULL;
+    static LPCSTR  CLASS_NAME      = "window";
+    static UINT    CLASS_STYLE     = CS_GLOBALCLASS | CS_OWNDC;
+    static HCURSOR CURSOR          = NULL;
+    static HICON   FAVICON         = NULL;
+    static HWND    HANDLE          = NULL;
+    static int     HEIGHT          = -1;
+    static HICON   ICON            = NULL;
+    static int     LEFT            = -1;
+    static LRESULT CALLBACK (*PROCEDURE)(HWND const, UINT const, WPARAM const, LPARAM const) = &::DefWindowProc;
+    static DWORD   STYLE           = WS_OVERLAPPEDWINDOW;
+    static DWORD   STYLE_EXTENSION = 0x00000000L;
+    static LPCSTR  TITLE           = "";
+    static int     TOP             = -1;
+    static int     WIDTH           = -1;
+}
+
+/* Main */
+int WinMain(HINSTANCE const programHandle, HINSTANCE const, LPSTR const, int const appearance) {
+    Program::HANDLE = programHandle;
+    Window::APPEARANCE = appearance;
+
+    // ...
+    INITIATE();
+    return Program::EXIT_CODE;
+}
+
+/* Phase --- WARN (Lapys) -> Phases (except `INITIATE`) can be invoked by the user. */
+/* : Initiate */
+void INITIATE() {
+    WNDCLASSEX classInformation;
+
+    // ...
+    ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
+
+    Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOW);
+    Window::CURSOR     = ::LoadCursor(NULL, IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
+    Window::ICON       = ::ExtractIcon(static_cast<HINSTANCE>(::GetCurrentProcess()), Program::FILE_NAME, 0u);
+    Window::PROCEDURE  = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
+    Window::TITLE      = "Window Title";
+
+    // ...
+    classInformation.cbClsExtra    = 0;
+    classInformation.cbSize        = sizeof(WNDCLASSEX);
+    classInformation.cbWndExtra    = 0;
+    classInformation.hbrBackground = Window::BACKGROUND;
+    classInformation.hCursor       = Window::CURSOR;
+    classInformation.hIcon         = Window::ICON;
+    classInformation.hIconSm       = Window::FAVICON;
+    classInformation.hInstance     = Program::HANDLE;
+    classInformation.lpfnWndProc   = Window::PROCEDURE;
+    classInformation.lpszClassName = Window::CLASS_NAME;
+    classInformation.lpszMenuName  = static_cast<LPCSTR>(NULL);
+    classInformation.style         = Window::CLASS_STYLE;
+
+    // ...
+    if (0x0 == ::RegisterClassEx(const_cast<WNDCLASSEX const*>(&classInformation))) TERMINATE();
+    else {
+        if (Window::HEIGHT == -1 || Window::LEFT == -1 || Window::TOP == -1 || Window::WIDTH == -1) {
+            RECT workareaBounds;
+            ::SystemParametersInfo(SPI_GETWORKAREA, 0x0000u, static_cast<PVOID>(&workareaBounds), 0x0u);
+
+            // ...
+            if (Window::HEIGHT == -1) Window::HEIGHT = ((workareaBounds.bottom - workareaBounds.top) * 3) / 4;
+            if (Window::WIDTH  == -1) Window::WIDTH  = ((workareaBounds.right - workareaBounds.left) * 3) / 4;
+
+            if (Window::LEFT   == -1) Window::LEFT   = (((workareaBounds.right - workareaBounds.left) - Window::WIDTH ) * 1) / 2;
+            if (Window::TOP    == -1) Window::TOP    = (((workareaBounds.bottom - workareaBounds.top) - Window::HEIGHT) * 1) / 2;
+        }
+
+        Window::HANDLE = ::CreateWindowEx(
+            Window::STYLE_EXTENSION, Window::CLASS_NAME, Window::TITLE, Window::STYLE,
+            Window::LEFT, Window::TOP, Window::WIDTH, Window::HEIGHT,
+            NULL /* --> HWND_DESKTOP */, static_cast<HMENU>(NULL), Program::HANDLE,
+            reinterpret_cast<LPVOID>(static_cast<LPARAM>(Window::APPEARANCE))
+        );
+
+        // ...
+        if (NULL == Window::HANDLE) TERMINATE();
+        else for (bool available = false; WM_QUIT != Program::THREAD_MESSAGE.message; ) {
+            available = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0u, 0x0u, PM_REMOVE);
+            if (FALSE != available) ::DispatchMessage(&Program::THREAD_MESSAGE);
+
+            Program::EXIT_CODE = Program::THREAD_MESSAGE.wParam;
+        }
+    }
+}
+
+/* : Update */
+LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
     switch (message) {
-        // [...]
-        case WM_CLOSE: ::DestroyWindow(windowHandle); break;
-        case WM_KEYDOWN: if (VK_ESCAPE == parameter) ::DestroyWindow(windowHandle); break;
-        case WM_SYSCOMMAND: if (SC_CLOSE == parameter) ::DestroyWindow(windowHandle); break;
-        case WM_SYSKEYDOWN: if (VK_F4 == parameter) ::DestroyWindow(windowHandle); break;
+        /* ... */
+        case WM_CLOSE     :                             ::DestroyWindow(windowHandle); break;
+        case WM_KEYDOWN   : if (VK_ESCAPE == parameter) ::DestroyWindow(windowHandle); break;
+        case WM_SYSCOMMAND: if (SC_CLOSE  == parameter) ::DestroyWindow(windowHandle); break;
+        case WM_SYSKEYDOWN: if (VK_F4     == parameter) ::DestroyWindow(windowHandle); break;
 
-        // [Create, Destroy]
-        case WM_CREATE: ::ShowWindow(windowHandle, static_cast<long>(reinterpret_cast<intptr_t>(static_cast<LPVOID>(reinterpret_cast<CREATESTRUCTA const*>(subparameter) -> lpCreateParams)))); break;
-        case WM_DESTROY: ::PostQuitMessage(EXIT_SUCCESS); break;
+        /* ... */
+        case WM_CREATE: {
+            LPVOID const creationParameter = reinterpret_cast<CREATESTRUCTA const*>(subparameter) -> lpCreateParams;
+
+            // ...
+            ::FreeConsole();
+            ::ShowWindow(windowHandle, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
+        } break;
+
+        // ...
+        case WM_DESTROY: {
+            Window::HANDLE = NULL;
+            ::PostQuitMessage(EXIT_SUCCESS);
+        } break;
     }
 
-    // Return
+    // ...
     return ::DefWindowProc(windowHandle, message, parameter, subparameter);
 }
 
-/* Main --- NOTE (Lapys) */
-int WinMain(HINSTANCE const instanceHandle, HINSTANCE const previousInstanceHandle, LPSTR const /* commandLineArguments */, int const appearance) {
-    // Initialization > (Exit Code, Instance ..., Lock Handle, Window ...)
-    int exitCode = EXIT_SUCCESS;
+/* : Terminate */
+void TERMINATE() {
+    if (NULL != Window::HANDLE) ::DestroyWindow(Window::HANDLE);
+    ::UnregisterClass(Window::CLASS_NAME, Program::HANDLE);
 
-    bool instanceAlreadyRunning = false;
-    CHAR instanceFileName[MAX_PATH] = {0};
-
-    HANDLE lockHandle = NULL;
-
-    WNDCLASSEX windowClassInformation = WNDCLASSEX();
-    HWND windowHandle = NULL;
-
-    // Update > Instance File Name
-    ::GetModuleFileName(NULL, instanceFileName, MAX_PATH);
-
-    // Logic > ... -> Detect multiple instances of this program being executed.
-    if (NULL != previousInstanceHandle) instanceAlreadyRunning = true;
-    else for (; false;) {
-        // Initialization > Lock File (Name, Path)
-        CHAR lockFileName[MAX_PATH] = {};
-        CHAR lockFilePath[MAX_PATH + 1u] = {};
-
-        // Logic
-        if (0u != ::GetTempPath(MAX_PATH + 1u, lockFilePath))
-        if (0u != ::GetTempFileName(lockFilePath, "", 0000u, lockFileName)) {
-            // ...; Logic
-            lockHandle = ::CreateFile(lockFileName, GENERIC_READ, 0u, NULL, CREATE_NEW, FILE_FLAG_DELETE_ON_CLOSE, NULL);
-            if (INVALID_HANDLE_VALUE != lockHandle) {
-                // ... Update > Instance Already Running; ...
-                switch (::GetLastError()) {
-                    case ERROR_FILE_EXISTS: instanceAlreadyRunning = true; break;
-                    case ERROR_SUCCESS: instanceAlreadyRunning = false; break;
-                }
-
-                if (false == instanceAlreadyRunning)
-                continue;
-            }
-        }
-
-        // ...; Logic
-        lockHandle = ::CreateMutex(NULL, TRUE, "PreviousInstanceAssertion");
-        if (NULL != lockHandle) {
-            // ... Update > Instance Already Running
-            switch (::GetLastError()) {
-                case ERROR_ALREADY_EXISTS: instanceAlreadyRunning = true; break;
-                case ERROR_SUCCESS: instanceAlreadyRunning = false; break;
-            }
-        }
-    }
-
-    // Logic > ... -> Create an (application) Window.
-    if (instanceAlreadyRunning) exitCode = EXIT_FAILURE;
-    else {
-        // Modification > Window Class Information > ...
-        windowClassInformation.cbClsExtra = 0;
-        windowClassInformation.cbSize = sizeof(WNDCLASSEX);
-        windowClassInformation.cbWndExtra = 0;
-        windowClassInformation.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
-        windowClassInformation.hCursor = static_cast<HCURSOR>(::LoadCursor(instanceHandle, IDC_ARROW)) /* --> static_cast<HCURSOR>(::LoadImage(instanceHandle, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE)) */;
-        windowClassInformation.hIcon = static_cast<HICON>(::ExtractIcon(instanceHandle, instanceFileName, 0u));
-        windowClassInformation.hIconSm = static_cast<HICON>(NULL);
-        windowClassInformation.hInstance = instanceHandle;
-        windowClassInformation.lpfnWndProc = &windowProcedure;
-        windowClassInformation.lpszClassName = "window";
-        windowClassInformation.lpszMenuName = static_cast<LPCSTR>(NULL);
-        windowClassInformation.style = CS_GLOBALCLASS | CS_OWNDC;
-
-        // Logic
-        if (0x0 == ::RegisterClassEx(static_cast<WNDCLASSEX const*>(&windowClassInformation)))
-            // Error
-            exitCode = EXIT_FAILURE;
-
-        else {
-            // Update > Window Handle
-            windowHandle = ::CreateWindowEx(
-                0x0, windowClassInformation.lpszClassName, "Windows GDI Application", WS_OVERLAPPEDWINDOW /* -> Default borders & title bar. */,
-                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                HWND_DESKTOP, static_cast<HMENU>(NULL), windowClassInformation.hInstance, reinterpret_cast<LPVOID>(static_cast<LPARAM>(appearance))
-            );
-
-            // Logic
-            if (NULL == windowHandle)
-                // Error
-                exitCode = EXIT_FAILURE;
-
-            else {
-                // ...; Loop > Update ...
-                MSG threadMessage = {};
-                for (
-                    BOOL threadMessageAvailable = TRUE; FALSE == threadMessageAvailable || WM_QUIT != threadMessage.message;
-                    threadMessageAvailable = ::PeekMessage(&threadMessage, NULL, 0x0, 0x0, PM_REMOVE)
-                ) ::DispatchMessage(&threadMessage);
-
-                // Update > Exit Code
-                exitCode = threadMessage.wParam;
-            }
-
-            // Termination
-            ::UnregisterClass(windowClassInformation.lpszClassName, windowClassInformation.hInstance);
-        }
-
-        // Deletion
-        if (INVALID_HANDLE_VALUE != lockHandle && NULL != lockHandle) { ::CloseHandle(lockHandle); }
-        ::DestroyCursor(windowClassInformation.hCursor);
-    }
-
-    // Return
-    return exitCode;
+    std::exit(Program::EXIT_CODE);
 }
