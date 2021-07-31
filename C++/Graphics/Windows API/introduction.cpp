@@ -8,7 +8,8 @@
 #include <stdint.h>  // Standard Integers
 
 // : [C++ Standard Library]
-#include <cstdio> // C Standard Input/ Output
+#include <cstdio>  // C Standard Input/ Output
+#include <cstdlib> // C Standard Library
 
 // : [Windows API]
 #include <windows.h> // Windows

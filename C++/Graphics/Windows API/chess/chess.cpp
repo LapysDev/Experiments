@@ -977,8 +977,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             Game::Board::LEFT = (Window::WIDTH  - (Game::Board::WIDTH  + (Game::Tiles::MARGIN * (Game::Tiles::COLUMN_COUNT - 1)))) / 2;
             Game::Board::TOP  = (Window::HEIGHT - (Game::Board::HEIGHT + (Game::Tiles::MARGIN * (Game::Tiles::ROW_COUNT    - 1)))) / 2;
 
-            ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
             ::FreeConsole();
+            ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
 
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
