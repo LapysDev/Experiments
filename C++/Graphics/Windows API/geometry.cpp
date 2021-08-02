@@ -28,14 +28,14 @@ LRESULT CALLBACK UPDATE(HWND const, UINT const, WPARAM const, LPARAM const);
 /* Namespace */
 // : Graphics
 namespace Graphics {
-    static unsigned char const CUBIC = 2u, QUADRATIC = 1u;
+    static unsigned char const CUBIC = 2u, QUADRATIC = 1u, LINEAR = 0u;
 
     // ...
     void drawCircle   (unsigned short const, unsigned short const, unsigned short, DWORD const);
     void drawEllipse  (unsigned short const, unsigned short const, unsigned short, unsigned short, DWORD const);
     void drawLine     (unsigned short const, unsigned short const, unsigned short const, unsigned short const, DWORD const);
     void drawRectangle(unsigned short const, unsigned short const, unsigned short const, unsigned short const, DWORD const);
-    void drawSpline   (unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned char const, ...);
+    void drawSpline   (unsigned short, unsigned short, unsigned short, unsigned short, unsigned char const, ...);
     void drawSquare   (unsigned short const, unsigned short const, unsigned short const, DWORD const);
 
     void putPixel(unsigned short const, unsigned short const, DWORD const);
@@ -142,54 +142,107 @@ void Graphics::drawRectangle(unsigned short const xOrigin, unsigned short const 
     }
 }
 
-void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned char const anchorCount, ...) {
-    std::va_list anchors;
+void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsigned short xTarget, unsigned short yTarget, unsigned char const count, ...) {
+    std::va_list arguments;
+    DWORD color;
+    unsigned short maximumLength = 0u;
+    unsigned short xAnchor[126], xControl[127];
+    unsigned short yAnchor[126], yControl[127];
 
-    va_start(anchors, anchorCount);
-      static_cast<void>(xOrigin);
-      static_cast<void>(yOrigin);
-      static_cast<void>(xTarget);
-      static_cast<void>(yTarget);
+    // ... ->> Parse variadic arguments
+    va_start(arguments, count);
+      for (unsigned char iterator = 0u; count != iterator++; ) {
+        xControl[iterator] = static_cast<unsigned short>(va_arg(arguments, unsigned int));
+        yControl[iterator] = static_cast<unsigned short>(va_arg(arguments, unsigned int));
+      }
 
-      for (unsigned char counter = anchorCount; counter; --counter)
-      static_cast<void>(static_cast<unsigned short>(va_arg(anchors, unsigned int)));
+      color = va_arg(arguments, DWORD);
+      xControl[0] = xOrigin; xControl[count + 1u] = xTarget;
+      yControl[0] = yOrigin; yControl[count + 1u] = yTarget;
+    va_end(arguments);
 
-      static_cast<void>(va_arg(anchors, DWORD));
-    va_end(anchors);
+    // ...
+    for (unsigned short counter = count + 1u, *xControlIterator = xControl, *yControlIterator = yControl; counter--; ++xControlIterator, ++yControlIterator) {
+        unsigned short length = 0u;
 
-    // float const xScale = width  < height ? static_cast<float>(width ) / static_cast<float>(height) : 1.0f;
-    // float const yScale = height < width  ? static_cast<float>(height) / static_cast<float>(width ) : 1.0f;
+        length += xControlIterator[0] < xControlIterator[1] ? xControlIterator[1] - xControlIterator[0] : xControlIterator[0] - xControlIterator[1];
+        length += yControlIterator[0] < yControlIterator[1] ? yControlIterator[1] - yControlIterator[0] : yControlIterator[0] - yControlIterator[1];
+        if (length > maximumLength) maximumLength = length;
+    }
 
-    // // ...
-    // float xInterval = 0.0f, yInterval = 0.0f;
-    // unsigned short x = xOrigin, y = yOrigin + height;
+    for (unsigned short length = 0u; length != maximumLength; ++length) {
+        float const ratio = static_cast<float>(length) / static_cast<float>(maximumLength);
 
-    // Graphics::drawLine(xOrigin, yOrigin + (height / 2u), xOrigin + width, yOrigin + (height / 2u), 0xFF0000u);
-    // Graphics::drawLine(xOrigin + (width / 2u), yOrigin, xOrigin + (width / 2u), yOrigin + height, 0xFF0000u);
-    // Graphics::drawLine(xOrigin + ((width * 1u) / 4u), yOrigin + ((height * 1u) / 4u), xOrigin + ((width * 2u) / 4u), yOrigin + ((height * 2u) / 4u), 0xFF9900u);
-    // Graphics::drawLine(xOrigin + ((width * 2u) / 4u), yOrigin + ((height * 2u) / 4u), xOrigin + ((width * 3u) / 4u), yOrigin + ((height * 3u) / 4u), 0x00FF00u);
+        // ...
+        for (unsigned short counter = count + 1u, *xControlIterator = xControl, *yControlIterator = yControl; counter--; ++xControlIterator, ++yControlIterator) {
+            xOrigin = xControlIterator[0]; xTarget = xControlIterator[1];
+            yOrigin = yControlIterator[0]; yTarget = yControlIterator[1];
 
-    // while (x != xOrigin + width && y != yOrigin) {
-    //     float const ratio = (1.0f == xScale ?
-    //         static_cast<float>(x - xOrigin) / static_cast<float>(width) :
-    //         static_cast<float>(y - yOrigin) / static_cast<float>(height)
-    //     );
+            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+            unsigned short const yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+            float const xSlope = xDistance < yDistance ? static_cast<float>(xDistance) / static_cast<float>(yDistance) : 1.0f;
+            float const ySlope = yDistance < xDistance ? static_cast<float>(yDistance) / static_cast<float>(xDistance) : 1.0f;
 
-    //     if (xInterval >= 1.0f) { xInterval -= 1.0f; ++x; }
-    //     if (yInterval >= 1.0f) { yInterval -= 1.0f; --y; }
+            // ...
+            float xInterval = 0.0f, yInterval = 0.0f;
+            unsigned short x = xOrigin, y = yOrigin;
 
-    //     Graphics::putPixel(x, yOrigin, 0xFF0000u);
-    //     Graphics::putPixel(xOrigin, y, 0xFF0000u);
-    //     Graphics::putPixel(x, y, 0xFF0000u);
-    //     Graphics::putPixel(
-    //         xOrigin + ((0.0f + ratio) * (x - xOrigin)),
-    //         yOrigin + ((1.0f - ratio) * (y - yOrigin)),
-    //         color
-    //     );
+            while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
+                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget;
+                unsigned short const ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
 
-    //     xInterval += xScale;
-    //     yInterval += yScale;
-    // }
+                float const length = static_cast<float>(xDistance + yDistance);
+                float const sublength = static_cast<float>(xSubdistance + ySubdistance);
+
+                if (ratio < 1.0f - (sublength / length)) {
+                    xAnchor[xControlIterator - xControl] = x;
+                    yAnchor[yControlIterator - yControl] = y;
+                    break;
+                }
+
+                if (xInterval >= 1.0f) { xInterval -= 1.0f; xOrigin < xTarget ? ++x : --x; }
+                if (yInterval >= 1.0f) { yInterval -= 1.0f; yOrigin < yTarget ? ++y : --y; }
+                xInterval += xSlope; yInterval += ySlope;
+            }
+        }
+
+        // ...
+        for (unsigned char subcount = count; subcount--; )
+        for (unsigned short counter = subcount + 1u, *xAnchorIterator = xAnchor, *yAnchorIterator = yAnchor; counter--; ++xAnchorIterator, ++yAnchorIterator) {
+            xOrigin = xAnchorIterator[0]; xTarget = xAnchorIterator[1];
+            yOrigin = yAnchorIterator[0]; yTarget = yAnchorIterator[1];
+
+            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+            unsigned short const yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+            float const xSlope = xDistance < yDistance ? static_cast<float>(xDistance) / static_cast<float>(yDistance) : 1.0f;
+            float const ySlope = yDistance < xDistance ? static_cast<float>(yDistance) / static_cast<float>(xDistance) : 1.0f;
+
+            // ...
+            float xInterval = 0.0f, yInterval = 0.0f;
+            unsigned short x = xOrigin, y = yOrigin;
+
+            while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
+                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget;
+                unsigned short const ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
+
+                float const length = static_cast<float>(xDistance + yDistance);
+                float const sublength = static_cast<float>(xSubdistance + ySubdistance);
+
+                if (ratio < 1.0f - (sublength / length)) {
+                    xAnchor[xAnchorIterator - xAnchor] = x;
+                    yAnchor[yAnchorIterator - yAnchor] = y;
+                    break;
+                }
+
+                if (xInterval >= 1.0f) { xInterval -= 1.0f; xOrigin < xTarget ? ++x : --x; }
+                if (yInterval >= 1.0f) { yInterval -= 1.0f; yOrigin < yTarget ? ++y : --y; }
+                xInterval += xSlope; yInterval += ySlope;
+            }
+        }
+
+        // ...
+        Graphics::putPixel(*xAnchor, *yAnchor, color);
+    }
 }
 
 void Graphics::drawSquare(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const size, DWORD const color) {
@@ -351,25 +404,28 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
 
         /* ... */
         case WM_PAINT: {
-            // [Line]
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , 0u                 , 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , Window::HEIGHT - 1u, 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , Window::HEIGHT / 2u, 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH / 2u, 0u                 , 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, 0u                 , 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, Window::HEIGHT - 1u, 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, Window::HEIGHT / 2u, 0x606060u);
-            Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH / 2u, Window::HEIGHT - 1u, 0x606060u);
-            Graphics::drawLine(std::rand() % Window::WIDTH, std::rand() % Window::HEIGHT, std::rand() % Window::WIDTH, std::rand() % Window::HEIGHT, 0x0F0F0Fu);
+            // // [Line]
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , 0u                 , 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , Window::HEIGHT - 1u, 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , Window::HEIGHT / 2u, 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH / 2u, 0u                 , 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, 0u                 , 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, Window::HEIGHT - 1u, 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, Window::HEIGHT / 2u, 0x606060u);
+            // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH / 2u, Window::HEIGHT - 1u, 0x606060u);
+            // Graphics::drawLine(std::rand() % Window::WIDTH, std::rand() % Window::HEIGHT, std::rand() % Window::WIDTH, std::rand() % Window::HEIGHT, 0x0F0F0Fu);
 
-            // [Circle, Ellipse, Rectangle, Square]
-            Graphics::drawSquare((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xAA0000u);
-            Graphics::drawCircle((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xCCCCCCu);
+            // // [Circle, Ellipse, Rectangle, Square]
+            // Graphics::drawSquare((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xAA0000u);
+            // Graphics::drawCircle((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xCCCCCCu);
 
-            Graphics::drawRectangle((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xAA0000u);
-            Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu);
+            // Graphics::drawRectangle((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xAA0000u);
+            // Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu);
 
             // [Spline]
+            Graphics::drawSpline(50u, 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
+            Graphics::drawSpline(350u, 400u, 400u, 80u, Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
+            Graphics::drawSpline(700u, 400u, 650u, 120u, Graphics::CUBIC   , 850u, 200u, 750u, 80u, 0x00FFFFu);
 
             // ...
             ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
