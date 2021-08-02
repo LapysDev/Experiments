@@ -112,20 +112,17 @@ void Graphics::drawEllipse(unsigned short const xOrigin, unsigned short const yO
 }
 
 void Graphics::drawLine(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, DWORD const color) {
-    unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
-    unsigned short const yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-    float const xSlope = xDistance < yDistance ? static_cast<float>(xDistance) / static_cast<float>(yDistance) : 1.0f;
-    float const ySlope = yDistance < xDistance ? static_cast<float>(yDistance) / static_cast<float>(xDistance) : 1.0f;
-
-    // ...
-    float xInterval = 0.0f, yInterval = 0.0f;
+    unsigned short xInterval = 0u, yInterval = 0u;
+    unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget, yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
     unsigned short x = xOrigin, y = yOrigin;
+    unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
 
     while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-        if (xInterval >= 1.0f) { xInterval -= 1.0f; xOrigin < xTarget ? ++x : --x; }
-        if (yInterval >= 1.0f) { yInterval -= 1.0f; yOrigin < yTarget ? ++y : --y; }
+        if (xInterval >= slope) { xInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+        if (yInterval >= slope) { yInterval -= slope; yOrigin < yTarget ? ++y : --y; }
 
-        xInterval += xSlope; yInterval += ySlope;
+        xInterval += xDistance;
+        yInterval += yDistance;
         Graphics::putPixel(x, y, color);
     }
 }
@@ -178,31 +175,26 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
             xOrigin = xControlIterator[0]; xTarget = xControlIterator[1];
             yOrigin = yControlIterator[0]; yTarget = yControlIterator[1];
 
-            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
-            unsigned short const yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-            float const xSlope = xDistance < yDistance ? static_cast<float>(xDistance) / static_cast<float>(yDistance) : 1.0f;
-            float const ySlope = yDistance < xDistance ? static_cast<float>(yDistance) / static_cast<float>(xDistance) : 1.0f;
-
-            // ...
-            float xInterval = 0.0f, yInterval = 0.0f;
+            unsigned short xInterval = 0u, yInterval = 0u;
+            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget, yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
             unsigned short x = xOrigin, y = yOrigin;
+            unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
+            unsigned short const length = xDistance + yDistance;
 
             while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget;
-                unsigned short const ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
+                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget, ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
+                unsigned short const sublength = xSubdistance + ySubdistance;
 
-                float const length = static_cast<float>(xDistance + yDistance);
-                float const sublength = static_cast<float>(xSubdistance + ySubdistance);
-
-                if (ratio < 1.0f - (sublength / length)) {
+                if (ratio < 1.0f - (static_cast<float>(sublength) / static_cast<float>(length))) {
                     xAnchor[xControlIterator - xControl] = x;
                     yAnchor[yControlIterator - yControl] = y;
+                    Graphics::putPixel(x, y, 0xFF0000u);
                     break;
                 }
 
-                if (xInterval >= 1.0f) { xInterval -= 1.0f; xOrigin < xTarget ? ++x : --x; }
-                if (yInterval >= 1.0f) { yInterval -= 1.0f; yOrigin < yTarget ? ++y : --y; }
-                xInterval += xSlope; yInterval += ySlope;
+                if (xInterval >= slope) { xInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+                if (yInterval >= slope) { yInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+                xInterval += xDistance; yInterval += yDistance;
             }
         }
 
@@ -212,31 +204,26 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
             xOrigin = xAnchorIterator[0]; xTarget = xAnchorIterator[1];
             yOrigin = yAnchorIterator[0]; yTarget = yAnchorIterator[1];
 
-            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
-            unsigned short const yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-            float const xSlope = xDistance < yDistance ? static_cast<float>(xDistance) / static_cast<float>(yDistance) : 1.0f;
-            float const ySlope = yDistance < xDistance ? static_cast<float>(yDistance) / static_cast<float>(xDistance) : 1.0f;
-
-            // ...
-            float xInterval = 0.0f, yInterval = 0.0f;
+            unsigned short xInterval = 0u, yInterval = 0u;
+            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget, yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
             unsigned short x = xOrigin, y = yOrigin;
+            unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
+            unsigned short const length = xDistance + yDistance;
 
             while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget;
-                unsigned short const ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
+                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget, ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
+                unsigned short const sublength = xSubdistance + ySubdistance;
 
-                float const length = static_cast<float>(xDistance + yDistance);
-                float const sublength = static_cast<float>(xSubdistance + ySubdistance);
-
-                if (ratio < 1.0f - (sublength / length)) {
+                if (ratio < 1.0f - (static_cast<float>(sublength) / static_cast<float>(length))) {
                     xAnchor[xAnchorIterator - xAnchor] = x;
                     yAnchor[yAnchorIterator - yAnchor] = y;
+                    Graphics::putPixel(x, y, 0x660000u);
                     break;
                 }
 
-                if (xInterval >= 1.0f) { xInterval -= 1.0f; xOrigin < xTarget ? ++x : --x; }
-                if (yInterval >= 1.0f) { yInterval -= 1.0f; yOrigin < yTarget ? ++y : --y; }
-                xInterval += xSlope; yInterval += ySlope;
+                if (xInterval >= slope) { xInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+                if (yInterval >= slope) { yInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+                xInterval += xDistance; yInterval += yDistance;
             }
         }
 
