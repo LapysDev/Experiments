@@ -80,13 +80,18 @@ namespace Window {
 
 /* Function > ... */
 void Graphics::drawCircle(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short radius, DWORD const color) {
-    unsigned short x = 0u, y = radius / 2u;
+    unsigned short x = 0u;
+    unsigned short y = radius / 2u;
 
-    for (radius /= 2u; x != radius && y != 0u; ) {
+    radius /= 2u;
+    while (true) {
         Graphics::putPixel(xOrigin + (radius + x), yOrigin + (radius + y), color);
         Graphics::putPixel(xOrigin + (radius + x), yOrigin + (radius - y), color);
         Graphics::putPixel(xOrigin + (radius - x), yOrigin + (radius + y), color);
         Graphics::putPixel(xOrigin + (radius - x), yOrigin + (radius - y), color);
+
+        // ...
+        if (x == radius || y == 0u) break;
 
         if ((radius * radius) > (((x + 1u) * (x + 1u)) + ((y + 0u) * (y + 0u)))) { ++x; continue; }
         if ((radius * radius) > (((x + 0u) * (x + 0u)) + ((y - 1u) * (y - 1u)))) { --y; continue; }
@@ -95,13 +100,18 @@ void Graphics::drawCircle(unsigned short const xOrigin, unsigned short const yOr
 }
 
 void Graphics::drawEllipse(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short width, unsigned short height, DWORD const color) {
-    unsigned short x = 0u, y = height / 2u;
+    unsigned short x = 0u;
+    unsigned short y = height / 2u;
 
-    for ((height /= 2u), (width /= 2u); x != width && y != 0u; ) {
+    height /= 2u; width /= 2u;
+    while (true) {
         Graphics::putPixel(xOrigin + (width + x), yOrigin + (height + y), color);
         Graphics::putPixel(xOrigin + (width + x), yOrigin + (height - y), color);
         Graphics::putPixel(xOrigin + (width - x), yOrigin + (height + y), color);
         Graphics::putPixel(xOrigin + (width - x), yOrigin + (height - y), color);
+
+        // ...
+        if (x == width || y == 0u) break;
 
         if ((height * width) > (((height * (x + 1u) * (x + 1u)) / width) + ((width * (y + 0u) * (y + 0u)) / height))) { ++x; continue; }
         if ((height * width) > (((height * (x + 0u) * (x + 0u)) / width) + ((width * (y - 1u) * (y - 1u)) / height))) { --y; continue; }
@@ -110,17 +120,24 @@ void Graphics::drawEllipse(unsigned short const xOrigin, unsigned short const yO
 }
 
 void Graphics::drawLine(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, DWORD const color) {
-    unsigned short xInterval = 0u, yInterval = 0u;
-    unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget, yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-    unsigned short x = xOrigin, y = yOrigin;
+    unsigned short xSlopeInterval = 0u;
+    unsigned short ySlopeInterval = 0u;
+
+    unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+    unsigned short const yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+
+    unsigned short x = xOrigin;
+    unsigned short y = yOrigin;
+
     unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
 
+    // ...
     while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-        if (xInterval >= slope) { xInterval -= slope; xOrigin < xTarget ? ++x : --x; }
-        if (yInterval >= slope) { yInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+        if (slope <= xSlopeInterval) { xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+        if (slope <= ySlopeInterval) { ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
 
-        xInterval += xDistance;
-        yInterval += yDistance;
+        xSlopeInterval += xDistance;
+        ySlopeInterval += yDistance;
         Graphics::putPixel(x, y, color);
     }
 }
@@ -141,10 +158,10 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
     std::va_list arguments;
     DWORD color;
     unsigned short maximumLength = 0u;
-    unsigned short xAnchor[126], xControl[127];
-    unsigned short yAnchor[126], yControl[127];
+    unsigned short xControl[127];
+    unsigned short yControl[127];
 
-    // ... ->> Parse variadic arguments
+    // ...
     va_start(arguments, count);
       for (unsigned char iterator = 0u; count != iterator++; ) {
         xControl[iterator] = static_cast<unsigned short>(va_arg(arguments, unsigned int));
@@ -154,19 +171,19 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
       color = va_arg(arguments, DWORD);
       xControl[0] = xOrigin; xControl[count + 1u] = xTarget;
       yControl[0] = yOrigin; yControl[count + 1u] = yTarget;
+
+      for (unsigned char iterator = count + 1u; iterator; --iterator) {
+        unsigned short length = 0u;
+
+        length += xControl[iterator - 0u] < xControl[iterator - 1u] ? xControl[iterator - 1u] - xControl[iterator - 0u] : xControl[iterator - 0u] - xControl[iterator - 1u];
+        length += yControl[iterator - 0u] < yControl[iterator - 1u] ? yControl[iterator - 1u] - yControl[iterator - 0u] : yControl[iterator - 0u] - yControl[iterator - 1u];
+
+        if (length > maximumLength) maximumLength = length;
+      }
     va_end(arguments);
 
     // ...
-    unsigned short xSus = xOrigin, ySus = yOrigin;
-
-    // ...
-    for (unsigned short counter = count + 1u, *xControlIterator = xControl, *yControlIterator = yControl; counter--; ++xControlIterator, ++yControlIterator) {
-        unsigned short length = 0u;
-
-        length += xControlIterator[0] < xControlIterator[1] ? xControlIterator[1] - xControlIterator[0] : xControlIterator[0] - xControlIterator[1];
-        length += yControlIterator[0] < yControlIterator[1] ? yControlIterator[1] - yControlIterator[0] : yControlIterator[0] - yControlIterator[1];
-        if (length > maximumLength) maximumLength = length;
-    }
+    unsigned short xAnchor[126], yAnchor[126];
 
     for (unsigned short currentLength = 0u; currentLength != maximumLength; ++currentLength) {
         float const ratio = 1.0f - (static_cast<float>(currentLength) / static_cast<float>(maximumLength));
@@ -229,12 +246,7 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
         }
 
         // ...
-        Graphics::putPixel(*xAnchor, *yAnchor, 0xFFFFFFu);
-
-        if (xSus == *xAnchor && ySus == *yAnchor) continue;
-        Graphics::drawLine(xSus, ySus, *xAnchor, *yAnchor, color);
-        Graphics::putPixel(*xAnchor, *yAnchor, 0xFFFFFFu);
-        xSus = *xAnchor; ySus = *yAnchor;
+        Graphics::putPixel(*xAnchor, *yAnchor, color);
     }
 }
 
@@ -258,7 +270,7 @@ int WinMain(HINSTANCE const programHandle, HINSTANCE const, LPSTR const, int con
     Window::APPEARANCE = appearance;
 
     struct segmentation { static void fault(int const) {
-        std::puts("SEGFAULT: Enter to continue...");
+        std::fputs("SEGFAULT: Enter to continue...", stderr);
         ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
         std::getchar();
         std::exit(EXIT_FAILURE);
