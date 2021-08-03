@@ -80,8 +80,7 @@ namespace Window {
 
 /* Function > ... */
 void Graphics::drawCircle(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short radius, DWORD const color) {
-    unsigned short x = 0u;
-    unsigned short y = radius / 2u;
+    unsigned short x = 0u, y = radius / 2u;
 
     for (radius /= 2u; x != radius && y != 0u; ) {
         Graphics::putPixel(xOrigin + (radius + x), yOrigin + (radius + y), color);
@@ -96,8 +95,7 @@ void Graphics::drawCircle(unsigned short const xOrigin, unsigned short const yOr
 }
 
 void Graphics::drawEllipse(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short width, unsigned short height, DWORD const color) {
-    unsigned short x = 0u;
-    unsigned short y = height / 2u;
+    unsigned short x = 0u, y = height / 2u;
 
     for ((height /= 2u), (width /= 2u); x != width && y != 0u; ) {
         Graphics::putPixel(xOrigin + (width + x), yOrigin + (height + y), color);
@@ -159,6 +157,9 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
     va_end(arguments);
 
     // ...
+    unsigned short xSus = xOrigin, ySus = yOrigin;
+
+    // ...
     for (unsigned short counter = count + 1u, *xControlIterator = xControl, *yControlIterator = yControl; counter--; ++xControlIterator, ++yControlIterator) {
         unsigned short length = 0u;
 
@@ -167,8 +168,8 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
         if (length > maximumLength) maximumLength = length;
     }
 
-    for (unsigned short length = 0u; length != maximumLength; ++length) {
-        float const ratio = static_cast<float>(length) / static_cast<float>(maximumLength);
+    for (unsigned short currentLength = 0u; currentLength != maximumLength; ++currentLength) {
+        float const ratio = 1.0f - (static_cast<float>(currentLength) / static_cast<float>(maximumLength));
 
         // ...
         for (unsigned short counter = count + 1u, *xControlIterator = xControl, *yControlIterator = yControl; counter--; ++xControlIterator, ++yControlIterator) {
@@ -185,7 +186,7 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
                 unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget, ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
                 unsigned short const sublength = xSubdistance + ySubdistance;
 
-                if (ratio < 1.0f - (static_cast<float>(sublength) / static_cast<float>(length))) {
+                if (ratio > static_cast<float>(sublength) / static_cast<float>(length)) {
                     xAnchor[xControlIterator - xControl] = x;
                     yAnchor[yControlIterator - yControl] = y;
                     Graphics::putPixel(x, y, 0xFF0000u);
@@ -214,7 +215,7 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
                 unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget, ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
                 unsigned short const sublength = xSubdistance + ySubdistance;
 
-                if (ratio < 1.0f - (static_cast<float>(sublength) / static_cast<float>(length))) {
+                if (ratio > static_cast<float>(sublength) / static_cast<float>(length)) {
                     xAnchor[xAnchorIterator - xAnchor] = x;
                     yAnchor[yAnchorIterator - yAnchor] = y;
                     Graphics::putPixel(x, y, 0x660000u);
@@ -228,7 +229,12 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
         }
 
         // ...
-        Graphics::putPixel(*xAnchor, *yAnchor, color);
+        Graphics::putPixel(*xAnchor, *yAnchor, 0xFFFFFFu);
+
+        if (xSus == *xAnchor && ySus == *yAnchor) continue;
+        Graphics::drawLine(xSus, ySus, *xAnchor, *yAnchor, color);
+        Graphics::putPixel(*xAnchor, *yAnchor, 0xFFFFFFu);
+        xSus = *xAnchor; ySus = *yAnchor;
     }
 }
 
@@ -410,9 +416,9 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             // Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu);
 
             // [Spline]
-            Graphics::drawSpline(50u, 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
-            Graphics::drawSpline(350u, 400u, 400u, 80u, Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
-            Graphics::drawSpline(700u, 400u, 650u, 120u, Graphics::CUBIC   , 850u, 200u, 750u, 80u, 0x00FFFFu);
+            Graphics::drawSpline(50u , 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
+            Graphics::drawSpline(350u, 400u, 400u, 80u , Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
+            Graphics::drawSpline(700u, 400u, 650u, 120u, Graphics::CUBIC    , 850u, 200u, 750u, 80u, 0x00FFFFu);
 
             // ...
             ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
