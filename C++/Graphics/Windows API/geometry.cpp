@@ -35,7 +35,7 @@ namespace Graphics {
     void drawEllipse  (unsigned short const, unsigned short const, unsigned short, unsigned short, DWORD const);
     void drawLine     (unsigned short const, unsigned short const, unsigned short const, unsigned short const, DWORD const);
     void drawRectangle(unsigned short const, unsigned short const, unsigned short const, unsigned short const, DWORD const);
-    void drawSpline   (unsigned short, unsigned short, unsigned short, unsigned short, unsigned char const, ...);
+    void drawSpline   (unsigned short const, unsigned short const, unsigned short const, unsigned short const, unsigned char const, ...);
     void drawSquare   (unsigned short const, unsigned short const, unsigned short const, DWORD const);
 
     void putPixel(unsigned short const, unsigned short const, DWORD const);
@@ -154,7 +154,7 @@ void Graphics::drawRectangle(unsigned short const xOrigin, unsigned short const 
     }
 }
 
-void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsigned short xTarget, unsigned short yTarget, unsigned char const count, ...) {
+void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned char const count, ...) {
     std::va_list arguments;
     DWORD color;
     unsigned short maximumLength = 0u;
@@ -174,80 +174,105 @@ void Graphics::drawSpline(unsigned short xOrigin, unsigned short yOrigin, unsign
 
       for (unsigned char iterator = count + 1u; iterator; --iterator) {
         unsigned short length = 0u;
+        unsigned short const xOrigin = xControl[iterator - 1u];
+        unsigned short const yOrigin = yControl[iterator - 1u];
+        unsigned short const xTarget = xControl[iterator - 0u];
+        unsigned short const yTarget = yControl[iterator - 0u];
 
-        length += xControl[iterator - 0u] < xControl[iterator - 1u] ? xControl[iterator - 1u] - xControl[iterator - 0u] : xControl[iterator - 0u] - xControl[iterator - 1u];
-        length += yControl[iterator - 0u] < yControl[iterator - 1u] ? yControl[iterator - 1u] - yControl[iterator - 0u] : yControl[iterator - 0u] - yControl[iterator - 1u];
+        // ...
+        length += xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+        length += yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
 
         if (length > maximumLength) maximumLength = length;
       }
     va_end(arguments);
 
-    // ...
-    unsigned short xAnchor[126], yAnchor[126];
-
-    for (unsigned short currentLength = 0u; currentLength != maximumLength; ++currentLength) {
-        float const ratio = 1.0f - (static_cast<float>(currentLength) / static_cast<float>(maximumLength));
+    /* ... */
+    // ... ->> demo every line
+    for (unsigned char iterator = count + 1u; iterator; --iterator) {
+        unsigned short const xTarget        = xControl[iterator - 0u];
+        unsigned short const yTarget        = yControl[iterator - 0u];
+        unsigned short       xSlopeInterval = 0u;
+        unsigned short       ySlopeInterval = 0u;
+        unsigned short const xOrigin        = xControl[iterator - 1u];
+        unsigned short const yOrigin        = yControl[iterator - 1u];
+        unsigned short const xDistance      = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+        unsigned short const yDistance      = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+        unsigned short x = xOrigin;
+        unsigned short y = yOrigin;
+        unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
 
         // ...
-        for (unsigned short counter = count + 1u, *xControlIterator = xControl, *yControlIterator = yControl; counter--; ++xControlIterator, ++yControlIterator) {
-            xOrigin = xControlIterator[0]; xTarget = xControlIterator[1];
-            yOrigin = yControlIterator[0]; yTarget = yControlIterator[1];
+        while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
+            if (slope <= xSlopeInterval) { xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+            if (slope <= ySlopeInterval) { ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
 
-            unsigned short xInterval = 0u, yInterval = 0u;
-            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget, yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-            unsigned short x = xOrigin, y = yOrigin;
-            unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
-            unsigned short const length = xDistance + yDistance;
+            xSlopeInterval += xDistance;
+            ySlopeInterval += yDistance;
 
-            while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget, ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
-                unsigned short const sublength = xSubdistance + ySubdistance;
-
-                if (ratio > static_cast<float>(sublength) / static_cast<float>(length)) {
-                    xAnchor[xControlIterator - xControl] = x;
-                    yAnchor[yControlIterator - yControl] = y;
-                    Graphics::putPixel(x, y, 0xFF0000u);
-                    break;
-                }
-
-                if (xInterval >= slope) { xInterval -= slope; xOrigin < xTarget ? ++x : --x; }
-                if (yInterval >= slope) { yInterval -= slope; yOrigin < yTarget ? ++y : --y; }
-                xInterval += xDistance; yInterval += yDistance;
-            }
+            Graphics::putPixel(x, y, 0xFF0000u);
         }
-
-        // ...
-        for (unsigned char subcount = count; subcount--; )
-        for (unsigned short counter = subcount + 1u, *xAnchorIterator = xAnchor, *yAnchorIterator = yAnchor; counter--; ++xAnchorIterator, ++yAnchorIterator) {
-            xOrigin = xAnchorIterator[0]; xTarget = xAnchorIterator[1];
-            yOrigin = yAnchorIterator[0]; yTarget = yAnchorIterator[1];
-
-            unsigned short xInterval = 0u, yInterval = 0u;
-            unsigned short const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget, yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-            unsigned short x = xOrigin, y = yOrigin;
-            unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
-            unsigned short const length = xDistance + yDistance;
-
-            while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-                unsigned short const xSubdistance = x < xTarget ? xTarget - x : x - xTarget, ySubdistance = y < yTarget ? yTarget - y : y - yTarget;
-                unsigned short const sublength = xSubdistance + ySubdistance;
-
-                if (ratio > static_cast<float>(sublength) / static_cast<float>(length)) {
-                    xAnchor[xAnchorIterator - xAnchor] = x;
-                    yAnchor[yAnchorIterator - yAnchor] = y;
-                    Graphics::putPixel(x, y, 0x660000u);
-                    break;
-                }
-
-                if (xInterval >= slope) { xInterval -= slope; xOrigin < xTarget ? ++x : --x; }
-                if (yInterval >= slope) { yInterval -= slope; yOrigin < yTarget ? ++y : --y; }
-                xInterval += xDistance; yInterval += yDistance;
-            }
-        }
-
-        // ...
-        Graphics::putPixel(*xAnchor, *yAnchor, color);
     }
+
+    // ... ->> for every segment in each line
+    std::printf("MAX: %hu" "\r\n", maximumLength);
+    for (unsigned short currentLength = 1u; currentLength != maximumLength; ++currentLength) {
+        unsigned int currentInterval;
+        unsigned short sus[6];
+
+        // ... ->> for every line
+        for (unsigned char iterator = count + 1u; iterator; --iterator) {
+            unsigned short const xTarget        = xControl[iterator - 0u];
+            unsigned short const yTarget        = yControl[iterator - 0u];
+            unsigned short       xSlopeInterval = 0u;
+            unsigned short       ySlopeInterval = 0u;
+            unsigned short const xOrigin        = xControl[iterator - 1u];
+            unsigned short const yOrigin        = yControl[iterator - 1u];
+            unsigned short const xDistance      = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+            unsigned short const yDistance      = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+            unsigned short x = xOrigin;
+            unsigned short y = yOrigin;
+
+            unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
+            unsigned short const length = xDistance + yDistance;
+
+            // ...
+            for (currentInterval = currentLength * length; (x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget); ) {
+                if (0u == currentInterval) {
+                    if (iterator == 1u) { sus[0] = x; sus[1] = y; }
+                    if (iterator == 2u) { sus[2] = x; sus[3] = y; }
+                    if (iterator == 3u) { sus[4] = x; sus[5] = y; }
+
+                    break;
+                }
+
+                if (slope <= xSlopeInterval) { currentInterval = (currentInterval > maximumLength) * (currentInterval - maximumLength); xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+                if (slope <= ySlopeInterval) { currentInterval = (currentInterval > maximumLength) * (currentInterval - maximumLength); ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+
+                xSlopeInterval += xDistance;
+                ySlopeInterval += yDistance;
+
+                Graphics::putPixel(x, y, color);
+            }
+        }
+
+        // ... ->> test
+        std::printf(
+            "[%f] ({%hu, %hu} -> {%hu, %hu}) : {%hu, %hu} / ({%hu, %hu} -> {%hu, %hu}) : {%hu, %hu} / ({%hu, %hu} -> {%hu, %hu}) : {%hu, %hu}" "\r\n",
+            static_cast<float>(currentLength) / static_cast<float>(maximumLength),
+
+            xOrigin, yOrigin, xControl[1], yControl[1],
+            sus[0], sus[1],
+
+            xControl[1], yControl[1], xControl[2], yControl[2],
+            sus[2], sus[3],
+
+            xControl[2], yControl[2], xTarget, yTarget,
+            sus[4], sus[5]
+        );
+    }
+
+    std::printf("%i", *static_cast<int*>(NULL));
 }
 
 void Graphics::drawSquare(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const size, DWORD const color) {
@@ -428,8 +453,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             // Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu);
 
             // [Spline]
-            Graphics::drawSpline(50u , 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
-            Graphics::drawSpline(350u, 400u, 400u, 80u , Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
+            // Graphics::drawSpline(50u , 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
+            // Graphics::drawSpline(350u, 400u, 400u, 80u , Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
             Graphics::drawSpline(700u, 400u, 650u, 120u, Graphics::CUBIC    , 850u, 200u, 750u, 80u, 0x00FFFFu);
 
             // ...
