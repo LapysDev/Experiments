@@ -188,37 +188,10 @@ void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOr
     va_end(arguments);
 
     /* ... */
-    // ... ->> demo every line
-    for (unsigned char iterator = count + 1u; iterator; --iterator) {
-        unsigned short const xTarget        = xControl[iterator - 0u];
-        unsigned short const yTarget        = yControl[iterator - 0u];
-        unsigned short       xSlopeInterval = 0u;
-        unsigned short       ySlopeInterval = 0u;
-        unsigned short const xOrigin        = xControl[iterator - 1u];
-        unsigned short const yOrigin        = yControl[iterator - 1u];
-        unsigned short const xDistance      = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
-        unsigned short const yDistance      = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-        unsigned short x = xOrigin;
-        unsigned short y = yOrigin;
-        unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
-
-        // ...
-        while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-            if (slope <= xSlopeInterval) { xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
-            if (slope <= ySlopeInterval) { ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
-
-            xSlopeInterval += xDistance;
-            ySlopeInterval += yDistance;
-
-            Graphics::putPixel(x, y, 0xFF0000u);
-        }
-    }
-
     // ... ->> for every segment in each line
-    std::printf("MAX: %hu" "\r\n", maximumLength);
+    unsigned short xSubcontrol[126], ySubcontrol[126];
     for (unsigned short currentLength = 1u; currentLength != maximumLength; ++currentLength) {
         unsigned int currentInterval;
-        unsigned short sus[6];
 
         // ... ->> for every line
         for (unsigned char iterator = count + 1u; iterator; --iterator) {
@@ -233,15 +206,14 @@ void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOr
             unsigned short x = xOrigin;
             unsigned short y = yOrigin;
 
-            unsigned short const slope = xDistance > yDistance ? xDistance : yDistance;
+            unsigned short const slope  = xDistance > yDistance ? xDistance : yDistance;
             unsigned short const length = xDistance + yDistance;
 
             // ...
             for (currentInterval = currentLength * length; (x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget); ) {
                 if (0u == currentInterval) {
-                    if (iterator == 1u) { sus[0] = x; sus[1] = y; }
-                    if (iterator == 2u) { sus[2] = x; sus[3] = y; }
-                    if (iterator == 3u) { sus[4] = x; sus[5] = y; }
+                    xSubcontrol[iterator - 1u] = x;
+                    ySubcontrol[iterator - 1u] = y;
 
                     break;
                 }
@@ -252,27 +224,48 @@ void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOr
                 xSlopeInterval += xDistance;
                 ySlopeInterval += yDistance;
 
-                Graphics::putPixel(x, y, color);
+                Graphics::putPixel(x, y, 0xFF6600u);
             }
         }
 
-        // ... ->> test
-        std::printf(
-            "[%f] ({%hu, %hu} -> {%hu, %hu}) : {%hu, %hu} / ({%hu, %hu} -> {%hu, %hu}) : {%hu, %hu} / ({%hu, %hu} -> {%hu, %hu}) : {%hu, %hu}" "\r\n",
-            static_cast<float>(currentLength) / static_cast<float>(maximumLength),
+        // ... ->> for every sub-line
+        for (unsigned char subcount = count; subcount; --subcount)
+        for (unsigned char iterator = subcount; iterator; --iterator) {
+            unsigned short const xTarget        = xSubcontrol[iterator - 0u];
+            unsigned short const yTarget        = ySubcontrol[iterator - 0u];
+            unsigned short       xSlopeInterval = 0u;
+            unsigned short       ySlopeInterval = 0u;
+            unsigned short const xOrigin        = xSubcontrol[iterator - 1u];
+            unsigned short const yOrigin        = ySubcontrol[iterator - 1u];
+            unsigned short const xDistance      = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+            unsigned short const yDistance      = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+            unsigned short x = xOrigin;
+            unsigned short y = yOrigin;
 
-            xOrigin, yOrigin, xControl[1], yControl[1],
-            sus[0], sus[1],
+            unsigned short const slope  = xDistance > yDistance ? xDistance : yDistance;
+            unsigned short const length = xDistance + yDistance;
+            unsigned short sus = 0u;
 
-            xControl[1], yControl[1], xControl[2], yControl[2],
-            sus[2], sus[3],
+            // ...
+            while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
+                if (static_cast<float>(maximumLength) * (static_cast<float>(sus) / static_cast<float>(length)) >= static_cast<float>(currentLength)) {
+                    xSubcontrol[iterator - 1u] = x;
+                    ySubcontrol[iterator - 1u] = y;
+                    break;
+                }
 
-            xControl[2], yControl[2], xTarget, yTarget,
-            sus[4], sus[5]
-        );
+                if (slope <= xSlopeInterval) { sus += 1u; xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+                if (slope <= ySlopeInterval) { sus += 1u; ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+
+                xSlopeInterval += xDistance;
+                ySlopeInterval += yDistance;
+                // Graphics::putPixel(x, y, 0x660000u);
+            }
+        }
+
+        // ... ->> accumulated {x, y}
+        Graphics::putPixel(*xSubcontrol, *ySubcontrol, color);
     }
-
-    std::printf("%i", *static_cast<int*>(NULL));
 }
 
 void Graphics::drawSquare(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const size, DWORD const color) {
@@ -453,8 +446,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             // Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu);
 
             // [Spline]
-            // Graphics::drawSpline(50u , 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
-            // Graphics::drawSpline(350u, 400u, 400u, 80u , Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
+            Graphics::drawSpline(50u , 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
+            Graphics::drawSpline(350u, 400u, 400u, 80u , Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
             Graphics::drawSpline(700u, 400u, 650u, 120u, Graphics::CUBIC    , 850u, 200u, 750u, 80u, 0x00FFFFu);
 
             // ...
