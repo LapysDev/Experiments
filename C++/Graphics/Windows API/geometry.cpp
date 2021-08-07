@@ -428,8 +428,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             bitmapInformation.bmiColors -> rgbReserved  = 0x0u;
             bitmapInformation.bmiHeader.biBitCount      = 32u;
             bitmapInformation.bmiHeader.biClrUsed       = 0u;
-            bitmapInformation.bmiHeader.biClrImportant  = 0u;
             bitmapInformation.bmiHeader.biCompression   = BI_RGB;
+            bitmapInformation.bmiHeader.biClrImportant  = 0u;
             bitmapInformation.bmiHeader.biHeight        = -Window::HEIGHT;
             bitmapInformation.bmiHeader.biPlanes        = 1u;
             bitmapInformation.bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
@@ -471,6 +471,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                 Graphics::putPixel(x, y, 0x000000u);
             }
         } break;
+
+        case WM_ERASEBKGND: return 0x1L;
         case WM_PAINT: {
             // // [Line]
             // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , 0u                 , 0x606060u);

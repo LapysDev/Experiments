@@ -920,8 +920,8 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             bitmapInformation.bmiColors -> rgbRed      = 0u;
             bitmapInformation.bmiColors -> rgbReserved = 0x0u;
             bitmapInformation.bmiHeader.biBitCount     = 32u;
-            bitmapInformation.bmiHeader.biClrUsed      = 0u;
             bitmapInformation.bmiHeader.biClrImportant = 0u;
+            bitmapInformation.bmiHeader.biClrUsed      = 0u;
             bitmapInformation.bmiHeader.biCompression  = BI_RGB;
             bitmapInformation.bmiHeader.biSize         = sizeof(BITMAPINFOHEADER);
 
@@ -960,13 +960,13 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
                         bitmapInformation.bmiHeader.biHeight        = -Game::Pieces::BITMAP.bmHeight;
                         bitmapInformation.bmiHeader.biPlanes        = Game::Pieces::BITMAP.bmPlanes;
                         bitmapInformation.bmiHeader.biSizeImage     = Game::Pieces::BITMAP.bmHeight * Game::Pieces::BITMAP.bmWidth * sizeof(UINT32);
-                        bitmapInformation.bmiHeader.biWidth         = Game::Pieces::BITMAP.bmWidth;
+                        bitmapInformation.bmiHeader.biWidth         = +Game::Pieces::BITMAP.bmWidth;
                         bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, HORZSIZE);
                         bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, VERTSIZE);
 
                         // ...
-                        ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
                         ::SelectObject(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE);
+                        ::GetDIBits(Game::Pieces::BITMAP_DEVICE_CONTEXT_HANDLE, Game::Pieces::BITMAP_HANDLE, 0u, Game::Pieces::BITMAP.bmHeight, Game::Pieces::BITMAP_MEMORY, &bitmapInformation, DIB_RGB_COLORS);
                     }
                 }
             }
@@ -999,6 +999,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         } break;
 
         /* ... */
+        case WM_ERASEBKGND: return 0x1L;
         case WM_PAINT: {
             unsigned char anticipate[27], anticipateCount = 0u;
             unsigned short const tileContentHeight = Game::getTileHeight() - Game::Tiles::MARGIN;
