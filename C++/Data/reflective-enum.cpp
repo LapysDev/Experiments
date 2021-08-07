@@ -77,7 +77,7 @@
             void operator ,(pseudo_enum const) const {}                              \
           } __VA_ARGS__;                                                             \
                                                                                      \
-          static_cast<void>(__VA_ARGS__, 0);                                         \
+          reflenum_cast(__VA_ARGS__, 0);                                             \
         }                                                                            \
                                                                                      \
         return const_cast<int const (&)[COUNT + 1]>(items);                          \

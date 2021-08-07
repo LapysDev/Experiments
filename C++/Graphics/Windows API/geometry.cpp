@@ -15,9 +15,7 @@
 // : [Windows API]
 #include <windows.h> // Windows
 
-/* Phase */
-// : Singular `INITIATE` called by entry point;
-// : Definitions for `RESET`, `TERMINATE`, `UPDATE`, more definitions are allowed & callable by programmer
+/* Phase > ... */
 static void INITIATE ();
        void RESET    ();
        void TERMINATE();
@@ -39,6 +37,7 @@ namespace Graphics {
     void drawSquare   (unsigned short const, unsigned short const, unsigned short const, DWORD const);
 
     void putPixel(unsigned short const, unsigned short const, DWORD const);
+    void rotateBy(unsigned short const, unsigned short const, float const);
 }
 
 // : Program
@@ -154,12 +153,16 @@ void Graphics::drawRectangle(unsigned short const xOrigin, unsigned short const 
     }
 }
 
+static unsigned short SUS = 1u;
 void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned char const count, ...) {
     std::va_list arguments;
     DWORD color;
     unsigned short maximumLength = 0u;
-    unsigned short xControl[127];
-    unsigned short yControl[127];
+
+    unsigned short xControl[127], yControl[127];
+    unsigned short xCurrent = xOrigin, yCurrent = yOrigin;
+    unsigned short xRecent, yRecent;
+    unsigned short xSubcontrol[126], ySubcontrol[126];
 
     // ...
     va_start(arguments, count);
@@ -187,13 +190,20 @@ void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOr
       }
     va_end(arguments);
 
-    /* ... */
-    // ... ->> for every segment in each line
-    unsigned short xSubcontrol[126], ySubcontrol[126];
-    for (unsigned short currentLength = 1u; currentLength != maximumLength; ++currentLength) {
-        unsigned int currentInterval;
+    // ...
+    maximumLength = SUS;
+    for (unsigned char iterator = count + 1u; iterator; --iterator) {
+        unsigned short const xTarget = xControl[iterator - 0u];
+        unsigned short const yTarget = yControl[iterator - 0u];
+        unsigned short const xOrigin = xControl[iterator - 1u];
+        unsigned short const yOrigin = yControl[iterator - 1u];
 
-        // ... ->> for every line
+        Graphics::drawLine(xOrigin, yOrigin, xTarget, yTarget, 0xFF0000u);
+    }
+
+    // ...
+    for (unsigned short currentLength = 1u; currentLength != maximumLength; ++currentLength) {
+        // ...
         for (unsigned char iterator = count + 1u; iterator; --iterator) {
             unsigned short const xTarget        = xControl[iterator - 0u];
             unsigned short const yTarget        = yControl[iterator - 0u];
@@ -210,60 +220,88 @@ void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOr
             unsigned short const length = xDistance + yDistance;
 
             // ...
-            for (currentInterval = currentLength * length; (x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget); ) {
-                if (0u == currentInterval) {
+            for (unsigned int interval = currentLength * length; (x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget); ) {
+                if (0u == interval) {
                     xSubcontrol[iterator - 1u] = x;
                     ySubcontrol[iterator - 1u] = y;
 
                     break;
                 }
 
-                if (slope <= xSlopeInterval) { currentInterval = (currentInterval > maximumLength) * (currentInterval - maximumLength); xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
-                if (slope <= ySlopeInterval) { currentInterval = (currentInterval > maximumLength) * (currentInterval - maximumLength); ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+                if (slope <= xSlopeInterval) { interval = (interval > maximumLength) * (interval - maximumLength); xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+                if (slope <= ySlopeInterval) { interval = (interval > maximumLength) * (interval - maximumLength); ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
 
                 xSlopeInterval += xDistance;
                 ySlopeInterval += yDistance;
 
-                Graphics::putPixel(x, y, 0xFF6600u);
+                if ((0xFF000000u | color) != Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)])
+                Graphics::putPixel(x, y, 0xFF0000u);
             }
         }
 
-        // ... ->> for every sub-line
-        for (unsigned char subcount = count; subcount; --subcount)
-        for (unsigned char iterator = subcount; iterator; --iterator) {
-            unsigned short const xTarget        = xSubcontrol[iterator - 0u];
-            unsigned short const yTarget        = ySubcontrol[iterator - 0u];
-            unsigned short       xSlopeInterval = 0u;
-            unsigned short       ySlopeInterval = 0u;
-            unsigned short const xOrigin        = xSubcontrol[iterator - 1u];
-            unsigned short const yOrigin        = ySubcontrol[iterator - 1u];
-            unsigned short const xDistance      = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
-            unsigned short const yDistance      = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
-            unsigned short x = xOrigin;
-            unsigned short y = yOrigin;
+        // ...
+        for (unsigned char subcount = count; subcount--; ) {
+            unsigned short submaximumLength = 0u;
 
-            unsigned short const slope  = xDistance > yDistance ? xDistance : yDistance;
-            unsigned short const length = xDistance + yDistance;
-            unsigned short sus = 0u;
+            for (unsigned char iterator = subcount + 1u; iterator; --iterator) {
+                unsigned short sublength = 0u;
+                unsigned short const xTarget = xSubcontrol[iterator - 0u];
+                unsigned short const yTarget = ySubcontrol[iterator - 0u];
+                unsigned short const xOrigin = xSubcontrol[iterator - 1u];
+                unsigned short const yOrigin = ySubcontrol[iterator - 1u];
 
-            // ...
-            while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
-                if (static_cast<float>(maximumLength) * (static_cast<float>(sus) / static_cast<float>(length)) >= static_cast<float>(currentLength)) {
-                    xSubcontrol[iterator - 1u] = x;
-                    ySubcontrol[iterator - 1u] = y;
-                    break;
+                sublength += xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+                sublength += yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+
+                if (sublength > submaximumLength) submaximumLength = sublength;
+            }
+
+            for (unsigned char iterator = subcount + 1u; iterator; --iterator) {
+                unsigned short const xTarget        = xSubcontrol[iterator - 0u];
+                unsigned short const yTarget        = ySubcontrol[iterator - 0u];
+                unsigned short       xSlopeInterval = 0u;
+                unsigned short       ySlopeInterval = 0u;
+                unsigned short const xOrigin        = xSubcontrol[iterator - 1u];
+                unsigned short const yOrigin        = ySubcontrol[iterator - 1u];
+                unsigned short const xDistance      = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+                unsigned short const yDistance      = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+                unsigned short x = xOrigin;
+                unsigned short y = yOrigin;
+
+                unsigned short const sublength = xDistance + yDistance;
+                unsigned short const slope     = xDistance > yDistance ? xDistance : yDistance;
+
+                // ...
+                for (float interval = static_cast<float>(sublength) * (static_cast<float>(currentLength * submaximumLength) / static_cast<float>(maximumLength)); (x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget); ) {
+                    if (interval <= 0.0f) {
+                        xSubcontrol[iterator - 1u] = x;
+                        ySubcontrol[iterator - 1u] = y;
+
+                        break;
+                    }
+
+                    if (slope <= xSlopeInterval) { interval = (interval > submaximumLength) * (interval - submaximumLength); xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
+                    if (slope <= ySlopeInterval) { interval = (interval > submaximumLength) * (interval - submaximumLength); ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
+
+                    xSlopeInterval += xDistance;
+                    ySlopeInterval += yDistance;
+
+                    if (color != (Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] & 0xFFFFFFu))
+                    Graphics::putPixel(x, y, (iterator == 3u ? 0x000030u : iterator == 2u ? 0x003000u : 0x300000u) | Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)]);
                 }
-
-                if (slope <= xSlopeInterval) { sus += 1u; xSlopeInterval -= slope; xOrigin < xTarget ? ++x : --x; }
-                if (slope <= ySlopeInterval) { sus += 1u; ySlopeInterval -= slope; yOrigin < yTarget ? ++y : --y; }
-
-                xSlopeInterval += xDistance;
-                ySlopeInterval += yDistance;
-                // Graphics::putPixel(x, y, 0x660000u);
             }
         }
 
         // ... ->> accumulated {x, y}
+        // if (xCurrent != *xSubcontrol && yCurrent != *ySubcontrol) {
+        //     xRecent = xCurrent; yRecent = yCurrent;
+        //     xCurrent = *xSubcontrol; yCurrent = *ySubcontrol;
+
+        //     if (xCurrent != xRecent && yCurrent != yRecent) Graphics::drawLine(xRecent, yRecent, xCurrent, yCurrent, color);
+        // }
+
+        static_cast<void>(xCurrent); static_cast<void>(yCurrent);
+        static_cast<void>(xRecent); static_cast<void>(yRecent);
         Graphics::putPixel(*xSubcontrol, *ySubcontrol, color);
     }
 }
@@ -426,6 +464,13 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
         } break;
 
         /* ... */
+        case WM_KEYUP: {
+            ++SUS;
+            for (unsigned short y = Window::HEIGHT; y--; )
+            for (unsigned short x = Window::WIDTH; x--; ) {
+                Graphics::putPixel(x, y, 0x000000u);
+            }
+        } break;
         case WM_PAINT: {
             // // [Line]
             // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , 0u                 , 0x606060u);
@@ -441,14 +486,16 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
             // // [Circle, Ellipse, Rectangle, Square]
             // Graphics::drawSquare((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xAA0000u);
             // Graphics::drawCircle((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xCCCCCCu);
+            // Graphics::drawCircle((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xCCCCCCu);
 
             // Graphics::drawRectangle((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xAA0000u);
             // Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu);
 
             // [Spline]
             Graphics::drawSpline(50u , 400u, 150u, 100u, Graphics::LINEAR   , 0xFFFF00u);
-            Graphics::drawSpline(350u, 400u, 400u, 80u , Graphics::QUADRATIC, 500u, 200u, 0xFF00FFu);
-            Graphics::drawSpline(700u, 400u, 650u, 120u, Graphics::CUBIC    , 850u, 200u, 750u, 80u, 0x00FFFFu);
+            Graphics::drawSpline(200u, 400u, 200u, 100u, Graphics::QUADRATIC, 300u, 250u, 0xFF00FFu);
+            Graphics::drawSpline(350u, 400u, 550u, 100u, Graphics::CUBIC    , 550u, 400u, 350u, 100u, 0x00FFFFu);
+            Graphics::drawSpline(650u, 400u, 950u, 400u, 3u                 , 650u, 100u, 950u, 100u, 800u, 400u, 0xF0F0F0u);
 
             // ...
             ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
