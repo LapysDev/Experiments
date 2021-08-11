@@ -19,15 +19,19 @@ static void signal_handler(int const signal) {
     /* case SIGBUS: break; */
     /* case SIGCHLD: break; */
     /* case SIGCONT: break; */
+    /* case SIGEMT: break; */
     /* case SIGHUP: break; */
+    /* case SIGIO: break; */
     /* case SIGIOT: break; */
     /* case SIGKILL: break; */
     /* case SIGPIPE: break; */
     /* case SIGPOLL: break; */
     /* case SIGPROF: break; */
+    /* case SIGPWR: break; */
     /* case SIGQUIT: break; */
     /* case SIGRTMAX: break; */
     /* case SIGRTMIN: break; */
+    /* case SIGSTKFLT: break; */
     /* case SIGSTOP: break; */
     /* case SIGSYS: break; */
     /* case SIGTRAP: break; */

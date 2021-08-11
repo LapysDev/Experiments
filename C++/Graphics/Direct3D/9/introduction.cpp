@@ -135,9 +135,9 @@ void INITIATE() {
     {
         if (NULL == Graphics::Direct3D) Graphics::Direct3D = ::Direct3DCreate9(D3D_SDK_VERSION);
 
-        Graphics::Direct3D.PRESENTATION_PARAMETERS.AutoDepthStencilFormat     = /* 0x0 */ D3DFMT_UNKNOWN;
+        Graphics::Direct3D.PRESENTATION_PARAMETERS.AutoDepthStencilFormat     = /* --> 0x0 */ D3DFMT_UNKNOWN;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.BackBufferCount            = 0u;
-        Graphics::Direct3D.PRESENTATION_PARAMETERS.BackBufferFormat           = /* 0x0 */ D3DFMT_UNKNOWN;
+        Graphics::Direct3D.PRESENTATION_PARAMETERS.BackBufferFormat           = /* --> 0x0 */ D3DFMT_UNKNOWN;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.BackBufferHeight           = 0u;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.BackBufferWidth            = 0u;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.EnableAutoDepthStencil     = FALSE;
@@ -145,7 +145,7 @@ void INITIATE() {
         Graphics::Direct3D.PRESENTATION_PARAMETERS.FullScreen_RefreshRateInHz = 0u;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.hDeviceWindow              = Window::HANDLE;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.MultiSampleQuality         = 0u;
-        Graphics::Direct3D.PRESENTATION_PARAMETERS.MultiSampleType            = /* 0x0 */ D3DMULTISAMPLE_NONE;
+        Graphics::Direct3D.PRESENTATION_PARAMETERS.MultiSampleType            = /* --> 0x0 */ D3DMULTISAMPLE_NONE;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.PresentationInterval       = 0u;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.SwapEffect                 = D3DSWAPEFFECT_COPY;
         Graphics::Direct3D.PRESENTATION_PARAMETERS.Windowed                   = TRUE;

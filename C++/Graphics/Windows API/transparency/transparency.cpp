@@ -3,6 +3,10 @@
 #ifndef PW_RENDERFULLCONTENT
 # define PW_RENDERFULLCONTENT 0x00000002
 #endif
+#ifndef WS_EX_NOREDIRECTIONBITMAP
+# define WS_EX_NOREDIRECTIONBITMAP 0x00200000L
+#endif
+
 #define _WIN32_WINNT 0x0501
 
 #undef UNICODE
@@ -19,7 +23,6 @@
 
 // : [Windows API]
 #include <windows.h> // Windows
-# include <d3d9.h>   // Direct 3D v9
 # include <dwmapi.h> // Desktop Window Manager API
 
 /* Phase > ... */
@@ -31,24 +34,6 @@ static void INITIATE ();
 LRESULT CALLBACK UPDATE(HWND const, UINT const, WPARAM const, LPARAM const);
 
 /* Namespace */
-// : Graphics
-namespace Graphics {
-    static struct Direct3D {
-      private: LPDIRECT3D9 value;
-      public:
-        Direct3D() : value() {}
-        Direct3D(LPDIRECT3D9 const value) : value(value) {}
-
-        // ...
-        LPDIRECT3DDEVICE9     DEVICE = NULL;
-        D3DPRESENT_PARAMETERS PRESENTATION_PARAMETERS;
-
-        // ...
-        LPDIRECT3D9 operator ->() const { return this -> value; }
-        operator LPDIRECT3D9&() { return const_cast<LPDIRECT3D9&>(this -> value); }
-    } Direct3D = NULL;
-}
-
 // : Program
 namespace Program {
     static int       EXIT_CODE           = EXIT_SUCCESS;
@@ -76,40 +61,47 @@ namespace Window {
     static int     TOP             = -1;
     static int     WIDTH           = -1;
 
-    // ... ->> Renderers
-    static HBITMAP DEVICE_CONTEXT_BITMAP_HANDLE        = NULL;
+    // ... ->> Rendering
     static HDC     DEVICE_CONTEXT_HANDLE               = NULL;
 
     static BITMAP  MEMORY_DEVICE_CONTEXT_BITMAP        = ::BITMAP();
     static HBITMAP MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = NULL;
     static UINT32 *MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = NULL;
     static HDC     MEMORY_DEVICE_CONTEXT_HANDLE        = NULL;
+    static HGDIOBJ MEMORY_DEVICE_CONTEXT_OBJECT        = NULL;
 }
 
 /* Main */
+#include <csignal>
 int WinMain(HINSTANCE const programHandle, HINSTANCE const, LPSTR const, int const appearance) {
     Program::HANDLE = programHandle;
     Window::APPEARANCE = appearance;
+
+    struct segmentation { static void fault(int const) {
+        std::fputs("SEGFAULT: Enter to continue...", stderr);
+        std::getchar();
+        std::exit(EXIT_FAILURE);
+    } };
+    std::signal(SIGSEGV, &segmentation::fault);
 
     // ...
     INITIATE();
     return Program::EXIT_CODE;
 }
 
-/* Phase */
+/* Phases */
 /* : Initiate */
 void INITIATE() {
     WNDCLASSEX classInformation;
 
     // ...
-    if (NULL == Window::HANDLE)
     ::GetModuleFileName(static_cast<HMODULE>(NULL), Program::FILE_NAME, MAX_PATH);
 
     Window::BACKGROUND = ::GetSysColorBrush(COLOR_WINDOW);
     Window::CURSOR     = ::LoadCursor(NULL, IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED))
     Window::ICON       = ::ExtractIcon(static_cast<HINSTANCE>(::GetCurrentProcess()), Program::FILE_NAME, 0u);
     Window::PROCEDURE  = static_cast<LRESULT CALLBACK (*)(HWND const, UINT const, WPARAM const, LPARAM const)>(&UPDATE);
-    Window::STYLE      = WS_POPUP;
+    Window::STYLE      = WS_OVERLAPPEDWINDOW;
     Window::TITLE      = "Transparency";
 
     // ...
@@ -141,16 +133,10 @@ void INITIATE() {
             if (Window::TOP    == -1) Window::TOP    = (((workareaBounds.bottom - workareaBounds.top) - Window::HEIGHT) * 1) / 2;
         }
 
-        Window::HANDLE = ::CreateWindowEx(
-            Window::STYLE_EXTENSION, Window::CLASS_NAME, Window::TITLE, Window::STYLE,
-            Window::LEFT, Window::TOP, Window::WIDTH, Window::HEIGHT,
-            NULL /* --> HWND_DESKTOP */, static_cast<HMENU>(NULL), Program::HANDLE,
-            reinterpret_cast<LPVOID>(static_cast<LPARAM>(Window::APPEARANCE))
-        );
-
-        // ...
+        Window::HANDLE = ::CreateWindowEx(Window::STYLE_EXTENSION, Window::CLASS_NAME, Window::TITLE, Window::STYLE, Window::LEFT, Window::TOP, Window::WIDTH, Window::HEIGHT, NULL, NULL, Program::HANDLE, reinterpret_cast<LPVOID>(static_cast<LPARAM>(Window::APPEARANCE)));
         if (NULL == Window::HANDLE) TERMINATE();
-        else for (bool available = false; WM_QUIT != Program::THREAD_MESSAGE.message; ) {
+
+        for (bool available = false; WM_QUIT != Program::THREAD_MESSAGE.message; ) {
             available = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0u, 0x0u, PM_REMOVE);
             if (FALSE != available) ::DispatchMessage(&Program::THREAD_MESSAGE);
 
@@ -160,6 +146,175 @@ void INITIATE() {
 }
 
 /* : Update */
+void UPDATE() {
+    RECT hitTestRectangle;
+
+    // Logic ->> Assert the window is visible
+    if (NULLREGION != ::GetClipBox(Window::DEVICE_CONTEXT_HANDLE, &hitTestRectangle) && FALSE == ::IsIconic(Window::HANDLE) && ::IsWindowVisible(Window::HANDLE)) {
+        HWND        desktopWallpaperWindowHandle = NULL;
+        HWND const  programManagerWindowHandle   = ::FindWindowW(L"ProgMan", NULL);
+        RECT        windowRectangle;
+        RECT        workareaBounds;
+
+        // Update > ...
+        windowRectangle.bottom = Window::TOP  + Window::HEIGHT;
+        windowRectangle.left   = Window::LEFT + 0u;
+        windowRectangle.right  = Window::LEFT + Window::WIDTH;
+        windowRectangle.top    = Window::TOP  + 0u;
+
+        ::SystemParametersInfo(SPI_GETWORKAREA, 0x0000u, static_cast<PVOID>(&workareaBounds), 0x0u);
+
+        // ... ->> Send message request to spawn a worker behind the desktop icons (otherwise do nothing)
+        ::SendMessageTimeout(programManagerWindowHandle, 0x052Cu, 0x0u, 0x0L, SMTO_NORMAL, 1000u, static_cast<PDWORD_PTR>(NULL));
+
+        /* Loop
+            --- NOTE   (Lapys) -> Enumerate the windows that are behind
+            --- UPDATE (Lapys) -> Filter for windows with differing capture/ monitor display behavior
+        */
+        for (HWND windowHandleIterator = Window::HANDLE; NULL != windowHandleIterator; windowHandleIterator = ::GetWindow(windowHandleIterator, GW_HWNDNEXT)) {
+            HDC        backgroundWindowDeviceContextHandle;
+            HWND const backgroundWindowHandle     = windowHandleIterator;
+            INT        backgroundWindowIsCloaked  = FALSE; // ->> checks for actual visibility, as opposed to just checking for the `WS_VISIBLE` style with `IsWindowVisible(...)`
+            bool       backgroundWindowIsObscured = false; // ->> checks if the window is completely obscured by an above sibling
+            BYTE       backgroundWindowOpacity    = 255u;
+            RECT       backgroundWindowRectangle;
+
+            // Update ->> Retrieve the window for desktop wallpapers via a spawned worker
+            if (NULL == desktopWallpaperWindowHandle && NULL != ::FindWindowExW(backgroundWindowHandle, NULL, L"SHELLDLL_DefView", NULL))
+            desktopWallpaperWindowHandle = ::FindWindowExW(NULL, backgroundWindowHandle, L"WorkerW", NULL);
+
+            // Logic ->> Filter for top-level level windows only
+            if (Window::HANDLE != backgroundWindowHandle && backgroundWindowHandle == ::GetAncestor(backgroundWindowHandle, GA_ROOT)) {
+                // Logic ... ->> Filter for non-cloaked, non-iconic, visible windows only
+                ::DwmGetWindowAttribute(backgroundWindowHandle, DWMWA_CLOAKED, &backgroundWindowIsCloaked, sizeof(INT));
+                if (FALSE == backgroundWindowIsCloaked && FALSE == ::IsIconic(backgroundWindowHandle) && ::IsWindowVisible(backgroundWindowHandle)) {
+                    // ...
+                    ::GetWindowRect(backgroundWindowHandle, &backgroundWindowRectangle); // ->> Correct for drop shadows and exclusive `bottom`/ `right` values via `DWMWA_EXTENDED_FRAME_BOUNDS`.
+                    ::DwmGetWindowAttribute(backgroundWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, &backgroundWindowRectangle, sizeof(RECT));
+
+                    ::GetLayeredWindowAttributes(backgroundWindowHandle, static_cast<COLORREF*>(NULL), &backgroundWindowOpacity, static_cast<DWORD*>(NULL));
+
+                    // Logic ...
+                    backgroundWindowDeviceContextHandle = ::GetDCEx(backgroundWindowHandle, NULL, DCX_NORESETATTRS | DCX_WINDOW);
+                    if (NULL != backgroundWindowDeviceContextHandle) {
+                        // ... ->> Filter for captured windows only
+                        backgroundWindowIsObscured = false == (
+                            backgroundWindowRectangle.right > 0L && backgroundWindowRectangle.left < (workareaBounds.right - workareaBounds.left) &&
+                            backgroundWindowRectangle.bottom > 0L && backgroundWindowRectangle.top < (workareaBounds.bottom - workareaBounds.top)
+                        );
+
+                        // ... ->> Filter for non-obscured intersecting/ wrapping windows only
+                        if (false == backgroundWindowIsObscured && NULLREGION != ::GetClipBox(backgroundWindowDeviceContextHandle, &hitTestRectangle) && FALSE != ::IntersectRect(&hitTestRectangle, &backgroundWindowRectangle, &windowRectangle))
+                        for (HWND subwindowHandleIterator = backgroundWindowHandle; Window::HANDLE != subwindowHandleIterator; subwindowHandleIterator = ::GetWindow(subwindowHandleIterator, GW_HWNDPREV)) {
+                            HWND const backgroundSubwindowHandle = subwindowHandleIterator;
+                            RECT       backgroundSubwindowRectangle;
+
+                            if (backgroundWindowHandle != backgroundSubwindowHandle) {
+                                ::GetWindowRect(backgroundSubwindowHandle, &backgroundSubwindowRectangle);
+                                if (
+                                    backgroundWindowRectangle.bottom <= backgroundSubwindowRectangle.bottom &&
+                                    backgroundWindowRectangle.left   >= backgroundSubwindowRectangle.left   &&
+                                    backgroundWindowRectangle.top    >= backgroundSubwindowRectangle.top    &&
+                                    backgroundWindowRectangle.right  <= backgroundSubwindowRectangle.right
+                                ) { backgroundWindowIsObscured = true; break; }
+                            }
+                        }
+
+                        // ...
+                        if (false == backgroundWindowIsObscured) {
+                            DWORD const bitmapImageSize      = Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth * sizeof(UINT32);
+                            BITMAPINFO  bitmapInformation;
+
+                            UINT32 *bitmapCurrentCapture = Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY + (0u * bitmapImageSize);
+                            UINT32 *bitmapRecentCapture  = Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY + (1u * bitmapImageSize);
+
+                            // ...
+                            if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY) {
+                                ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, backgroundWindowRectangle.right - backgroundWindowRectangle.left, backgroundWindowRectangle.bottom - backgroundWindowRectangle.top, backgroundWindowDeviceContextHandle, 0, 0, SRCCOPY);
+                                ::PrintWindow(backgroundWindowHandle, Window::DEVICE_CONTEXT_HANDLE, PW_RENDERFULLCONTENT);
+                            }
+
+                            else {
+                                ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_OBJECT);
+                                bitmapInformation.bmiColors -> rgbBlue      = 0u;
+                                bitmapInformation.bmiColors -> rgbGreen     = 0u;
+                                bitmapInformation.bmiColors -> rgbRed       = 0u;
+                                bitmapInformation.bmiColors -> rgbReserved  = 0x0u;
+                                bitmapInformation.bmiHeader.biBitCount      = 32u;
+                                bitmapInformation.bmiHeader.biClrImportant  = 0u;
+                                bitmapInformation.bmiHeader.biClrUsed       = 0u;
+                                bitmapInformation.bmiHeader.biCompression   = BI_RGB;
+                                bitmapInformation.bmiHeader.biHeight        = -Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight;
+                                bitmapInformation.bmiHeader.biPlanes        = Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmPlanes;
+                                bitmapInformation.bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
+                                bitmapInformation.bmiHeader.biSizeImage     = bitmapImageSize;
+                                bitmapInformation.bmiHeader.biWidth         = +Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth;
+                                bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, HORZSIZE);
+                                bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, VERTSIZE);
+                                ::GetDIBits(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, 0u, Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight, static_cast<LPVOID>(bitmapRecentCapture), &bitmapInformation, DIB_RGB_COLORS);
+
+                                if (FALSE == ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, backgroundWindowRectangle.right - backgroundWindowRectangle.left, backgroundWindowRectangle.bottom - backgroundWindowRectangle.top, backgroundWindowDeviceContextHandle, 0, 0, SRCCOPY))
+                                    ::PrintWindow(backgroundWindowHandle, Window::DEVICE_CONTEXT_HANDLE, PW_RENDERFULLCONTENT);
+
+                                else {
+                                    bitmapInformation.bmiColors -> rgbBlue      = 0u;
+                                    bitmapInformation.bmiColors -> rgbGreen     = 0u;
+                                    bitmapInformation.bmiColors -> rgbRed       = 0u;
+                                    bitmapInformation.bmiColors -> rgbReserved  = 0x0u;
+                                    bitmapInformation.bmiHeader.biBitCount      = 32u;
+                                    bitmapInformation.bmiHeader.biClrImportant  = 0u;
+                                    bitmapInformation.bmiHeader.biClrUsed       = 0u;
+                                    bitmapInformation.bmiHeader.biCompression   = BI_RGB;
+                                    bitmapInformation.bmiHeader.biHeight        = -Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight;
+                                    bitmapInformation.bmiHeader.biPlanes        = Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmPlanes;
+                                    bitmapInformation.bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
+                                    bitmapInformation.bmiHeader.biSizeImage     = bitmapImageSize;
+                                    bitmapInformation.bmiHeader.biWidth         = +Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth;
+                                    bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, HORZSIZE);
+                                    bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::MEMORY_DEVICE_CONTEXT_HANDLE, VERTSIZE);
+                                    ::GetDIBits(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, 0u, Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight, static_cast<LPVOID>(bitmapCurrentCapture), &bitmapInformation, DIB_RGB_COLORS);
+                                    Window::MEMORY_DEVICE_CONTEXT_OBJECT = ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+
+                                    for (DWORD bitmapCounter = bitmapImageSize / sizeof(UINT32); bitmapCounter--; ) {
+                                        if (*(bitmapCurrentCapture++) != *(bitmapRecentCapture++)) break;
+                                        if (0u == bitmapCounter) ::PrintWindow(backgroundWindowHandle, Window::DEVICE_CONTEXT_HANDLE, PW_RENDERFULLCONTENT);
+                                    }
+                                }
+                            }
+
+                            static_cast<void>(backgroundWindowDeviceContextHandle);
+                            static_cast<void>(backgroundWindowOpacity);
+                            static_cast<void>(backgroundWindowRectangle);
+                            static_cast<void>(desktopWallpaperWindowHandle);
+                            static_cast<void>(windowRectangle);
+                            // BLENDFUNCTION blendFunction;
+
+                            // blendFunction.AlphaFormat = AC_SRC_ALPHA;
+                            // blendFunction.BlendFlags = 0x0u;
+                            // blendFunction.BlendOp = AC_SRC_OVER;
+                            // blendFunction.SourceConstantAlpha = 255u;
+
+                            // /* FALSE != */ ::AlphaBlend(
+                            //     Window::DEVICE_CONTEXT_HANDLE,
+                            //     backgroundWindowRectangle.left, backgroundWindowRectangle.top, backgroundWindowRectangle.right, backgroundWindowRectangle.bottom,
+                            //     backgroundWindowDeviceContextHandle,
+                            //     0, 0, backgroundWindowRectangle.right, backgroundWindowRectangle.bottom,
+                            //     blendFunction
+                            // );
+
+                            // ...
+                            ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
+                        }
+
+                        // ...
+                        ::DeleteDC(backgroundWindowDeviceContextHandle);
+                    }
+                }
+            }
+        }
+    }
+}
+
 LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
     switch (message) {
         /* ... */
@@ -170,178 +325,52 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
 
         /* ... */
         case WM_CREATE: {
-            BITMAPINFO bitmapInformation;
             LPVOID const creationParameter = reinterpret_cast<CREATESTRUCTA const*>(subparameter) -> lpCreateParams;
 
-            /* ... */
+            // ...
             Window::DEVICE_CONTEXT_HANDLE = ::GetDCEx(windowHandle, static_cast<HRGN>(NULL), DCX_LOCKWINDOWUPDATE | DCX_NORESETATTRS | DCX_WINDOW);
             if (NULL == Window::DEVICE_CONTEXT_HANDLE) TERMINATE();
 
-            Window::DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateCompatibleBitmap(Window::DEVICE_CONTEXT_HANDLE, Window::WIDTH, Window::HEIGHT);
-            if (NULL == Window::DEVICE_CONTEXT_BITMAP_HANDLE) TERMINATE();
-
-            // ...
-            bitmapInformation.bmiColors -> rgbBlue      = 0u;
-            bitmapInformation.bmiColors -> rgbGreen     = 0u;
-            bitmapInformation.bmiColors -> rgbRed       = 0u;
-            bitmapInformation.bmiColors -> rgbReserved  = 0x0u;
-            bitmapInformation.bmiHeader.biBitCount      = 32u;
-            bitmapInformation.bmiHeader.biClrImportant  = 0u;
-            bitmapInformation.bmiHeader.biClrUsed       = 0u;
-            bitmapInformation.bmiHeader.biCompression   = BI_RGB;
-            bitmapInformation.bmiHeader.biHeight        = -Window::HEIGHT;
-            bitmapInformation.bmiHeader.biPlanes        = 1u;
-            bitmapInformation.bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
-            bitmapInformation.bmiHeader.biSizeImage     = Window::HEIGHT * Window::WIDTH * sizeof(UINT32);
-            bitmapInformation.bmiHeader.biWidth         = +Window::WIDTH;
-            bitmapInformation.bmiHeader.biXPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, HORZSIZE);
-            bitmapInformation.bmiHeader.biYPelsPerMeter = ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTRES) / ::GetDeviceCaps(Window::DEVICE_CONTEXT_HANDLE, VERTSIZE);
-
-            // ...
             Window::MEMORY_DEVICE_CONTEXT_HANDLE = ::CreateCompatibleDC(Window::DEVICE_CONTEXT_HANDLE);
             if (NULL == Window::MEMORY_DEVICE_CONTEXT_HANDLE) TERMINATE();
 
-            Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateDIBSection(Window::MEMORY_DEVICE_CONTEXT_HANDLE, &bitmapInformation, DIB_RGB_COLORS, static_cast<VOID**>(static_cast<void*>(&Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY)), NULL, 0u);
-            if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE && NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY) TERMINATE();
+            Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE = ::CreateCompatibleBitmap(Window::DEVICE_CONTEXT_HANDLE, ::GetSystemMetrics(SM_CXVIRTUALSCREEN), ::GetSystemMetrics(SM_CXVIRTUALSCREEN));
+            if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE) TERMINATE();
+            else {
+                ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
+                Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY = static_cast<UINT32*>(std::malloc(2u * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth * sizeof(UINT32)));
+            }
 
-            /* ... */
+            // ...
             // ::FreeConsole();
-            ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
-
-            ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
-            ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
-            ::ShowWindow(windowHandle, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
+            Window::MEMORY_DEVICE_CONTEXT_OBJECT = ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+            ::ShowWindow(windowHandle, static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
         } break;
 
-        // ...
         case WM_DESTROY: {
-            ::DeleteDC(Window::MEMORY_DEVICE_CONTEXT_HANDLE); ::DeleteObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
-            ::ReleaseDC(windowHandle, Window::DEVICE_CONTEXT_HANDLE);
             Window::HANDLE = NULL;
 
+            ::DeleteDC(Window::MEMORY_DEVICE_CONTEXT_HANDLE); ::DeleteObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
+            ::ReleaseDC(windowHandle, Window::DEVICE_CONTEXT_HANDLE);
             ::PostQuitMessage(EXIT_SUCCESS);
         } break;
 
         /* ... */
         case WM_ERASEBKGND: return 0x1L;
-        case WM_PAINT: {
-            RECT hitTestRectangle;
-
-            // ... ->> Assert the window is visible
-            if (NULLREGION != ::GetClipBox(Window::DEVICE_CONTEXT_HANDLE, &hitTestRectangle) && FALSE == ::IsIconic(Window::HANDLE) && ::IsWindowVisible(Window::HANDLE)) {
-                HWND       desktopWallpaperWindowHandle = NULL;
-                HWND const programManagerWindowHandle   = ::FindWindowW(L"ProgMan", NULL);
-                RECT       windowRectangle;
-
-                // ...
-                windowRectangle.bottom = Window::TOP  + Window::HEIGHT;
-                windowRectangle.left   = Window::LEFT + 0u;
-                windowRectangle.right  = Window::LEFT + Window::WIDTH;
-                windowRectangle.top    = Window::TOP  + 0u;
-
-                // ... ->> Send message request to spawn a worker behind the desktop icons (otherwise do nothing)
-                ::SendMessageTimeout(programManagerWindowHandle, 0x052Cu, 0x0u, 0x0L, SMTO_NORMAL, 1000u, static_cast<PDWORD_PTR>(NULL));
-
-                // ... --- UPDATE (Lapys) -> Filter for windows with differing capture/ monitor display behavior ->> Enumerate the windows that are behind
-                for (HWND windowHandleIterator = Window::HANDLE; NULL != windowHandleIterator; windowHandleIterator = ::GetWindow(windowHandleIterator, GW_HWNDNEXT)) {
-                    HDC        backgroundWindowDeviceContextHandle;
-                    HWND const backgroundWindowHandle       = windowHandleIterator;
-                    INT        backgroundWindowIsCloaked    = FALSE; // ->> checks for actual visibility, as opposed to just checking for the `WS_VISIBLE` style with `IsWindowVisible(...)`
-                    bool       backgroundWindowIsObscured   = false; // ->> checks if the window is completely obscured by an above sibling
-                    BYTE       backgroundWindowOpacity      = 255u;
-                    RECT       backgroundWindowRectangle;
-
-                    // ... ->> Retrieve the window for desktop wallpapers via a spawned worker
-                    if (NULL == desktopWallpaperWindowHandle && NULL != ::FindWindowExW(backgroundWindowHandle, NULL, L"SHELLDLL_DefView", NULL))
-                    desktopWallpaperWindowHandle = ::FindWindowExW(NULL, backgroundWindowHandle, L"WorkerW", NULL);
-
-                    // ... ->> Filter for top-level level windows only
-                    if (Window::HANDLE != backgroundWindowHandle && backgroundWindowHandle == ::GetAncestor(backgroundWindowHandle, GA_ROOT)) {
-                        // ... ->> Filter for non-cloaked, non-iconic, visible windows only
-                        ::DwmGetWindowAttribute(backgroundWindowHandle, DWMWA_CLOAKED, &backgroundWindowIsCloaked, sizeof(INT));
-                        if (FALSE == backgroundWindowIsCloaked && FALSE == ::IsIconic(backgroundWindowHandle) && ::IsWindowVisible(backgroundWindowHandle)) {
-                            // ... ->> Retrieve the background window bounds and opacity.
-                            ::GetWindowRect(backgroundWindowHandle, &backgroundWindowRectangle); // ->> Correct for drop shadows via `DWMWA_EXTENDED_FRAME_BOUNDS` and exclusive `bottom`/ `right` values.
-                            ::DwmGetWindowAttribute(backgroundWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, &backgroundWindowRectangle, sizeof(RECT));
-
-                            ::GetLayeredWindowAttributes(backgroundWindowHandle, static_cast<COLORREF*>(NULL), &backgroundWindowOpacity, static_cast<DWORD*>(NULL));
-
-                            // ...
-                            backgroundWindowDeviceContextHandle = ::GetDCEx(backgroundWindowHandle, NULL, CS_OWNDC | DCX_NORESETATTRS | DCX_WINDOW);
-                            if (NULL != backgroundWindowDeviceContextHandle) {
-                                unsigned short const backgroundWindowHeight = backgroundWindowRectangle.bottom - backgroundWindowRectangle.top ;
-                                unsigned short const backgroundWindowWidth  = backgroundWindowRectangle.right  - backgroundWindowRectangle.left;
-
-                                // ... ->> Filter for non-obscured intersecting/ wrapping windows only
-                                if (NULLREGION != ::GetClipBox(backgroundWindowDeviceContextHandle, &hitTestRectangle) && FALSE != ::IntersectRect(&hitTestRectangle, &backgroundWindowRectangle, &windowRectangle))
-                                for (HWND subwindowHandleIterator = backgroundWindowHandle; Window::HANDLE != subwindowHandleIterator; subwindowHandleIterator = ::GetWindow(subwindowHandleIterator, GW_HWNDPREV)) {
-                                    HWND const backgroundSubwindowHandle = subwindowHandleIterator;
-                                    RECT       backgroundSubwindowRectangle;
-
-                                    if (backgroundWindowHandle != backgroundSubwindowHandle) {
-                                        ::GetWindowRect(backgroundSubwindowHandle, &backgroundSubwindowRectangle);
-                                        if (
-                                            backgroundWindowRectangle.bottom <= backgroundSubwindowRectangle.bottom &&
-                                            backgroundWindowRectangle.left   >= backgroundSubwindowRectangle.left   &&
-                                            backgroundWindowRectangle.top    >= backgroundSubwindowRectangle.top    &&
-                                            backgroundWindowRectangle.right  <= backgroundSubwindowRectangle.right
-                                        ) { backgroundWindowIsObscured = true; break; }
-                                    }
-                                }
-
-                                // ...
-                                if (false == backgroundWindowIsObscured) {
-                                    static_cast<void>(backgroundWindowDeviceContextHandle);
-                                    static_cast<void>(backgroundWindowHandle);
-                                    static_cast<void>(backgroundWindowHeight);
-                                    static_cast<void>(backgroundWindowOpacity);
-                                    static_cast<void>(backgroundWindowRectangle);
-                                    static_cast<void>(backgroundWindowWidth);
-                                    static_cast<void>(desktopWallpaperWindowHandle);
-                                    static_cast<void>(windowRectangle);
-
-                                    // ::PrintWindow(backgroundWindowHandle, Window::MEMORY_DEVICE_CONTEXT_HANDLE, PW_RENDERFULLCONTENT);
-                                    // ::BitBlt(Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, backgroundWindowWidth, backgroundWindowHeight, backgroundWindowDeviceContextHandle, 0, 0, SRCCOPY);
-                                    // BLENDFUNCTION blendFunction;
-
-                                    // blendFunction.AlphaFormat = AC_SRC_ALPHA;
-                                    // blendFunction.BlendFlags = 0x0u;
-                                    // blendFunction.BlendOp = AC_SRC_OVER;
-                                    // blendFunction.SourceConstantAlpha = 255u;
-
-                                    // ::AlphaBlend(
-                                    //     Window::MEMORY_DEVICE_CONTEXT_HANDLE,
-                                    //     backgroundWindowRectangle.left, backgroundWindowRectangle.top, backgroundWindowRectangle.right, backgroundWindowRectangle.bottom,
-                                    //     backgroundWindowDeviceContextHandle,
-                                    //     0, 0, backgroundWindowRectangle.right, backgroundWindowRectangle.bottom,
-                                    //     blendFunction
-                                    // );
-                                }
-
-                                // ...
-                                ::DeleteDC(backgroundWindowDeviceContextHandle);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ...
-            ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
-        } return 0x0L;
+        case WM_PAINT: UPDATE(); return 0x0L;
     }
 
     // ...
     return ::DefWindowProc(windowHandle, message, parameter, subparameter);
 }
 
-/* : Reset */
-void RESET() { return INITIATE(); }
-
 /* : Terminate */
 void TERMINATE() {
+    std::free(Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY);
+
     if (NULL != Window::HANDLE) ::DestroyWindow(Window::HANDLE);
     ::UnregisterClass(Window::CLASS_NAME, Program::HANDLE);
 
+    // ...
     std::exit(Program::EXIT_CODE);
 }

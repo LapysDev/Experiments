@@ -382,16 +382,10 @@ void INITIATE() {
             if (Window::TOP    == -1) Window::TOP    = (((workareaBounds.bottom - workareaBounds.top) - Window::HEIGHT) * 1) / 2;
         }
 
-        Window::HANDLE = ::CreateWindowEx(
-            Window::STYLE_EXTENSION, Window::CLASS_NAME, Window::TITLE, Window::STYLE,
-            Window::LEFT, Window::TOP, Window::WIDTH, Window::HEIGHT,
-            NULL /* --> HWND_DESKTOP */, static_cast<HMENU>(NULL), Program::HANDLE,
-            reinterpret_cast<LPVOID>(static_cast<LPARAM>(Window::APPEARANCE))
-        );
-
-        // ...
+        Window::HANDLE = ::CreateWindowEx(Window::STYLE_EXTENSION, Window::CLASS_NAME, Window::TITLE, Window::STYLE, Window::LEFT, Window::TOP, Window::WIDTH, Window::HEIGHT, NULL, static_cast<HMENU>(NULL), Program::HANDLE, reinterpret_cast<LPVOID>(static_cast<LPARAM>(Window::APPEARANCE)));
         if (NULL == Window::HANDLE) TERMINATE();
-        else for (bool available = false; WM_QUIT != Program::THREAD_MESSAGE.message; ) {
+
+        for (bool available = false; WM_QUIT != Program::THREAD_MESSAGE.message; ) {
             available = ::PeekMessage(&Program::THREAD_MESSAGE, NULL, 0x0u, 0x0u, PM_REMOVE);
             if (FALSE != available) ::DispatchMessage(&Program::THREAD_MESSAGE);
 
@@ -451,7 +445,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
 
             ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
             ::SelectObject(Window::MEMORY_DEVICE_CONTEXT_HANDLE, Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE);
-            ::ShowWindow(windowHandle, /* --> SW_SHOWDEFAULT */ static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
+            ::ShowWindow(windowHandle, static_cast<long>(static_cast<int>(reinterpret_cast<intptr_t>(creationParameter))));
         } break;
 
         // ...
