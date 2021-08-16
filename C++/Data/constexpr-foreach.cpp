@@ -3,17 +3,17 @@
 /* ... */
 // since C++11
 template <typename begin_t, typename end_t, typename return_t, typename... arguments_t>
-constexpr void constexpr_foreach(begin_t begin, end_t end, return_t (*function)(arguments_t...)) {
-  return begin == end ? static_cast<void>(/* NOP */ 0x0) : (function(begin), constexpr_foreach(++begin, end, function));
+constexpr int constexpr_foreach(begin_t begin, end_t end, return_t (*function)(arguments_t...)) {
+  return begin == end ? 0x0 : (function(begin), constexpr_foreach(begin + 1, end, function));
 }
 
 // after C++11
 template <typename begin_t, typename end_t, typename return_t, typename... arguments_t>
 constexpr void constexpr_foreach(begin_t begin, end_t end, return_t (*function)(arguments_t...)) {
-  while (false == (begin == end)) { function(begin); ++begin; }
+  while (false == (begin == end)) { function(begin); begin = begin + 1; }
 }
 
-/* constexpr */ void print(char const string[]) { std::putchar(*string); }
+/* constexpr */ char print(char const string[]) { return *string; }
 
 /* Main */
 int main(void) {

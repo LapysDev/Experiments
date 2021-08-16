@@ -172,7 +172,7 @@
             <!-- Task List -->
             <div id=taskList>
                 <table id=taskListContent> <tbody> </tbody> </table>
-                <button id=taskListAddTaskButton> Add Task </button>
+                <button onclick=addTaskItem()> Add Task </button>
             </div>
         </div>
 
@@ -184,7 +184,7 @@
                 if ("TBODY" === childNodes.item(iterator).nodeName) return childNodes.item(iterator);
             })(taskListContent.childNodes) || taskListContent;
 
-            /* Function > Add Task */
+            /* Function > Add Task Item */
             function addTaskItem() {
                 var roles = ["Designer", "Developer", "Manager", "Marketer"];
                 var taskItemSectionHidden = false;
@@ -222,31 +222,29 @@
                 // Function > Toggle Task Item Section
                 function toggleTaskItemSection() {
                     taskItemSectionHidden = !taskItemSectionHidden;
-
-                    if (taskItemSectionHidden) taskItemSection.setAttribute("style", "display: none");
-                    else taskItemSection.removeAttribute("style")
+                    taskItemSection.style.display = taskItemSectionHidden ? "none" : ""
                 }
 
                 // Modification > ...
                 taskItem.className = "task";
                 taskItemBanner.className = "task-banner";
                 taskItemBannerControls[0].setAttribute("placeholder", "Some kind of task name");
+                taskItemBannerControls[1].readOnly = true;
                 taskItemBannerControls[1].setAttribute("placeholder", ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm');
-                taskItemBannerControls[1].setAttribute("readonly", "");
                 taskItemBannerControls[2].setAttribute("placeholder", ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm');
-                taskItemBannerControls[2].setAttribute("readonly", "");
+                taskItemBannerControls[2].readOnly = true;
                 taskItemBannerControls[3].innerHTML = "<span> More </span> <span style=\"float: right\"> &#9776; </span>";
-                taskItemBannerFields[0].setAttribute("style", "padding-left: 0");
-                taskItemBannerFields[taskItemBannerFields.length - 1].setAttribute("style", "padding-right: 0");
-                taskItemBannerLabels[0].setAttribute("style", "padding-left: 0");
+                taskItemBannerFields[0].style.paddingLeft = '0';
+                taskItemBannerFields[taskItemBannerFields.length - 1].style.paddingRight = '0';
+                taskItemBannerLabels[0].style.paddingLeft = '0';
                 taskItemBannerLabels[0].innerHTML = "Title";
                 taskItemBannerLabels[1].innerHTML = "Time used";
                 taskItemBannerLabels[2].innerHTML = "Time estimated";
-                taskItemBannerLabels[taskItemBannerLabels.length - 1].setAttribute("style", "padding-right: 0");
+                taskItemBannerLabels[taskItemBannerLabels.length - 1].style.paddingRight = '0';
                 taskItemSection.className = "task-content";
                 taskItemSectionAboutBody.className = "task-content-about";
                 taskItemSectionAboutFooter.className = "task-content-about";
-                taskItemSectionAboutBodyBody.innerHTML = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+                taskItemSectionAboutBodyBody.innerHTML = "<p> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. </p>";
                 taskItemSectionAboutBodyHeading.innerHTML = "About";
                 taskItemSectionAboutFooterControls[0].innerHTML = "Wiki";
                 taskItemSectionAboutFooterControls[1].innerHTML = "Track";
@@ -255,9 +253,9 @@
                 taskItemSectionDetailsBody.className = "task-content-details";
                 taskItemSectionDetailsFooter.className = "task-content-details";
                 taskItemSectionDetailsFooterControls[0].innerHTML = "<span> Done </span>";
-                taskItemSectionDetailsFooterControls[0].setAttribute("style", "background-color: #89E6A8");
+                taskItemSectionDetailsFooterControls[0].style.backgroundColor = "#89E6A8";
                 taskItemSectionDetailsFooterControls[1].innerHTML = "<span> Delete </span>";
-                taskItemSectionDetailsFooterControls[1].setAttribute("style", "background-color: #E66767");
+                taskItemSectionDetailsFooterControls[1].style.backgroundColor = "#E66767";
                 taskItemSectionDetailsFooterControls[2].innerHTML = "<span> &#9937; </span> <span> Assign </span>";
                 taskItemSectionFooter.className = "task-content-footer";
 
@@ -291,7 +289,7 @@
                        taskItemSectionDetailsBodyBodyHead.appendChild(taskItemSectionDetailsBodyBodyHeadContent);
                       taskItemSectionDetailsBodyBody.appendChild(taskItemSectionDetailsBodyBodyBody);
                        taskItemSectionDetailsBodyBodyBody.appendChild(taskItemSectionDetailsBodyBodyBodyContent);
-                        for (var counter = ((Math.random() * 4) | +0) + 1; counter--; ) {
+                        for (var counter = ((Math.random() * 4) | +0) + 1; counter; --counter) {
                          var roleIndex = (Math.random() * roles.length) | +0;
                          var taskItemSectionDetailsBodyBodyBodyContentContent = document.createElement("td");
                          var taskItemSectionDetailsBodyBodyHeadContentLabel   = document.createElement("th");
@@ -308,7 +306,7 @@
                           if (+0 !== subcounter) taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span> You </span>";
                           else {
                            taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span> More </span> <span style=\"float: right\"> &#9660; </span>";
-                           taskItemSectionDetailsBodyBodyBodyContentControl.setAttribute("style", "cursor: pointer")
+                           taskItemSectionDetailsBodyBodyBodyContentControl.style.cursor = "pointer"
                           }
 
                           taskItemSectionDetailsBodyBodyBodyContentContent.appendChild(taskItemSectionDetailsBodyBodyBodyContentControl);
@@ -345,9 +343,6 @@
                 // ...
                 return taskListContentBody.appendChild(taskItem)
             }
-
-            /* Event > ... */
-            taskListAddTaskButton.onclick = addTaskItem;
         </script>
     </body>
 </html>

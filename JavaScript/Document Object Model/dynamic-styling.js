@@ -1,37 +1,57 @@
-/* MODIFY STYLESHEETS VIA JAVASCRIPT */
+var rule = {
+  declarations: [
+    {property: "margin", value: "0 !important"},
+    {property: "padding", value: '0'}
+  ],
+  selector: "body"
+};
+
+/* ... */
+function ruleToSource(rule) {
+  return rule.selector + '{' + ruleDeclarationsToSource(rule.declarations) + '}'
+}
+
+function ruleDeclarationsToSource(declarations) {
+  var source = "";
+
+  for (var iterator = +0, length = declarations.length; iterator != length; ++iterator) {
+    var declaration = declarations[iterator];
+    source += declaration.property + ':' + declaration.value + ';'
+  }
+
+  return source
+}
+
+/* ... */
 try {
-  // Add `<style>` element to DOM
+  var head = document.getElementsByTagName("head")[0];
   var style = document.createElement("style");
-  style.innerHTML = "body { margin: 0 }";
 
-  document.head.appendChild(style)
+  // ...
+  style.innerHTML = ruleToSource(rule);
+  if (null === head) {
+    head = document.createElement("head");
+    document.documentElement.appendChild(head)
+  }
+
+  // ...
+  head.appendChild(style)
 } catch (error) {
-  try {
-    // Add `<style>` element to DOM
-    var style = document.createElement("style");
-    style.appendChild(document.createTextNode("body { margin: 0 }"));
+  if (document.styleSheets.length) {
+    var stylesheet = document.styleSheets[0];
 
-    document.head.appendChild(style)
-  } catch (error) {
-    if (document.styleSheets.length) {
+    if ("cssText" in stylesheet) stylesheet.cssText += ruleToSource(rule);
+    else {
+      var cssRuleCount;
+
+      if ("cssRules" in stylesheet) cssRuleCount = stylesheet.cssRules.length;
+      else if ("rules" in stylesheet) cssRuleCount = stylesheet.rules.length;
+
       try {
-        // Add rule to DOM `CSSStyleSheet` rules list
-        if ("function" == typeof(document.styleSheets[0].insertRule))
-          // -- may be `appendRule(...)`, instead
-          document.styleSheets[0].insertRule(
-            "body { margin: 0 }",
-            document.styleSheets[0].cssRules.length
-          );
-
-        // Add rule to DOM `CSSStyleSheet` rules list
-        else if ("function" == typeof(document.styleSheets[0].addRule))
-          document.styleSheets[0].addRule(
-            "body", "margin: 0 !important; padding: 0",
-            document.styleSheets[0].cssRules.length
-          )
+        if ("function" === typeof(stylesheet.insertRule)) stylesheet.insertRule(ruleToSource(rule), cssRuleCount);
+        else if ("function" === typeof(stylesheet.addRule)) stylesheet.addRule(rule.selector, ruleDeclarationsToSource(rule.declarations), cssRuleCount)
       } catch (error) {
-        // Add to interpreted CSS..?
-        document.styleSheets[0].cssText += "body { margin: 0 }"
+        stylesheet.cssText += ruleToSource(rule)
       }
     }
   }
