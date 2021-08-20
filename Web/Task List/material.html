@@ -10,14 +10,17 @@
         <style media=all type=text/css>
             /* DOM Elements > ... */
             body { margin: 0 }
+            body, html { width: 100% }
 
             /* Components > ... */
+            .icon { float: right }
+            .placeholder, .text { position: absolute }
+
             .task, .task-banner, .task-content { width: 100% }
               .task-banner, .task-content {
                 padding-bottom: 5px;
                 padding-top: 5px
               }
-                .task-banner tbody td * { width: 100% }
                 .task-banner thead th {
                   color: #4F5E65;
                   cursor: default;
@@ -31,11 +34,7 @@
                     color: #FFFFFF;
                     cursor: pointer;
                     display: inline-block;
-                    font-weight: lighter;
-                    margin-bottom: 5px;
-                    margin-top: 5px;
-                    padding-bottom: 5px;
-                    padding-top: 5px
+                    font-weight: lighter
                   }
                     .task-banner button span {
                         display: inline-block;
@@ -43,22 +42,39 @@
                     }
 
                   .task-banner button, .task-banner input {
-                    border: 2.5px solid #4F5E65;
+                    behavior: url(pie.htc);
+                    border-color: #4F5E65;
                     border-radius: 5px;
-                    padding-bottom: 10px;
-                    padding-top: 10px;
                     width: 100%
                   }
 
+                  .task-banner button, .task-banner input, .task-banner .placeholder {
+                    border-style: solid;
+                    border-width: 2.5px;
+                    padding-bottom: 10px;
+                    padding-top: 10px
+                  }
+
                   .task-banner input {
+                    height: 100%;
+                    padding-left: 3%
+                  }
+
+                  .task-banner input, .task-banner .placeholder {
                     box-sizing: border-box;
-                    padding-left: 3%;
                     padding-right: 3%
                   }
 
-                  .task-banner td, th {
+                  .task-banner td, .task-banner th {
                     padding-left: 7.5px;
                     padding-right: 7.5px
+                  }
+
+                  .task-banner .placeholder {
+                    border-color: transparent;
+                    color: #A0A0A0;
+                    text-indent: 7.5%;
+                    white-space: nowrap
                   }
 
               .task-content {
@@ -149,9 +165,10 @@
             /* Features > ...  */
             #main { width: 100% }
               #taskListContent {
-                margin-left: auto;
-                margin-right: auto;
-                overflow: hidden;
+                /*margin-left: auto;*/
+                margin-left: 9.5%;
+                /*margin-right: auto;*/
+                margin-right: 9.5%;
                 width: 80%
               }
 
@@ -185,6 +202,7 @@
             })(taskListContent.childNodes) || taskListContent;
 
             /* Function > Add Task Item */
+            addTaskItem();
             function addTaskItem() {
                 var roles = ["Designer", "Developer", "Manager", "Marketer"];
                 var taskItemSectionHidden = false;
@@ -196,6 +214,7 @@
                     var taskItemBannerBodyContent = document.createElement("tr");
                      var taskItemBannerFields = [document.createElement("td"), document.createElement("td"), document.createElement("td"), document.createElement("td")];
                       var taskItemBannerControls = [document.createElement("input"), document.createElement("input"), document.createElement("input"), document.createElement("button")];
+                      var taskItemBannerPlaceholders = [document.createElement("div"), document.createElement("div"), document.createElement("div"), document.createElement("div")];
                    var taskItemBannerHead = document.createElement("thead");
                     var taskItemBannerHeadContent = document.createElement("tr");
                      var taskItemBannerLabels = [document.createElement("th"), document.createElement("th"), document.createElement("th"), document.createElement("th")];
@@ -228,18 +247,21 @@
                 // Modification > ...
                 taskItem.className = "task";
                 taskItemBanner.className = "task-banner";
-                taskItemBannerControls[0].setAttribute("placeholder", "Some kind of task name");
                 taskItemBannerControls[1].readOnly = true;
-                taskItemBannerControls[1].setAttribute("placeholder", ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm');
-                taskItemBannerControls[2].setAttribute("placeholder", ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm');
                 taskItemBannerControls[2].readOnly = true;
-                taskItemBannerControls[3].innerHTML = "<span> More </span> <span style=\"float: right\"> &#9776; </span>";
+                taskItemBannerControls[3].innerHTML = "<span class=text> More </span> <span class=icon> &#9776; </span>";
                 taskItemBannerFields[0].style.paddingLeft = '0';
                 taskItemBannerFields[taskItemBannerFields.length - 1].style.paddingRight = '0';
                 taskItemBannerLabels[0].style.paddingLeft = '0';
                 taskItemBannerLabels[0].innerHTML = "Title";
                 taskItemBannerLabels[1].innerHTML = "Time used";
                 taskItemBannerLabels[2].innerHTML = "Time estimated";
+                taskItemBannerPlaceholders[0].className = "placeholder";
+                taskItemBannerPlaceholders[0].innerHTML = "Some kind of task name";
+                taskItemBannerPlaceholders[1].className = "placeholder";
+                taskItemBannerPlaceholders[1].innerHTML = ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm';
+                taskItemBannerPlaceholders[2].className = "placeholder";
+                taskItemBannerPlaceholders[2].innerHTML = ((Math.random() * 24) | +0) + "h " + ((Math.random() * 60) | +0) + 'm';
                 taskItemBannerLabels[taskItemBannerLabels.length - 1].style.paddingRight = '0';
                 taskItemSection.className = "task-content";
                 taskItemSectionAboutBody.className = "task-content-about";
@@ -260,7 +282,19 @@
                 taskItemSectionFooter.className = "task-content-footer";
 
                 // Events > ...
-                taskItemBannerControls[3].onclick = toggleTaskItemSection;
+                taskItemBannerControls[3].onclick  = toggleTaskItemSection;
+
+                for (var iterator = taskItemBannerControls.length; iterator--; )
+                void function(index) {
+                  taskItemBannerControls[index].onblur   = function() { if ("" === taskItemBannerControls[index].value) taskItemBannerPlaceholders[index].style.visibility = "" };
+                  taskItemBannerControls[index].onchange = function() { if ("" === taskItemBannerControls[index].value) taskItemBannerPlaceholders[index].style.visibility = "" };
+                  taskItemBannerControls[index].onfocus  = function() { taskItemBannerPlaceholders[index].style.visibility = "hidden" }
+                }(iterator);
+
+                for (var iterator = taskItemBannerPlaceholders.length; iterator--; )
+                void function(index) {
+                  taskItemBannerPlaceholders[index].onclick = function() { taskItemBannerControls[index].focus() }
+                }(iterator);
 
                 // Insertion ...
                 taskItem.appendChild(taskItemContent);
@@ -274,6 +308,8 @@
                    taskItemBannerBody.appendChild(taskItemBannerBodyContent);
                     for (var iterator = +0; iterator !== taskItemBannerFields.length; ++iterator) {
                      taskItemBannerBodyContent.appendChild(taskItemBannerFields[iterator]);
+
+                     taskItemBannerFields[iterator].appendChild(taskItemBannerPlaceholders[iterator]);
                       taskItemBannerFields[iterator].appendChild(taskItemBannerControls[iterator])
                     }
 
@@ -305,7 +341,7 @@
 
                           if (+0 !== subcounter) taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span> You </span>";
                           else {
-                           taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span> More </span> <span style=\"float: right\"> &#9660; </span>";
+                           taskItemSectionDetailsBodyBodyBodyContentControl.innerHTML = "<span class=text> More </span> <span class=icon> &#9660; </span>";
                            taskItemSectionDetailsBodyBodyBodyContentControl.style.cursor = "pointer"
                           }
 
