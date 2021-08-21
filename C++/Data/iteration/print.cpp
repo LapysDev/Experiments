@@ -14,11 +14,10 @@ namespace {
   union assertion<true, base> { typedef base type; };
 
   // ...
-  template <std::size_t count, std::size_t... indexes>
-  struct index_sequence : index_sequence<count - 1u, count - 1u, indexes...> {};
+  template <std::size_t...> struct sequence {};
 
-  template <std::size_t... indexes>
-  struct index_sequence<0u, indexes...> {};
+  template <std::size_t count, std::size_t... indexes> struct index_sequence : index_sequence<count - 1u, count - 1u, indexes...> {};
+  template <std::size_t... indexes> struct index_sequence<0u, indexes...> : sequence<0u, indexes...> {};
 
   // ... --- NOTE (Lapys) -> Feel free to adapt for other character formats: `char8_t`, `char16_t`, `char32_t`, `wchar_t`
   template <typename char_t, std::size_t length>
@@ -67,19 +66,19 @@ namespace {
 
   // ...
   template <unsigned long long integer, unsigned long long radix, unsigned char width>
-  struct widthof { static unsigned char const value = widthof<integer / radix, radix, width + 1u>::value; };
+  struct lengthof { static unsigned char const value = lengthof<integer / radix, radix, width + 1u>::value; };
 
   template <unsigned long long radix, unsigned char width>
-  struct widthof<0uLL, radix, width> { static unsigned char const value = width; };
+  struct lengthof<0uLL, radix, width> { static unsigned char const value = width; };
 }
 
 namespace {
-  enum { PTR_DIG    = widthof<PTRDIFF_MAX, 16uLL, 0u>::value };
-  enum { UCHAR_DIG  = widthof<UCHAR_MAX  , 10uLL, 0u>::value };
-  enum { UINT_DIG   = widthof<UINT_MAX   , 10uLL, 0u>::value };
-  enum { ULONG_DIG  = widthof<ULONG_MAX  , 10uLL, 0u>::value };
-  enum { ULLONG_DIG = widthof<ULLONG_MAX , 10uLL, 0u>::value };
-  enum { USHRT_DIG  = widthof<USHRT_MAX  , 10uLL, 0u>::value };
+  enum { PTR_DIG    = lengthof<PTRDIFF_MAX, 16uLL, 0u>::value };
+  enum { UCHAR_DIG  = lengthof<UCHAR_MAX  , 10uLL, 0u>::value };
+  enum { UINT_DIG   = lengthof<UINT_MAX   , 10uLL, 0u>::value };
+  enum { ULONG_DIG  = lengthof<ULONG_MAX  , 10uLL, 0u>::value };
+  enum { ULLONG_DIG = lengthof<ULLONG_MAX , 10uLL, 0u>::value };
+  enum { USHRT_DIG  = lengthof<USHRT_MAX  , 10uLL, 0u>::value };
 }
 
 namespace {
@@ -172,6 +171,27 @@ namespace {
     return reverse(string, index_sequence<capacity>());
   }
 
+  // ... --> shift(...)
+  template <typename char_t, std::size_t capacity>
+  constexpr string<char_t, capacity> shift(string<char_t, capacity> const&, std::size_t const, sequence<> const) {
+    return string<char_t, 0u>();
+  }
+
+  template <typename char_t, std::size_t capacity, std::size_t index, std::size_t... indexes>
+  constexpr string<char_t, capacity> shift(string<char_t, capacity> const& string, std::size_t const length, sequence<index, indexes...> const) {
+    return 0u != length ? shift<char_t, capacity, indexes...>(string, length - 1u, sequence<indexes...>()) : ::string<char_t, capacity>(string.value[indexes]...);
+  }
+
+  template <typename char_t, std::size_t capacity, std::size_t... indexes>
+  constexpr string<char_t, capacity> shift(string<char_t, capacity> const& string, std::size_t const length, index_sequence<0u, indexes...> const) {
+    return shift<char_t, capacity, indexes...>(string, length, sequence<indexes...>());
+  }
+
+  template <typename char_t, std::size_t capacity>
+  constexpr string<char_t, capacity> shift(string<char_t, capacity> const& string, std::size_t const length) {
+    return 0u != length ? shift<char_t, capacity>(string, length - 1u, index_sequence<capacity>()) : string;
+  }
+
   // ... --> stringify(...)
   template <typename char_t> // --> NUL
   constexpr string<char_t, 0u> stringify() {
@@ -262,18 +282,21 @@ namespace {
 }
 
 // ... --> flush(...)
-template <std::size_t capacity>
-static std::size_t flush(FILE *const stream, string<capacity> const& string) {
+template <typename char_t, std::size_t capacity>
+static std::size_t flush(FILE *const stream, string<char_t, capacity> const& string) {
   return std::fprintf(stream, "%.*s", string.value, static_cast<int>(capacity));
 }
 
-template <std::size_t capacity>
-static std::size_t flush(string<capacity> const& string) {
+template <typename char_t, std::size_t capacity>
+static std::size_t flush(string<char_t, capacity> const& string) {
   return flush(stdout, string);
 }
 
 // ... --> print(...)
-template <typename type, typename... types>
+template <typename char_t, std::size_t capacity>
+constexpr string<char_t, capacity> print(char_t (&string)[capacity]) {
+  return stringify(string);
+}
 
 /* Main */
 int main() {}
