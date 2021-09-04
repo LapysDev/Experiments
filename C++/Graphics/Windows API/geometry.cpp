@@ -155,6 +155,28 @@ void Graphics::drawRectangle(unsigned short const xOrigin, unsigned short const 
 
 static unsigned short SUS = 1u;
 void Graphics::drawSpline(unsigned short const xOrigin, unsigned short const yOrigin, unsigned short const xTarget, unsigned short const yTarget, unsigned char const count, ...) {
+    // static Vec2 Lerp(const Vec2& v0, const Vec2& v1, float t)
+    // {
+    //     return  v0 * (1 - t) + v1 * t;
+    // }
+
+    // static Vec2 QuadraticCurve(const Vec2& a, const Vec2& b, const Vec2& c, float t)
+    // {
+    //     Vec2 p0 = Vec2::Lerp(a, b, t);
+    //     Vec2 p1 = Vec2::Lerp(b, c, t);
+    //     return Vec2::Lerp(p0, p1, t);
+    // }
+
+    // static Vec2 CubicCurve(const Vec2& a, const Vec2& b, const Vec2& c, const Vec2& d, float t)
+    // {
+    //     Vec2 p0 = Vec2::QuadraticCurve(a, b, c, t);
+    //     Vec2 p1 = Vec2::QuadraticCurve(b, c, d, t);
+    //     return Vec2::Lerp(p0, p1, t);
+    // }
+    // for (float t = 0; t <= 1; t += 0.001)
+    // {
+    //     gfx.PutPixel(Vec2::CubicCurve(p0, p1, p2, p3, t), Colors::White);
+    // }
     std::va_list arguments;
     DWORD color;
     unsigned short maximumLength = 0u;

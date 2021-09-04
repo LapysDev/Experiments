@@ -35,11 +35,35 @@ namespace {
    template <> struct is_char_t<char32_t> { static bool const value = true; };
   #endif
 
+  template <typename> struct is_function_pointer { static bool const value = false; };
+  template <typename base, typename... types> struct is_function_pointer<base (*)(types...)>      { static bool const value = true; };
+  template <typename base, typename... types> struct is_function_pointer<base (*)(types..., ...)> { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)>                     { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...)>                { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)      const>          { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) const>          { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)      const volatile> { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) const volatile> { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)      volatile>       { static bool const value = true; };
+  template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) volatile>       { static bool const value = true; };
+  #if __cplusplus >= 201703L
+    template <typename base, typename... types> struct is_function_pointer<base (*)(types...) noexcept>      { static bool const value = true; };
+    template <typename base, typename... types> struct is_function_pointer<base (*)(types..., ...) noexcept> { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...) noexcept>                     { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) noexcept>                { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)      const noexcept>          { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) const noexcept>          { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)      const volatile noexcept> { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) const volatile noexcept> { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types...)      volatile noexcept>       { static bool const value = true; };
+    template <class object, typename base, typename... types> struct is_function_pointer<base (object::*)(types..., ...) volatile noexcept>       { static bool const value = true; };
+  #endif
+
   template <typename> struct is_pointer { static bool const value = false; };
-  template <typename type> struct is_pointer<type*>                { static bool const value = true; };
-  template <typename type> struct is_pointer<type const*>          { static bool const value = true; };
-  template <typename type> struct is_pointer<type const volatile*> { static bool const value = true; };
-  template <typename type> struct is_pointer<type volatile*>       { static bool const value = true; };
+  template <typename type> struct is_pointer<type*>                { static bool const value = false == is_function_pointer<type*>::value; };
+  template <typename type> struct is_pointer<type const*>          { static bool const value = is_pointer<type*>::value; };
+  template <typename type> struct is_pointer<type const volatile*> { static bool const value = is_pointer<type*>::value; };
+  template <typename type> struct is_pointer<type volatile*>       { static bool const value = is_pointer<type*>::value; };
 
   // ...
   template <typename type, type...>
@@ -259,7 +283,7 @@ namespace {
     return string;
   }
 
-  template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length> // --> long double
+  template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length>
   constexpr typename assertion<length == LDBL_MANT_DIG && (false == CHARACTERISTICS && true == MANTISSA), string<char_t, LDBL_MANT_DIG> const&>::type stringify(long double const, unsigned long long const, string<char_t, length> const& string) {
     return string;
   }
@@ -295,62 +319,24 @@ namespace {
     );
   }
 
-  template <typename char_t> // --> signed long long
-  constexpr string<char_t, ULLONG_DIG + 1u> stringify(long long const integer, unsigned long long const radix) {
-    return (0LL > integer
-      ? concatenate(stringify<char_t>('-'), stringify<char_t>(static_cast<unsigned long long>(-integer), radix))
-      : concatenate(stringify<char_t>('0'), stringify<char_t>(static_cast<unsigned long long>(+integer), radix))
-    );
+  template <typename char_t, std::size_t size, std::size_t capacity> // --> unsigned char[]
+  constexpr typename assertion<capacity == size * countof<UCHAR_MAX, 16uLL, 0u>::value, string<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> >::type stringify(unsigned char const[], unsigned char const[], string<char_t, capacity> const& string) {
+    return string;
   }
 
-  template <typename char_t, typename type, std::size_t length>  // --> byte [] ->> Works for little-endian machines only
-  string<char_t, 64u> stringify(unsigned char const bytes[], std::size_t const size, string<char_t, length> const& string) {
-    std::puts("bruh :v");
-    return (0u != size
-      ?
-        stringify<char_t, type, length + countof<UCHAR_MAX, 16uLL, 0u>::value>(bytes + 1, size - 1u, concatenate(
-          resize<countof<UCHAR_MAX, 16uLL, 0u>::value>(stringify<char_t>(static_cast<unsigned long long>(*bytes), 16uLL)),
-          string
-        ))
-      : resize<64u>(string)
-    );
+  template <typename char_t, std::size_t size, std::size_t capacity>
+  constexpr typename assertion<capacity != size * countof<UCHAR_MAX, 16uLL, 0u>::value, string<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> >::type stringify(unsigned char const current[], unsigned char const end[], string<char_t, capacity> const& string) {
+    return current != end ? stringify<char_t, size, capacity + countof<UCHAR_MAX, 16uLL, 0u>::value>(
+      current - 1, end, concatenate<char_t>(string, resize<countof<UCHAR_MAX, 16uLL, 0u>::value>(
+        shift(stringify<char_t>(static_cast<unsigned long long>(*current), 16uLL), ULLONG_DIG - countof<UCHAR_MAX, 16uLL, 0u>::value)
+      ))
+    ) : resize<size * countof<UCHAR_MAX, 16uLL, 0u>::value>(string);
   }
 
-  template <typename char_t, typename type>
-  string<char_t, 64u> stringify(unsigned char const bytes[], std::size_t const index, unsigned long long const value, unsigned long long const recent) {
-    std::printf("[%u -> %u]: (%p)" "\r\n", index, sizeof(type), static_cast<void*>(static_cast<unsigned char*>(NULL) + value));
-    return index != sizeof(type) ? (
-      recent > value
-        /* just use string representation */ ?
-        stringify<char_t, type, 0u>(bytes - index, sizeof(type), string<char_t, 0u>())
-
-        /* use number representation */ :
-        stringify<char_t, type>(bytes + 1, index + 1u, value + (*bytes << (CHAR_BIT * index)), value)
-    ) : /* stop */ resize<64u>(stringify<char_t>(value, 16uLL));
+  template <typename char_t, std::size_t size>
+  constexpr string<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> stringify(unsigned char const bytes[]) {
+    return stringify<char_t, size, 0u>((bytes + size) - 1, bytes - 1, string<char_t, 0u>());
   }
-
-  template <typename char_t, typename type>
-  string<char_t, 64u> stringify(unsigned char const bytes[]) {
-    return stringify<char_t, type>(bytes, 0u, 0uLL, 10uLL);
-  }
-
-  // int put(int integer) {
-  //   int *const address = &integer;
-  //   char *const endianness = (char*) address;
-  //   size_t size = sizeof(int);
-  //   uintptr_t value = 0u;
-
-  //   for (unsigned char
-  //     *iterator = (unsigned char*) (void*) address,
-  //     *const end = iterator + size
-  //   ; end != iterator; ++iterator) {
-  //     value += *iterator << (CHAR_BIT * (
-  //       '\x7' != *endianness ? sizeof(int) - --size - 1u : --size
-  //     ));
-  //   }
-
-  //   return value;
-  // }
 
   template <typename char_t> // --> void*
   constexpr string<char_t, UINTPTR_DIG + 3u> stringify(void* const pointer) {
@@ -358,16 +344,13 @@ namespace {
       0 > static_cast<unsigned char*>(pointer) - static_cast<unsigned char*>(NULL) ?
         string<char_t, 3u>('-', '0', 'x') :
         string<char_t, 3u>('0', 'x', '0'),
-      reverse(resize<UINTPTR_DIG>(reverse(stringify<char_t>(static_cast<signed long long>((static_cast<unsigned char*>(pointer) - static_cast<unsigned char*>(NULL)) / sizeof(unsigned char)), 16uLL))))
+      reverse(resize<UINTPTR_DIG>(reverse(stringify<char_t>(static_cast<unsigned long long>((static_cast<unsigned char*>(pointer) - static_cast<unsigned char*>(NULL)) / sizeof(unsigned char)), 16uLL))))
     );
   }
 
-  template <typename char_t, typename type, typename... types> // --> void (*)(...)
-  string<char_t, 64u> stringify(type (*const pointer)(types...)) {
-    return concatenate(
-      string<char_t, 2u>('0', 'h'),
-      stringify<char_t, type (*)(types...)>(static_cast<unsigned char const*>(static_cast<void const*>(&pointer)))
-    );
+  template <typename char_t, std::size_t size> // --> void (*)(...)
+  constexpr string<char_t, 2u + (size * countof<UCHAR_MAX, 16uLL, 0u>::value)> stringify(void const* const pointer) {
+    return concatenate(string<char_t, 2u>('0', 'h'), stringify<char_t, size>(static_cast<unsigned char const*>(pointer)));
   }
 }
 
@@ -413,10 +396,10 @@ constexpr string<wchar_t, capacity> print(wchar_t const (&string)[capacity]) {
 }
 
 template <typename char_t>
-string<char_t, ULLONG_DIG + 1u> print(long long const integer) {
-  return (0LL > integer
-    ? concatenate(stringify<char_t>('-'), resize<ULLONG_DIG>(shift(stringify<char_t>(static_cast<signed long long>(-integer), 10uLL), ULLONG_DIG - lengthof(static_cast<signed long long>(integer)) + 1u)))
-    : shift(stringify<char_t>(static_cast<signed long long>(integer), 10uLL), ULLONG_DIG - lengthof(static_cast<signed long long>(integer)) + 1u)
+constexpr string<char_t, ULLONG_DIG + 1u> print(long long const integer) {
+  return concatenate(
+    stringify<char_t>(0LL > integer ? '-' : '0'),
+    resize<ULLONG_DIG>(shift(stringify<char_t>(static_cast<unsigned long long>(0LL > integer ? -integer : integer), 10uLL), ULLONG_DIG - lengthof(static_cast<signed long long>(integer))))
   );
 }
 
@@ -431,9 +414,21 @@ constexpr typename assertion<is_char_t<char_t>::value, string<char_t, capacity> 
 }
 
 template <typename char_t, typename type>
+constexpr typename assertion<is_function_pointer<type>::value, string<char_t, 2u + (countof<UCHAR_MAX, 16uLL, 0u>::value * sizeof(type))> >::type print(type const pointer) {
+  return stringify<char_t, sizeof(type)>(static_cast<void const*>(&pointer));
+}
+
+template <typename char_t, typename type>
 constexpr typename assertion<is_pointer<type>::value, string<char_t, UINTPTR_DIG + 3u> >::type print(type const pointer) {
   return stringify<char_t>(const_cast<void*>(static_cast<void const*>(pointer)));
 }
+
+template <typename char_t, typename type, typename... types> constexpr string<char_t, 1u> print(type (&)(types...)) = delete;
+template <typename char_t, typename type, typename... types> constexpr string<char_t, 1u> print(type (&)(types..., ...)) = delete;
+#if __cplusplus >= 201703L
+  template <typename char_t, typename type, typename... types> constexpr string<char_t, 1u> print(type (&)(types...) noexcept) = delete;
+  template <typename char_t, typename type, typename... types> constexpr string<char_t, 1u> print(type (&)(types..., ...) noexcept) = delete;
+#endif
 
 // ... --> print(...)
 template <typename char_t>
@@ -476,50 +471,89 @@ constexpr string<char_t, USHRT_DIG> print(unsigned short const integer) {
   return print<char_t>(static_cast<unsigned long long>(integer));
 }
 
-// template <typename char_t, typename type, typename... types>
-// constexpr string<char_t, 2u + (countof<UCHAR_MAX, 16uLL, 0u>::value * sizeof(type (*)(types...)))> print(type (*const pointer)(types...)) {
-//   return stringify<char_t>(pointer);
-// }
-// template <typename type, typename... types> constexpr string<16u> print(type (*const pointer)(types...))                            { return stringify(static_cast<void*>(pointer)); }
-// template <typename type, typename... types> constexpr string<16u> print(type (*const pointer)(types..., ...))                       { return stringify(static_cast<void*>(pointer)); }
-// template <typename type, typename... types> constexpr string<16u> print(type (&)(types...));
-// template <typename type, typename... types> constexpr string<16u> print(type (&)(types..., ...));
-// template <class object, typename type, typename... types> constexpr string<16u> print(type (object::*const pointer)(types...))      { return stringify(static_cast<void*>(pointer)); }
-// template <class object, typename type, typename... types> constexpr string<16u> print(type (object::*const pointer)(types..., ...)) { return stringify(static_cast<void*>(pointer)); }
-// #if __cplusplus >= 201703L
-//  template <typename type, typename... types> constexpr string<16u> print(type (*const pointer)(types...) noexcept)                            { return stringify(static_cast<void*>(pointer)); }
-//  template <typename type, typename... types> constexpr string<16u> print(type (*const pointer)(types..., ...) noexcept)                       { return stringify(static_cast<void*>(pointer)); }
-//  template <typename type, typename... types> constexpr string<16u> print(type (&const)(types...) noexcept);
-//  template <typename type, typename... types> constexpr string<16u> print(type (&const)(types..., ...) noexcept);
-//  template <class object, typename type, typename... types> constexpr string<16u> print(type (object::*const pointer)(types...) noexcept)      { return stringify(static_cast<void*>(pointer)); }
-//  template <class object, typename type, typename... types> constexpr string<16u> print(type (object::*const pointer)(types..., ...) noexcept) { return stringify(static_cast<void*>(pointer)); }
-// #endif
-
-/* Main */
-static int const array[1] = {0};
-static char const constant[] = "Hello, World!";
-static void function() {}
-static char modifiable[] = "Hello, World!";
-static void const *const pointer = static_cast<void const*>("Hello, World!");
+/* Main ->> */
+constexpr static int const      array[1] = {0};
+constexpr static char           constant[] = "Hello, World!";
+constexpr static int            function() { return 0x0; }
+struct object { constexpr int   member() const volatile { return 0x0; } };
+static char                     modifiable[] = "Hello, World!";
+constexpr static signed const   negative = -1337;
+constexpr static void const    *pointer = static_cast<void const*>("Hello, World!");
+constexpr static unsigned const positive = 1337u;
 
 int main() {
-  std::printf("[void (*)()]     : \"%p\" \"0u", reinterpret_cast<void*>(&function));
-    constexpr void (*const address)() = &function;
-    unsigned long long value = 0uLL;
+  // ❌ array ->> conversion from `void*` and null pointer arithmetic disallowed
+  auto const arrayPointerString = print<char>(&array);
+  std::printf("[int const (*)[]]  : \"%p\" -> \"%.*s\"" "\r\n", static_cast<void const*>(&array), static_cast<int>(UINTPTR_DIG + 3u), arrayPointerString.value);
 
-    for (unsigned char const *iterator = static_cast<unsigned char const*>(static_cast<void const*>(&address)), *const end = iterator + sizeof(void (*)()); end != iterator; ++iterator)
-    value += *iterator << (CHAR_BIT * (sizeof(void (*)()) - (end - iterator))); // 0...n
-  std::printf("%p\" \"0s", static_cast<void*>(static_cast<unsigned char*>(NULL) + value));
-    for (unsigned char const *const end = static_cast<unsigned char const*>(static_cast<void const*>(&address)), *iterator = end + sizeof(void (*)()); end != iterator--; ) {
+  // ✅ constant
+  constexpr auto constantString = print<char>(constant);
+  std::printf("[char const []]    : \"%s\" -> \"%s\"" "\r\n", constant, constantString.value);
+
+  // ❌ function ->> conversion from `void*` and null pointer arithmetic disallowed
+  auto const functionPointerString = print<char>(&function);
+
+  std::printf("[int (*)()]        : \"%p\"" " ", reinterpret_cast<void*>(&function));
+  std::printf("\"0n");
+    constexpr int (*const functionAddress)() = &function;
+    unsigned long long functionAddressValue = 0uLL;
+
+    for (unsigned char const *iterator = static_cast<unsigned char const*>(static_cast<void const*>(&functionAddress)), *const end = iterator + sizeof(int (*)()); end != iterator; ++iterator)
+    functionAddressValue += *iterator << (CHAR_BIT * (sizeof(int (*)()) - (end - iterator))); // 0..n
+  std::printf("%p\"" " ", static_cast<void*>(static_cast<unsigned char*>(NULL) + functionAddressValue));
+  std::printf("\"0n");
+    for (unsigned char const *const end = static_cast<unsigned char const*>(static_cast<void const*>(&functionAddress)), *iterator = end + sizeof(int (*)()); end != iterator--; ) {
       std::putchar("0123456789ABCDEF"[(*iterator / 0x10u) % 16u]);
       std::putchar("0123456789ABCDEF"[(*iterator / 0x01u) % 16u]);
     }
-  std::printf("%c", '"');
-  std::printf("\"%.*s\"" "\r\n", sizeof(stringify<char>(function).value), stringify<char>(function).value);
+  std::printf("\"" " ");
+  std::printf("-> \"%.*s\"" "\r\n", static_cast<int>(sizeof(functionPointerString)), functionPointerString.value);
 
-  // ...
-  std::printf("[int const (*)[]]: \"%p\" \"%.*s\"" "\r\n", static_cast<void const*>(&array), UINTPTR_DIG + 3u, print<char>(&array).value);
-  std::printf("[void const*]    : \"%p\" \"%.*s\"" "\r\n", pointer, UINTPTR_DIG + 3u, print<char>(pointer).value);
-  std::printf("[char const []]  : \"%s\" \"%s\""   "\r\n", constant, print<char>(constant).value);
-  std::printf("[char []]        : \"%s\" \"%s\""   "\r\n", modifiable, print<char>(modifiable).value);
+  // ❌ member ->> conversion from `void*` and null pointer arithmetic disallowed
+  // constexpr int (object::*const sus)() const volatile = &object::member;
+  // auto const memberPointerString = stringify<char, sizeof(&object::member)>(static_cast<void const*>(&sus));
+  auto const memberPointerString = print<char>(&object::member);
+  union {
+    int (object::* member)() const volatile;
+    unsigned char bytes[sizeof(int (object::*)() const volatile)];
+  } memberAddressBytes;
+
+  std::printf("[int (object::*)()]: \"");
+    memberAddressBytes.member = &object::member;
+
+    for (unsigned char const *const end = memberAddressBytes.bytes, *iterator = end + sizeof(int (object::*)()); end != iterator--; ) {
+      std::putchar("0123456789ABCDEF"[(*iterator / 0x10u) % 16u]);
+      std::putchar("0123456789ABCDEF"[(*iterator / 0x01u) % 16u]);
+    }
+  std::printf("\"" " ");
+  std::printf("\"0n");
+    constexpr int (object::*const memberAddress)() const volatile = &object::member;
+    unsigned long long memberAddressValue = 0uLL;
+
+    for (unsigned char const *iterator = static_cast<unsigned char const*>(static_cast<void const*>(&memberAddress)), *const end = iterator + sizeof(int (object::*)() const volatile); end != iterator; ++iterator)
+    memberAddressValue += *iterator << (CHAR_BIT * (sizeof(int (object::*)() const volatile) - (end - iterator))); // 0..n
+  std::printf("%p\"" " ", static_cast<void*>(static_cast<unsigned char*>(NULL) + memberAddressValue));
+  std::printf("\"0n");
+    for (unsigned char const *const end = static_cast<unsigned char const*>(static_cast<void const*>(&memberAddress)), *iterator = end + sizeof(int (object::*)() const volatile); end != iterator--; ) {
+      std::putchar("0123456789ABCDEF"[(*iterator / 0x10u) % 16u]);
+      std::putchar("0123456789ABCDEF"[(*iterator / 0x01u) % 16u]);
+    }
+  std::printf("\"" " ");
+  std::printf("-> \"%.*s\"" "\r\n", static_cast<int>(sizeof(memberPointerString)), memberPointerString.value);
+
+  // ❌ modifiable ->> use of `modifiable` not a constant expression
+  auto modifiableString = print<char>(modifiable);
+  std::printf("[char []]          : \"%s\" -> \"%s\"" "\r\n", modifiable, modifiableString.value);
+
+  // ✅ negative
+  constexpr auto const negativeString = print<char>(negative);
+  std::printf("[signed int]       : \"%i\" -> \"%.*s\"" "\r\n", negative, static_cast<int>(UINT_DIG + 1u), negativeString.value);
+
+  // ❌ pointer ->> conversion from `void*` and null pointer arithmetic disallowed
+  auto const pointerString = print<char>(pointer);
+  std::printf("[void const*]      : \"%p\" -> \"%.*s\"" "\r\n", pointer, static_cast<int>(UINTPTR_DIG + 3u), pointerString.value);
+
+  // ✅ positive
+  constexpr auto const positiveString = print<char>(positive);
+  std::printf("[unsigned int]     : \"%u\" -> \"%.*s\"" "\r\n", positive, static_cast<int>(UINT_DIG), positiveString.value);
 }
