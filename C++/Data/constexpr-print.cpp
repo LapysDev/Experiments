@@ -4,6 +4,9 @@
 #include <cstdio>
 #include <stdbool.h>
 #include <stdint.h>
+#if defined(__cplusplus) && __cplusplus >= 201103L
+# include <type_traits>
+#endif
 
 /* ... */
 namespace {
@@ -197,21 +200,65 @@ namespace {
   }
 
   // ... --> modulus(…) ->> Calculating number digits
-  constexpr long double modulus(long double const dividend, long double const divisor, long double const denominator = 0.00L) {
-    return (
-      0.00L == dividend ? 0.00L :                                                                  // ->> `dividend` was initially zero
-      divisor > dividend && 0.00L   == denominator ? dividend :                                    // ->> `divisor` was initially greater than `dividend`
-      divisor > dividend && divisor != denominator ? modulus(dividend, denominator, denominator) : // ->> `divisor` too big a factor, return it to original value
-        0.00L > dividend ? -modulus(-dividend, divisor) :
-        0.00L > divisor  ? +modulus(dividend, -divisor) :
+  #if __cplusplus >= 201402L
+    constexpr long double modulus(long double dividend, long double divisor) {
+      long double denominator = divisor;
+      bool signedness = false;
 
-        dividend >= (divisor * divisor) ? modulus(dividend - (divisor * divisor), divisor * divisor, 0.00L == denominator ? divisor : denominator) :
-        dividend >= (divisor * 10.00L ) ? modulus(dividend - (divisor * 10.00L ), divisor * 10.00L , 0.00L == denominator ? divisor : denominator) :
-        dividend >= (divisor + divisor) ? modulus(dividend - (divisor + divisor), divisor + divisor, 0.00L == denominator ? divisor : denominator) :
-        dividend >= divisor             ? modulus(dividend - (divisor          ), divisor          , 0.00L == denominator ? divisor : denominator) :
-      dividend
-    );
-  }
+      // ...
+      if (0.00L == dividend) return 0.00L;
+      if (ULLONG_MAX >= dividend / divisor) return dividend - (divisor * static_cast<unsigned long long>(dividend / divisor));
+
+      // ...
+      if (0.00L > dividend) { dividend = -dividend; signedness = true; }
+      if (0.00L > divisor) { denominator = -divisor; divisor = -divisor; }
+
+      while (true) {
+        if (dividend < divisor) {
+          if (denominator == divisor) break;
+
+          divisor = denominator;
+          continue;
+        }
+
+        if (dividend > divisor * divisor) divisor *= divisor;
+        else if (dividend > divisor * 10.00L ) divisor *= 10.00L;
+        else if (dividend > divisor + divisor) divisor += divisor;
+
+        dividend -= divisor;
+      }
+
+      return dividend * (signedness ? -1.00L : 1.00L);
+    }
+  #else
+    constexpr long double modulus(long double const dividend, long double const divisor, long double const denominator = 0.00L) {
+      return (
+        0.00L == dividend ? 0.00L :
+        0.00L > dividend ? -modulus(-dividend, divisor, denominator) :
+        0.00L > divisor  ? +modulus(dividend, -divisor, denominator) :
+        divisor > dividend && 0.00L == denominator ? dividend :
+
+        // ->> Conditionally split between compile-time vs runtime evaluation
+        #if defined(__cplusplus) && __cplusplus >= 202002L
+          std::is_constant_evaluated()
+        #elif defined(__builtin_is_constant_evaluated)
+          __builtin_is_constant_evaluated()
+        #else
+          true
+        #endif
+        ? (
+          dividend - (ULLONG_MAX < dividend / divisor ? 0.00L : divisor * static_cast<unsigned long long>(dividend / divisor))
+        ) : (
+          divisor > dividend && denominator != divisor ? modulus(dividend, denominator, 0.00L) :
+            dividend >= (divisor * divisor) ? modulus(dividend - (divisor * divisor), divisor * divisor, 0.00L == denominator ? divisor : denominator) :
+            dividend >= (divisor * 10.00L ) ? modulus(dividend - (divisor * 10.00L ), divisor * 10.00L , 0.00L == denominator ? divisor : denominator) :
+            dividend >= (divisor + divisor) ? modulus(dividend - (divisor + divisor), divisor + divisor, 0.00L == denominator ? divisor : denominator) :
+            dividend >= divisor             ? modulus(dividend - (divisor          ), divisor          , 0.00L == denominator ? divisor : denominator) :
+          dividend
+        )
+      );
+    }
+  #endif
 
   constexpr unsigned long long modulus(unsigned long long const dividend, unsigned long long const divisor) {
     return dividend % divisor;
@@ -378,7 +425,7 @@ namespace {
 
   template <typename char_t, std::size_t size>
   constexpr string<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> stringify(unsigned char const bytes[]) {
-    return stringify<char_t, size, 0u>((bytes + size) - 1, bytes - 1, string<char_t, 0u>());
+    return stringify<char_t, size, 0u>((bytes + size) - 1, bytes - 1, stringify<char_t>());
   }
 
   template <typename char_t> // --> void*
@@ -446,6 +493,11 @@ constexpr string<char_t, 5u> print(bool const boolean) {
 template <typename char_t>
 constexpr string<char_t, 1u> print(char const character) {
   return stringify<char_t>(character);
+}
+
+template <typename char_t>
+constexpr string<char_t, LDBL_DIG + LDBL_MANT_DIG + 1u> print(long double const number) {
+  return stringify<char_t>(number, 10uLL);
 }
 
 template <typename char_t>
@@ -529,6 +581,7 @@ constexpr static int const      array[1] = {0};
 constexpr static bool const     boolean = true;
 constexpr static char const     character = 'L';
 constexpr static char const     constant[] = "Hello, World!";
+constexpr static double const   decimal = 420.69;
 constexpr static int            function() { return 0x0; }
 struct object { constexpr int   member() const volatile { return 0x0; } };
 constexpr static char           modifiable[] = "Hello, World!";
@@ -552,6 +605,10 @@ int main() {
   // ✅ constant
   constexpr auto constantString = print<char>(constant);
   std::printf("[char const []]    : \"%s\" -> \"%s\"" "\r\n", constant, constantString.value);
+
+  // ✅ decimal
+  constexpr auto decimalString = print<char>(static_cast<long double>(decimal));
+  std::printf("[double]           : \"%lf\" -> \"%.*s\"" "\r\n", decimal, static_cast<int>(LDBL_DIG + LDBL_MANT_DIG + 1u), decimalString.value);
 
   // ❌ function ->> conversion from `void*` and null pointer arithmetic disallowed
   auto const functionPointerString = print<char>(&function);
