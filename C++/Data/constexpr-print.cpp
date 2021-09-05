@@ -331,10 +331,16 @@ namespace {
   #if __cplusplus >= 201402L // --> unsigned long long
     template <typename char_t, std::size_t... indexes>
     constexpr string<char_t, ULLONG_DIG> stringify(unsigned long long integer, unsigned long long const radix, index_sequence<0u, indexes...> const) {
-      char_t string[ULLONG_DIG] = {"\0"[indexes - indexes]...};
+      std::size_t length = ULLONG_DIG;
+      char_t string[]  = {"\0"[indexes - indexes]...};
+      char_t *iterator = string;
 
-      for (char_t *iterator = string + ULLONG_DIG; 0uLL != integer; integer /= 10uLL)
-      *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(modulus(integer, radix), 36uLL)];
+      // ...
+      iterator += length;
+      for (; length; --length) {
+        *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(modulus(integer, radix), 36uLL)];
+        integer /= radix;
+      }
 
       return string;
     }
@@ -355,16 +361,39 @@ namespace {
     }
   #endif
 
-  #if false && __cplusplus >= 201402L // --> long double
+  #if __cplusplus >= 201402L // --> long double
     template <typename char_t, std::size_t... characteristicsIndexes, std::size_t... mantissaIndexes>
-    constexpr string<char_t, LDBL_DIG + LDBL_MANT_DIG + 1u> stringify(long double const number, unsigned long long const radix) {
-      char_t string[] = {"\0"[characteristicsIndexes - characteristicsIndexes]..., '.', "\0"[mantissaIndexes - mantissaIndexes]...};
+    constexpr string<char_t, LDBL_DIG + LDBL_MANT_DIG + 1u> stringify(long double number, unsigned long long const radix, index_sequence<0u, characteristicsIndexes...> const, index_sequence<0u, mantissaIndexes...> const) {
+      std::size_t characteristicsLength = LDBL_DIG;
+      std::size_t mantissaLength        = LDBL_MANT_DIG;
+      char_t string[]  = {'0', "\0"[characteristicsIndexes - characteristicsIndexes]..., '.', "\0"[mantissaIndexes - mantissaIndexes]...};
+      char_t *iterator = string;
+
+      if (0.00L > number) {
+        number = -number;
+        *string = '-';
+      }
+
+      // ...
+      iterator += 1u + mantissaLength;
+      iterator += 1u + characteristicsLength;
+      for (long double mantissa = number; mantissaLength; --mantissaLength) {
+        mantissa *= static_cast<long double>(radix);
+        *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(mantissa, static_cast<long double>(radix)), 36.00L))];
+      }
+
+      *--iterator = '.';
+      for (long double characteristics = number; characteristicsLength; --characteristicsLength) {
+        *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(characteristics, static_cast<long double>(radix)), 36.00L))];
+        characteristics /= static_cast<long double>(radix);
+      }
+
       return string;
     }
 
     template <typename char_t>
     constexpr string<char_t, LDBL_DIG + LDBL_MANT_DIG + 1u> stringify(long double const number, unsigned long long const radix) {
-      return stringify<char_t>(number, radix, index_sequence<LDBL_DIG>(), index_sequence<LDBL_MANT_DIG>())
+      return stringify<char_t>(number, radix, index_sequence<LDBL_DIG>(), index_sequence<LDBL_MANT_DIG>());
     }
   #else
     template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length>
@@ -596,11 +625,11 @@ int main() {
 
   // ✅ boolean
   constexpr auto const booleanString = print<char>(boolean);
-  std::printf("[int const (*)[]]  : \"%4.5s\" -> \"%.*s\"" "\r\n", boolean ? "true" : "false", 5u, booleanString.value);
+  std::printf("[bool]             : \"%4.5s\" -> \"%.*s\"" "\r\n", boolean ? "true" : "false", 5u, booleanString.value);
 
   // ✅ character
   constexpr auto const characterString = print<char>(character);
-  std::printf("[int const (*)[]]  : \"%c\" -> \"%.*s\"" "\r\n", character, 1u, characterString.value);
+  std::printf("[char]             : \"%c\" -> \"%.*s\"" "\r\n", character, 1u, characterString.value);
 
   // ✅ constant
   constexpr auto constantString = print<char>(constant);
