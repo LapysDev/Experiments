@@ -1,740 +1,654 @@
-#include <cfloat>
+// #include <cfloat>
+// #include <climits>
+// #include <cstddef>
+// #include <cstdio>
+// #include <new>
+// #include <stdint.h>
+
+// /* ... [Utilities] */
+// namespace {
+//   template <typename type, type...>
+//   struct collection {};
+//     template <std::size_t...>
+//     struct integer_collection;
+
+//     template <>
+//     struct integer_collection<> : public collection<std::size_t> {
+//       enum { total = 0u };
+//     };
+
+//     template <std::size_t integer, std::size_t... integers>
+//     struct integer_collection<integer, integers...> : public collection<std::size_t, integer, integers...> {
+//       enum { total = integer + integer_collection<integers...>::total };
+//     };
+//       template <std::size_t count, std::size_t... indexes>
+//       struct index_sequence : public index_sequence<count - 1u, count - 1u, indexes...> {};
+
+//       template <std::size_t... indexes>
+//       struct index_sequence<0u, indexes...> : public integer_collection<0u, indexes...> {};
+
+//   // ...
+//   template <unsigned long long integer, unsigned long long radix>
+//   union countof {
+//     private:
+//       template <unsigned long long current, unsigned char total>
+//       union count {
+//         friend union countof<integer, radix>;
+//         private: enum { value = count<current / radix, 1u + total>::value };
+//       };
+
+//     public:
+//       enum { value = count<integer, 0u>::value };
+//   };
+
+//   template <unsigned long long integer, unsigned long long radix>
+//   template <unsigned char total>
+//   union countof<integer, radix>::count<0uLL, total> {
+//     friend union countof<integer, radix>;
+//     private: enum { value = total };
+//   };
+
+//   // ...
+//   template <typename> union is_character { enum { value = false }; };
+
+//   template <typename type> union is_character<type const>          { enum { value = is_character<type>::value }; };
+//   template <typename type> union is_character<type const volatile> { enum { value = is_character<type>::value }; };
+//   template <typename type> union is_character<type volatile>       { enum { value = is_character<type>::value }; };
+
+//   template <> union is_character<char>    { enum { value = true }; };
+//   template <> union is_character<wchar_t> { enum { value = true }; };
+//   #if defined(__cplusplus) && __cplusplus >= 202002L
+//    template <> union is_character<char8_t> { enum { value = true }; };
+//   #endif
+//   #if defined(__cplusplus) && __cplusplus >= 201103L
+//    template <> union is_character<char16_t> { enum { value = true }; };
+//    template <> union is_character<char32_t> { enum { value = true }; };
+//   #endif
+
+//   // ...
+//   template <typename> union is_function_pointer { enum { value = false }; };
+//   template <typename base, typename... types> union is_function_pointer<base (*)(types...)>      { enum { value = true }; };
+//   template <typename base, typename... types> union is_function_pointer<base (*)(types..., ...)> { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)>                     { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...)>                { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const>          { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const>          { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const volatile> { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const volatile> { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      volatile>       { enum { value = true }; };
+//   template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) volatile>       { enum { value = true }; };
+//   #if __cplusplus >= 201703L
+//     template <typename base, typename... types> union is_function_pointer<base (*)(types...) noexcept>      { enum { value = true }; };
+//     template <typename base, typename... types> union is_function_pointer<base (*)(types..., ...) noexcept> { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...) noexcept>                     { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) noexcept>                { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const noexcept>          { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const noexcept>          { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const volatile noexcept> { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const volatile noexcept> { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      volatile noexcept>       { enum { value = true }; };
+//     template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) volatile noexcept>       { enum { value = true }; };
+//   #endif
+
+//   // ...
+//   template <typename> union is_object_pointer { enum { value = false }; };
+//   template <typename type> union is_object_pointer<type*>                { enum { value = false == is_function_pointer<type*>::value }; };
+//   template <typename type> union is_object_pointer<type const*>          { enum { value = is_object_pointer<type*>::value }; };
+//   template <typename type> union is_object_pointer<type const volatile*> { enum { value = is_object_pointer<type*>::value }; };
+//   template <typename type> union is_object_pointer<type volatile*>       { enum { value = is_object_pointer<type*>::value }; };
+
+//   // ...
+//   template <typename...>
+//   union is_same {
+//     enum { value = false };
+//   };
+
+//   template <typename base>
+//   union is_same<base> {
+//     enum { value = true };
+//   };
+
+//   template <typename base, typename... types>
+//   union is_same<base, base, types...> {
+//     enum { value = is_same<base, types...>::value };
+//   };
+// }
+
+// namespace {
+//   constexpr long double clamp(long double const number, long double const maximum) noexcept {
+//     return number < maximum ? number : maximum;
+//   }
+
+//   constexpr unsigned long long clamp(unsigned long long const integer, unsigned long long const maximum) noexcept {
+//     return integer < maximum ? integer : maximum;
+//   }
+
+//   // ...
+//   template <typename type>
+//   constexpr type instanceof() noexcept;
+
+//   // ...
+//   #if __cplusplus >= 201402L
+//     constexpr long double modulus(long double dividend, long double divisor) {
+//       long double denominator = divisor;
+//       bool signedness = false;
+
+//       // ...
+//       if (0.00L == dividend) return 0.00L;
+//       if (ULLONG_MAX >= dividend / divisor) return dividend - (divisor * static_cast<unsigned long long>(dividend / divisor));
+
+//       // ...
+//       if (0.00L > dividend) { dividend = -dividend; signedness = true; }
+//       if (0.00L > divisor) { denominator = -divisor; divisor = -divisor; }
+
+//       while (true) {
+//         if (dividend < divisor) {
+//           if (denominator == divisor) break;
+
+//           divisor = denominator;
+//           continue;
+//         }
+
+//         if (dividend > divisor * divisor) divisor *= divisor;
+//         else if (dividend > divisor * 10.00L ) divisor *= 10.00L;
+//         else if (dividend > divisor + divisor) divisor += divisor;
+
+//         dividend -= divisor;
+//       }
+
+//       return dividend * (signedness ? -1.00L : 1.00L);
+//     }
+//   #else
+//     constexpr long double modulus(long double const dividend, long double const divisor, long double const denominator = 0.00L) {
+//       return (
+//         0.00L == dividend ? 0.00L :
+//         0.00L > dividend ? -modulus(-dividend, divisor, denominator) :
+//         0.00L > divisor  ? +modulus(dividend, -divisor, denominator) :
+//         divisor > dividend && 0.00L == denominator ? dividend :
+
+//         // ->> Conditionally split between (constrained) compile-time vs (recursive) runtime evaluation
+//         #if defined(__cplusplus) && __cplusplus >= 202002L
+//           std::is_constant_evaluated()
+//         #elif defined(__builtin_is_constant_evaluated)
+//           __builtin_is_constant_evaluated()
+//         #else
+//           true
+//         #endif
+//         ? (
+//           dividend - (ULLONG_MAX < dividend / divisor ? 0.00L : divisor * static_cast<unsigned long long>(dividend / divisor))
+//         ) : (
+//           divisor > dividend && denominator != divisor ? modulus(dividend, denominator, 0.00L) :
+//             dividend >= (divisor * divisor) ? modulus(dividend - (divisor * divisor), divisor * divisor, 0.00L == denominator ? divisor : denominator) :
+//             dividend >= (divisor * 10.00L ) ? modulus(dividend - (divisor * 10.00L ), divisor * 10.00L , 0.00L == denominator ? divisor : denominator) :
+//             dividend >= (divisor + divisor) ? modulus(dividend - (divisor + divisor), divisor + divisor, 0.00L == denominator ? divisor : denominator) :
+//             dividend >= divisor             ? modulus(dividend - (divisor          ), divisor          , 0.00L == denominator ? divisor : denominator) :
+//           dividend
+//         )
+//       );
+//     }
+//   #endif
+
+//   constexpr unsigned long long modulus(unsigned long long const dividend, unsigned long long const divisor) {
+//     return dividend % divisor;
+//   }
+// }
+
+// /* ... [Types] */
+// int main();
+// namespace {
+//   template <bool, typename> union assert_t;
+//   union string;
+//   template <typename, std::size_t> union string_t;
+
+//   // ...
+//   template <typename base>
+//   union assert_t<true, base> {
+//     typedef base type;
+//   };
+
+//   // ... ->> `string_t` manipulation utilities
+//   union string {
+//     friend int ::main();
+
+//     template <typename, std::size_t>
+//     friend union string_t;
+
+//     private:
+//       template <typename char_t, std::size_t capacity>
+//       constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string) noexcept {
+//         return string;
+//       }
+
+//       template <typename char_t>
+//       constexpr static string_t<char_t, 0u> concatenate(string_t<char_t, 0u> const&, string_t<char_t, 0u> const&) noexcept {
+//         return {};
+//       }
+
+//       template <typename char_t, std::size_t capacity>
+//       constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, 0u> const&, string_t<char_t, capacity> const& string) noexcept {
+//         return string;
+//       }
+
+//       template <typename char_t, std::size_t capacity>
+//       constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string, string_t<char_t, 0u> const&) noexcept {
+//         return string;
+//       }
+
+//       template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... indexesA, std::size_t... indexesB>
+//       constexpr static string_t<char_t, capacityA + capacityB> concatenate(index_sequence<0u, indexesA...> const, index_sequence<0u, indexesB...> const, string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) noexcept {
+//         return {stringA.value[indexesA]..., stringB.value[indexesB]...};
+//       }
+
+//       template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... capacities>
+//       constexpr static string_t<char_t, capacityA + capacityB + integer_collection<capacities...>::total> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, string_t<char_t, capacities> const&... strings) noexcept {
+//         return concatenate(concatenate(index_sequence<capacityA>(), index_sequence<capacityB>(), stringA, stringB), strings...);
+//       }
+
+//       // ...
+//       template <std::size_t length, typename char_t, std::size_t capacity>
+//       constexpr static typename assert_t<capacity == length, string_t<char_t, length> const&>::type resize(string_t<char_t, capacity> const& string) noexcept {
+//         return string;
+//       }
+
+//       template <std::size_t length, typename char_t, std::size_t capacity>
+//       constexpr static typename assert_t<capacity != length, string_t<char_t, length> >::type resize(string_t<char_t, capacity> const& string) noexcept {
+//         return {string};
+//       }
+
+//       // ...
+//       template <typename char_t>
+//       constexpr static string_t<char_t, 0u> const& reverse(string_t<char_t, 0u> const& string) noexcept {
+//         return string;
+//       }
+
+//       template <typename char_t>
+//       constexpr static string_t<char_t, 1u> const& reverse(string_t<char_t, 1u> const& string) noexcept {
+//         return string;
+//       }
+
+//       template <typename char_t, std::size_t capacity, std::size_t... indexes>
+//       constexpr static string_t<char_t, capacity> reverse(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+//         return {string.value[capacity - indexes - 1u]...};
+//       }
+
+//       template <typename char_t, std::size_t capacity>
+//       constexpr static string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string) noexcept {
+//         return reverse(index_sequence<capacity>(), string);
+//       }
+
+//       // ...
+//       template <typename char_t, std::size_t count, std::size_t capacity>
+//       constexpr static typename assert_t<(count >= capacity), string_t<char_t, 0u> >::type slice_begin(string_t<char_t, capacity> const&) noexcept {
+//         return {};
+//       }
+
+//       template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
+//       constexpr static typename assert_t<(count < capacity), string_t<char_t, capacity - count> >::type slice_begin(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+//         return {string.value[count + indexes]...};
+//       }
+
+//       template <typename char_t, std::size_t count, std::size_t capacity>
+//       constexpr static typename assert_t<(count < capacity), string_t<char_t, capacity - count> >::type slice_begin(string_t<char_t, capacity> const& string) noexcept {
+//         return slice_begin<char_t, count>(index_sequence<capacity - count>(), string);
+//       }
+
+//       // ...
+//       template <typename char_t, std::size_t count, std::size_t capacity>
+//       constexpr static typename assert_t<(count >= capacity), string_t<char_t, 0u> >::type slice_end(string_t<char_t, capacity> const&) noexcept {
+//         return {};
+//       }
+
+//       template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
+//       constexpr static typename assert_t<(count < capacity), string_t<char_t, capacity - count> >::type slice_end(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+//         return {string.value[indexes]...};
+//       }
+
+//       template <typename char_t, std::size_t count, std::size_t capacity>
+//       constexpr static typename assert_t<(count < capacity), string_t<char_t, capacity - count> >::type slice_end(string_t<char_t, capacity> const& string) noexcept {
+//         return slice_end<char_t, count>(index_sequence<capacity - count>(), string);
+//       }
+
+//       // ...
+//       template <typename char_t> // --> bool
+//       constexpr static string_t<char_t, 5u> stringify(bool const boolean) noexcept {
+//         return boolean ? string_t<char_t, 5u>('t', 'r', 'u', 'e', '\0') : string_t<char_t, 5u>('f', 'a', 'l', 's', 'e');
+//       }
+
+//       template <typename char_t> // --> char
+//       constexpr static string_t<char_t, 1u> stringify(char_t const& character) noexcept {
+//         return {character};
+//       }
+
+//       template <typename char_t, std::size_t capacity, std::size_t... indexes> // --> char []
+//       constexpr static string_t<char_t, capacity> stringify(index_sequence<0u, indexes...> const, char const string[]) noexcept {
+//         return {string[indexes]...};
+//       }
+
+//       template <typename char_t, std::size_t capacity, std::size_t... indexes>
+//       constexpr static string_t<char_t, capacity> stringify(index_sequence<0u, indexes...> const, char_t const (&string)[capacity]) noexcept {
+//         return {string[indexes]...};
+//       }
+
+//       template <typename char_t, std::size_t capacity>
+//       constexpr static string_t<char_t, capacity> stringify(char_t const (&string)[capacity]) noexcept {
+//         return stringify(index_sequence<capacity>(), string);
+//       }
+
+//       #if __cplusplus >= 201402L // --> unsigned long long
+//         template <typename char_t, unsigned long long radix, std::size_t... indexes>
+//         constexpr static string_t<char_t, countof<ULLONG_MAX, radix>::value> stringify(index_sequence<0u, indexes...> const, unsigned long long integer) noexcept {
+//           char string[] = {"\0"[indexes - indexes]...};
+
+//           for (char *iterator = string + (sizeof(string) / sizeof(char)); iterator != string; integer /= radix)
+//           *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(modulus(integer, radix), 36uLL)];
+
+//           return {string[indexes]...};
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char>
+//         constexpr static string_t<char_t, countof<ULLONG_MAX, radix>::value> stringify(unsigned long long const integer) noexcept {
+//           return stringify<char_t, radix>(index_sequence<countof<ULLONG_MAX, radix>::value>(), integer);
+//         }
+//       #else
+//         template <typename char_t, unsigned long long radix, unsigned char count>
+//         constexpr static typename assert_t<count == countof<ULLONG_MAX, radix>::value, string_t<char_t, countof<ULLONG_MAX, radix>::value> >::type stringify(unsigned long long const, string_t<char_t, count> const& string = {}) noexcept {
+//           return string;
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char count>
+//         constexpr static typename assert_t<count != countof<ULLONG_MAX, radix>::value, string_t<char_t, countof<ULLONG_MAX, radix>::value> >::type stringify(unsigned long long const integer, string_t<char_t, count> const& string = {}) noexcept {
+//           return stringify<char_t, radix, count + 1u>(integer / radix, concatenate<char_t>(stringify<char_t>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(modulus(integer, radix), 36uLL)]), string));
+//         }
+//       #endif
+
+//       #if __cplusplus >= 201402L // --> long double
+//         template <typename char_t, unsigned long long radix, std::size_t... characteristicsIndexes, std::size_t... mantissaIndexes>
+//         constexpr static string_t<char_t, 2u + LDBL_DIG + LDBL_MANT_DIG> stringify(index_sequence<0u, characteristicsIndexes...> const, index_sequence<0u, mantissaIndexes...> const, long double characteristics, long double mantissa) noexcept {
+//           char characteristicsString[] = {"\0"[characteristicsIndexes - characteristicsIndexes]...};
+//           bool signedness = false;
+//           char mantissaString[] = {"\0"[mantissaIndexes - mantissaIndexes]...};
+
+//           if (0.00L > characteristics || 0.00L > mantissa) {
+//             characteristics = -characteristics;
+//             mantissa = -mantissa;
+//             signedness = true;
+//           }
+
+//           for (char *iterator = characteristicsString + (sizeof(characteristicsString) / sizeof(char)); iterator != characteristicsString; characteristics /= static_cast<long double>(radix))
+//           *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(characteristics, static_cast<long double>(radix)), 36.00L))];
+
+//           for (char *iterator = mantissaString + (sizeof(mantissaString) / sizeof(char)); iterator != mantissaString; mantissa *= static_cast<long double>(radix))
+//           *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(mantissa, static_cast<long double>(radix)), 36.00L))];
+
+//           return {signedness ? '-' : '0', characteristicsString[characteristicsIndexes]..., '.', mantissaString[LDBL_MANT_DIG - mantissaIndexes - 1u]...};
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char, unsigned char>
+//         constexpr static string_t<char_t, 2u + LDBL_DIG + LDBL_MANT_DIG> stringify(long double const number) noexcept {
+//           return stringify<char_t, radix>(index_sequence<LDBL_DIG>(), index_sequence<LDBL_MANT_DIG>(), number, number * static_cast<long double>(radix));
+//         }
+//       #else
+//         template <typename char_t, unsigned long long radix, unsigned char characteristicsCount, unsigned char mantissaCount>
+//         constexpr static typename assert_t<characteristicsCount == LDBL_DIG && mantissaCount == LDBL_MANT_DIG, string_t<char_t, LDBL_DIG> const&>::type stringify(long double const, string_t<char_t, LDBL_DIG> const& string) noexcept {
+//           return string;
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char characteristicsCount, unsigned char mantissaCount>
+//         constexpr static typename assert_t<characteristicsCount == LDBL_DIG && mantissaCount == LDBL_MANT_DIG, string_t<char_t, LDBL_MANT_DIG> const&>::type stringify(long double const, string_t<char_t, LDBL_MANT_DIG> const& string) noexcept {
+//           return string;
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char characteristicsCount, unsigned char mantissaCount>
+//         constexpr static typename assert_t<characteristicsCount != LDBL_DIG && mantissaCount == LDBL_MANT_DIG, string_t<char_t, LDBL_DIG> >::type stringify(long double const number, string_t<char_t, characteristicsCount> const& string = {}) noexcept {
+//           return stringify<char_t, radix, characteristicsCount + 1u, mantissaCount>(number / static_cast<long double>(radix), concatenate<char_t>(stringify<char_t>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(number, static_cast<long double>(radix)), 36.00L))]), string));
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char characteristicsCount, unsigned char mantissaCount>
+//         constexpr static typename assert_t<characteristicsCount == LDBL_DIG && mantissaCount != LDBL_MANT_DIG, string_t<char_t, LDBL_MANT_DIG> >::type stringify(long double const number, string_t<char_t, mantissaCount> const& string = {}) noexcept {
+//           return stringify<char_t, radix, characteristicsCount, mantissaCount + 1u>(number * static_cast<long double>(radix), concatenate<char_t>(string, stringify<char_t>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(number, static_cast<long double>(radix)), 36.00L))])));
+//         }
+
+//         template <typename char_t, unsigned long long radix, unsigned char characteristicsCount, unsigned char mantissaCount>
+//         constexpr static typename assert_t<characteristicsCount != LDBL_DIG && mantissaCount != LDBL_MANT_DIG, string_t<char_t, 2u + LDBL_DIG + LDBL_MANT_DIG> >::type stringify(long double const number) noexcept {
+//           return concatenate<char_t>(
+//             stringify<char_t>(0.00L > number ? '-' : '0'), resize<LDBL_DIG>(stringify<char_t, radix, characteristicsCount, LDBL_MANT_DIG>(0.00L > number ? -number : number)),
+//             stringify<char_t>('.'), resize<LDBL_MANT_DIG>(stringify<char_t, radix, LDBL_DIG, mantissaCount>(static_cast<long double>(radix) * (0.00L > number ? -number : number)))
+//           );
+//         }
+//       #endif
+
+//       #if __cplusplus >= 201402L // --> unsigned char[]
+//         template <typename char_t, std::size_t size, std::size_t... indexes>
+//         constexpr static string_t<char_t, size * countof<UCHAR_MAX, 16uLL>::value> stringify(index_sequence<0u, indexes...> const, unsigned char const bytes[]) {
+//           char string[] = {"\0"[indexes - indexes]...};
+
+//           for (char *iterator = string + (sizeof(string) / sizeof(char)); iterator != string; bytes += 1) {
+//             char const *const byte = stringify<typename assert_t<is_same<char_t>::value, char>::type, 16uLL, 0u>(static_cast<unsigned long long>(*bytes)).value + (countof<ULLONG_MAX, 16uLL>::value - countof<UCHAR_MAX, 16uLL>::value);
+
+//             for (char_t const *subiterator = byte + countof<UCHAR_MAX, 16uLL>::value; subiterator != byte; )
+//             *--iterator = *--subiterator;
+//           }
+
+//           return {string[indexes]...};
+//         }
+
+//         template <typename char_t, std::size_t size, std::size_t>
+//         constexpr static string_t<char_t, size * countof<UCHAR_MAX, 16uLL>::value> stringify(unsigned char const bytes[]) {
+//           return stringify<char_t, size>(index_sequence<size * countof<UCHAR_MAX, 16uLL>::value>(), bytes);
+//         }
+//       #else
+//         template <typename char_t, std::size_t size, std::size_t count>
+//         constexpr static typename assert_t<count == size, string_t<char_t, size * countof<UCHAR_MAX, 16uLL>::value> >::type stringify(unsigned char const[], string_t<char_t, count * countof<UCHAR_MAX, 16uLL>::value> const& string = {}) {
+//           return string;
+//         }
+
+//         template <typename char_t, std::size_t size, std::size_t count>
+//         constexpr static typename assert_t<count != size, string_t<char_t, size * countof<UCHAR_MAX, 16uLL>::value> >::type stringify(unsigned char const bytes[], string_t<char_t, count * countof<UCHAR_MAX, 16uLL>::value> const& string = {}) {
+//           return stringify<char_t, size, count + 1u>(bytes + 1, concatenate<char_t>(slice_begin<char_t, countof<ULLONG_MAX, 16uLL>::value - countof<UCHAR_MAX, 16uLL>::value>(stringify<char_t, 16uLL, 0u>(static_cast<unsigned long long>(*bytes))), string));
+//         }
+//       #endif
+
+//       // --> void*
+//       template <typename char_t>
+//       constexpr static string_t<char_t, countof<UINTPTR_MAX, 16uLL>::value> stringify(void* const pointer) {
+//         return stringify<char_t, 16uLL, 0u>(
+//           static_cast<unsigned char*>(pointer)
+//         );
+//       }
+//   };
+
+//   // ... ->> `char_t` members always copy/ value-initialized once
+//   template <typename char_t, std::size_t length>
+//   union string_t {
+//     friend int ::main();
+
+//     friend union string;
+
+//     template <typename, std::size_t>
+//     friend union string_t;
+
+//     private:
+//       char_t const value[length];
+
+//       // ... ->> empty string
+//       template <std::size_t... indexes>
+//       constexpr string_t(index_sequence<0u, indexes...> const) noexcept(noexcept(char_t('\0'))) :
+//         value{"\0"[indexes - indexes]...}
+//       {}
+
+//       constexpr string_t() noexcept(noexcept(string_t<char_t, length>(index_sequence<length>()))) :
+//         string_t<char_t, length>::string_t(index_sequence<length>())
+//       {}
+
+//       // ... ->> null string
+//       constexpr string_t(string_t<char_t, 0u> const&) noexcept(noexcept(string_t<char_t, length>())) :
+//         string_t<char_t, length>::string_t()
+//       {}
+
+//       // ... ->> equal string
+//       template <std::size_t... indexes>
+//       constexpr string_t(index_sequence<0u, indexes...> const, string_t<char_t, length> const& string) noexcept(noexcept(char_t(instanceof<char_t const&>()))) :
+//         value{string.value[indexes]...}
+//       {}
+
+//       constexpr string_t(string_t<char_t, length> const& string) noexcept(noexcept(string_t<char_t, length>(index_sequence<length>(), instanceof<string_t<char_t, length> const&>()))) :
+//         string_t<char_t, length>::string_t(index_sequence<length>(), string)
+//       {}
+
+//       // ... ->> bigger string
+//       template <std::size_t capacity>
+//       constexpr string_t(string_t<char_t, capacity> const& string, typename assert_t<(capacity > length), unsigned char>::type const = 0x0u) noexcept(noexcept(string_t<char_t, length>(string::slice_end<char_t, capacity - length>(instanceof<string_t<char_t, capacity> const&>())))) :
+//         string_t<char_t, length>::string_t(string::slice_end<char_t, capacity - length>(string))
+//       {}
+
+//       // ... ->> smaller string
+//       template <std::size_t capacity, std::size_t... nulIndexes, std::size_t... indexes>
+//       constexpr string_t(index_sequence<0u, nulIndexes...> const, index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept(noexcept(char_t('\0')) && noexcept(char_t(instanceof<char_t const&>()))) :
+//         value{string.value[indexes]..., "\0"[nulIndexes - nulIndexes]...}
+//       {}
+
+//       template <std::size_t capacity>
+//       constexpr string_t(string_t<char_t, capacity> const& string, typename assert_t<(capacity < length), unsigned char>::type const = 0x0u) noexcept(noexcept(string_t<char_t, length>(index_sequence<length - capacity>(), index_sequence<capacity>(), instanceof<string_t<char_t, capacity> const&>()))) :
+//         string_t<char_t, length>::string_t(index_sequence<length - capacity>(), index_sequence<capacity>(), string)
+//       {}
+
+//       // ... ->> equal character-by-character
+//       template <typename... chars_t>
+//       constexpr string_t(typename assert_t<length == 1u + sizeof...(chars_t) && (is_same<char, chars_t...>::value || is_same<char_t, chars_t...>::value), char_t>::type const& character, chars_t const&... characters) noexcept(noexcept(char_t(instanceof<char_t const&>()))) :
+//         value{character, characters...}
+//       {}
+
+//       // ... ->> more/ less character-by-character
+//       template <typename... chars_t>
+//       constexpr string_t(typename assert_t<length != 1u + sizeof...(chars_t) && (is_same<char, chars_t...>::value || is_same<char_t, chars_t...>::value), char_t>::type const& character, chars_t const&... characters) noexcept(noexcept(string_t<char_t, length>(instanceof<string_t<char_t, 1u + sizeof...(chars_t)> const&>()))) :
+//         string_t<char_t, length>::string_t(string_t<char_t, 1u + sizeof...(chars_t)>(character, characters...))
+//       {}
+//   };
+
+//   template <typename char_t>
+//   union string_t<char_t, 0u> {
+//     friend union string;
+
+//     template <typename, std::size_t>
+//     friend union string_t;
+
+//     private:
+//       constexpr string_t(...) noexcept {}
+//   };
+// }
+
+// /* Main */
+// struct object { void member() const {} };
+// int main() {
+//   union {
+//     void (object::* address)() const;
+//     unsigned char bytes[sizeof(void (object::*)() const)];
+//   } function;
+//   function.address = &object::member;
+//   int const integer = 0x45;
+
+//   std::printf("[]: \"%.*s\"" "\r\n", countof<ULLONG_MAX, 10uLL>::value, string::stringify<char, 10uLL, 0u>(42u).value);
+//   std::printf("[]: \"%.*s\"" "\r\n", 2u + LDBL_DIG + LDBL_MANT_DIG, string::stringify<char, 10uLL, 0u, 0u>(1337.69L).value);
+
+//   std::printf("[]: \"");
+//     for (unsigned char const *destination = function.bytes + sizeof(void (object::*)() const); destination-- != function.bytes; )
+//     std::printf("%c%c", "0123456789ABCDEF"[(*destination / 0x10u) % 0x10u], "0123456789ABCDEF"[(*destination / 0x01u) % 0x10u]);
+//   std::printf("\" \"%.*s\"" "\r\n", sizeof(void (object::*)() const) * countof<UCHAR_MAX, 16uLL>::value, string::stringify<char, sizeof(void (object::*)() const), 0u>(function.bytes).value);
+
+//   std::printf("[]: \"");
+//     for (unsigned char const *destination = static_cast<unsigned char const*>(static_cast<void const*>(&integer)) + sizeof(int); destination-- != static_cast<void const*>(&integer); )
+//     std::printf("%c%c", "0123456789ABCDEF"[(*destination / 0x10u) % 0x10u], "0123456789ABCDEF"[(*destination / 0x01u) % 0x10u]);
+//   std::printf("\" \"%.*s\"" "\r\n", sizeof(int) * countof<UCHAR_MAX, 16uLL>::value, string::stringify<char, sizeof(int), 0u>(static_cast<unsigned char const*>(static_cast<void const*>(&integer))).value);
+// }
+
 #include <climits>
 #include <cstddef>
 #include <cstdio>
-#include <cwchar>
-
-#include <stdbool.h>
 #include <stdint.h>
-#if defined(__cplusplus) && __cplusplus >= 201103L
-# include <type_traits>
-#endif
 
-/* ... */
-namespace {
-  template <typename type, type...>
-  struct collection {};
-    template <std::size_t...>
-    struct integer_collection;
+// Square root of integer
+constexpr std::size_t isqrt(std::size_t const s) {
+  std::size_t x0 = s >> 1u;
 
-    template <>
-    struct integer_collection<> : public collection<std::size_t> {
-      enum { total = 0u };
-    };
+  if (0u != x0) {
+    std::size_t x1 = (x0 + (s / x0)) >> 1u;
 
-    template <std::size_t integer, std::size_t... integers>
-    struct integer_collection<integer, integers...> : public collection<std::size_t, integer, integers...> {
-      enum { total = integer + integer_collection<integers...>::total };
-    };
-      template <std::size_t count, std::size_t... indexes>
-      struct index_sequence : public index_sequence<count - 1u, count - 1u, indexes...> {};
-
-      template <std::size_t... indexes>
-      struct index_sequence<0u, indexes...> : public integer_collection<0u, indexes...> {};
-
-  // ...
-  template <unsigned long long integer, unsigned long long radix, unsigned char length>
-  union countof {
-    enum { value = countof<integer / radix, radix, length + 1u>::value };
-  };
-
-  template <unsigned long long radix, unsigned char length>
-  union countof<0uLL, radix, length> {
-    enum { value = length };
-  };
-
-  // ...
-  template <typename> union is_character { enum { value = false }; };
-
-  template <typename type> union is_character<type const>          { enum { value = is_character<type>::value }; };
-  template <typename type> union is_character<type const volatile> { enum { value = is_character<type>::value }; };
-  template <typename type> union is_character<type volatile>       { enum { value = is_character<type>::value }; };
-
-  template <> union is_character<char>    { enum { value = true }; };
-  template <> union is_character<wchar_t> { enum { value = true }; };
-  #if defined(__cplusplus) && __cplusplus >= 202002L
-   template <> union is_character<char8_t> { enum { value = true }; };
-  #endif
-  #if defined(__cplusplus) && __cplusplus >= 201103L
-   template <> union is_character<char16_t> { enum { value = true }; };
-   template <> union is_character<char32_t> { enum { value = true }; };
-  #endif
-
-  // ...
-  template <typename> union is_function_pointer { enum { value = false }; };
-  template <typename base, typename... types> union is_function_pointer<base (*)(types...)>      { enum { value = true }; };
-  template <typename base, typename... types> union is_function_pointer<base (*)(types..., ...)> { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)>                     { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...)>                { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const>          { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const>          { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const volatile> { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const volatile> { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      volatile>       { enum { value = true }; };
-  template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) volatile>       { enum { value = true }; };
-  #if __cplusplus >= 201703L
-    template <typename base, typename... types> union is_function_pointer<base (*)(types...) noexcept>      { enum { value = true }; };
-    template <typename base, typename... types> union is_function_pointer<base (*)(types..., ...) noexcept> { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...) noexcept>                     { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) noexcept>                { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const noexcept>          { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const noexcept>          { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      const volatile noexcept> { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) const volatile noexcept> { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types...)      volatile noexcept>       { enum { value = true }; };
-    template <class object, typename base, typename... types> union is_function_pointer<base (object::*)(types..., ...) volatile noexcept>       { enum { value = true }; };
-  #endif
-
-  // ...
-  template <typename> union is_object_pointer { enum { value = false }; };
-  template <typename type> union is_object_pointer<type*>                { enum { value = false == is_function_pointer<type*>::value }; };
-  template <typename type> union is_object_pointer<type const*>          { enum { value = is_object_pointer<type*>::value }; };
-  template <typename type> union is_object_pointer<type const volatile*> { enum { value = is_object_pointer<type*>::value }; };
-  template <typename type> union is_object_pointer<type volatile*>       { enum { value = is_object_pointer<type*>::value }; };
-}
-
-namespace {
-  enum { UCHAR_DIG   = countof<UCHAR_MAX  , 10uLL, 0u>::value };
-  enum { UINT_DIG    = countof<UINT_MAX   , 10uLL, 0u>::value };
-  enum { UINTPTR_DIG = countof<UINTPTR_MAX, 16uLL, 0u>::value };
-  enum { ULONG_DIG   = countof<ULONG_MAX  , 10uLL, 0u>::value };
-  enum { ULLONG_DIG  = countof<ULLONG_MAX , 10uLL, 0u>::value };
-  enum { USHRT_DIG   = countof<USHRT_MAX  , 10uLL, 0u>::value };
-}
-
-int main();
-namespace {
-  // ...
-  template <bool, typename>
-  union assert_t;
-
-  template <typename base>
-  union assert_t<true, base> {
-    typedef base type;
-  };
-
-  // ...
-  template <typename char_t, std::size_t length>
-  struct string_t {
-    // ->> must be initialized only
-    char_t const value[length];
-
-    // ->> ...
-    constexpr string_t() noexcept(noexcept(::string_t<char_t, length>(index_sequence<length>()))) :
-      ::string_t<char_t, length>::string_t(index_sequence<length>())
-    {}
-
-    constexpr string_t(string_t<char_t, 0u> const&) noexcept(noexcept(::string_t<char_t, length>())) :
-      ::string_t<char_t, length>::string_t()
-    {}
-
-    template <typename... chars_t>
-    constexpr string_t(char_t const& character, chars_t const&... characters) noexcept(noexcept(::string_t<char_t, length>(index_sequence<length - sizeof...(characters) - 1u>(), character, characters...))) :
-      ::string_t<char_t, length>::string_t(index_sequence<length - sizeof...(characters) - 1u>(), character, characters...)
-    {}
-
-    template <std::size_t capacity>
-    constexpr string_t(char_t const (&string)[capacity]) noexcept(noexcept(::string_t<char_t, length>(string, index_sequence<(capacity < length) ? capacity : length>()))) :
-      ::string_t<char_t, length>::string_t(string, index_sequence<(capacity < length) ? capacity : length>())
-    {}
-
-    template <std::size_t capacity>
-    constexpr string_t(string_t<char_t, capacity> const& string) noexcept(noexcept(::string_t<char_t, length>(string.value))) :
-      ::string_t<char_t, length>::string_t(string.value)
-    {}
-
-    template <std::size_t capacity, std::size_t... indexes>
-    constexpr string_t(char_t const (&string)[capacity], index_sequence<0u, indexes...> const) noexcept(noexcept(char_t(*string))) :
-      value{string[indexes]...}
-    {}
-
-    template <typename... chars_t, std::size_t... indexes>
-    constexpr string_t(index_sequence<0u, indexes...> const, chars_t const&... characters) noexcept(noexcept(char_t('\0'))) :
-      value{characters..., "\0"[indexes - indexes]...}
-    {}
-  };
-
-  template <typename char_t>
-  struct string_t<char_t, 0u> {
-    constexpr string_t(...) {}
-  };
-}
-
-namespace {
-  // ... --> clamp(…) ->> Converting numeric digits to string digits
-  constexpr long double clamp(long double const number, long double const maximum) {
-    return number < maximum ? number : maximum;
-  }
-
-  constexpr unsigned long long clamp(unsigned long long const integer, unsigned long long const maximum) {
-    return integer < maximum ? integer : maximum;
-  }
-
-  // ... --> concatenate(…) ->> Compositing different strings together
-  template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string) {
-    return string;
-  }
-
-  template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> const& concatenate(::string_t<char_t, 0u> const&, string_t<char_t, capacity> const& string) {
-    return concatenate(string);
-  }
-
-  template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string, ::string_t<char_t, 0u> const&) {
-    return concatenate(string);
-  }
-
-  template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... indexesA, std::size_t... indexesB>
-  constexpr string_t<char_t, capacityA + capacityB> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, index_sequence<0u, indexesA...> const, index_sequence<0u, indexesB...> const) {
-    return {stringA.value[indexesA]..., stringB.value[indexesB]...};
-  }
-
-  template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... capacities>
-  constexpr string_t<char_t, capacityA + capacityB + integer_collection<capacities...>::total> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, string_t<char_t, capacities> const&... strings) {
-    return concatenate(concatenate(stringA, stringB, index_sequence<capacityA>(), index_sequence<capacityB>()), strings...);
-  }
-
-  // ... --> lengthof(…) ->> Neatly formatting number strings
-  constexpr unsigned char lengthof(unsigned long long const integer) {
-    return 0uLL != integer ? 1u + lengthof(integer / 10uLL) : 0u;
-  }
-
-  constexpr unsigned char lengthof(signed long long const integer) {
-    return lengthof(static_cast<unsigned long long>(0LL > integer ? -integer : integer));
-  }
-
-  // ... --> modulus(…) ->> Calculating number digits
-  #if __cplusplus >= 201402L
-    constexpr long double modulus(long double dividend, long double divisor) {
-      long double denominator = divisor;
-      bool signedness = false;
-
-      // ...
-      if (0.00L == dividend) return 0.00L;
-      if (ULLONG_MAX >= dividend / divisor) return dividend - (divisor * static_cast<unsigned long long>(dividend / divisor));
-
-      // ...
-      if (0.00L > dividend) { dividend = -dividend; signedness = true; }
-      if (0.00L > divisor) { denominator = -divisor; divisor = -divisor; }
-
-      while (true) {
-        if (dividend < divisor) {
-          if (denominator == divisor) break;
-
-          divisor = denominator;
-          continue;
-        }
-
-        if (dividend > divisor * divisor) divisor *= divisor;
-        else if (dividend > divisor * 10.00L ) divisor *= 10.00L;
-        else if (dividend > divisor + divisor) divisor += divisor;
-
-        dividend -= divisor;
-      }
-
-      return dividend * (signedness ? -1.00L : 1.00L);
-    }
-  #else
-    constexpr long double modulus(long double const dividend, long double const divisor, long double const denominator = 0.00L) {
-      return (
-        0.00L == dividend ? 0.00L :
-        0.00L > dividend ? -modulus(-dividend, divisor, denominator) :
-        0.00L > divisor  ? +modulus(dividend, -divisor, denominator) :
-        divisor > dividend && 0.00L == denominator ? dividend :
-
-        // ->> Conditionally split between compile-time vs runtime evaluation
-        #if defined(__cplusplus) && __cplusplus >= 202002L
-          std::is_constant_evaluated()
-        #elif defined(__builtin_is_constant_evaluated)
-          __builtin_is_constant_evaluated()
-        #else
-          true
-        #endif
-        ? (
-          dividend - (ULLONG_MAX < dividend / divisor ? 0.00L : divisor * static_cast<unsigned long long>(dividend / divisor))
-        ) : (
-          divisor > dividend && denominator != divisor ? modulus(dividend, denominator, 0.00L) :
-            dividend >= (divisor * divisor) ? modulus(dividend - (divisor * divisor), divisor * divisor, 0.00L == denominator ? divisor : denominator) :
-            dividend >= (divisor * 10.00L ) ? modulus(dividend - (divisor * 10.00L ), divisor * 10.00L , 0.00L == denominator ? divisor : denominator) :
-            dividend >= (divisor + divisor) ? modulus(dividend - (divisor + divisor), divisor + divisor, 0.00L == denominator ? divisor : denominator) :
-            dividend >= divisor             ? modulus(dividend - (divisor          ), divisor          , 0.00L == denominator ? divisor : denominator) :
-          dividend
-        )
-      );
-    }
-  #endif
-
-  constexpr unsigned long long modulus(unsigned long long const dividend, unsigned long long const divisor) {
-    return dividend % divisor;
-  }
-
-  // ... --> resize(…)
-  template <std::size_t length, typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, length> resize(string_t<char_t, capacity> const& string) {
-    return {string};
-  }
-
-  // ... --> reverse(…)
-  template <typename char_t>
-  constexpr string_t<char_t, 0u> const& reverse(string_t<char_t, 0u> const& string) {
-    return string;
-  }
-
-  template <typename char_t, std::size_t capacity, std::size_t... indexes>
-  constexpr string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string, index_sequence<0u, indexes...> const) {
-    return {string.value[capacity - indexes - 1u]...};
-  }
-
-  template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string) {
-    return reverse(string, index_sequence<capacity>());
-  }
-
-  // ... --> shift(…)
-  template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> shift(string_t<char_t, capacity> const&, std::size_t const, integer_collection<> const) {
-    return string_t<char_t, 0u>();
-  }
-
-  template <typename char_t, std::size_t capacity, std::size_t index, std::size_t... indexes>
-  constexpr string_t<char_t, capacity> shift(string_t<char_t, capacity> const& string, std::size_t const length, integer_collection<index, indexes...> const) {
-    return 0u != length ? shift<char_t, capacity, indexes...>(string, length - 1u, integer_collection<indexes...>()) : ::string_t<char_t, capacity>(string.value[indexes]...);
-  }
-
-  template <typename char_t, std::size_t capacity, std::size_t... indexes>
-  constexpr string_t<char_t, capacity> shift(string_t<char_t, capacity> const& string, std::size_t const length, index_sequence<0u, indexes...> const) {
-    return shift<char_t, capacity, indexes...>(string, length, integer_collection<indexes...>());
-  }
-
-  template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> shift(string_t<char_t, capacity> const& string, std::size_t const length) {
-    return 0u != length ? shift<char_t, capacity>(string, length - 1u, index_sequence<capacity>()) : string;
-  }
-
-  // ... --> stringify(…)
-  template <typename char_t> // --> NUL
-  constexpr string_t<char_t, 0u> stringify() {
-    return {};
-  }
-
-  template <typename char_t> // --> bool
-  constexpr string_t<char_t, 5u> stringify(bool const boolean) {
-    return boolean ? string_t<char_t, 5u>('t', 'r', 'u', 'e', '\0') : string_t<char_t, 5u>('f', 'a', 'l', 's', 'e');
-  }
-
-  template <typename char_t> // --> char
-  constexpr string_t<char_t, 1u> stringify(char_t const& character) {
-    return {character};
-  }
-
-  template <typename char_t, std::size_t capacity> // --> char []
-  constexpr string_t<char_t, capacity> stringify(char_t const (&string)[capacity]) {
-    return {string};
-  }
-
-  #if __cplusplus >= 201402L // --> unsigned long long
-    template <typename char_t, std::size_t... indexes>
-    constexpr string_t<char_t, ULLONG_DIG> stringify(unsigned long long integer, unsigned long long const radix, index_sequence<0u, indexes...> const) {
-      std::size_t length = ULLONG_DIG;
-      char string[]  = {"\0"[indexes - indexes]...};
-      char *iterator = string;
-
-      // ...
-      iterator += length;
-      for (; length; --length) {
-        *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(modulus(integer, radix), 36uLL)];
-        integer /= radix;
-      }
-
-      return {string[indexes]...};
+    while (x1 < x0) {
+      x0 = x1;
+      x1 = (x0 + (s / x0)) >> 1u;
     }
 
-    template <typename char_t>
-    constexpr string_t<char_t, ULLONG_DIG> stringify(unsigned long long const integer, unsigned long long const radix) {
-      return stringify<char_t>(integer, radix, index_sequence<ULLONG_DIG>());
-    }
-  #else
-    template <typename char_t, typename... chars_t>
-    constexpr typename assert_t<ULLONG_DIG == sizeof...(chars_t), string_t<char_t, ULLONG_DIG> >::type stringify(unsigned long long const, unsigned long long const, chars_t const&... digits) {
-      return {digits...};
-    }
-
-    template <typename char_t, typename... chars_t>
-    constexpr typename assert_t<ULLONG_DIG != sizeof...(chars_t), string_t<char_t, ULLONG_DIG> >::type stringify(unsigned long long const integer, unsigned long long const radix, chars_t const&... digits) {
-      return stringify<char_t, char_t, chars_t...>(integer / radix, radix, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(modulus(integer, radix), 36uLL)], digits...);
-    }
-  #endif
-
-  #if __cplusplus >= 201402L // --> long double
-    template <typename char_t, std::size_t... characteristicsIndexes, std::size_t... mantissaIndexes>
-    constexpr string_t<char_t, LDBL_DIG + LDBL_MANT_DIG + 2u> stringify(long double number, unsigned long long const radix, index_sequence<0u, characteristicsIndexes...> const, index_sequence<0u, mantissaIndexes...> const) {
-      std::size_t characteristicsLength = LDBL_DIG;
-      std::size_t mantissaLength        = LDBL_MANT_DIG;
-      char string[]  = {'0', "\0"[characteristicsIndexes - characteristicsIndexes]..., '.', "\0"[mantissaIndexes - mantissaIndexes]...};
-      char *iterator = string;
-
-      if (0.00L > number) {
-        number = -number;
-        *string = '-';
-      }
-
-      // ...
-      iterator += 1u + mantissaLength;
-      iterator += 1u + characteristicsLength;
-      for (long double mantissa = number; mantissaLength; --mantissaLength) {
-        mantissa *= static_cast<long double>(radix);
-        *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(mantissa, static_cast<long double>(radix)), 36.00L))];
-      }
-
-      *--iterator = '.';
-      for (long double characteristics = number; characteristicsLength; --characteristicsLength) {
-        *--iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(characteristics, static_cast<long double>(radix)), 36.00L))];
-        characteristics /= static_cast<long double>(radix);
-      }
-
-      return {string[0], string[characteristicsIndexes + 1u]..., string[LDBL_DIG + 1u], string[LDBL_DIG + mantissaIndexes + 2u]...};
-    }
-
-    template <typename char_t>
-    constexpr string_t<char_t, LDBL_DIG + LDBL_MANT_DIG + 2u> stringify(long double const number, unsigned long long const radix) {
-      return stringify<char_t>(number, radix, index_sequence<LDBL_DIG>(), index_sequence<LDBL_MANT_DIG>());
-    }
-  #else
-    template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length>
-    constexpr typename assert_t<length == LDBL_DIG      && (true == CHARACTERISTICS && false == MANTISSA), string_t<char_t, LDBL_DIG     > const&>::type stringify(long double const, unsigned long long const, string_t<char_t, length> const& string) {
-      return string;
-    }
-
-    template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length>
-    constexpr typename assert_t<length == LDBL_MANT_DIG && (false == CHARACTERISTICS && true == MANTISSA), string_t<char_t, LDBL_MANT_DIG> const&>::type stringify(long double const, unsigned long long const, string_t<char_t, length> const& string) {
-      return string;
-    }
-
-    template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length>
-    constexpr typename assert_t<length != LDBL_DIG      && (true == CHARACTERISTICS && false == MANTISSA), string_t<char_t, LDBL_DIG     > >::type stringify(long double const number, unsigned long long const radix, string_t<char_t, length> const& string) {
-      return stringify<CHARACTERISTICS, MANTISSA, char_t, length + 1u>(
-        number / static_cast<long double>(radix), radix,
-        concatenate(stringify<char_t>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(number, static_cast<long double>(radix)), 36.00L))]), string)
-      );
-    }
-
-    template <bool CHARACTERISTICS, bool MANTISSA, typename char_t, std::size_t length>
-    constexpr typename assert_t<length != LDBL_MANT_DIG && (false == CHARACTERISTICS && true == MANTISSA), string_t<char_t, LDBL_MANT_DIG> >::type stringify(long double const number, unsigned long long const radix, string_t<char_t, length> const& string) {
-      return stringify<CHARACTERISTICS, MANTISSA, char_t, length + 1u>(
-        number * static_cast<long double>(radix), radix,
-        concatenate(string, stringify<char_t>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(modulus(number * static_cast<long double>(radix), static_cast<long double>(radix)), 36.00L))]))
-      );
-    }
-
-    template <typename char_t>
-    constexpr string_t<char_t, LDBL_DIG + LDBL_MANT_DIG + 2u> stringify(long double const number, unsigned long long const radix) {
-      return (0.00L > number
-        ? concatenate(
-          concatenate(stringify<char_t>('-'), stringify<true, false>(-number, radix, stringify<char_t>())),
-          concatenate(stringify<char_t>('.'), stringify<false, true>(-number, radix, stringify<char_t>()))
-        )
-
-        : concatenate(
-          concatenate(stringify<char_t>('0'), stringify<true, false>(+number, radix, stringify<char_t>())),
-          concatenate(stringify<char_t>('.'), stringify<false, true>(+number, radix, stringify<char_t>()))
-        )
-      );
-    }
-  #endif
-
-  template <typename char_t, std::size_t size, std::size_t capacity> // --> unsigned char[]
-  constexpr typename assert_t<capacity == size * countof<UCHAR_MAX, 16uLL, 0u>::value, string_t<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> >::type stringify(unsigned char const[], unsigned char const[], string_t<char_t, capacity> const& string) {
-    return string;
+    return x0;
   }
 
-  template <typename char_t, std::size_t size, std::size_t capacity>
-  constexpr typename assert_t<capacity != size * countof<UCHAR_MAX, 16uLL, 0u>::value, string_t<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> >::type stringify(unsigned char const current[], unsigned char const end[], string_t<char_t, capacity> const& string) {
-    return current != end ? stringify<char_t, size, capacity + countof<UCHAR_MAX, 16uLL, 0u>::value>(
-      current - 1, end, concatenate<char_t>(string, resize<countof<UCHAR_MAX, 16uLL, 0u>::value>(
-        shift(stringify<char_t>(static_cast<unsigned long long>(*current), 16uLL), ULLONG_DIG - countof<UCHAR_MAX, 16uLL, 0u>::value)
-      ))
-    ) : resize<size * countof<UCHAR_MAX, 16uLL, 0u>::value>(string);
+  return s;
+}
+
+template <typename type>
+constexpr type* get(type* const pointer) {
+  type *current = pointer;
+  enum { DOUBLE, RADIX, SQUARE } factor = DOUBLE;
+  std::size_t increment = 1u;
+  type *recent = current;
+  uintptr_t value = 0u;
+  unsigned short count = 0u;
+
+  while (count != 1uLL << 15uLL /* 18uLL */ && NULL != current) {
+    ++count;
+    // std::printf("[PROGRESS #%u]: (%s, %u) %u -> (%u, %u)" "\r\n", count, DOUBLE == factor ? "x 2" : RADIX == factor ? "x10" : "x N", increment, (uintptr_t) pointer, (uintptr_t) recent, (uintptr_t) current);
+    increment = 4243524u;
+    recent = current;
+    current -= increment;
+    if (NULL == current) return current;
+
+    // if (static_cast<type*>(NULL) > current || current > pointer) {
+    //   current = recent;
+    //   increment >>= 2u;
+    //   if (0u == increment) increment = 1u;
+    //   // std::printf("[RESET    #%u]: (%s, %u) %u -> (%u, %u)" "\r\n", count, DOUBLE == factor ? "x 2" : RADIX == factor ? "x10" : "x N", increment, (uintptr_t) pointer, (uintptr_t) recent, (uintptr_t) current);
+    //   factor = DOUBLE;
+    //   continue;
+    // }
+
+    // switch (factor) {
+    //   case DOUBLE: {
+    //     if (increment < SIZE_MAX / 2u) {
+    //       increment *= 2u;
+    //       if (increment < SIZE_MAX / 10u) factor = RADIX;
+    //     }
+    //   } break;
+
+    //   case RADIX: {
+    //     if (increment < SIZE_MAX / 10u) {
+    //       increment *= 10u;
+    //       if (increment < (SIZE_MAX >> ((CHAR_BIT * sizeof(std::size_t)) / 2u))) factor = SQUARE;
+    //     } else factor = DOUBLE;
+    //   } break;
+
+    //   case SQUARE: {
+    //     if (increment < (SIZE_MAX >> ((CHAR_BIT * sizeof(std::size_t)) / 2u))) {
+    //       increment *= increment;
+    //     } else factor = DOUBLE;
+    //   } break;
+    // }
   }
 
-  template <typename char_t, std::size_t size>
-  constexpr string_t<char_t, size * countof<UCHAR_MAX, 16uLL, 0u>::value> stringify(unsigned char const bytes[]) {
-    return stringify<char_t, size, 0u>((bytes + size) - 1, bytes - 1, stringify<char_t>());
-  }
+  static_cast<void>(count);
+  static_cast<void>(current);
+  static_cast<void>(factor);
+  static_cast<void>(increment);
+  static_cast<void>(recent);
+  static_cast<void>(value);
 
-  template <typename char_t> // --> void*
-  constexpr string_t<char_t, UINTPTR_DIG + 3u> stringify(void* const pointer) {
-    return concatenate(
-      0 > static_cast<unsigned char*>(pointer) - static_cast<unsigned char*>(NULL) ?
-        string_t<char_t, 3u>('-', '0', 'x') :
-        string_t<char_t, 3u>('0', 'x', '0'),
-      reverse(resize<UINTPTR_DIG>(reverse(stringify<char_t>(static_cast<unsigned long long>((static_cast<unsigned char*>(pointer) - static_cast<unsigned char*>(NULL)) / sizeof(unsigned char)), 16uLL))))
-    );
-  }
-
-  template <typename char_t, std::size_t size> // --> void (*)(…)
-  constexpr string_t<char_t, 2u + (size * countof<UCHAR_MAX, 16uLL, 0u>::value)> stringify(void const* const pointer) {
-    return concatenate(string_t<char_t, 2u>('0', 'h'), stringify<char_t, size>(static_cast<unsigned char const*>(pointer)));
-  }
-}
-
-// ... --> flush(…)
-template <typename char_t, std::size_t capacity>
-static std::size_t flush(FILE *const stream, string_t<char_t, capacity> const& string) {
-  return std::fwrite(string.value, sizeof(char_t), capacity, stream);
-}
-
-template <typename char_t, std::size_t capacity>
-static std::size_t flush(string_t<char_t, capacity> const& string) {
-  return flush(stdout, string);
-}
-
-// ... --> print(…)
-template <std::size_t capacity>
-constexpr string_t<char, capacity> print(char const (&string)[capacity]) {
-  return stringify<char>(string);
-}
-
-#if defined(__cplusplus) && __cplusplus >= 202002L
- template <std::size_t capacity>
- constexpr string_t<char8_t, capacity> print(char8_t const (&string)[capacity]) {
-  return stringify<char8_t>(string);
- }
-#endif
-
-#if defined(__cplusplus) && __cplusplus >= 201103L
- template <std::size_t capacity>
- constexpr string_t<char16_t, capacity> print(char16_t const (&string)[capacity]) {
-  return stringify<char16_t>(string);
- }
-
- template <std::size_t capacity>
- constexpr string_t<char32_t, capacity> print(char32_t const (&string)[capacity]) {
-  return stringify<char32_t>(string);
- }
-#endif
-
-template <std::size_t capacity>
-constexpr string_t<wchar_t, capacity> print(wchar_t const (&string)[capacity]) {
-  return stringify<wchar_t>(string);
-}
-
-template <typename char_t>
-constexpr string_t<char_t, 5u> print(bool const boolean) {
-  return stringify<char_t>(boolean);
-}
-
-template <typename char_t>
-constexpr string_t<char_t, 1u> print(char const character) {
-  return stringify<char_t>(character);
-}
-
-template <typename char_t>
-constexpr string_t<char_t, LDBL_DIG + LDBL_MANT_DIG + 2u> print(long double const number) {
-  return stringify<char_t>(number, 10uLL);
-}
-
-template <typename char_t>
-constexpr string_t<char_t, ULLONG_DIG + 1u> print(long long const integer) {
-  return concatenate(
-    stringify<char_t>(0LL > integer ? '-' : '0'),
-    resize<ULLONG_DIG>(shift(stringify<char_t>(static_cast<unsigned long long>(0LL > integer ? -integer : integer), 10uLL), ULLONG_DIG - lengthof(static_cast<signed long long>(integer))))
-  );
-}
-
-template <typename char_t>
-constexpr string_t<char_t, ULLONG_DIG> print(unsigned long long const integer) {
-  return shift(stringify<char_t>(static_cast<unsigned long long>(integer), 10uLL), ULLONG_DIG - lengthof(static_cast<unsigned long long>(integer)));
-}
-
-template <typename char_t, typename type>
-constexpr typename assert_t<is_function_pointer<type>::value, string_t<char_t, 2u + (countof<UCHAR_MAX, 16uLL, 0u>::value * sizeof(type))> >::type print(type const pointer) {
-  return stringify<char_t, sizeof(type)>(static_cast<void const*>(&pointer));
-}
-
-template <typename char_t, typename type>
-constexpr typename assert_t<is_object_pointer<type>::value, string_t<char_t, UINTPTR_DIG + 3u> >::type print(type const pointer) {
-  return stringify<char_t>(const_cast<void*>(static_cast<void const*>(pointer)));
-}
-
-template <typename char_t, typename type, typename... types> constexpr string_t<char_t, 1u> print(type (&)(types...)) = delete;
-template <typename char_t, typename type, typename... types> constexpr string_t<char_t, 1u> print(type (&)(types..., ...)) = delete;
-#if __cplusplus >= 201703L
-  template <typename char_t, typename type, typename... types> constexpr string_t<char_t, 1u> print(type (&)(types...) noexcept) = delete;
-  template <typename char_t, typename type, typename... types> constexpr string_t<char_t, 1u> print(type (&)(types..., ...) noexcept) = delete;
-#endif
-
-// ... --> print(…)
-template <typename char_t>
-constexpr string_t<char_t, DBL_DIG + DBL_MANT_DIG + 2u> print(double const number) {
-  return print<char_t>(static_cast<long double>(number));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, FLT_DIG + FLT_MANT_DIG + 2u> print(float const number) {
-  return print<char_t>(static_cast<long double>(number));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, UINT_DIG + 1u> print(int const integer) {
-  return print<char_t>(static_cast<long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, ULONG_DIG + 1u> print(long const integer) {
-  return print<char_t>(static_cast<long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, USHRT_DIG + 1u> print(short const integer) {
-  return print<char_t>(static_cast<long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, UCHAR_DIG + 1u> print(signed char const integer) {
-  return print<char_t>(static_cast<long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, UCHAR_DIG> print(unsigned char const integer) {
-  return print<char_t>(static_cast<unsigned long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, UINT_DIG> print(unsigned int const integer) {
-  return print<char_t>(static_cast<unsigned long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, ULONG_DIG> print(unsigned long const integer) {
-  return print<char_t>(static_cast<unsigned long long>(integer));
-}
-
-template <typename char_t>
-constexpr string_t<char_t, USHRT_DIG> print(unsigned short const integer) {
-  return print<char_t>(static_cast<unsigned long long>(integer));
-}
-
-template <typename char_t, std::size_t capacity>
-constexpr typename assert_t<false != is_character<char_t>::value, string_t<char_t, capacity> >::type print(char_t const (&string)[capacity]) {
-  return print<capacity>(string);
-}
-
-/* Main ->> */
-struct character {
-  unsigned int value;
-  constexpr character(unsigned int const value) : value(value) {}
-
-  // ...
-  friend void print(struct character const&) {}
-};
-
-constexpr static int const      array[1]   = {0};
-constexpr static bool const     boolean    = true;
-constexpr static char const     character  = 'L';
-constexpr static char const     constant[] = "Hello, World!";
-constexpr static double const   decimal    = 420.69;
-constexpr static int            function() { return 0x0; }
-struct object { constexpr int   member() const volatile { return 0x0; } };
-constexpr static char           modifiable[] = "Hello, World!";
-constexpr static signed const   negative   = -1337;
-constexpr static void const    *pointer    = static_cast<void const*>("Hello, World!");
-constexpr static unsigned const positive   = 1337u;
-constexpr static wchar_t const  unicode[]  = L"Hello, World!";
-
-// ...
-template <std::size_t capacity>
-constexpr struct character const (&print(struct character const (&characters)[capacity]))[capacity] {
-  return characters;
+  return current;
 }
 
 int main() {
-  // ❌ array ->> conversion from `void*` and null pointer arithmetic disallowed
-  auto const arrayPointerString = print<char>(&array);
-  std::printf("[int const (*)[]]  : \"%p\" -> \"%.*s\"" "\r\n", static_cast<void const*>(&array), static_cast<int>(UINTPTR_DIG + 3u), arrayPointerString.value);
+  constexpr static char const string[] = "Hello, World!";
+  // constexpr uintptr_t address = get(string);
+  constexpr static char const *address = get(string);
 
-  // ✅ boolean
-  constexpr auto const booleanString = print<char>(boolean);
-  std::printf("[bool]             : \"%4.5s\" -> \"%.*s\"" "\r\n", boolean ? "true" : "false", 5u, booleanString.value);
-
-  // ✅ character
-  constexpr auto const characterString = print<char>(character);
-  std::printf("[char]             : \"%c\" -> \"%.*s\"" "\r\n", character, 1u, characterString.value);
-
-  // ✅ constant
-  constexpr auto constantString = print<char>(constant);
-  std::printf("[char const []]    : \"%s\" -> \"%s\"" "\r\n", constant, constantString.value);
-
-  // ✅ decimal
-  constexpr auto decimalString = print<char>(decimal);
-  std::printf("[double]           : \"%lf\" -> \"%.*s\"" "\r\n", decimal, static_cast<int>(DBL_DIG + DBL_MANT_DIG + 2u), decimalString.value);
-
-  // ❌ function ->> conversion from `void*` and null pointer arithmetic disallowed
-  auto const functionPointerString = print<char>(&function);
-
-  std::printf("[int (*)()]        : \"%p\"" " ", reinterpret_cast<void*>(&function));
-  std::printf("\"0n");
-    constexpr int (*const functionAddress)() = &function;
-    unsigned long long functionAddressValue = 0uLL;
-
-    for (unsigned char const *iterator = static_cast<unsigned char const*>(static_cast<void const*>(&functionAddress)), *const end = iterator + sizeof(int (*)()); end != iterator; ++iterator)
-    functionAddressValue += *iterator << (CHAR_BIT * (sizeof(int (*)()) - (end - iterator))); // 0..n
-  std::printf("%p\"" " ", reinterpret_cast<void*>(functionAddressValue));
-  std::printf("\"0n");
-    for (unsigned char const *const end = static_cast<unsigned char const*>(static_cast<void const*>(&functionAddress)), *iterator = end + sizeof(int (*)()); end != iterator--; ) {
-      std::putchar("0123456789ABCDEF"[(*iterator / 0x10u) % 16u]);
-      std::putchar("0123456789ABCDEF"[(*iterator / 0x01u) % 16u]);
-    }
-  std::printf("\"" " ");
-  std::printf("-> \"%.*s\"" "\r\n", static_cast<int>(sizeof(functionPointerString)), functionPointerString.value);
-
-  // ❌ member ->> conversion from `void*` and null pointer arithmetic disallowed
-  auto const memberPointerString = print<char>(&object::member);
-  std::printf("[int (object::*)()]: \"");
-    union {
-      int (object::* member)() const volatile;
-      unsigned char bytes[sizeof(int (object::*)() const volatile)];
-    } memberAddressBytes;
-    memberAddressBytes.member = &object::member;
-
-    for (unsigned char const *const end = memberAddressBytes.bytes, *iterator = end + sizeof(int (object::*)()); end != iterator--; ) {
-      std::putchar("0123456789ABCDEF"[(*iterator / 0x10u) % 16u]);
-      std::putchar("0123456789ABCDEF"[(*iterator / 0x01u) % 16u]);
-    }
-  std::printf("\"" " ");
-  std::printf("\"0n");
-    constexpr int (object::*const memberAddress)() const volatile = &object::member;
-    unsigned long long memberAddressValue = 0uLL;
-
-    for (unsigned char const *iterator = static_cast<unsigned char const*>(static_cast<void const*>(&memberAddress)), *const end = iterator + sizeof(int (object::*)() const volatile); end != iterator; ++iterator)
-    memberAddressValue += *iterator << (CHAR_BIT * (sizeof(int (object::*)() const volatile) - (end - iterator))); // 0..n
-  std::printf("%p\"" " ", reinterpret_cast<void*>(memberAddressValue));
-  std::printf("\"0n");
-    for (unsigned char const *const end = static_cast<unsigned char const*>(static_cast<void const*>(&memberAddress)), *iterator = end + sizeof(int (object::*)() const volatile); end != iterator--; ) {
-      std::putchar("0123456789ABCDEF"[(*iterator / 0x10u) % 16u]);
-      std::putchar("0123456789ABCDEF"[(*iterator / 0x01u) % 16u]);
-    }
-  std::printf("\"" " ");
-  std::printf("-> \"%.*s\"" "\r\n", static_cast<int>(sizeof(memberPointerString)), memberPointerString.value);
-
-  // ✅ modifiable
-  constexpr auto modifiableString = print<char>(const_cast<char (&)[14]>(modifiable));
-  std::printf("[char []]          : \"%s\" -> \"%s\"" "\r\n", modifiable, modifiableString.value);
-
-  // ✅ negative
-  constexpr auto const negativeString = print<char>(negative);
-  std::printf("[signed int]       : \"%i\" -> \"%.*s\"" "\r\n", negative, static_cast<int>(UINT_DIG + 1u), negativeString.value);
-
-  // ❌ pointer ->> conversion from `void*` and null pointer arithmetic disallowed
-  auto const pointerString = print<char>(pointer);
-  std::printf("[void const*]      : \"%p\" -> \"%.*s\"" "\r\n", pointer, static_cast<int>(UINTPTR_DIG + 3u), pointerString.value);
-
-  // ✅ positive
-  constexpr auto const positiveString = print<char>(positive);
-  std::printf("[unsigned int]     : \"%u\" -> \"%.*s\"" "\r\n", positive, static_cast<int>(UINT_DIG), positiveString.value);
-
-  // ✅ positive
-  constexpr auto const unicodeString = print<wchar_t>(unicode);
-  std::wprintf(L"[wchar_t const []] : \"%ls\" -> \"%ls\"" L"\r\n", unicode, unicodeString.value);
+  std::printf("[+]: %u, [-]: %u" "\r\n", (uintptr_t) static_cast<void const*>(string), (uintptr_t) static_cast<void const*>(string - (2u * (string - static_cast<char const*>(NULL)))));
+  std::printf("[+]: %u", (uintptr_t) address);
+  // std::printf("[+]: %u", (uintptr_t) static_cast<unsigned char*>(NULL) + address);
 }
