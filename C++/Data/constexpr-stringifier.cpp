@@ -226,7 +226,6 @@ namespace {
   union remove_volatile<base volatile> { typedef base type; };
 }
 
-#include <iostream>
 namespace {
   constexpr static long double clamp(long double const number, long double const maximum) noexcept {
     return number < maximum ? number : maximum;
@@ -241,17 +240,17 @@ namespace {
   constexpr static type instanceof() noexcept;
 
   // ...
-  constexpr long double ipow(long double const number, unsigned long long exponent) noexcept {
+  constexpr static long double ipow(long double const number, unsigned long long exponent) noexcept {
     return 0uLL != exponent ? number * ipow(number, exponent - 1uLL) : 1.0L;
   }
 
-  constexpr unsigned long long ipow(unsigned long long const number, unsigned long long exponent) noexcept {
+  constexpr static unsigned long long ipow(unsigned long long const number, unsigned long long exponent) noexcept {
     return 0uLL != exponent ? number * ipow(number, exponent - 1uLL) : 1uLL;
   }
 
   // ...
   template <unsigned long long radix>
-  constexpr unsigned short lengthof(long double const number, unsigned long long base = radix, unsigned char const count = 1u) noexcept {
+  constexpr static unsigned short lengthof(long double const number, unsigned long long base = radix, unsigned char const count = 1u) noexcept {
     return 0.1L < number ? count + (
       base < ULLONG_MAX / ULONG_MAX && 1.0L < number / (base * base)
       ? lengthof<radix>(number / (base * base ), base * base , 2u * count) :
@@ -264,34 +263,281 @@ namespace {
   }
 
   template <unsigned long long radix>
-  constexpr unsigned char lengthof(unsigned long long const integer) noexcept {
+  constexpr static unsigned char lengthof(unsigned long long const integer) noexcept {
     return 0uLL != integer ? 1u + lengthof<radix>(integer / radix) : 0u;
+  }
+}
+
+/* ... [Interface] */
+namespace string {
+  template <typename...>
+  union assess_types;
+
+  template <typename, typename...>
+  union resolve_t;
+
+  template <typename, std::size_t>
+  union string_t;
+}
+
+namespace string {
+  template <typename char_t, std::size_t offsetA, std::size_t offsetB, std::size_t capacityA, std::size_t capacityB>
+  constexpr typename conditional_t<0u == capacityA || 0u == capacityB || (capacityA <= offsetA || capacityB <= offsetB), bool>::type compare(string_t<char_t, capacityA> const&, string_t<char_t, capacityB> const&) {
+    return false;
+  }
+
+  template <typename char_t, std::size_t offsetA, std::size_t offsetB, std::size_t capacityA, std::size_t capacityB>
+  constexpr typename conditional_t<0u != capacityA && 0u != capacityB && (capacityA > offsetA && capacityB > offsetB), bool>::type compare(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) {
+    return stringA.value[offsetA] == stringB.value[offsetB] && (
+      (capacityA > offsetA || capacityB > offsetB) ||
+      compare<char_t, capacityA, capacityB, offsetA + 1u, offsetB + 1u>(stringA, stringB)
+    );
   }
 
   // ...
-  template <unsigned long long radix>
-  void print(long double const number, long double const factor) noexcept {
-    if (0.1L < number) {
-      std::putchar("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(number / factor, 36.0L))]);
-      print<radix>(number - (
-        factor * static_cast<unsigned char>(number / factor)
-      ), factor / radix);
-    }
+  template <typename char_t, std::size_t capacity>
+  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string) noexcept {
+    return string;
   }
 
-  template <unsigned long long radix>
-  void print(long double const number) noexcept {
-    return print<radix>(number, ipow(static_cast<long double>(radix), lengthof<radix>(number) - 2u));
+  template <typename char_t>
+  constexpr string_t<char_t, 0u> concatenate(string_t<char_t, 0u> const, string_t<char_t, 0u> const) noexcept {
+    return {};
+  }
+
+  template <typename char_t, std::size_t capacity>
+  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, 0u> const, string_t<char_t, capacity> const& string) noexcept {
+    return string;
+  }
+
+  template <typename char_t, std::size_t capacity>
+  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string, string_t<char_t, 0u> const) noexcept {
+    return string;
+  }
+
+  template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... indexesA, std::size_t... indexesB>
+  constexpr string_t<char_t, capacityA + capacityB> concatenate(index_sequence<0u, indexesA...> const, index_sequence<0u, indexesB...> const, string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) noexcept {
+    return {stringA.value[indexesA]..., stringB.value[indexesB]...};
+  }
+
+  template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... capacities>
+  constexpr string_t<char_t, capacityA + capacityB + integer_collection<capacities...>::total> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, string_t<char_t, capacities> const&... strings) noexcept {
+    return concatenate(concatenate(index_sequence<capacityA>(), index_sequence<capacityB>(), stringA, stringB), strings...);
+  }
+
+  // ...
+  template <typename char_t, std::size_t length, std::size_t capacity>
+  constexpr typename conditional_t<capacity == length, string_t<char_t, length> const&>::type resize(string_t<char_t, capacity> const& string) noexcept {
+    return string;
+  }
+
+  template <typename char_t, std::size_t length, std::size_t capacity>
+  constexpr typename conditional_t<capacity != length, string_t<char_t, length> >::type resize(string_t<char_t, capacity> const& string) noexcept {
+    return {string};
+  }
+
+  // ...
+  template <typename char_t>
+  constexpr string_t<char_t, 0u> const reverse(string_t<char_t, 0u> const string) noexcept {
+    return string;
+  }
+
+  template <typename char_t>
+  constexpr string_t<char_t, 1u> const& reverse(string_t<char_t, 1u> const& string) noexcept {
+    return string;
+  }
+
+  template <typename char_t, std::size_t capacity, std::size_t... indexes>
+  constexpr string_t<char_t, capacity> reverse(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+    return {string.value[capacity - indexes - 1u]...};
+  }
+
+  template <typename char_t, std::size_t capacity>
+  constexpr string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string) noexcept {
+    return reverse(index_sequence<capacity>(), string);
+  }
+
+  // ...
+  template <typename char_t, std::size_t count, std::size_t capacity>
+  constexpr typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_begin(string_t<char_t, capacity> const&) noexcept {
+    return {};
+  }
+
+  template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
+  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+    return {string.value[count + indexes]...};
+  }
+
+  template <typename char_t, std::size_t count, std::size_t capacity>
+  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(string_t<char_t, capacity> const& string) noexcept {
+    return slice_begin<char_t, count>(index_sequence<capacity - count>(), string);
+  }
+
+  // ...
+  template <typename char_t, std::size_t count, std::size_t capacity>
+  constexpr typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_end(string_t<char_t, capacity> const&) noexcept {
+    return {};
+  }
+
+  template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
+  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+    return {string.value[indexes]...};
+  }
+
+  template <typename char_t, std::size_t count, std::size_t capacity>
+  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(string_t<char_t, capacity> const& string) noexcept {
+    return slice_end<char_t, count>(index_sequence<capacity - count>(), string);
+  }
+
+  // ...
+  template <typename char_t, std::size_t count, std::size_t capacity>
+  constexpr typename conditional_t<(capacity <= count * 2u), string_t<char_t, 0u> >::type slice(string_t<char_t, capacity> const&) noexcept {
+    return {};
+  }
+
+  template <typename char_t, std::size_t count, std::size_t capacity>
+  constexpr typename conditional_t<(capacity > count * 2u), string_t<char_t, capacity - (count * 2u)> >::type slice(string_t<char_t, capacity> const& string) noexcept {
+    return slice_begin<char_t, count, capacity - count>(slice_end<char_t, count, capacity>(string));
+  }
+
+  // ...
+  template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
+  constexpr typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
+    return string;
+  }
+
+  template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
+  constexpr typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
+    return compare<char_t, 0u, 0u>(string, search) ? resize<char_t, capacity>(trim_begin<char_t, capacity - searchCapacity, searchCapacity>(slice_begin<char_t, searchCapacity>(string), search)) : string;
+  }
+
+  // ...
+  template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
+  constexpr typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
+    return string;
+  }
+
+  template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
+  constexpr typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
+    return compare<char_t, capacity - searchCapacity, 0u>(string, search) ? resize<char_t, capacity>(trim_end<char_t, capacity - searchCapacity, searchCapacity>(slice_end<char_t, searchCapacity>(string), search)) : string;
+  }
+
+  // ...
+  template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
+  constexpr string_t<char_t, capacity> trim(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
+    return trim_begin<char_t, capacity, searchCapacity>(trim_end<char_t, capacity, searchCapacity>(string, search), search);
   }
 }
+
+namespace string {
+  template <typename char_t, std::size_t length>
+  union string_t {
+    template <typename, std::size_t>
+    friend union string_t;
+
+    private:
+      typedef char_t const (&type)[length];
+      char_t const value[length];
+
+      // ... ->> empty string
+      template <std::size_t... indexes>
+      constexpr string_t(index_sequence<0u, indexes...> const) noexcept(noexcept(char_t('\0'))) :
+        value{"\0"[indexes - indexes]...}
+      {}
+
+      // ... ->> equal string
+      template <std::size_t... indexes>
+      constexpr string_t(index_sequence<0u, indexes...> const, string_t<char_t, length> const& string) noexcept(noexcept(char_t(instanceof<char_t const&>()))) :
+        value{string.value[indexes]...}
+      {}
+
+      // ... ->> smaller string
+      template <std::size_t capacity, std::size_t... nulIndexes, std::size_t... indexes>
+      constexpr string_t(index_sequence<0u, nulIndexes...> const, index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept(noexcept(char_t('\0')) && noexcept(char_t(instanceof<char_t const&>()))) :
+        value{string.value[indexes]..., "\0"[nulIndexes - nulIndexes]...}
+      {}
+
+    public:
+      // ... ->> empty string
+      constexpr string_t() noexcept(noexcept(string_t<char_t, length>(index_sequence<length>()))) :
+        string_t<char_t, length>::string_t(index_sequence<length>())
+      {}
+
+      // ... ->> null string
+      constexpr string_t(string_t<char_t, 0u> const) noexcept(noexcept(string_t<char_t, length>())) :
+        string_t<char_t, length>::string_t()
+      {}
+
+      // ... ->> equal string
+      constexpr string_t(string_t<char_t, length> const& string) noexcept(noexcept(string_t<char_t, length>(index_sequence<length>(), instanceof<string_t<char_t, length> const&>()))) :
+        string_t<char_t, length>::string_t(index_sequence<length>(), string)
+      {}
+
+      // ... ->> bigger string
+      template <std::size_t capacity>
+      constexpr string_t(string_t<char_t, capacity> const& string, typename conditional_t<(capacity > length), unsigned char>::type const = 0x0u) noexcept(noexcept(string_t<char_t, length>(string::slice_end<char_t, capacity - length>(instanceof<string_t<char_t, capacity> const&>())))) :
+        string_t<char_t, length>::string_t(string::slice_end<char_t, capacity - length>(string))
+      {}
+
+      // ... ->> smaller string
+      template <std::size_t capacity>
+      constexpr string_t(string_t<char_t, capacity> const& string, typename conditional_t<(capacity < length), unsigned char>::type const = 0x0u) noexcept(noexcept(string_t<char_t, length>(index_sequence<length - capacity>(), index_sequence<capacity>(), instanceof<string_t<char_t, capacity> const&>()))) :
+        string_t<char_t, length>::string_t(index_sequence<length - capacity>(), index_sequence<capacity>(), string)
+      {}
+
+      // ... ->> equal character-by-character
+      template <typename... chars_t>
+      constexpr string_t(typename conditional_t<length == 1u + sizeof...(chars_t) && (is_same<char, chars_t...>::value || is_same<char_t, chars_t...>::value), char_t>::type const& character, chars_t const&... characters) noexcept(noexcept(char_t(instanceof<char_t const&>()))) :
+        value{character, characters...}
+      {}
+
+      // ... ->> more/ less character-by-character
+      template <typename... chars_t>
+      constexpr string_t(typename conditional_t<length != 1u + sizeof...(chars_t) && (is_same<char, chars_t...>::value || is_same<char_t, chars_t...>::value), char_t>::type const& character, chars_t const&... characters) noexcept(noexcept(string_t<char_t, length>(instanceof<string_t<char_t, 1u + sizeof...(chars_t)> const&>()))) :
+        string_t<char_t, length>::string_t(string_t<char_t, 1u + sizeof...(chars_t)>(character, characters...))
+      {}
+
+      // ...
+      constexpr operator string_t<char_t, length>::type() const noexcept {
+        return this -> value;
+      }
+  };
+
+  template <typename char_t>
+  union string_t<char_t, 0u> {
+    template <typename, std::size_t>
+    friend union string_t;
+
+    public:
+      constexpr string_t(...) noexcept {}
+      constexpr explicit operator char_t const*() const = delete;
+  };
+}
+
+using string::string_t;
+
 
 /* Main */
-#include <ostream>
-
 int main() noexcept {
-  std::cout << std::fixed << "[]: " << LDBL_MAX << std::endl;
+  constexpr auto number  = string::trim<char>(string_t<char, 10u>('0', '0', '0', '0', '4', '2', '0', '0', '0', '0'), string_t<char, 1u>('0'));
+  constexpr auto reverse = string::reverse<char>(string_t<char, 11u>('L', 'o', 'r', 'e', 'm', ' ', 'i', 'p', 's', 'u', 'm'));
+  constexpr auto string  = string::concatenate<char>(string_t<char, 5u>('H', 'e', 'l', 'l', 'o'), string_t<char, 2u>(',', ' '), string_t<char, 7u>('W', 'o', 'r', 'l', 'd', '!'));
 
-  std::printf("%5s", "[]: \"");
-  print<10uLL>(LDBL_MAX);
-  std::putchar('"');
+  // ...
+  std::printf("[]: \"%1.*s\"" "\r\n", sizeof(number ) / sizeof(char), static_cast<char const*>(number));
+  std::printf("[]: \"%1.*s\"" "\r\n", sizeof(reverse) / sizeof(char), static_cast<char const*>(reverse));
+  std::printf("[]: \"%1.*s\"" "\r\n", sizeof(string ) / sizeof(char), static_cast<char const*>(string));
 }
+
+// template <unsigned long long radix>
+// void print(long double const number, long double const factor) noexcept {
+//   if (0.1L < number) {
+//     std::putchar("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(number / factor, 36.0L))]);
+//     print<radix>(number - (factor * static_cast<unsigned char>(number / factor)), factor / radix);
+//   }
+// }
+
+// template <unsigned long long radix>
+// void print(long double const number) noexcept {
+//   return print<radix>(number, ipow(static_cast<long double>(radix), lengthof<radix>(number) - 2u));
+// }
