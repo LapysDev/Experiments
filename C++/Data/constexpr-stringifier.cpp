@@ -241,66 +241,57 @@ namespace {
   constexpr static type instanceof() noexcept;
 
   // ...
-  constexpr static long double BRUH = 1090748135619415929403854669820128643832076401464198256741457059016023337455712704283293103825893418692963576760113404078870676361153328176337335791819453201293648567019545657769144328226729201351285269931196406270260336026480440969175457457972761371674685151986574543459574227180854216484829113510191433779904843906907429804595741823896486554618709041792897601116455079493369203465678175521696079684801558459855685733013566486039513197988373105835405796777612009301237854206866739825615928311027165234639450636848285846852170348270463209512509968067058410966085955092642305503999126249849448107494853836391673145057372360720424255193707930795994041642726134995908110235708792030968796978483320364347331379151776431779364689546781962532253830960478901235464552624735416170604229305704925798779937451183419917038882806949708127234296341630168457825311375190591938038532055263285376832051944705141594038168672584850105364137599906517090544246795943993047853382443557989750469086158380598290390817110977610708111281743815889676802983646880826277564443248867778999148099842770552937804045889869286932455986368097079801144943456484044501617914569752698799884748962448047381796626795915530385096762145649322993391853235732671223977435104048254563405033240765625678089482118619809316732015536399192001899986924279696482083825565538460312042194744384125777271713345334017008082499514551259345301937304531975956497587857813056357548743649252357662809902759268511245695220131755191191178754007743206136757995670389950808100623572398189635493648216795635229703365535937852132326697175361683729221025080424046084144493501461439616151571355283440633672450909832934735553367486392669531577251320558493971529522604761008028335623084242646494241138543741352686635888477730572942421530630919576116463519288087677879156380533208360801124706092572874115363993099695064769539416137905471954311106208397247690315470064624693670821849400811330458450488644556033372998959370992455415748897276576893134153834324225722747123365652717624767122587271223017720171358782071455476769419233276521819687142122867912819815905959535037583849140734279485726542341201739085687544185810789331401517726924334326432746195082356549679165353921485307479751097936588932037591464355435684099891485732748813779092562433055320292412558828857099539048519794851962881214192758407551927719426266389283037153538421489646205312387728364866753456450981869430743506800681796940942358371128706585427614331772236925501440.0L;
+  constexpr long double ipow(long double const number, unsigned long long exponent) noexcept {
+    return 0uLL != exponent ? number * ipow(number, exponent - 1uLL) : 1.0L;
+  }
 
-  template <std::size_t count>
-  union divisor_t {
-    long double const value[count];
+  constexpr unsigned long long ipow(unsigned long long const number, unsigned long long exponent) noexcept {
+    return 0uLL != exponent ? number * ipow(number, exponent - 1uLL) : 1uLL;
+  }
 
-    constexpr divisor_t() noexcept : value{} {}
+  // ...
+  template <unsigned long long radix>
+  constexpr unsigned short lengthof(long double const number, unsigned long long base = radix, unsigned char const count = 1u) noexcept {
+    return 0.1L < number ? count + (
+      base < ULLONG_MAX / ULONG_MAX && 1.0L < number / (base * base)
+      ? lengthof<radix>(number / (base * base ), base * base , 2u * count) :
 
-    template <std::size_t... indexes, typename... types>
-    constexpr divisor_t(index_sequence<0u, indexes...> const, long double const values[], types const... metavalues) noexcept : value{metavalues..., values[indexes]...} {}
-  };
+      base < ULLONG_MAX / radix     && 1.0L < number / (base * radix)
+      ? lengthof<radix>(number / (base * radix), base * radix, 1u + count) :
 
-  template <>
-  union divisor_t<0u> {
-    constexpr divisor_t(...) noexcept {}
-  };
+      lengthof<radix>(number / radix, radix, 1u)
+    ) : 0u;
+  }
 
-  template <std::size_t limit>
-  static long double modulus(
-    long double const dividend, long double const divisor,
-    long double const denominator, divisor_t<limit> const& denominators, std::size_t const count
-  ) noexcept {
-    std::cout << "[...]: " << dividend << ", " << divisor << " [";
-      for (std::size_t iterator = 0u; count != iterator; ++iterator)
-      std::cout << denominators.value[iterator] << ", ";
-    std::cout << "]" "\r\n";
+  template <unsigned long long radix>
+  constexpr unsigned char lengthof(unsigned long long const integer) noexcept {
+    return 0uLL != integer ? 1u + lengthof<radix>(integer / radix) : 0u;
+  }
 
-    return (
-      0.0L == dividend ? 0.0L :
-      0.0L > dividend ? -modulus<limit>(-dividend, divisor, denominator, denominators, count) :
-      0.0L > divisor  ? +modulus<limit>(dividend, -divisor, denominator, denominators, count) :
-      dividend < divisor ? (
-        0u == count && denominator == divisor
-        ? dividend :
+  // ...
+  template <unsigned long long radix>
+  void print(long double const number, long double const factor) noexcept {
+    if (0.1L < number) {
+      std::putchar("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(number / factor, 36.0L))]);
+      print<radix>(number - (
+        factor * static_cast<unsigned char>(number / factor)
+      ), factor / radix);
+    }
+  }
 
-        0u == count && denominator != divisor
-        ? modulus<limit>(dividend, denominator, denominator, denominators, count)
-        : modulus<limit>(dividend, denominators.value[0u], denominator, divisor_t<limit>(index_sequence<limit - 1u>(), denominators.value + 1), count - 1u)
-      ) : (
-        dividend > (divisor * divisor)
-        ? modulus<limit>(dividend - (divisor * divisor), divisor * divisor, denominator, divisor_t<limit>(index_sequence<limit - 1u>(), denominators.value, divisor), count + (count != limit)) :
-
-        dividend > (divisor *   10.0L)
-        ? modulus<limit>(dividend - (divisor *   10.0L), divisor *   10.0L, denominator, divisor_t<limit>(index_sequence<limit - 1u>(), denominators.value, divisor), count + (count != limit)) :
-
-        dividend > (divisor *    2.0L)
-        ? modulus<limit>(dividend - (divisor *    2.0L), divisor *    2.0L, denominator, divisor_t<limit>(index_sequence<limit - 1u>(), denominators.value, divisor), count + (count != limit)) :
-
-        modulus<limit>(dividend - divisor, divisor, denominator, denominators, count)
-      )
-    );
+  template <unsigned long long radix>
+  void print(long double const number) noexcept {
+    return print<radix>(number, ipow(static_cast<long double>(radix), lengthof<radix>(number) - 2u));
   }
 }
 
 /* Main */
-int main() noexcept {
-  std::fixed(std::cout);
-  std::cout << "[]: " << ULONG_MAX << "\r\n";
-  std::scientific(std::cout);
+#include <ostream>
 
-  long double modulo = modulus<256u>(ULONG_MAX, 10.0L, 10.0L, {}, 0u);
-  std::printf("[]: %lf", static_cast<double>(modulo));
+int main() noexcept {
+  std::cout << std::fixed << "[]: " << LDBL_MAX << std::endl;
+
+  std::printf("%5s", "[]: \"");
+  print<10uLL>(LDBL_MAX);
+  std::putchar('"');
 }
