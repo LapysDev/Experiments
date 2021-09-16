@@ -4,8 +4,6 @@
 #include <cstdio>
 #include <stdint.h>
 
-#define private public
-
 /* ... [Utilities] */
 namespace {
   namespace { union void_t; }
@@ -269,25 +267,19 @@ namespace {
 }
 
 /* ... [Interface] */
-namespace string {
-  template <typename...>
-  union assess_types;
+union string {
+  template <typename...> union assess_types;
+  template <typename, typename...> union resolve_t;
+  template <typename, std::size_t> union string_t;
 
-  template <typename, typename...>
-  union resolve_t;
-
-  template <typename, std::size_t>
-  union string_t;
-}
-
-namespace string {
+  /* ... */
   template <typename char_t, std::size_t offsetA, std::size_t offsetB, std::size_t capacityA, std::size_t capacityB>
-  constexpr typename conditional_t<0u == capacityA || 0u == capacityB || (capacityA <= offsetA || capacityB <= offsetB), bool>::type compare(string_t<char_t, capacityA> const&, string_t<char_t, capacityB> const&) {
+  constexpr static typename conditional_t<0u == capacityA || 0u == capacityB || (capacityA <= offsetA || capacityB <= offsetB), bool>::type compare(string_t<char_t, capacityA> const&, string_t<char_t, capacityB> const&) {
     return false;
   }
 
   template <typename char_t, std::size_t offsetA, std::size_t offsetB, std::size_t capacityA, std::size_t capacityB>
-  constexpr typename conditional_t<0u != capacityA && 0u != capacityB && (capacityA > offsetA && capacityB > offsetB), bool>::type compare(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) {
+  constexpr static typename conditional_t<0u != capacityA && 0u != capacityB && (capacityA > offsetA && capacityB > offsetB), bool>::type compare(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) {
     return stringA.value[offsetA] == stringB.value[offsetB] && (
       (capacityA > offsetA || capacityB > offsetB) ||
       compare<char_t, capacityA, capacityB, offsetA + 1u, offsetB + 1u>(stringA, stringB)
@@ -296,142 +288,143 @@ namespace string {
 
   // ...
   template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string) noexcept {
     return string;
   }
 
   template <typename char_t>
-  constexpr string_t<char_t, 0u> concatenate(string_t<char_t, 0u> const, string_t<char_t, 0u> const) noexcept {
+  constexpr static string_t<char_t, 0u> concatenate(string_t<char_t, 0u> const, string_t<char_t, 0u> const) noexcept {
     return {};
   }
 
   template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, 0u> const, string_t<char_t, capacity> const& string) noexcept {
+  constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, 0u> const, string_t<char_t, capacity> const& string) noexcept {
     return string;
   }
 
   template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string, string_t<char_t, 0u> const) noexcept {
+  constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string, string_t<char_t, 0u> const) noexcept {
     return string;
   }
 
   template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... indexesA, std::size_t... indexesB>
-  constexpr string_t<char_t, capacityA + capacityB> concatenate(index_sequence<0u, indexesA...> const, index_sequence<0u, indexesB...> const, string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) noexcept {
+  constexpr static string_t<char_t, capacityA + capacityB> concatenate(index_sequence<0u, indexesA...> const, index_sequence<0u, indexesB...> const, string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) noexcept {
     return {stringA.value[indexesA]..., stringB.value[indexesB]...};
   }
 
   template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... capacities>
-  constexpr string_t<char_t, capacityA + capacityB + integer_collection<capacities...>::total> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, string_t<char_t, capacities> const&... strings) noexcept {
+  constexpr static string_t<char_t, capacityA + capacityB + integer_collection<capacities...>::total> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, string_t<char_t, capacities> const&... strings) noexcept {
     return concatenate(concatenate(index_sequence<capacityA>(), index_sequence<capacityB>(), stringA, stringB), strings...);
   }
 
   // ...
   template <typename char_t, std::size_t length, std::size_t capacity>
-  constexpr typename conditional_t<capacity == length, string_t<char_t, length> const&>::type resize(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<capacity == length, string_t<char_t, length> const&>::type resize(string_t<char_t, capacity> const& string) noexcept {
     return string;
   }
 
   template <typename char_t, std::size_t length, std::size_t capacity>
-  constexpr typename conditional_t<capacity != length, string_t<char_t, length> >::type resize(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<capacity != length, string_t<char_t, length> >::type resize(string_t<char_t, capacity> const& string) noexcept {
     return {string};
   }
 
   // ...
   template <typename char_t>
-  constexpr string_t<char_t, 0u> const reverse(string_t<char_t, 0u> const string) noexcept {
+  constexpr static string_t<char_t, 0u> const reverse(string_t<char_t, 0u> const string) noexcept {
     return string;
   }
 
   template <typename char_t>
-  constexpr string_t<char_t, 1u> const& reverse(string_t<char_t, 1u> const& string) noexcept {
+  constexpr static string_t<char_t, 1u> const& reverse(string_t<char_t, 1u> const& string) noexcept {
     return string;
   }
 
   template <typename char_t, std::size_t capacity, std::size_t... indexes>
-  constexpr string_t<char_t, capacity> reverse(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+  constexpr static string_t<char_t, capacity> reverse(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
     return {string.value[capacity - indexes - 1u]...};
   }
 
   template <typename char_t, std::size_t capacity>
-  constexpr string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string) noexcept {
     return reverse(index_sequence<capacity>(), string);
   }
 
   // ...
   template <typename char_t, std::size_t count, std::size_t capacity>
-  constexpr typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_begin(string_t<char_t, capacity> const&) noexcept {
+  constexpr static typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_begin(string_t<char_t, capacity> const&) noexcept {
     return {};
   }
 
   template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
-  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
     return {string.value[count + indexes]...};
   }
 
   template <typename char_t, std::size_t count, std::size_t capacity>
-  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(string_t<char_t, capacity> const& string) noexcept {
     return slice_begin<char_t, count>(index_sequence<capacity - count>(), string);
   }
 
   // ...
   template <typename char_t, std::size_t count, std::size_t capacity>
-  constexpr typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_end(string_t<char_t, capacity> const&) noexcept {
+  constexpr static typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_end(string_t<char_t, capacity> const&) noexcept {
     return {};
   }
 
   template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
-  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
     return {string.value[indexes]...};
   }
 
   template <typename char_t, std::size_t count, std::size_t capacity>
-  constexpr typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(string_t<char_t, capacity> const& string) noexcept {
     return slice_end<char_t, count>(index_sequence<capacity - count>(), string);
   }
 
   // ...
   template <typename char_t, std::size_t count, std::size_t capacity>
-  constexpr typename conditional_t<(capacity <= count * 2u), string_t<char_t, 0u> >::type slice(string_t<char_t, capacity> const&) noexcept {
+  constexpr static typename conditional_t<(capacity <= count * 2u), string_t<char_t, 0u> >::type slice(string_t<char_t, capacity> const&) noexcept {
     return {};
   }
 
   template <typename char_t, std::size_t count, std::size_t capacity>
-  constexpr typename conditional_t<(capacity > count * 2u), string_t<char_t, capacity - (count * 2u)> >::type slice(string_t<char_t, capacity> const& string) noexcept {
+  constexpr static typename conditional_t<(capacity > count * 2u), string_t<char_t, capacity - (count * 2u)> >::type slice(string_t<char_t, capacity> const& string) noexcept {
     return slice_begin<char_t, count, capacity - count>(slice_end<char_t, count, capacity>(string));
   }
 
   // ...
   template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-  constexpr typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
+  constexpr static typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
     return string;
   }
 
   template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-  constexpr typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
+  constexpr static typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
     return compare<char_t, 0u, 0u>(string, search) ? resize<char_t, capacity>(trim_begin<char_t, capacity - searchCapacity, searchCapacity>(slice_begin<char_t, searchCapacity>(string), search)) : string;
   }
 
   // ...
   template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-  constexpr typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
+  constexpr static typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
     return string;
   }
 
   template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-  constexpr typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
+  constexpr static typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
     return compare<char_t, capacity - searchCapacity, 0u>(string, search) ? resize<char_t, capacity>(trim_end<char_t, capacity - searchCapacity, searchCapacity>(slice_end<char_t, searchCapacity>(string), search)) : string;
   }
 
   // ...
   template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-  constexpr string_t<char_t, capacity> trim(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
+  constexpr static string_t<char_t, capacity> trim(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
     return trim_begin<char_t, capacity, searchCapacity>(trim_end<char_t, capacity, searchCapacity>(string, search), search);
   }
-}
 
-namespace string {
+  /* ... */
   template <typename char_t, std::size_t length>
   union string_t {
+    friend union string;
+
     template <typename, std::size_t>
     friend union string_t;
 
@@ -502,26 +495,24 @@ namespace string {
         return this -> value;
       }
   };
+};
 
-  template <typename char_t>
-  union string_t<char_t, 0u> {
-    template <typename, std::size_t>
-    friend union string_t;
+template <typename char_t>
+union string::string_t<char_t, 0u> {
+  template <typename, std::size_t>
+  friend union string_t;
 
-    public:
-      constexpr string_t(...) noexcept {}
-      constexpr explicit operator char_t const*() const = delete;
-  };
-}
-
-using string::string_t;
+  public:
+    constexpr string_t(...) noexcept {}
+    constexpr explicit operator char_t const*() const = delete;
+};
 
 
 /* Main */
 int main() noexcept {
-  constexpr auto number  = string::trim<char>(string_t<char, 10u>('0', '0', '0', '0', '4', '2', '0', '0', '0', '0'), string_t<char, 1u>('0'));
-  constexpr auto reverse = string::reverse<char>(string_t<char, 11u>('L', 'o', 'r', 'e', 'm', ' ', 'i', 'p', 's', 'u', 'm'));
-  constexpr auto string  = string::concatenate<char>(string_t<char, 5u>('H', 'e', 'l', 'l', 'o'), string_t<char, 2u>(',', ' '), string_t<char, 7u>('W', 'o', 'r', 'l', 'd', '!'));
+  constexpr auto number  = string::trim<char>(string::string_t<char, 10u>('0', '0', '0', '0', '4', '2', '0', '0', '0', '0'), string::string_t<char, 1u>('0'));
+  constexpr auto reverse = string::reverse<char>(string::string_t<char, 11u>('L', 'o', 'r', 'e', 'm', ' ', 'i', 'p', 's', 'u', 'm'));
+  constexpr auto string  = string::concatenate<char>(string::string_t<char, 5u>('H', 'e', 'l', 'l', 'o'), string::string_t<char, 2u>(',', ' '), string::string_t<char, 7u>('W', 'o', 'r', 'l', 'd', '!'));
 
   // ...
   std::printf("[]: \"%1.*s\"" "\r\n", sizeof(number ) / sizeof(char), static_cast<char const*>(number));
