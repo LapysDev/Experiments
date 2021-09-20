@@ -1,8 +1,8 @@
 #include <cfloat>
 #include <climits>
-#include <cstddef>
 #include <cstdio>
-#include <stdint.h>
+
+#define MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH 500u /*17u*/
 
 /* ... [Utilities] */
 namespace {
@@ -13,9 +13,10 @@ namespace {
   template <typename> union assess_pointer;
   template <typename> union assess_reference;
   template <typename> union baseof;
+  template <bool...> union boolean_and;
+  template <bool...> union boolean_or;
   template <typename type, type...> struct collection;
   template <bool, typename = void_t, typename = void_t> union conditional_t;
-  template <unsigned long long, unsigned long long> union countof;
   template <std::size_t, std::size_t...> struct index_sequence;
   template <std::size_t...> struct integer_collection;
   template <typename> union is_array;
@@ -28,6 +29,7 @@ namespace {
   template <typename...> union is_same;
   template <typename> union remove_const;
   template <typename> union remove_cv;
+  template <typename> union remove_reference;
   template <typename> union remove_volatile;
 
   // ...
@@ -91,17 +93,35 @@ namespace {
   };
 
   // ...
+  template <>
+  union boolean_and<> {
+    enum { value = true };
+  };
+
+  template <bool assertion, bool... assertions>
+  union boolean_and<assertion, assertions...> {
+    enum { value = assertion && boolean_and<assertions...>::value };
+  };
+
+  // ...
+  template <>
+  union boolean_or<> {
+    enum { value = false };
+  };
+
+  template <bool assertion, bool... assertions>
+  union boolean_or<assertion, assertions...> {
+    enum { value = assertion || boolean_or<assertions...>::value };
+  };
+
+  // ...
   template <typename type, type...>
   struct collection {};
     template <>
-    struct integer_collection<> : public collection<std::size_t> {
-      enum { total = 0u };
-    };
+    struct integer_collection<> : public collection<std::size_t> {};
 
     template <std::size_t integer, std::size_t... integers>
-    struct integer_collection<integer, integers...> : public collection<std::size_t, integer, integers...> {
-      enum { total = integer + integer_collection<integers...>::total };
-    };
+    struct integer_collection<integer, integers...> : public collection<std::size_t, integer, integers...> {};
       template <std::size_t count, std::size_t... indexes>
       struct index_sequence : public index_sequence<count - 1u, count - 1u, indexes...> {};
 
@@ -115,26 +135,6 @@ namespace {
   template <typename base> union conditional_t<true , base> { typedef base type; };
   template <typename true_t, typename false_t> union conditional_t<false, true_t, false_t> { typedef false_t type; };
   template <typename true_t, typename false_t> union conditional_t<true , true_t, false_t> { typedef true_t  type; };
-
-  // ...
-  template <unsigned long long integer, unsigned long long radix>
-  union countof {
-    private:
-      template <unsigned long long current, unsigned char total>
-      union count {
-        friend union countof<integer, radix>;
-        private: enum { value = count<current / radix, 1u + total>::value };
-      };
-
-    public:
-      enum { value = count<integer, 0u>::value };
-  };
-    template <unsigned long long integer, unsigned long long radix>
-    template <unsigned char total>
-    union countof<integer, radix>::count<0uLL, total> {
-      friend union countof<integer, radix>;
-      private: enum { value = total };
-    };
 
   // ...
   template <typename type>
@@ -221,6 +221,12 @@ namespace {
 
   // ...
   template <typename base>
+  union remove_reference {
+    typedef typename assess_reference<base>::type type;
+  };
+
+  // ...
+  template <typename base>
   union remove_volatile { typedef base type; };
 
   template <typename base>
@@ -237,14 +243,52 @@ namespace {
     return integer < maximum ? integer : maximum;
   }
 
+  // ... --> countof(…)
+  template <unsigned long long radix>
+  constexpr static unsigned char countof(unsigned long long const integer) noexcept {
+    return 0uLL != integer ? 1u + countof<radix>(integer / radix) : 0u;
+  }
+
+  template <unsigned long long radix>
+  constexpr static unsigned char countof(long long const integer) noexcept {
+    return countof<radix>(static_cast<unsigned long long>(0LL > integer ? -integer : integer));
+  }
+
+  template <unsigned long long radix>
+  constexpr static unsigned short countof(long double const number, unsigned long long base = radix, unsigned char const count = 1u) noexcept {
+    return (
+      0.0L > number ? countof<radix>(-number, base, count) :
+      0.1L < number ? count + (
+        base < ULLONG_MAX / ULONG_MAX && 1.0L < number / (base * base)
+        ? countof<radix>(number / (base * base ), base * base , 2u * count) :
+
+        base < ULLONG_MAX / radix     && 1.0L < number / (base * radix)
+        ? countof<radix>(number / (base * radix), base * radix, 1u + count) :
+
+        countof<radix>(number / radix, radix, 1u)
+      ) : 0u
+    );
+  }
+
+  template <unsigned long long radix> constexpr static unsigned short countof(double const number) noexcept { return countof<radix>(static_cast<long double>(number)); }
+  template <unsigned long long radix> constexpr static unsigned short countof(float const number) noexcept { return countof<radix>(static_cast<long double>(number)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(int const integer) noexcept { return countof<radix>(static_cast<long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(long const integer) noexcept { return countof<radix>(static_cast<long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(short const integer) noexcept { return countof<radix>(static_cast<long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(signed char const integer) noexcept { return countof<radix>(static_cast<long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(unsigned char const integer) noexcept { return countof<radix>(static_cast<unsigned long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(unsigned int const integer) noexcept { return countof<radix>(static_cast<unsigned long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(unsigned long const integer) noexcept { return countof<radix>(static_cast<unsigned long long>(integer)); }
+  template <unsigned long long radix> constexpr static unsigned char countof(unsigned short const integer) noexcept { return countof<radix>(static_cast<unsigned long long>(integer)); }
+
   // ... --> forward(…)
   template <typename type>
-  constexpr static type& forward(type& reference) noexcept {
-    return reference;
+  constexpr static type&& forward(typename remove_reference<type>::type& reference) noexcept {
+    return static_cast<type&&>(reference);
   }
 
   template <typename type>
-  constexpr static type&& forward(type&& reference) noexcept {
+  constexpr static type&& forward(typename remove_reference<type>::type&& reference) noexcept {
     return reference;
   }
 
@@ -252,32 +296,14 @@ namespace {
   template <typename type>
   constexpr static type instanceof() noexcept;
 
-  // ... --> ipow(…)
-  constexpr static long double ipow(long double const number, unsigned long long exponent) noexcept {
-    return 0uLL != exponent ? number * ipow(number, exponent - 1uLL) : 1.0L;
+  // ... --> sumof(…)
+  constexpr static std::size_t sumof() noexcept {
+    return 0u;
   }
 
-  constexpr static unsigned long long ipow(unsigned long long const number, unsigned long long exponent) noexcept {
-    return 0uLL != exponent ? number * ipow(number, exponent - 1uLL) : 1uLL;
-  }
-
-  // ... --> lengthof(…)
-  template <unsigned long long radix>
-  constexpr static unsigned short lengthof(long double const number, unsigned long long base = radix, unsigned char const count = 1u) noexcept {
-    return 0.1L < number ? count + (
-      base < ULLONG_MAX / ULONG_MAX && 1.0L < number / (base * base)
-      ? lengthof<radix>(number / (base * base ), base * base , 2u * count) :
-
-      base < ULLONG_MAX / radix     && 1.0L < number / (base * radix)
-      ? lengthof<radix>(number / (base * radix), base * radix, 1u + count) :
-
-      lengthof<radix>(number / radix, radix, 1u)
-    ) : 0u;
-  }
-
-  template <unsigned long long radix>
-  constexpr static unsigned char lengthof(unsigned long long const integer) noexcept {
-    return 0uLL != integer ? 1u + lengthof<radix>(integer / radix) : 0u;
+  template <typename... types>
+  constexpr static std::size_t sumof(std::size_t const integer, types&&... integers) noexcept {
+    return integer + sumof(forward<types>(integers)...);
   }
 }
 
@@ -287,357 +313,54 @@ union string {
     template <typename...> union assess_types;
     template <typename, typename...> union resolve_t;
 
+    constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types...))>::typed::type<is_same, char, types...>::value
+    constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types...))>::untyped<std::size_t>::type<index_sequence, sizeof...(types)>::value
+
+    #include <cstdio>
+
+    /* ... */
+    template <bool assertion>
+    union constrain {
+      template <bool = assertion> union typed;
+      template <bool = assertion, typename...> union untyped;
+    };
+
+    template <bool assertion>
+    template <>
+    union constrain<assertion>::typed<true> {
+      template <template <typename...> class trait, typename... types>
+      using type = trait<types...>;
+    };
+
+    template <bool assertion>
+    template <typename... types>
+    union constrain<assertion>::untyped<true, types...> {
+      template <template <types...> class trait, types... parameters>
+      using type = trait<parameters...>;
+    };
+
+    // ...
+    template <typename> union is_void { enum { value = false }; };
+    template <> union is_void<void> { enum { value = true }; };
+
+    template <std::size_t...> union sum;
+    template <std::size_t integer> union sum<integer> { enum { value = integer }; };
+    template <std::size_t integerA, std::size_t integerB, std::size_t... integers> union sum<integerA, integerB, integers...> { enum { value = sumof<integerA + integerB, integers...>::value }; };
+
+    /* Main */
+    int main() noexcept {
+      std::printf("[is_void<int>] : %4.5s" "\r\n", constrain<true>::typed::type<is_void, int>::value  ? "true" : "false");
+      std::printf("[is_void<void>]: %4.5s" "\r\n", constrain<true>::typed::type<is_void, void>::value ? "true" : "false");
+      std::printf("[sum<2, 3>]: %u", constrain<true>::untyped<std::size_t, std::size_t>::type<sum, 2u, 3u>::value);
+    }
+
   public:
     template <typename, std::size_t>
     union string_t;
 
   /* ... */
   private:
-    // ... --> concatenate(…)
-    template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... indexesA, std::size_t... indexesB>
-    constexpr static string_t<char_t, capacityA + capacityB> concatenate(index_sequence<0u, indexesA...> const, index_sequence<0u, indexesB...> const, string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) noexcept {
-      return {stringA.value[indexesA]..., stringB.value[indexesB]...};
-    }
-
-    // ... --> convert(…)
-    template <typename char_t> // --> bool
-    constexpr static string_t<char_t, 5u> convert(bool const boolean) noexcept {
-      return boolean ? string_t<char_t, 5u>('t', 'r', 'u', 'e', '\0') : string_t<char_t, 5u>('f', 'a', 'l', 's', 'e');
-    }
-
-    template <typename char_t> // --> char
-    constexpr static string_t<char_t, 1u> convert(char_t const& character) noexcept {
-      return {character};
-    }
-
-    template <typename char_t, std::size_t capacity, std::size_t... indexes> // --> char []
-    constexpr static string_t<char_t, capacity> convert(index_sequence<0u, indexes...> const, char_t const (&string)[capacity]) noexcept {
-      return {string[indexes]...};
-    }
-
-    #if __cplusplus >= 201402L // --> long double
-    #else
-    #endif
-
-    #if __cplusplus >= 201402L // --> unsigned long long
-      template <typename char_t, unsigned long long radix, unsigned char, std::size_t... indexes>
-      constexpr static string_t<char_t, countof<ULLONG_MAX, radix>::value> convert(index_sequence<0u, indexes...> const, unsigned long long integer, unsigned long long factor) noexcept {
-        char string[] = {"\0"[indexes - indexes]...};
-
-        for (char *iterator = string; 0uLL != integer; ++iterator) {
-          *iterator = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(integer / factor, 36uLL)];
-          integer -= factor * (integer / factor);
-          factor /= radix;
-        }
-
-        return {string[indexes]...};
-      }
-
-      template <typename char_t, unsigned long long radix, unsigned char>
-      constexpr static string_t<char_t, countof<ULLONG_MAX, radix>::value> convert(unsigned long long const integer, unsigned long long const factor) noexcept {
-        return convert<char_t, radix, 0u>(index_sequence<countof<ULLONG_MAX, radix>::value>(), integer, factor);
-      }
-    #else
-      template <typename char_t, unsigned long long radix, unsigned char count>
-      constexpr static typename conditional_t<count == countof<ULLONG_MAX, radix>::value, string_t<char_t, countof<ULLONG_MAX, radix>::value> >::type convert(unsigned long long const, unsigned long long const, string_t<char_t, count> const& string = {}) noexcept {
-        return string;
-      }
-
-      template <typename char_t, unsigned long long radix, unsigned char count>
-      constexpr static typename conditional_t<count != countof<ULLONG_MAX, radix>::value, string_t<char_t, countof<ULLONG_MAX, radix>::value> >::type convert(unsigned long long const integer, unsigned long long const factor, string_t<char_t, count> const& string = {}) noexcept {
-        return 0uLL == integer ? resize<char_t, countof<ULLONG_MAX, radix>::value>(string) : convert<char_t, radix, count + 1u>(
-          integer - (factor * (integer / factor)), factor / radix,
-          concatenate<char_t>(string, convert<char_t>("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[clamp(integer / factor, 36uLL)]))
-        );
-      }
-    #endif
-
-    // ... --> reverse(…)
-    template <typename char_t, std::size_t capacity, std::size_t... indexes>
-    constexpr static string_t<char_t, capacity> reverse(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
-      return {string.value[capacity - indexes - 1u]...};
-    }
-
-    // ... --> slice_begin(…)
-    template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
-    constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
-      return {string.value[count + indexes]...};
-    }
-
-    // ... --> slice_end(…)
-    template <typename char_t, std::size_t count, std::size_t capacity, std::size_t... indexes>
-    constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept {
-      return {string.value[indexes]...};
-    }
-
   public:
-    // ... --> compare(…)
-    template <typename char_t, std::size_t offsetA, std::size_t offsetB, std::size_t capacityA, std::size_t capacityB>
-    constexpr static typename conditional_t<0u == capacityA || 0u == capacityB || (capacityA <= offsetA || capacityB <= offsetB), bool>::type compare(string_t<char_t, capacityA> const&, string_t<char_t, capacityB> const&) {
-      return false;
-    }
-
-    template <typename char_t, std::size_t offsetA, std::size_t offsetB, std::size_t capacityA, std::size_t capacityB>
-    constexpr static typename conditional_t<0u != capacityA && 0u != capacityB && (capacityA > offsetA && capacityB > offsetB), bool>::type compare(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB) {
-      return stringA.value[offsetA] == stringB.value[offsetB] && (
-        (capacityA > offsetA || capacityB > offsetB) ||
-        compare<char_t, capacityA, capacityB, offsetA + 1u, offsetB + 1u>(stringA, stringB)
-      );
-    }
-
-    // ... --> concatenate(…)
-    template <typename char_t, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string) noexcept {
-      return string;
-    }
-
-    template <typename char_t>
-    constexpr static string_t<char_t, 0u> concatenate(string_t<char_t, 0u> const, string_t<char_t, 0u> const) noexcept {
-      return {};
-    }
-
-    template <typename char_t, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, 0u> const, string_t<char_t, capacity> const& string) noexcept {
-      return string;
-    }
-
-    template <typename char_t, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> const& concatenate(string_t<char_t, capacity> const& string, string_t<char_t, 0u> const) noexcept {
-      return string;
-    }
-
-    template <typename char_t, std::size_t capacityA, std::size_t capacityB, std::size_t... capacities>
-    constexpr static string_t<char_t, capacityA + capacityB + integer_collection<capacities...>::total> concatenate(string_t<char_t, capacityA> const& stringA, string_t<char_t, capacityB> const& stringB, string_t<char_t, capacities> const&... strings) noexcept {
-      return concatenate(concatenate(index_sequence<capacityA>(), index_sequence<capacityB>(), stringA, stringB), strings...);
-    }
-
-    // ... --> resize(…)
-    template <typename char_t, std::size_t length, std::size_t capacity>
-    constexpr static typename conditional_t<capacity == length, string_t<char_t, length> const&>::type resize(string_t<char_t, capacity> const& string) noexcept {
-      return string;
-    }
-
-    template <typename char_t, std::size_t length, std::size_t capacity>
-    constexpr static typename conditional_t<capacity != length, string_t<char_t, length> >::type resize(string_t<char_t, capacity> const& string) noexcept {
-      return {string};
-    }
-
-    // ... --> reverse(…)
-    template <typename char_t>
-    constexpr static string_t<char_t, 0u> const reverse(string_t<char_t, 0u> const string) noexcept {
-      return string;
-    }
-
-    template <typename char_t>
-    constexpr static string_t<char_t, 1u> const& reverse(string_t<char_t, 1u> const& string) noexcept {
-      return string;
-    }
-
-    template <typename char_t, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> reverse(string_t<char_t, capacity> const& string) noexcept {
-      return reverse(index_sequence<capacity>(), string);
-    }
-
-    // ... --> slice_begin(…)
-    template <typename char_t, std::size_t count, std::size_t capacity>
-    constexpr static typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_begin(string_t<char_t, capacity> const&) noexcept {
-      return {};
-    }
-
-    template <typename char_t, std::size_t count, std::size_t capacity>
-    constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_begin(string_t<char_t, capacity> const& string) noexcept {
-      return slice_begin<char_t, count>(index_sequence<capacity - count>(), string);
-    }
-
-    // ... --> slice_end(…)
-    template <typename char_t, std::size_t count, std::size_t capacity>
-    constexpr static typename conditional_t<(capacity <= count), string_t<char_t, 0u> >::type slice_end(string_t<char_t, capacity> const&) noexcept {
-      return {};
-    }
-
-    template <typename char_t, std::size_t count, std::size_t capacity>
-    constexpr static typename conditional_t<(capacity > count), string_t<char_t, capacity - count> >::type slice_end(string_t<char_t, capacity> const& string) noexcept {
-      return slice_end<char_t, count>(index_sequence<capacity - count>(), string);
-    }
-
-    // ... --> slice(…)
-    template <typename char_t, std::size_t count, std::size_t capacity>
-    constexpr static typename conditional_t<(capacity <= count * 2u), string_t<char_t, 0u> >::type slice(string_t<char_t, capacity> const&) noexcept {
-      return {};
-    }
-
-    template <typename char_t, std::size_t count, std::size_t capacity>
-    constexpr static typename conditional_t<(capacity > count * 2u), string_t<char_t, capacity - (count * 2u)> >::type slice(string_t<char_t, capacity> const& string) noexcept {
-      return slice_begin<char_t, count, capacity - count>(slice_end<char_t, count, capacity>(string));
-    }
-
-    // ... --> stringify(…)
-    template <typename char_t = void, unsigned long long = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, bool>::type, 5u> stringify(bool const boolean) noexcept {
-      return convert<typename resolve_t<char_t, bool>::type>(boolean);
-    }
-
-    template <typename char_t = void, unsigned long long = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, char>::type, 1u> stringify(char const character) noexcept {
-      return convert<typename resolve_t<char_t, char>::type>(character);
-    }
-
-    template <typename char_t = void, unsigned long long = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, char16_t>::type, 1u> stringify(char16_t const character) noexcept {
-      return convert<typename resolve_t<char_t, char16_t>::type>(character);
-    }
-
-    template <typename char_t = void, unsigned long long = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, char32_t>::type, 1u> stringify(char32_t const character) noexcept {
-      return convert<typename resolve_t<char_t, char32_t>::type>(character);
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, int>::type, 1u + countof<INT_MAX, radix>::value> stringify(int const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, long>::type, 1u + countof<LONG_MAX, radix>::value> stringify(long const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, long double>::type, 2u + LDBL_DIG + LDBL_MANT_DIG> stringify(long double const number) noexcept {
-      return (
-        0.0L == integer
-        ? resize<typename resolve_t<char_t, long double>::type, 2u + LDBL_DIG + LDBL_MANT_DIG>(concatenate(
-          convert<typename resolve_t<char_t, long double>::type>('0'),
-          convert<typename resolve_t<char_t, long double>::type>('.'),
-          convert<typename resolve_t<char_t, long double>::type>('0')
-        ))
-        : (
-          0.0L < integer
-          ? concatenate(stringify<typename resolve_t<char_t, long double>::type>('-'), convert<typename resolve_t<char_t, long double>::type, radix, 0u, 0u>(-number, ipow(static_cast<long double>(radix), lengthof<radix>(-number) - 1u))
-          : concatenate(convert<typename resolve_t<char_t, long double>::type, radix, 0u, 0u>(+number, ipow(static_cast<long double>(radix), lengthof<radix>(+number) - 1u)), stringify<typename resolve_t<char_t, long long>::type>('\0'))
-        ))
-      )
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, long long>::type, 1u + countof<LLONG_MAX, radix>::value> stringify(long long const integer) noexcept {
-      return (
-        0LL > integer
-        ? concatenate(stringify<typename resolve_t<char_t, long long>::type>('-'), stringify<char_t, radix>(static_cast<unsigned long long>(-integer)))
-        : concatenate(stringify<char_t, radix>(static_cast<unsigned long long>(integer)), stringify<typename resolve_t<char_t, long long>::type>('\0'))
-      );
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, short>::type, 1u + countof<SHRT_MAX, radix>::value> stringify(short const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, signed char>::type, 1u + countof<SCHAR_MAX, radix>::value> stringify(signed char const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, unsigned char>::type, countof<UCHAR_MAX, radix>::value> stringify(unsigned char const integer) noexcept {
-      return resize<typename resolve_t<char_t, unsigned char>::type, countof<UCHAR_MAX, radix>::value>(stringify<char_t, radix>(static_cast<unsigned long long>(integer)));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, unsigned int>::type, countof<UINT_MAX, radix>::value> stringify(unsigned int const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<unsigned long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, unsigned long>::type, countof<ULONG_MAX, radix>::value> stringify(unsigned long const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<unsigned long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, unsigned long long>::type, countof<ULLONG_MAX, radix>::value> stringify(unsigned long long const integer) noexcept {
-      return (0uLL == integer
-        ? resize<typename resolve_t<char_t, unsigned long long>::type, countof<ULLONG_MAX, radix>::value>(convert<typename resolve_t<char_t, unsigned long long>::type>('0'))
-        : convert<typename resolve_t<char_t, unsigned long long>::type, radix, 0u>(integer, ipow(radix, lengthof<radix>(integer) - 1u))
-      );
-    }
-
-    template <typename char_t = void, unsigned long long radix = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, unsigned short>::type, countof<USHRT_MAX, radix>::value> stringify(unsigned short const integer) noexcept {
-      return stringify<char_t, radix>(static_cast<unsigned long long>(integer));
-    }
-
-    template <typename char_t = void, unsigned long long = 10uLL>
-    constexpr static string_t<typename resolve_t<char_t, wchar_t>::type, 1u> stringify(wchar_t const character) noexcept {
-      return convert<typename resolve_t<char_t, wchar_t>::type>(character);
-    }
-
-    template <typename char_t, unsigned long long = 10uLL, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> stringify(char_t (&string)[capacity]) noexcept {
-      return convert<char_t>(index_sequence<capacity>(), const_cast<char_t const (&)[capacity]>(string));
-    }
-
-    template <typename char_t, unsigned long long = 10uLL, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> stringify(char_t const (&string)[capacity]) noexcept {
-      return convert<char_t>(index_sequence<capacity>(), string);
-    }
-
-    template <typename char_t, unsigned long long = 10uLL, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> stringify(char_t const volatile (&string)[capacity]) noexcept {
-      return convert<char_t>(index_sequence<capacity>(), string);
-    }
-
-    template <typename char_t, unsigned long long = 10uLL, std::size_t capacity>
-    constexpr static string_t<char_t, capacity> stringify(char_t volatile (&string)[capacity]) noexcept {
-      return convert<char_t>(index_sequence<capacity>(), const_cast<char_t const volatile (&)[capacity]>(string));
-    }
-
-    template <unsigned long long radix = 10uLL, typename typeA, typename typeB, typename... types>
-    constexpr static string_t<typename resolve_t<void, typeA, typeB, types...>::type, sizeof(concatenate(
-      stringify<typename resolve_t<void, typeA, typeB, types...>::type, radix>(instanceof<typeA const&>()),
-      stringify<typename resolve_t<void, typeA, typeB, types...>::type, radix>(instanceof<typeB const&>()),
-      stringify<typename resolve_t<void, typeA, typeB, types...>::type, radix>(instanceof<types&&>())...
-    )) / sizeof(typename resolve_t<void, typeA, typeB, types...>::type)> stringify(typeA const& objectA, typeB const& objectB, types&&... objects) noexcept {
-      return concatenate(
-        stringify<typename resolve_t<void, typeA, typeB, types...>::type, radix>(objectA),
-        stringify<typename resolve_t<void, typeA, typeB, types...>::type, radix>(objectB),
-        stringify<typename resolve_t<void, typeA, typeB, types...>::type, radix>(forward<types>(objects))...
-      );
-    }
-
-    #if __cplusplus >= 202002L
-      template <typename char_t = void> // --> char8_t
-      constexpr static string_t<typename resolve_t<char_t, char8_t>::type, 1u> stringify(char8_t const character) noexcept {
-        return convert<typename resolve_t<char_t, char8_t>::type>(character);
-      }
-    #endif
-
-    // ... --> trim(…)
-    template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-    constexpr static string_t<char_t, capacity> trim(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
-      return trim_begin<char_t, capacity, searchCapacity>(trim_end<char_t, capacity, searchCapacity>(string, search), search);
-    }
-
-    // ... --> trim_begin(…)
-    template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-    constexpr static typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
-      return string;
-    }
-
-    template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-    constexpr static typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_begin(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
-      return compare<char_t, 0u, 0u>(string, search) ? resize<char_t, capacity>(trim_begin<char_t, capacity - searchCapacity, searchCapacity>(slice_begin<char_t, searchCapacity>(string), search)) : string;
-    }
-
-    // ... --> trim_end(…)
-    template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-    constexpr static typename conditional_t<(capacity < searchCapacity || 0u == searchCapacity), string_t<char_t, capacity> const&>::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const&) noexcept {
-      return string;
-    }
-
-    template <typename char_t, std::size_t capacity, std::size_t searchCapacity>
-    constexpr static typename conditional_t<(capacity >= searchCapacity), string_t<char_t, capacity> >::type trim_end(string_t<char_t, capacity> const& string, string_t<char_t, searchCapacity> const& search) noexcept {
-      return compare<char_t, capacity - searchCapacity, 0u>(string, search) ? resize<char_t, capacity>(trim_end<char_t, capacity - searchCapacity, searchCapacity>(slice_end<char_t, searchCapacity>(string), search)) : string;
-    }
 
   /* ... */
   private:
@@ -701,6 +424,8 @@ union string {
     };
 
     // ...
+
+    // ...
     template <typename base, typename...>
     union resolve_t {
       typedef base type;
@@ -718,6 +443,17 @@ union string {
     };
 
   public:
+    template <typename... types>
+    static void print(std::size_t const integer) {
+      std::printf("%u", integer);
+    }
+
+    template <typename... types>
+    static void print(std::size_t const integer, std::size_t const other, types const... others) {
+      std::printf("%u, ", integer);
+      print(other, others...);
+    }
+
     template <typename char_t, std::size_t length>
     union string_t {
       friend union string;
@@ -729,62 +465,72 @@ union string {
         typedef char_t const (&type)[length];
         char_t const value[length];
 
-        // ... ->> empty string
-        template <std::size_t... indexes>
-        constexpr string_t(index_sequence<0u, indexes...> const) noexcept(noexcept(char_t('\0'))) :
-          value{static_cast<char_t>("\0"[indexes - indexes])...}
+        // ...
+        template <std::size_t capacity, std::size_t... indexes>
+        constexpr string_t(string_t<char_t, capacity> const& string, integer_collection<indexes...> const) noexcept :
+          value{string.value[indexes]...}
         {}
 
-        // ... ->> equal string
-        template <std::size_t... indexes>
-        constexpr string_t(index_sequence<0u, indexes...> const, string_t<char_t, length> const& string) noexcept(noexcept(char_t(instanceof<char_t const&>()))) :
-          value{static_cast<char_t>(string.value[indexes])...}
+        template <std::size_t capacity, std::size_t... range, std::size_t... ranges, std::size_t... indexes>
+        string_t(
+          string_t<char_t, capacity> const& string,
+          integer_collection<indexes...> const,
+          index_sequence<0u, range...> const&,
+          index_sequence<ranges> const&... sequences
+        ) noexcept :
+          string_t<char_t, length>::string_t(
+            string, integer_collection<indexes..., (range + sizeof...(indexes))...>(), sequences...
+          )
+        {
+          std::printf("%4s", "[]: ");
+          print(range...);
+          std::printf("%2s", "\r\n");
+        }
+
+        template <std::size_t capacity, std::size_t... indexes>
+        constexpr string_t(
+          typename conditional_t<false == (length > MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH * (1u + sizeof...(indexes))), unsigned char>::type const,
+          string_t<char_t, capacity> const& string,
+          integer_collection<indexes> const&...
+        ) noexcept :
+          string_t<char_t, length>::string_t(
+            string,
+            integer_collection<>(),
+            index_sequence<indexes>()...,
+            index_sequence<length - (MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH * sizeof...(indexes))>()
+          )
         {}
 
-        // ... ->> smaller string
-        template <std::size_t capacity, std::size_t... nulIndexes, std::size_t... indexes>
-        constexpr string_t(index_sequence<0u, nulIndexes...> const, index_sequence<0u, indexes...> const, string_t<char_t, capacity> const& string) noexcept(noexcept(char_t('\0')) && noexcept(char_t(instanceof<char_t const&>()))) :
-          value{static_cast<char_t>(string.value[indexes])..., static_cast<char_t>("\0"[nulIndexes - nulIndexes])...}
+        template <std::size_t capacity, std::size_t... indexes>
+        constexpr string_t(
+          typename conditional_t<false != (length > MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH * (1u + sizeof...(indexes))), unsigned char>::type const,
+          string_t<char_t, capacity> const& string,
+          integer_collection<indexes> const&... collections
+        ) noexcept :
+          string_t<char_t, length>::string_t(
+            0x0u, string, collections...,
+            integer_collection<MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH>()
+          )
         {}
 
       public:
-        // ... ->> empty string
-        constexpr string_t() noexcept(noexcept(string_t<char_t, length>(index_sequence<length>()))) :
-          string_t<char_t, length>::string_t(index_sequence<length>())
+        template <std::size_t capacity> // ->> unequal string
+        constexpr string_t(string_t<char_t, capacity> const& string) noexcept(
+          noexcept(string_t<char_t, length>(0x0u, string))
+        ) :
+          string_t<char_t, length>::string_t(0x0u, string)
         {}
 
-        // ... ->> null string
-        constexpr string_t(string_t<char_t, 0u> const) noexcept(noexcept(string_t<char_t, length>())) :
-          string_t<char_t, length>::string_t()
-        {}
-
-        // ... ->> equal string
-        constexpr string_t(string_t<char_t, length> const& string) noexcept(noexcept(string_t<char_t, length>(index_sequence<length>(), instanceof<string_t<char_t, length> const&>()))) :
-          string_t<char_t, length>::string_t(index_sequence<length>(), string)
-        {}
-
-        // ... ->> bigger string
-        template <std::size_t capacity>
-        constexpr string_t(string_t<char_t, capacity> const& string, typename conditional_t<(capacity > length), unsigned char>::type const = 0x0u) noexcept(noexcept(string_t<char_t, length>(string::slice_end<char_t, capacity - length>(instanceof<string_t<char_t, capacity> const&>())))) :
-          string_t<char_t, length>::string_t(string::slice_end<char_t, capacity - length>(string))
-        {}
-
-        // ... ->> smaller string
-        template <std::size_t capacity>
-        constexpr string_t(string_t<char_t, capacity> const& string, typename conditional_t<(capacity < length), unsigned char>::type const = 0x0u) noexcept(noexcept(string_t<char_t, length>(index_sequence<length - capacity>(), index_sequence<capacity>(), instanceof<string_t<char_t, capacity> const&>()))) :
-          string_t<char_t, length>::string_t(index_sequence<length - capacity>(), index_sequence<capacity>(), string)
-        {}
-
-        // ... ->> equal character-by-character
-        template <typename... chars_t>
-        constexpr string_t(typename conditional_t<length == 1u + sizeof...(chars_t) && (is_same<char, chars_t...>::value || is_same<char_t, chars_t...>::value), char_t>::type const& character, chars_t const&... characters) noexcept(noexcept(char_t(instanceof<char_t const&>()))) :
+        template <typename... types> // ->> equal character-by-character
+        constexpr string_t(typename conditional_t<length == 1u + sizeof...(types), typename conditional_t<is_same<char_t, types...>::value, char, typename conditional_t<is_same<char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(boolean_and<noexcept(char_t(character)), noexcept(char_t(characters))...>::value) :
           value{static_cast<char_t>(character), static_cast<char_t>(characters)...}
         {}
 
-        // ... ->> more/ less character-by-character
-        template <typename... chars_t>
-        constexpr string_t(typename conditional_t<length != 1u + sizeof...(chars_t) && (is_same<char, chars_t...>::value || is_same<char_t, chars_t...>::value), char_t>::type const& character, chars_t const&... characters) noexcept(noexcept(string_t<char_t, length>(instanceof<string_t<char_t, 1u + sizeof...(chars_t)> const&>()))) :
-          string_t<char_t, length>::string_t(string_t<char_t, 1u + sizeof...(chars_t)>(character, characters...))
+        template <typename... types> // ->> more/ less character-by-character
+        constexpr string_t(typename conditional_t<length != 1u + sizeof...(types), typename conditional_t<is_same<char_t, types...>::value, char, typename conditional_t<is_same<char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(noexcept(string_t<char_t, length>(string_t<char_t, 1u + sizeof...(types)>(character, forward<types>(characters)...)))) :
+          string_t<char_t, length>::string_t(
+            string_t<char_t, 1u + sizeof...(types)>(character, forward<types>(characters)...)
+          )
         {}
 
         // ...
@@ -806,22 +552,9 @@ union string {
 
 /* Main */
 int main() {
-  constexpr auto string = string::stringify(false, '[', static_cast<unsigned char>(1u), static_cast<signed char>(-1), 1uLL, -1LL, "]" "Hello, World!");
+  auto string = string::string_t<char, 1000u>('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');
 
-  std::fprintf(stdout, "[]: (%u) \"", static_cast<unsigned>(sizeof(string) / sizeof(char const)));
+  std::fprintf(stdout, "%5s", "[]: \"");
   std::fwrite(static_cast<char const*>(string), sizeof(char const), sizeof(string) / sizeof(char const), stdout);
   std::fputc('"', stdout);
 }
-
-// template <unsigned long long radix>
-// void print(long double const number, long double const factor) noexcept {
-//   if (0.1L < number) {
-//     std::putchar("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ*"[static_cast<unsigned char>(clamp(number / factor, 36.0L))]);
-//     print<radix>(number - (factor * static_cast<unsigned char>(number / factor)), factor / radix);
-//   }
-// }
-
-// template <unsigned long long radix>
-// void print(long double const number) noexcept {
-//   return print<radix>(number, ipow(static_cast<long double>(radix), lengthof<radix>(number) - 2u));
-// }
