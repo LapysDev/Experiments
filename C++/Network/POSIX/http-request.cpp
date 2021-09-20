@@ -1,25 +1,32 @@
+/* ... --> wininet.lib | ws2_32.lib */
 /* Import */
 // : [C/ C++ Standard Library]
 #include <cerrno>  // C Error Number
 #include <cstddef> // C Standard Definition
 #include <cstdio>  // C Standard Input/ Output
 #include <cstdlib> // C Standard Library
-#include <cstring> // C String
+#include <new>     // New
 
 #include <stdint.h> // Standard Integers
 
 // : [POSIX]
-#if (\
+#if ( \
   defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || \
   defined(__clang__) || defined(__clang_major__) || defined(__clang_minor__) || defined(__clang_patchlevel__) || \
   defined(__GNUC__) || defined(__GNUG__) || defined(__GNUC_MINOR__) || defined(__GNUC_PATCHLEVEL__) || \
-  defined(_MSC_VER) \
+  defined(_MSC_VER) ||\
+  \
+  defined(_WIN32) || defined(_WIN64) \
 )
-# include <stdio.h>
-# include <unistd.h>
-# include <sys/socket.h>
-# include <netdb.h>
-# include <string.h>
+# include <cstring>      // C String
+# include <sys/types.h>  // System > Types
+# if defined(_WIN32) || defined(_WIN64)
+#  include <BaseTsd.h>  // Base Types Definitions
+#  include <winsock2.h> // Windows Sockets
+# else
+#  include <arpa/inet.h>  // ARPA > Internet
+#  include <sys/socket.h> // System > Socket
+# endif
 
 // : [Windows]
 #elif defined(__NT__) || defined(__TOS_WIN__) || defined(_WIN16) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN32_WCE) || defined(_WIN64) || defined(__WINDOWS__)
@@ -29,86 +36,157 @@
 # include <wininet.h> // Windows Internet
 #endif
 
-/* ... */
-#include <cstring>
-void error(const char *msg) {
-  std::perror(msg);
-  std::printf("\r\n" "[ERROR]: %u", errno);
-  std::exit(0);
-}
-
 /* Main */
 int main(int const, char* const[]) /* noexcept */ {
   char       *haystack = NULL;
   std::size_t haystackLength = 0u;
 
   int exitCode = EXIT_SUCCESS;
-  char const host    [] = "en.wikipedia.org";
-  char const method  [] = "GET";
-  char const protocol[] = "HTTP";
-  char const target  [] = "wiki/\"Hello,_World!\"_program";
+  char const     host    [] = "en.wikipedia.org";
+  char const     method  [] = "GET";
+  uint16_t const port       = 80u;
+  char const     protocol[] = "HTTP";
+  char const     target  [] = "wiki/\"Hello,_World!\"_program";
+  char const     version [] = "1.1";
 
   // ...
-  #if (\
+  #if ( \
     defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || \
     defined(__clang__) || defined(__clang_major__) || defined(__clang_minor__) || defined(__clang_patchlevel__) || \
     defined(__GNUC__) || defined(__GNUG__) || defined(__GNUC_MINOR__) || defined(__GNUC_PATCHLEVEL__) || \
-    defined(_MSC_VER) \
+    defined(_MSC_VER) ||\
+    \
+    defined(_WIN32) || defined(_WIN64) \
   )
-    const char * request = "GET /index.html HTTP/1.1\nAccept: */*\n\n";
-    size_t length = strlen(request);
-    printf("request:\n\n%s", request);
+    char       *message       = NULL;
+    std::size_t messageLength = 0u;
+    bool        ready;
+    sockaddr_in server;
+    int         socketFileDescriptor;
 
-    //  get the destination address
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    struct addrinfo * address;
-    getaddrinfo("castifyreceiver.com", "http", &hints, &address);
+    // ...
+    static_cast<void>(target);
 
-    //  create a socket
-    int sfd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-    int result = connect(sfd, address->ai_addr, address->ai_addrlen);
-    if (result != 0) {
-        printf("connection failed: %i\n", result);
-        freeaddrinfo(address);
-        close(sfd);
-        return 0;
-    } else {
-        printf("connected\n");
+    // ...
+    #if defined(_WIN32) || defined(_WIN64)
+      WSADATA windowsSocketsAPIData;
+
+      if (0x0 == ::WSAStartup(MAKEWORD(2, 2), &windowsSocketsAPIData))
+        ready = true;
+
+      else {
+        exitCode = EXIT_FAILURE;
+        std::fprintf(stderr, "\r\n" "[Module Error (%u)]: Unable to initialize use of Windows Sockets subsystem DLL to establish request to read haystack from host \"%s\"", static_cast<unsigned>(::WSAGetLastError()), host);
+      }
+    #else
+      ready = true;
+    #endif
+
+    // ...
+    if (ready) {
+      socketFileDescriptor = ::socket(AF_INET, SOCK_STREAM, 0x0);
+
+      if (socketFileDescriptor == -1) {
+        exitCode = EXIT_FAILURE;
+        std::fprintf(stderr, "\r\n" "[I/O Error (%i)]: Unable to create socket to establish request to read haystack from host \"%s\":" "\r\n\t" "%s", errno, host, std::strerror(errno));
+      }
+
+      else {
+        server.sin_port        = ::htons(port);
+        server.sin_family      = AF_INET;
+        server.sin_addr.s_addr = ::inet_addr(host);
+
+        if (INADDR_NONE == server.sin_addr.s_addr) {
+          hostent *const hostEntry = ::gethostbyname(host);
+
+          if (NULL != hostEntry && AF_INET == hostEntry -> h_addrtype)
+          server.sin_addr = *reinterpret_cast<in_addr*>(hostEntry -> h_addr);
+        }
+
+        // ...
+        if (::connect(socketFileDescriptor, reinterpret_cast<sockaddr*>(&server), sizeof(sockaddr_in)) == -1) {
+          exitCode = EXIT_FAILURE;
+          std::fprintf(stderr, "\r\n" "[I/O Error (%i)]: Unable to connect request to read haystack from %s server \"%s\":" "\r\n\t" "%s", errno, protocol, host, std::strerror(errno));
+        }
+
+        else {
+          for (char const *iterator = method  ; '\0' != *iterator; ++iterator) ++messageLength;
+          for (char const *iterator = protocol; '\0' != *iterator; ++iterator) ++messageLength;
+          for (char const *iterator = version ; '\0' != *iterator; ++iterator) ++messageLength;
+
+          messageLength += 9u;
+          message = static_cast<char*>(::operator new(messageLength * sizeof(char), std::nothrow));
+
+          // ...
+          if (NULL == message) {
+            exitCode = EXIT_FAILURE;
+            std::fprintf(stderr, "\r\n" "[Memory Error]: Unable to allocate memory to read haystack from %s server \"%s\"", protocol, host);
+          }
+
+          else {
+            for (char const *iterator = method       ; '\0' != *iterator; ++iterator) *(message++) = *iterator;
+            for (char const *iterator = " / "        ; '\0' != *iterator; ++iterator) *(message++) = *iterator;
+            for (char const *iterator = protocol     ; '\0' != *iterator; ++iterator) *(message++) = *iterator;
+            for (char const *iterator = "/"          ; '\0' != *iterator; ++iterator) *(message++) = *iterator;
+            for (char const *iterator = version      ; '\0' != *iterator; ++iterator) *(message++) = *iterator;
+            for (char const *iterator = "\r\n" "\r\n"; '\0' != *iterator; ++iterator) *(message++) = *iterator;
+
+            *message = '\0';
+            message -= messageLength;
+
+            // ...
+            if (::send(socketFileDescriptor, message, messageLength, 0x0) == -1) {
+              exitCode = EXIT_FAILURE;
+              std::fprintf(stderr, "\r\n" "[I/O Error (%i)]: Unable to send request to read haystack from %s server \"%s\":" "\r\n\t" "%s", errno, protocol, host, std::strerror(errno));
+            }
+
+            else {
+              haystackLength = 1024u;
+              haystack = static_cast<char*>(std::calloc(haystackLength, sizeof(char)));
+              std::strcpy(haystack, "Hello, World!");
+
+              if (::recv(socketFileDescriptor, haystack, haystackLength, 0x0) == -1) {
+                exitCode = EXIT_FAILURE;
+                std::fprintf(stderr, "\r\n" "[I/O Error (%i)]: Unable to read response to read haystack from %s server \"%s\":" "\r\n\t" "%s", errno, protocol, host, std::strerror(errno));
+              }
+
+              haystack[haystackLength - 1u] = '\0';
+            }
+          }
+        }
+      }
+
+      // ...
+      #if defined(_WIN32) || defined(_WIN64)
+        if (socketFileDescriptor != -1) ::closesocket(socketFileDescriptor);
+        ::WSACleanup();
+      #else
+        if (socketFileDescriptor != -1) ::close(socketFileDescriptor);
+      #endif
     }
 
-    //  write to socket
-    ssize_t written = write(sfd, request, length);
-    printf("wrote %lu of %lu expected\n", written, length);
-
-    //  read from socket and cleanup
-    char response[4096];
-    ssize_t readed = read(sfd, response, 4096);
-    printf("read %lu of 4096 possible\n", readed);
-    close(sfd);
-    freeaddrinfo(address);
-
-    //  display response message
-    response[readed] = '\0';
-    printf("response:\n\n%s\n", response);
+    // ...
+    if (NULL != message)
+    ::operator delete(message);
   #elif defined(__NT__) || defined(__TOS_WIN__) || defined(_WIN16) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN32_WCE) || defined(_WIN64) || defined(__WINDOWS__)
     HINTERNET connectionHandle;
     HINTERNET openHandle;
     HINTERNET resourceHandle;
 
     // ...
+    static_cast<void>(port);
+    static_cast<void>(version);
+
+    // ...
     do {
       openHandle = ::InternetOpen(protocol, INTERNET_OPEN_TYPE_DIRECT, static_cast<LPCSTR>(NULL), static_cast<LPCSTR>(NULL), 0x0u);
-      if (NULL == openHandle) { std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to initialize Windows Internet to establish request to \"%s\"", static_cast<unsigned>(::GetLastError()), host); break; }
+      if (NULL == openHandle) { std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to initialize the Windows Internet API to establish request to read haystack from host \"%s\"", static_cast<unsigned>(::GetLastError()), host); break; }
 
       connectionHandle = ::InternetConnect(openHandle, host, INTERNET_DEFAULT_HTTPS_PORT, static_cast<LPCSTR>(NULL), static_cast<LPCSTR>(NULL), INTERNET_SERVICE_HTTP, 0x0u, 0x1u);
-      if (NULL == connectionHandle) { std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to open %s session for host \"%s\"", static_cast<unsigned>(::GetLastError()), protocol, host); break; }
+      if (NULL == connectionHandle) { std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to open %s session to read haystack from host \"%s\"", static_cast<unsigned>(::GetLastError()), protocol, host); break; }
 
       resourceHandle = ::HttpOpenRequest(connectionHandle, method, target, static_cast<LPCSTR>(NULL), "", static_cast<LPCSTR*>(NULL), INTERNET_FLAG_SECURE | INTERNET_FLAG_KEEP_CONNECTION, 0x1u);
-      if (NULL == resourceHandle) { std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to create request to HTTP server \"%s\"", static_cast<unsigned>(::GetLastError()), host); break; }
+      if (NULL == resourceHandle) { std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to create request to read haystack from %s server \"%s\"", static_cast<unsigned>(::GetLastError()), protocol, host); break; }
     } while (false);
 
     // ...
@@ -118,7 +196,7 @@ int main(int const, char* const[]) /* noexcept */ {
     else {
       if (false == ::HttpSendRequest(resourceHandle, NULL, 0, NULL, 0)) {
         exitCode = EXIT_FAILURE;
-        std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to send request to HTTP server \"%s\"", static_cast<unsigned>(::GetLastError()), host);
+        std::fprintf(stderr, "\r\n" "[I/O Error (%u)]: Unable to send request to read haystack from HTTP server \"%s\"", static_cast<unsigned>(::GetLastError()), host);
       }
 
       else {
@@ -185,7 +263,7 @@ int main(int const, char* const[]) /* noexcept */ {
     std::fwrite(haystack, sizeof(char), haystackLength, stdout);
     std::fprintf(stdout, "%5s", "\r\n" "```");
 
-    // std::free(haystack);
+    std::free(haystack);
   }
 
   // ...
