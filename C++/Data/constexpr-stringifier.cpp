@@ -310,49 +310,14 @@ namespace {
 /* ... [Interface] */
 union string {
   private:
-    template <typename...> union assess_types;
+    template <typename...> union inspect_types;
     template <typename, typename...> union resolve_t;
 
-    constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types...))>::typed::type<is_same, char, types...>::value
-    constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types...))>::untyped<std::size_t>::type<index_sequence, sizeof...(types)>::value
-
-    #include <cstdio>
-
-    /* ... */
-    template <bool assertion>
+    template <bool>
     union constrain {
-      template <bool = assertion> union typed;
-      template <bool = assertion, typename...> union untyped;
+      template <typename...> union typed;
+      template <typename...> union untyped;
     };
-
-    template <bool assertion>
-    template <>
-    union constrain<assertion>::typed<true> {
-      template <template <typename...> class trait, typename... types>
-      using type = trait<types...>;
-    };
-
-    template <bool assertion>
-    template <typename... types>
-    union constrain<assertion>::untyped<true, types...> {
-      template <template <types...> class trait, types... parameters>
-      using type = trait<parameters...>;
-    };
-
-    // ...
-    template <typename> union is_void { enum { value = false }; };
-    template <> union is_void<void> { enum { value = true }; };
-
-    template <std::size_t...> union sum;
-    template <std::size_t integer> union sum<integer> { enum { value = integer }; };
-    template <std::size_t integerA, std::size_t integerB, std::size_t... integers> union sum<integerA, integerB, integers...> { enum { value = sumof<integerA + integerB, integers...>::value }; };
-
-    /* Main */
-    int main() noexcept {
-      std::printf("[is_void<int>] : %4.5s" "\r\n", constrain<true>::typed::type<is_void, int>::value  ? "true" : "false");
-      std::printf("[is_void<void>]: %4.5s" "\r\n", constrain<true>::typed::type<is_void, void>::value ? "true" : "false");
-      std::printf("[sum<2, 3>]: %u", constrain<true>::untyped<std::size_t, std::size_t>::type<sum, 2u, 3u>::value);
-    }
 
   public:
     template <typename, std::size_t>
@@ -364,8 +329,36 @@ union string {
 
   /* ... */
   private:
+    template <>
+    union constrain<true> {
+      template <typename...> union typed;
+      template <typename...> union untyped;
+
+      // ...
+      template <typename...>
+      union typed {
+        template <template <typename...> class trait, typename... types>
+        using type = trait<types...>;
+      };
+
+      #if defined(__clang__) || defined(__clang_major__) || defined(__clang_minor__) || defined(__clang_patchlevel__)
+        template <typename... types>
+        union untyped {
+          template <template <types...> class trait, types... parameters>
+          using type = trait<parameters...>;
+        };
+      #else
+        template <typename base, typename... types>
+        union untyped<base, types...> {
+          template <template <base...> class trait, base... parameters>
+          using type = trait<parameters...>;
+        };
+      #endif
+    };
+
+    // ...
     template <typename...>
-    union assess_types {
+    union inspect_types {
       friend union string;
 
       private:
@@ -374,7 +367,7 @@ union string {
     };
 
     template <typename base, typename... types>
-    union assess_types<base, types...> {
+    union inspect_types<base, types...> {
       friend union string;
 
       private:
@@ -389,33 +382,33 @@ union string {
             #endif
 
             0x00u
-          )) | static_cast<unsigned>(assess_types<types...>::value)
+          )) | static_cast<unsigned>(inspect_types<types...>::value)
         };
 
         enum {
           resolved = (
-            0x00u != assess_types<base, types...>::value &&
-            0u == (assess_types<base, types...>::value & (assess_types<base, types...>::value - 1u))
+            0x00u != inspect_types<base, types...>::value &&
+            0u == (inspect_types<base, types...>::value & (inspect_types<base, types...>::value - 1u))
           )
         };
 
         // ...
         typedef
           typename conditional_t<
-            0x01u == (assess_types<base, types...>::value | assess_types<types...>::value), char,
+            0x01u == (inspect_types<base, types...>::value | inspect_types<types...>::value), char,
 
           typename conditional_t<
-            0x02u == (assess_types<base, types...>::value | assess_types<types...>::value), char16_t,
+            0x02u == (inspect_types<base, types...>::value | inspect_types<types...>::value), char16_t,
 
           typename conditional_t<
-            0x04u == (assess_types<base, types...>::value | assess_types<types...>::value), char32_t,
+            0x04u == (inspect_types<base, types...>::value | inspect_types<types...>::value), char32_t,
 
           typename conditional_t<
-            0x08u == (assess_types<base, types...>::value | assess_types<types...>::value), wchar_t,
+            0x08u == (inspect_types<base, types...>::value | inspect_types<types...>::value), wchar_t,
 
           typename conditional_t<
             #if __cplusplus >= 202002L
-              0x10u == (assess_types<base, types...>::value | assess_types<types...>::value), char8_t,
+              0x10u == (inspect_types<base, types...>::value | inspect_types<types...>::value), char8_t,
             #else
               false, void,
             #endif
@@ -434,10 +427,10 @@ union string {
     template <typename... types>
     union resolve_t<void, types...> {
       typedef typename conditional_t<
-        0x00u == assess_types<types...>::value, // ->> no discernible built-in character type found
+        0x00u == inspect_types<types...>::value, // ->> no discernible built-in character type found
         char, typename conditional_t<
-          false == assess_types<types...>::resolved, // ->> different built-in character type found
-          void_t, typename assess_types<types...>::type // ->> single built-in character type found
+          false == inspect_types<types...>::resolved, // ->> different built-in character type found
+          void_t, typename inspect_types<types...>::type // ->> single built-in character type found
         >::type
       >::type type;
     };
@@ -522,12 +515,12 @@ union string {
         {}
 
         template <typename... types> // ->> equal character-by-character
-        constexpr string_t(typename conditional_t<length == 1u + sizeof...(types), typename conditional_t<is_same<char_t, types...>::value, char, typename conditional_t<is_same<char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(boolean_and<noexcept(char_t(character)), noexcept(char_t(characters))...>::value) :
+        constexpr string_t(typename conditional_t<length == 1u + sizeof...(types), typename conditional_t<constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char_t, types...>::value, char, typename conditional_t<constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::untyped<bool>::<boolean_and, noexcept(char_t(character)), noexcept(char_t(characters))...>::value) :
           value{static_cast<char_t>(character), static_cast<char_t>(characters)...}
         {}
 
         template <typename... types> // ->> more/ less character-by-character
-        constexpr string_t(typename conditional_t<length != 1u + sizeof...(types), typename conditional_t<is_same<char_t, types...>::value, char, typename conditional_t<is_same<char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(noexcept(string_t<char_t, length>(string_t<char_t, 1u + sizeof...(types)>(character, forward<types>(characters)...)))) :
+        constexpr string_t(typename conditional_t<length != 1u + sizeof...(types), typename conditional_t<constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char_t, types...>::value, char, typename conditional_t<constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(noexcept(string_t<char_t, length>(string_t<char_t, 1u + sizeof...(types)>(character, forward<types>(characters)...)))) :
           string_t<char_t, length>::string_t(
             string_t<char_t, 1u + sizeof...(types)>(character, forward<types>(characters)...)
           )

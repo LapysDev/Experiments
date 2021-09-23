@@ -1,10 +1,2 @@
-template <typename type>
-type* aligned_alloc(std::size_t const alignment = alignof(type)) {
-    void *allocation = std::malloc(69u * sizeof(type));
-    return static_cast<type*>(
-        // could be `NULL`
-        std::align(alignment, sizeof(type), allocation, 69u * sizeof(type))
-    );
-}
-
-aligned_alloc<int>();
+::operator new(69u * sizeof(int));
+std::align(alignof(int), sizeof(int), std::malloc(69u * sizeof(int)), 69u * sizeof(int));

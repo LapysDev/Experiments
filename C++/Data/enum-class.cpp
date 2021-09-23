@@ -1,6 +1,6 @@
 struct Color {
-    enum Value { RED, GREEN, BLUE } value;
+  enum Enumeration { RED, GREEN, BLUE } value;
 
-    Color(Value const value) : value(value) {}
-    operator Value() const { return this -> value; }
+  Color(Enumeration const value) : value(value) {}
+  operator Enumeration() const { return this -> value; }
 };

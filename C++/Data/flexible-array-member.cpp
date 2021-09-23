@@ -2,10 +2,9 @@
 #include <cstdio>
 
 /* ... */
-class String {
-  public:
-    std::size_t length;
-    char data[];
+struct String {
+  std::size_t length;
+  char data[];
 };
 
 /* Main */
