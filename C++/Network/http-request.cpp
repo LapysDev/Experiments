@@ -193,7 +193,7 @@ int main(int const, char* const[]) /* noexcept */ {
         }
 
         else {
-          messageLength = 8u + std::strlen(method) + std::strlen(protocol) + std::strlen(target) + std::strlen(version);
+          messageLength = 17u + std::strlen(host) + std::strlen(method) + std::strlen(protocol) + std::strlen(target) + std::strlen(version);
           message = static_cast<char*>(std::calloc(messageLength + 1u, sizeof(char)));
 
           // ... ->> Build up HTTP request message
@@ -210,10 +210,13 @@ int main(int const, char* const[]) /* noexcept */ {
             std::strcat(message, protocol);
             std::strcat(message, "/");
             std::strcat(message, version);
-            std::strcat(message, "\r\n" "\r\n");
-            message[messageLength] = '\0';
+            std::strcat(message, "\r\n");
+            std::strcat(message, "Host: ");
+            std::strcat(message, host);
+            std::strcat(message, "\r\n");
 
-            std::printf("[...]: \"%.*s\"" "\r\n", static_cast<int>(messageLength), message);
+            std::strcat(message, "\r\n");
+            message[messageLength] = '\0';
 
             // ...
             if (::send(socketFileDescriptor, message, messageLength, 0x0) == -1) {

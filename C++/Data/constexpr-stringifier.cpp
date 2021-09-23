@@ -6,7 +6,25 @@
 
 /* ... [Utilities] */
 namespace {
-  namespace { union void_t; }
+  namespace {
+    union null_t;
+    template <> union null_trait;
+
+    null_t<bool, int>::type
+  }
+
+  union null {
+    union type;
+    template <typename... types>
+    union trait {
+      template <typename...> union typed;
+      template <types...> union untyped;
+    };
+  };
+
+  null::type
+  null::traits<>::typed
+  null::traits<int, bool>::untyped
 
   template <typename> union assess_array;
   template <typename> union assess_function;
@@ -16,7 +34,8 @@ namespace {
   template <bool...> union boolean_and;
   template <bool...> union boolean_or;
   template <typename type, type...> struct collection;
-  template <bool, typename = void_t, typename = void_t> union conditional_t;
+  template <bool, typename = null_t, typename = null_t> union conditional_t;
+  template <bool, typename = null_t, typename = null_t> union conditional_trait;
   template <std::size_t, std::size_t...> struct index_sequence;
   template <std::size_t...> struct integer_collection;
   template <typename> union is_array;
@@ -430,7 +449,7 @@ union string {
         0x00u == inspect_types<types...>::value, // ->> no discernible built-in character type found
         char, typename conditional_t<
           false == inspect_types<types...>::resolved, // ->> different built-in character type found
-          void_t, typename inspect_types<types...>::type // ->> single built-in character type found
+          null_t, typename inspect_types<types...>::type // ->> single built-in character type found
         >::type
       >::type type;
     };
@@ -515,7 +534,13 @@ union string {
         {}
 
         template <typename... types> // ->> equal character-by-character
-        constexpr string_t(typename conditional_t<length == 1u + sizeof...(types), typename conditional_t<constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char_t, types...>::value, char, typename conditional_t<constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char, types...>::value, char const&>::type>::type>::type const character, types&&... characters) noexcept(constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::untyped<bool>::<boolean_and, noexcept(char_t(character)), noexcept(char_t(characters))...>::value) :
+        constexpr string_t(typename conditional_t<length == 1u + sizeof...(types), typename conditional_t<
+          constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char_t, types...>::value,
+          char, typename conditional_t<
+            constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::typed<>::type<is_same, char, types...>::value,
+            char const&
+          >::type
+        >::type>::type const character, types&&... characters) noexcept(constrain<(MAXIMUM_TEMPLATE_INSTANTIATION_DEPTH > sizeof...(types))>::untyped<bool>::<boolean_and, noexcept(char_t(character)), noexcept(char_t(characters))...>::value) :
           value{static_cast<char_t>(character), static_cast<char_t>(characters)...}
         {}
 
