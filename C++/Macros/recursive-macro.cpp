@@ -45,8 +45,8 @@
 #define stringify(argument) #argument
 # define comma() ,
 
-int main(void) {
-    std::printf("%s, %s", map(stringify, comma, Hello, number:));
-    std::printf(" %i" "\r\n\n", map(square, plus, 1, 2, 3, 4));
-    std::printf("%s", map(greet, space, C++, GD:Script, Visual Basic));
+int main() {
+  std::printf("%s, %s", map(stringify, comma, Hello, number:));
+  std::printf(" %i" "\r\n\n", map(square, plus, 1, 2, 3, 4));
+  std::printf("%s", map(greet, space, C++, GD:Script, Visual Basic));
 }
