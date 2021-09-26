@@ -153,7 +153,7 @@ void Graphics::drawRectangle(uint16_t const xOrigin, uint16_t const yOrigin, uin
   }
 }
 
-void Graphics::drawSpline(uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t count, ...) {
+void Graphics::drawSpline(uint16_t xOrigin, uint16_t yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t count, ...) {
   std::va_list arguments;
   DWORD color;
   uint16_t maximumLength = 0u;
@@ -178,11 +178,14 @@ void Graphics::drawSpline(uint16_t const xOrigin, uint16_t const yOrigin, uint16
     uint16_t const xDistance = xControl[iterator] < xControl[iterator - 1u] ? xControl[iterator - 1u] - xControl[iterator] : xControl[iterator] - xControl[iterator - 1u];
     uint16_t const yDistance = yControl[iterator] < yControl[iterator - 1u] ? yControl[iterator - 1u] - yControl[iterator] : yControl[iterator] - yControl[iterator - 1u];
 
+    // ->> Draw each line
     Graphics::drawLine(xControl[iterator], yControl[iterator], xControl[iterator - 1u], yControl[iterator - 1u], 0xFF0000u);
-    if (maximumLength < xDistance + yDistance)
-    maximumLength = xDistance + yDistance;
+
+    // ->> Get the longest line
+    if (maximumLength < xDistance + yDistance) maximumLength = xDistance + yDistance;
   }
 
+  // ... ->> Would rather a non-recursive solution
   for (maximumRatio = maximumLength; maximumRatio; --maximumRatio) {
     uint16_t x, xRecent;
     uint16_t y, yRecent;
@@ -191,8 +194,8 @@ void Graphics::drawSpline(uint16_t const xOrigin, uint16_t const yOrigin, uint16
 
     for (uint8_t subcount = count; subcount; ) {
       if (0u == --subcount) {
-        Graphics::putPixel(x, y, color);
-        // x == xRecent && y == yRecent ? Graphics::putPixel(x, y, color) : Graphics::drawLine(xRecent, yRecent, x, y, color);
+        Graphics::putPixel(x, y, color); // ->> draw each point
+        // x == xRecent && y == yRecent ? Graphics::putPixel(x, y, color) : Graphics::drawLine(xRecent, yRecent, x, y, color); // ->> connect points with lines
       }
 
       else for (uint8_t iterator = 0u; iterator != subcount; ++iterator) {
@@ -210,7 +213,7 @@ void Graphics::drawSpline(uint16_t const xOrigin, uint16_t const yOrigin, uint16
         uint16_t const slope = xDistance > yDistance ? xDistance : yDistance;
         uint16_t const length = xDistance + yDistance;
 
-        // ...
+        // ... ->> go through each line and figure out where the current `ratio` is
         x = xOrigin; xRecent = x;
         y = yOrigin; yRecent = y;
 
@@ -222,6 +225,7 @@ void Graphics::drawSpline(uint16_t const xOrigin, uint16_t const yOrigin, uint16
           xSlopeInterval += xDistance;
           ySlopeInterval += yDistance;
 
+          // ... ->> add sample point to be recursed through later
           if (maximumLength - maximumRatio == ((length - ratio) * maximumLength) / length) {
             xSubcontrol[iterator] = x;
             ySubcontrol[iterator] = y;
