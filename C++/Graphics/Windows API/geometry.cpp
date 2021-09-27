@@ -156,10 +156,12 @@ void Graphics::drawRectangle(uint16_t const xOrigin, uint16_t const yOrigin, uin
 void Graphics::drawSpline(uint16_t xOrigin, uint16_t yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t count, ...) {
   std::va_list arguments;
   DWORD color;
-  uint16_t maximumLength = 0u;
-  uint16_t maximumRatio;
+  uint16_t const full = 50u;
+  uint16_t percentage;
   uint16_t xControl[126];
   uint16_t yControl[126];
+  uint16_t xFormer = xOrigin;
+  uint16_t yFormer = yOrigin;
 
   va_start(arguments, count);
     for (uint8_t iterator = 0u; count != iterator; ++iterator) {
@@ -174,19 +176,10 @@ void Graphics::drawSpline(uint16_t xOrigin, uint16_t yOrigin, uint16_t const xTa
   va_end(arguments);
 
   // ...
-  for (uint8_t iterator = count; --iterator; ) {
-    uint16_t const xDistance = xControl[iterator] < xControl[iterator - 1u] ? xControl[iterator - 1u] - xControl[iterator] : xControl[iterator] - xControl[iterator - 1u];
-    uint16_t const yDistance = yControl[iterator] < yControl[iterator - 1u] ? yControl[iterator - 1u] - yControl[iterator] : yControl[iterator] - yControl[iterator - 1u];
+  for (uint8_t iterator = count; --iterator; )
+  Graphics::drawLine(xControl[iterator], yControl[iterator], xControl[iterator - 1u], yControl[iterator - 1u], 0xFF0000u);
 
-    Graphics::drawLine(xControl[iterator], yControl[iterator], xControl[iterator - 1u], yControl[iterator - 1u], 0xFF0000u);
-    if (maximumLength < xDistance + yDistance)
-    maximumLength = xDistance + yDistance;
-  }
-
-  maximumLength = 50u;
-  uint16_t xFormer = xOrigin;
-  uint16_t yFormer = yOrigin;
-  for (maximumRatio = 0u; maximumLength >= maximumRatio; ++maximumRatio) {
+  for (percentage = 0u; full >= percentage; ++percentage) {
     uint16_t x, xRecent;
     uint16_t y, yRecent;
     uint16_t xSubcontrol[126] = {xControl[0], xControl[1], xControl[2], xControl[3], xControl[4], xControl[5], xControl[6], xControl[7], xControl[8], xControl[9], xControl[10], xControl[11], xControl[12], xControl[13], xControl[14], xControl[15], xControl[16], xControl[17], xControl[18], xControl[19], xControl[20], xControl[21], xControl[22], xControl[23], xControl[24], xControl[25], xControl[26], xControl[27], xControl[28], xControl[29], xControl[30], xControl[31], xControl[32], xControl[33], xControl[34], xControl[35], xControl[36], xControl[37], xControl[38], xControl[39], xControl[40], xControl[41], xControl[42], xControl[43], xControl[44], xControl[45], xControl[46], xControl[47], xControl[48], xControl[49], xControl[50], xControl[51], xControl[52], xControl[53], xControl[54], xControl[55], xControl[56], xControl[57], xControl[58], xControl[59], xControl[60], xControl[61], xControl[62], xControl[63], xControl[64], xControl[65], xControl[66], xControl[67], xControl[68], xControl[69], xControl[70], xControl[71], xControl[72], xControl[73], xControl[74], xControl[75], xControl[76], xControl[77], xControl[78], xControl[79], xControl[80], xControl[81], xControl[82], xControl[83], xControl[84], xControl[85], xControl[86], xControl[87], xControl[88], xControl[89], xControl[90], xControl[91], xControl[92], xControl[93], xControl[94], xControl[95], xControl[96], xControl[97], xControl[98], xControl[99], xControl[100], xControl[101], xControl[102], xControl[103], xControl[104], xControl[105], xControl[106], xControl[107], xControl[108], xControl[109], xControl[110], xControl[111], xControl[112], xControl[113], xControl[114], xControl[115], xControl[116], xControl[117], xControl[118], xControl[119], xControl[120], xControl[121], xControl[122], xControl[123], xControl[124], xControl[125]};
@@ -194,8 +187,7 @@ void Graphics::drawSpline(uint16_t xOrigin, uint16_t yOrigin, uint16_t const xTa
 
     for (uint8_t subcount = count; subcount; ) {
       if (0u == --subcount) {
-        // Graphics::putPixel(x, y, color);
-        x == xFormer && y == yFormer ? Graphics::putPixel(x, y, color) : Graphics::drawLine(xFormer, yFormer, x, y, color);
+        Graphics::drawLine(xFormer, yFormer, x, y, color);
         xFormer = x;
         yFormer = y;
       }
@@ -228,13 +220,13 @@ void Graphics::drawSpline(uint16_t xOrigin, uint16_t yOrigin, uint16_t const xTa
           ySlopeInterval += yDistance;
 
           // ...
-          if (maximumLength - maximumRatio == ((length - ratio) * maximumLength) / length) {
+          if (static_cast<float>(percentage * 100) / static_cast<float>(full) == static_cast<float>(ratio * 100) / static_cast<float>(length)) {
             xSubcontrol[iterator] = x;
             ySubcontrol[iterator] = y;
             break;
           }
 
-          else if (maximumLength - maximumRatio < ((length - ratio) * maximumLength) / length) {
+          else if (static_cast<float>(percentage * 100) / static_cast<float>(full) > static_cast<float>(ratio * 100) / static_cast<float>(length)) {
             xSubcontrol[iterator] = xRecent;
             ySubcontrol[iterator] = yRecent;
             break;
