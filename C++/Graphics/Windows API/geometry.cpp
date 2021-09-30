@@ -155,12 +155,12 @@ void Graphics::drawLine(void (*const function)(uint16_t, uint16_t, uint16_t, uin
 }
 
 void Graphics::drawRectangle(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const width, uint16_t const height, DWORD const color, float const value) {
-  for (uint16_t iterator = width; iterator--; ) {
+  for (uint16_t iterator = width + 1u; iterator--; ) {
     function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + height, value, color);
     function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + 0u    , value, color);
   }
 
-  for (uint16_t iterator = height; iterator--; ) {
+  for (uint16_t iterator = height + 1u; iterator--; ) {
     function(xOrigin, yOrigin, xOrigin + width, yOrigin + iterator, value, color);
     function(xOrigin, yOrigin, xOrigin + 0u   , yOrigin + iterator, value, color);
   }
@@ -267,7 +267,7 @@ void Graphics::drawSpline(void (*const function)(uint16_t, uint16_t, uint16_t, u
 }
 
 void Graphics::drawSquare(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const size, DWORD const color, float const value) {
-  for (uint16_t iterator = size; iterator--; ) {
+  for (uint16_t iterator = size + 1u; iterator--; ) {
     function(xOrigin, yOrigin, xOrigin + size    , yOrigin + iterator, value, color);
     function(xOrigin, yOrigin, xOrigin + 0u      , yOrigin + iterator, value, color);
     function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + size    , value, color);
@@ -280,38 +280,27 @@ void Graphics::putPixel(uint16_t const, uint16_t const, uint16_t const x, uint16
   Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | color;
 }
 
+#include <cmath>
 void Graphics::Transform::rotate(uint16_t xOrigin, uint16_t yOrigin, uint16_t x, uint16_t y, float angle, DWORD const color) {
-  uint16_t const radius = 2u * ((x < xOrigin ? xOrigin - x : x - xOrigin) > (y < yOrigin ? yOrigin - y : y - yOrigin) ? (x < xOrigin ? xOrigin - x : x - xOrigin) : (y < yOrigin ? yOrigin - y : y - yOrigin));
-  uint16_t const size = (x < xOrigin ? xOrigin - x : x - xOrigin) > (y < yOrigin ? yOrigin - y : y - yOrigin) ? (x < xOrigin ? xOrigin - x : x - xOrigin) : (y < yOrigin ? yOrigin - y : y - yOrigin);
-
-  static_cast<void>(radius);
-  // Graphics::drawCircle(&Graphics::putPixel, xOrigin - (radius / 2u), yOrigin - (radius / 2u), radius, y - yOrigin > 105 ? 0x006600u : 0x660000u, 0.0f);
-  Graphics::putPixel(x, y, color);
+  // if (false == (x == 550u)) return;
+  if (0u == (x < xOrigin ? xOrigin - x : x - xOrigin) + (y < yOrigin ? yOrigin - y : y - yOrigin)) return;
 
   // ...
-  float sus;
+  uint16_t xTarget = x;
+  uint16_t yTarget = y;
   float xSlope, xSlopeInterval = 0.0f;
   float ySlope, ySlopeInterval = 0.0f;
+  float sus = (
+    (x < xOrigin ? xOrigin - x : x - xOrigin) > (y < yOrigin ? yOrigin - y : y - yOrigin)
+    ? (45.0f + (45.0f * (1.0f - (static_cast<float>(y < yOrigin ? yOrigin - y : y - yOrigin) / static_cast<float>(x < xOrigin ? xOrigin - x : x - xOrigin)))))
+    : (45.0f * (static_cast<float>(x < xOrigin ? xOrigin - x : x - xOrigin) / static_cast<float>(y < yOrigin ? yOrigin - y : y - yOrigin)))
+  );
 
-  if ((x < xOrigin ? xOrigin - x : x - xOrigin) > (y < yOrigin ? yOrigin - y : y - yOrigin)) {
-    // std::printf("%5s", "[X]: ");
-    sus = 45.0f + (45.0f * (1.0f - (static_cast<float>(y < yOrigin ? yOrigin - y : y - yOrigin) / static_cast<float>(x < xOrigin ? xOrigin - x : x - xOrigin))));
-    // std::printf("%f" "\r\n", sus);
-    // 0 == 90
-    // 1 == 45
-  }
-
-  else {
-    // std::printf("%5s", "[Y]: ");
-    sus = 45.0f * (static_cast<float>(x < xOrigin ? xOrigin - x : x - xOrigin) / static_cast<float>(y < yOrigin ? yOrigin - y : y - yOrigin));
-    // std::printf("%f" "\r\n", sus);
-    // 0 == 0
-    // 1 == 45
-  }
-  // std::printf("[]: %f" "\r\n", sus);
   if (x < xOrigin) sus += 180.0f;
-  if (y > yOrigin) sus += 90.0f;
+  if (y > yOrigin) sus = 180.0f - sus;
   angle += sus;
+  if (angle > 360.0f) angle -= 360.0f;
+  // std::printf("[]: (%f -> %f) {%hu, %hu} -> {%hu, %hu}" "\r\n", sus, angle, xOrigin, yOrigin, x, y);
 
   // 0   => [+0, -1]
   // 45  => [+1, -1]
@@ -331,27 +320,32 @@ void Graphics::Transform::rotate(uint16_t xOrigin, uint16_t yOrigin, uint16_t x,
   else if (angle > 225.0f && angle <= 270.0f) { xSlope = -1.0f;                             ySlope = 1.0f - ((angle - 225.0f) / 45.0f); }
   else if (angle > 270.0f && angle <= 315.0f) { xSlope = -1.0f;                             ySlope = (angle - 270.0f) / -45.0f; }
   else if (angle > 315.0f && angle <= 360.0f) { xSlope = ((angle - 315.0f) / 45.0f) - 1.0f; ySlope = -1.0f; }
+  static_cast<void>(color);
+  static_cast<void>(xTarget); static_cast<void>(xSlope); static_cast<void>(xSlopeInterval);
+  static_cast<void>(yTarget); static_cast<void>(ySlope); static_cast<void>(ySlopeInterval);
 
-  // xSlope = 1.0f;
-  // ySlope = 1.0f;
-  static_cast<void>(size);
+  uint32_t const haha = ::sqrt(((x < xOrigin ? xOrigin - x : x - xOrigin) * (x < xOrigin ? xOrigin - x : x - xOrigin)) + ((y < yOrigin ? yOrigin - y : y - yOrigin) * (y < yOrigin ? yOrigin - y : y - yOrigin)));
+  if ((xTarget == 400u && yTarget == 350u) || (xTarget == 550u && yTarget == 200u) || (xTarget == 550u && yTarget == 350u) || xTarget == 475u || yTarget == 275u)
+  Graphics::drawCircle(xOrigin - haha, yOrigin - haha, haha * 2u, 0x00FF00u, 0.0f);
   x = xOrigin;
   y = yOrigin;
-  while (static_cast<uint32_t>(size * size) > static_cast<uint32_t>(
-    // (x < xOrigin ? xOrigin - x : x - xOrigin) +
-    // (y < yOrigin ? yOrigin - y : y - yOrigin)
-    ((x < xOrigin ? xOrigin - x : x - xOrigin) * (x < xOrigin ? xOrigin - x : x - xOrigin)) +
-    ((y < yOrigin ? yOrigin - y : y - yOrigin) * (y < yOrigin ? yOrigin - y : y - yOrigin))
-  )) {
-    if (1.0f <= xSlopeInterval) { --xSlopeInterval; 0.0f > xSlope ? --x : ++x; }
-    if (1.0f <= ySlopeInterval) { --ySlopeInterval; 0.0f > ySlope ? --y : ++y; }
+  xSlopeInterval = 0.0f;
+  ySlopeInterval = 0.0f;
+
+  while (haha > ::sqrt(((x < xOrigin ? xOrigin - x : x - xOrigin) * (x < xOrigin ? xOrigin - x : x - xOrigin)) + ((y < yOrigin ? yOrigin - y : y - yOrigin) * (y < yOrigin ? yOrigin - y : y - yOrigin)))) {
+    if (1.0f <= xSlopeInterval) { xSlopeInterval -= 1.0f; 0.0f > xSlope ? --x : ++x; }
+    if (1.0f <= ySlopeInterval) { ySlopeInterval -= 1.0f; 0.0f > ySlope ? --y : ++y; }
 
     xSlopeInterval += 0.0f > xSlope ? -xSlope : xSlope;
     ySlopeInterval += 0.0f > ySlope ? -ySlope : ySlope;
+    if ((xTarget == 400u && yTarget == 350u) || (xTarget == 550u && yTarget == 200u) || (xTarget == 550u && yTarget == 350u) || xTarget == 475u || yTarget == 275u)
+    Graphics::putPixel(x, y, 0x333333u);
   }
 
+  Graphics::putPixel(xOrigin, yOrigin, 0xFF0000u);
+  Graphics::putPixel(xTarget, yTarget, 0xFF0000u);
   Graphics::putPixel(x, y, 0xFFFF00u);
-  // Graphics::putPixel((::cosf(angle) * x) - (::sinf(angle) * y), (::sinf(angle) * x) + (::cosf(angle) * y), 0xFF0000u);
+  // Graphics::putPixel((::cosf(angle) * x) - (::sinf(angle) * y), (::sinf(angle) * x) + (::cosf(angle) * y), 0xFF00FFu);
 }
 
 /* Main */
@@ -421,6 +415,7 @@ void INITIATE() {
 }
 
 /* : Update */
+static float SUS = 0.0f;
 LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
   switch (message) {
     /* ... */
@@ -484,6 +479,10 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
     } break;
 
     /* ... */
+    case WM_KEYUP: {
+      SUS = SUS != 360.0f ? SUS + 1.0f : 0.0f;
+      std::printf("[...]: %f" "\r\n", SUS);
+    } break;
     case WM_ERASEBKGND: return 0x1L;
     case WM_PAINT: {
       // // [Line]
@@ -512,24 +511,21 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
       // Graphics::drawSpline(1u, Window::HEIGHT - 1u, Window::WIDTH - 1u, Window::HEIGHT - 1u, 3u, 0u, 0u, Window::WIDTH / 2u, 0u, Window::WIDTH - 1u, 0u, 0x009900u, 0.0f);
 
       // [...]
-      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 200u, 400u, 200u, 0x00FF00u,  0.0f);
+      for (uint16_t y = Window::HEIGHT; y--; )
+      for (uint16_t x = Window::WIDTH; x--; ) {
+        Graphics::putPixel(x, y, 0x000000u);
+      }
       // Graphics::drawLine(&Graphics::putPixel, 300u, 200u, 300u, 300u, 0x0000FFu, 0.0f);
+      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 200u, 400u, 200u, 0x00FF00u,  0.0f);
 
-      Graphics::drawLine(&Graphics::Transform::rotate, 300u, 275u, 400u, 275u, 0x0000FFu, 45.0f);
-      Graphics::drawLine(&Graphics::putPixel, 300u, 275u, 300u, 375u, 0x0000FFu, 45.0f);
+      // Graphics::drawLine(&Graphics::putPixel, 300u, 275u, 300u, 375u, 0x0000FFu, SUS);
+      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 275u, 400u, 275u, 0x0000FFu, SUS);
 
-      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 350u, 400u, 350u, 0x00FFFFu, 90.0f);
       // Graphics::drawLine(&Graphics::putPixel, 300u, 350u, 300u, 450u, 0x0000FFu, 90.0f);
-      // Graphics::drawRectangle(
-      //   &Graphics::Transform::rotate,
-      //   (Window::WIDTH  - (((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 1u) / 5u)) / 2u,
-      //   (Window::HEIGHT - (((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 2u) / 5u)) / 2u,
-
-      //   ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 1u) / 5u,
-      //   ((Window::HEIGHT < Window::WIDTH ? Window::HEIGHT : Window::WIDTH) * 2u) / 5u,
-
-      //   0x0000FFu, 45.0f
-      // );
+      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 350u, 400u, 350u, 0x00FFFFu, 90.0f);
+      // Graphics::drawRectangle(&Graphics::Transform::rotate, 400u, 200u, 100u, 200u, 0x0000FFu, 45.0f);
+      Graphics::drawSquare(&Graphics::putPixel, 400u, 200u, 150u, 0x0000FFu, SUS);
+      Graphics::drawSquare(&Graphics::Transform::rotate, 400u, 200u, 150u, 0x0000FFu, SUS);
 
       // ...
       ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);

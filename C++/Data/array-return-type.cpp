@@ -5,7 +5,7 @@
 
 /* ... -> (Ideally compile-time) `return` array generated within the function. */
 int (&GetHeapArray(void))[2] {
-  // Post-C++ 20 version: `new` is not compile-time(?)
+  // Post-C++ 20 version: `new` without `delete` is not compile-time
   return *std::bit_cast<int (*)[2]>(
     new int[2] {0x45, -420}
   );
