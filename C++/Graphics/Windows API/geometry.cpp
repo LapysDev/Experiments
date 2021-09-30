@@ -281,71 +281,16 @@ void Graphics::putPixel(uint16_t const, uint16_t const, uint16_t const x, uint16
 }
 
 #include <cmath>
-void Graphics::Transform::rotate(uint16_t xOrigin, uint16_t yOrigin, uint16_t x, uint16_t y, float angle, DWORD const color) {
-  // if (false == (x == 550u)) return;
-  if (0u == (x < xOrigin ? xOrigin - x : x - xOrigin) + (y < yOrigin ? yOrigin - y : y - yOrigin)) return;
+void Graphics::Transform::rotate(uint16_t xAnchor, uint16_t yAnchor, uint16_t x, uint16_t y, float angle, DWORD const color) {
+  angle *= 245850922.0f / 78256779.0f;
+  angle /= 180.0f;
 
-  // ...
-  uint16_t xTarget = x;
-  uint16_t yTarget = y;
-  float xSlope, xSlopeInterval = 0.0f;
-  float ySlope, ySlopeInterval = 0.0f;
-  float sus = (
-    (x < xOrigin ? xOrigin - x : x - xOrigin) > (y < yOrigin ? yOrigin - y : y - yOrigin)
-    ? (45.0f + (45.0f * (1.0f - (static_cast<float>(y < yOrigin ? yOrigin - y : y - yOrigin) / static_cast<float>(x < xOrigin ? xOrigin - x : x - xOrigin)))))
-    : (45.0f * (static_cast<float>(x < xOrigin ? xOrigin - x : x - xOrigin) / static_cast<float>(y < yOrigin ? yOrigin - y : y - yOrigin)))
+  Graphics::putPixel(x, y, color);
+  Graphics::putPixel(
+    xAnchor + ((::cosf(angle) * (x - xAnchor)) - (::sinf(angle) * (y - yAnchor))),
+    yAnchor + ((::sinf(angle) * (x - xAnchor)) + (::cosf(angle) * (y - yAnchor))),
+    0xFF00FFu
   );
-
-  if (x < xOrigin) sus += 180.0f;
-  if (y > yOrigin) sus = 180.0f - sus;
-  angle += sus;
-  if (angle > 360.0f) angle -= 360.0f;
-  // std::printf("[]: (%f -> %f) {%hu, %hu} -> {%hu, %hu}" "\r\n", sus, angle, xOrigin, yOrigin, x, y);
-
-  // 0   => [+0, -1]
-  // 45  => [+1, -1]
-  // 90  => [+1, +0]
-  // 135 => [+1, +1]
-  // 180 => [+0, +1]
-  // 225 => [-1, +1]
-  // 270 => [-1, +0]
-  // 315 => [-1, -1]
-  // 360 => [+0, -1]
-  if (angle == 0.0f) { xSlope = 0.0f; ySlope = -1.0f; }
-  else if (angle >   0.0f && angle <=  45.0f) { xSlope = angle / 45.0f;                     ySlope = -1.0f; }
-  else if (angle >  45.0f && angle <=  90.0f) { xSlope = 1.0f;                              ySlope = ((angle - 45.0f) / 45.0f) - 1.0f; }
-  else if (angle >  90.0f && angle <= 135.0f) { xSlope = 1.0f;                              ySlope = (angle - 90.0f) / 45.0f; }
-  else if (angle > 135.0f && angle <= 180.0f) { xSlope = 1.0f - ((angle - 135.0f) / 45.0f); ySlope = 1.0f; }
-  else if (angle > 180.0f && angle <= 225.0f) { xSlope = (angle - 180.0f) / -45.0f;         ySlope = 1.0f; }
-  else if (angle > 225.0f && angle <= 270.0f) { xSlope = -1.0f;                             ySlope = 1.0f - ((angle - 225.0f) / 45.0f); }
-  else if (angle > 270.0f && angle <= 315.0f) { xSlope = -1.0f;                             ySlope = (angle - 270.0f) / -45.0f; }
-  else if (angle > 315.0f && angle <= 360.0f) { xSlope = ((angle - 315.0f) / 45.0f) - 1.0f; ySlope = -1.0f; }
-  static_cast<void>(color);
-  static_cast<void>(xTarget); static_cast<void>(xSlope); static_cast<void>(xSlopeInterval);
-  static_cast<void>(yTarget); static_cast<void>(ySlope); static_cast<void>(ySlopeInterval);
-
-  uint32_t const haha = ::sqrt(((x < xOrigin ? xOrigin - x : x - xOrigin) * (x < xOrigin ? xOrigin - x : x - xOrigin)) + ((y < yOrigin ? yOrigin - y : y - yOrigin) * (y < yOrigin ? yOrigin - y : y - yOrigin)));
-  if ((xTarget == 400u && yTarget == 350u) || (xTarget == 550u && yTarget == 200u) || (xTarget == 550u && yTarget == 350u) || xTarget == 475u || yTarget == 275u)
-  Graphics::drawCircle(xOrigin - haha, yOrigin - haha, haha * 2u, 0x00FF00u, 0.0f);
-  x = xOrigin;
-  y = yOrigin;
-  xSlopeInterval = 0.0f;
-  ySlopeInterval = 0.0f;
-
-  while (haha > ::sqrt(((x < xOrigin ? xOrigin - x : x - xOrigin) * (x < xOrigin ? xOrigin - x : x - xOrigin)) + ((y < yOrigin ? yOrigin - y : y - yOrigin) * (y < yOrigin ? yOrigin - y : y - yOrigin)))) {
-    if (1.0f <= xSlopeInterval) { xSlopeInterval -= 1.0f; 0.0f > xSlope ? --x : ++x; }
-    if (1.0f <= ySlopeInterval) { ySlopeInterval -= 1.0f; 0.0f > ySlope ? --y : ++y; }
-
-    xSlopeInterval += 0.0f > xSlope ? -xSlope : xSlope;
-    ySlopeInterval += 0.0f > ySlope ? -ySlope : ySlope;
-    if ((xTarget == 400u && yTarget == 350u) || (xTarget == 550u && yTarget == 200u) || (xTarget == 550u && yTarget == 350u) || xTarget == 475u || yTarget == 275u)
-    Graphics::putPixel(x, y, 0x333333u);
-  }
-
-  Graphics::putPixel(xOrigin, yOrigin, 0xFF0000u);
-  Graphics::putPixel(xTarget, yTarget, 0xFF0000u);
-  Graphics::putPixel(x, y, 0xFFFF00u);
-  // Graphics::putPixel((::cosf(angle) * x) - (::sinf(angle) * y), (::sinf(angle) * x) + (::cosf(angle) * y), 0xFF00FFu);
 }
 
 /* Main */
