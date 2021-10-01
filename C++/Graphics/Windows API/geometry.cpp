@@ -8,8 +8,8 @@
 #include <stdint.h>  // Standard Integers
 
 // : [C++ Standard Library]
+#include <cmath>   // C Mathematics
 #include <cstdarg> // C Standard Arguments
-#include <cstdio>
 #include <cstdlib> // C Standard Library
 
 // : [Windows API]
@@ -25,35 +25,54 @@ LRESULT CALLBACK UPDATE(HWND const, UINT const, WPARAM const, LPARAM const);
 
 /* Namespace */
 // : Graphics
-namespace Graphics {
-  static uint8_t const CUBIC = 2u, QUADRATIC = 1u, LINEAR = 0u;
+union Graphics {
+  private:
+    // ...
+    enum { LINEAR = 0u, QUADRATIC = 1u, CUBIC = 2u };
 
-  // ...
-  namespace Transform {
-    void rotate   (uint16_t const, uint16_t const, uint16_t const, uint16_t const, float const, DWORD const);
-    void scale    (uint16_t const, uint16_t const, uint16_t const, uint16_t const, float const, DWORD const);
-    void skew     (uint16_t const, uint16_t const, uint16_t const, uint16_t const, float const, DWORD const);
-    void translate(uint16_t const, uint16_t const, uint16_t const, uint16_t const, float const, DWORD const);
-  }
+    // ...
+    static void drawCircle   (bool (*const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t const, uint16_t const, uint16_t, DWORD const);
+    static void drawEllipse  (bool (*const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t const, uint16_t const, uint16_t, uint16_t, DWORD const);
+    static void drawLine     (bool (*const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t const, uint16_t const, uint16_t const, uint16_t const, DWORD const);
+    static void drawRectangle(bool (*const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t const, uint16_t const, uint16_t const, uint16_t const, DWORD const);
+    static void drawSpline   (bool (*const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t, uint16_t, uint16_t, uint16_t, uint8_t);
+    static void drawSquare   (bool (*const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t const, uint16_t const, uint16_t const, DWORD const);
 
-  void drawCircle   (void (*const)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const, uint16_t const, uint16_t, DWORD const, float const);
-  void drawEllipse  (void (*const)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const, uint16_t const, uint16_t, uint16_t, DWORD const, float const);
-  void drawLine     (void (*const)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const, uint16_t const, uint16_t const, uint16_t const, DWORD const, float const);
-  void drawRectangle(void (*const)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const, uint16_t const, uint16_t const, uint16_t const, DWORD const, float const);
-  void drawSpline   (void (*const)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t, uint16_t, uint16_t, uint16_t, uint8_t, std::va_list);
-  void drawSpline   (void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t const degree, ...) { std::va_list arguments; va_start(arguments, degree); return Graphics::drawSpline(function, xOrigin, yOrigin, xTarget, yTarget, degree, arguments); }
-  void drawSquare   (void (*const)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const, uint16_t const, uint16_t const, DWORD const, float const);
-  void putPixel(uint16_t const, uint16_t const, uint16_t const, uint16_t const, float const, DWORD const);
+    static void putPixel(bool (*const* const)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const, uint16_t const, uint16_t const, uint16_t const, uint16_t const, DWORD const);
+    static void putPixel(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const x, uint16_t const y, DWORD const color) { Graphics::putPixel(&function, values, xOrigin, yOrigin, x, y, color); }
 
-  void drawCircle   (uint16_t const x, uint16_t const y, uint16_t radius, DWORD const color, float const value) { return Graphics::drawCircle(&Graphics::putPixel, x, y, radius, color, value); }
-  void drawEllipse  (uint16_t const x, uint16_t const y, uint16_t width, uint16_t height, DWORD const color, float const value) { return Graphics::drawEllipse(&Graphics::putPixel, x, y, width, height, color, value); }
-  void drawLine     (uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, DWORD const color, float const value) { return Graphics::drawLine(&Graphics::putPixel, xOrigin, yOrigin, xTarget, yTarget, color, value); }
-  void drawRectangle(uint16_t const x, uint16_t const y, uint16_t const width, uint16_t const height, DWORD const color, float const value) { return Graphics::drawRectangle(&Graphics::putPixel, x, y, width, height, color, value); }
-  void drawSpline   (uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t const degree, std::va_list arguments) { return Graphics::drawSpline(&Graphics::putPixel, xOrigin, yOrigin, xTarget, yTarget, degree, arguments); }
-  void drawSpline   (uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t const degree, ...) { std::va_list arguments; va_start(arguments, degree); return Graphics::drawSpline(xOrigin, yOrigin, xTarget, yTarget, degree, arguments); }
-  void drawSquare   (uint16_t const x, uint16_t const y, uint16_t const size, DWORD const color, float const value) { return Graphics::drawSquare(&Graphics::putPixel, x, y, size, color, value); }
-  void putPixel(uint16_t const x, uint16_t const y, DWORD const color) { Graphics::putPixel(0u, 0u, x, y, 0.0f, color); }
-}
+  public:
+    union Transform {
+      static bool rotate   (uint16_t (*const)[2], uint16_t const, uint16_t const, float const);
+      static bool scale    (uint16_t (*const)[2], uint16_t const, uint16_t const, float const, float const);
+      static bool skew     (uint16_t (*const)[2], uint16_t const, uint16_t const, float const, float const);
+      static bool translate(uint16_t (*const)[2], int32_t const, int32_t const);
+    };
+
+    // ...
+    static void clear();
+
+    static void drawCircle   (bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const x, uint16_t const y, uint16_t const radius, DWORD const color, ...) { std::va_list values; va_start(values, color); Graphics::drawCircle(function, &values, x, y, radius, color); va_end(values); }
+    static void drawCircle   (uint16_t const x, uint16_t const y, uint16_t const radius, DWORD const color) { Graphics::drawCircle(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, x, y, radius, color); }
+
+    static void drawEllipse  (bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const x, uint16_t const y, uint16_t const width, uint16_t const height, DWORD const color, ...) { std::va_list values; va_start(values, color); Graphics::drawEllipse(function, &values, x, y, width, height, color); va_end(values); }
+    static void drawEllipse  (uint16_t const x, uint16_t const y, uint16_t const width, uint16_t const height, DWORD const color) { Graphics::drawEllipse(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, x, y, width, height, color); }
+
+    static void drawLine     (bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, DWORD const color, ...) { std::va_list values; va_start(values, color); Graphics::drawLine(function, &values, xOrigin, yOrigin, xTarget, yTarget, color); va_end(values); }
+    static void drawLine     (uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, DWORD const color) { Graphics::drawLine(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, xOrigin, yOrigin, xTarget, yTarget, color); }
+
+    static void drawPoint    (bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const x, uint16_t const y, DWORD const color, ...) { std::va_list values; va_start(values, color); Graphics::putPixel(&function, &values, x, y, x, y, color); va_end(values); }
+    static void drawPoint    (uint16_t const x, uint16_t const y, DWORD const color) { Graphics::putPixel(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, x, y, x, y, color); }
+
+    static void drawRectangle(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const x, uint16_t const y, uint16_t const width, uint16_t const height, DWORD const color, ...) { std::va_list values; va_start(values, color); Graphics::drawRectangle(function, &values, x, y, width, height, color); va_end(values); }
+    static void drawRectangle(uint16_t const x, uint16_t const y, uint16_t const width, uint16_t const height, DWORD const color) { Graphics::drawRectangle(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, x, y, width, height, color); }
+
+    static void drawSpline   (bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t const degree, ...) { std::va_list values; va_start(values, degree); Graphics::drawSpline(function, &values, xOrigin, yOrigin, xTarget, yTarget, degree); va_end(values); }
+    static void drawSpline   (uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, uint8_t const degree) { Graphics::drawSpline(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, xOrigin, yOrigin, xTarget, yTarget, degree); }
+
+    static void drawSquare   (bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), uint16_t const x, uint16_t const y, uint16_t const size, DWORD const color, ...) { std::va_list values; va_start(values, color); Graphics::drawSquare(function, &values, x, y, size, color); va_end(values); }
+    static void drawSquare   (uint16_t const x, uint16_t const y, uint16_t const size, DWORD const color) { Graphics::drawSquare(static_cast<bool (*)(uint16_t (*)[2], uint16_t, uint16_t, ...)>(NULL), NULL, x, y, size, color); }
+};
 
 // : Program
 namespace Program {
@@ -93,16 +112,21 @@ namespace Window {
 }
 
 /* Function > ... */
-void Graphics::drawCircle(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t radius, DWORD const color, float const value) {
+void Graphics::clear() {
+  for (UINT32 *iterator = Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY + (Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth); iterator-- != Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY; )
+  *iterator ^= *iterator;
+}
+
+void Graphics::drawCircle(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t radius, DWORD const color) {
   uint16_t x = 0u;
   uint16_t y = radius / 2u;
 
   radius /= 2u;
   while (true) {
-    function(xOrigin, yOrigin, xOrigin + (radius + x), yOrigin + (radius + y), value, color);
-    function(xOrigin, yOrigin, xOrigin + (radius + x), yOrigin + (radius - y), value, color);
-    function(xOrigin, yOrigin, xOrigin + (radius - x), yOrigin + (radius + y), value, color);
-    function(xOrigin, yOrigin, xOrigin + (radius - x), yOrigin + (radius - y), value, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (radius + x), yOrigin + (radius + y), color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (radius + x), yOrigin + (radius - y), color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (radius - x), yOrigin + (radius + y), color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (radius - x), yOrigin + (radius - y), color);
 
     // ...
     if (x == radius || y == 0u) break;
@@ -113,16 +137,16 @@ void Graphics::drawCircle(void (*const function)(uint16_t, uint16_t, uint16_t, u
   }
 }
 
-void Graphics::drawEllipse(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t width, uint16_t height, DWORD const color, float const value) {
+void Graphics::drawEllipse(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t width, uint16_t height, DWORD const color) {
   uint16_t x = 0u;
   uint16_t y = height / 2u;
 
   height /= 2u; width /= 2u;
   while (true) {
-    function(xOrigin, yOrigin, xOrigin + (width + x), yOrigin + (height + y), value, color);
-    function(xOrigin, yOrigin, xOrigin + (width + x), yOrigin + (height - y), value, color);
-    function(xOrigin, yOrigin, xOrigin + (width - x), yOrigin + (height + y), value, color);
-    function(xOrigin, yOrigin, xOrigin + (width - x), yOrigin + (height - y), value, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (width + x), yOrigin + (height + y), color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (width + x), yOrigin + (height - y), color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (width - x), yOrigin + (height + y), color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + (width - x), yOrigin + (height - y), color);
 
     // ...
     if (x == width || y == 0u) break;
@@ -133,7 +157,7 @@ void Graphics::drawEllipse(void (*const function)(uint16_t, uint16_t, uint16_t, 
   }
 }
 
-void Graphics::drawLine(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, DWORD const color, float const value) {
+void Graphics::drawLine(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const xTarget, uint16_t const yTarget, DWORD const color) {
   uint16_t x = xOrigin;
   uint16_t y = yOrigin;
   uint16_t const xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
@@ -150,26 +174,25 @@ void Graphics::drawLine(void (*const function)(uint16_t, uint16_t, uint16_t, uin
 
     xSlopeInterval += xDistance;
     ySlopeInterval += yDistance;
-    function(xOrigin, yOrigin, x, y, value, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, x, y, color);
   }
 }
 
-void Graphics::drawRectangle(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const width, uint16_t const height, DWORD const color, float const value) {
-  for (uint16_t iterator = width + 1u; iterator--; ) {
-    function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + height, value, color);
-    function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + 0u    , value, color);
+void Graphics::drawRectangle(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const width, uint16_t const height, DWORD const color) {
+  for (uint16_t iterator = width; iterator--; ) {
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + iterator, yOrigin + height, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + iterator, yOrigin + 0u    , color);
   }
 
-  for (uint16_t iterator = height + 1u; iterator--; ) {
-    function(xOrigin, yOrigin, xOrigin + width, yOrigin + iterator, value, color);
-    function(xOrigin, yOrigin, xOrigin + 0u   , yOrigin + iterator, value, color);
+  for (uint16_t iterator = height; iterator--; ) {
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + width, yOrigin + iterator, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + 0u   , yOrigin + iterator, color);
   }
 }
 
-void Graphics::drawSpline(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t xOrigin, uint16_t yOrigin, uint16_t xTarget, uint16_t yTarget, uint8_t degree, std::va_list arguments) {
+void Graphics::drawSpline(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t xOrigin, uint16_t yOrigin, uint16_t xTarget, uint16_t yTarget, uint8_t degree) {
   DWORD color;
   uint16_t const totalSamples = 0u == degree ? 1u : 50u;
-  float value;
   uint16_t xControl[126], xSubcontrol[126];
   uint16_t yControl[126], ySubcontrol[126];
   uint16_t xFormer = xOrigin;
@@ -177,17 +200,14 @@ void Graphics::drawSpline(void (*const function)(uint16_t, uint16_t, uint16_t, u
 
   // ...
   for (uint8_t iterator = 0u; degree != iterator; ++iterator) {
-    xControl[iterator + 1u] = static_cast<uint16_t>(va_arg(arguments, unsigned int));
-    yControl[iterator + 1u] = static_cast<uint16_t>(va_arg(arguments, unsigned int));
+    xControl[iterator + 1u] = static_cast<uint16_t>(va_arg(*values, unsigned int));
+    yControl[iterator + 1u] = static_cast<uint16_t>(va_arg(*values, unsigned int));
   }
 
-  color = va_arg(arguments, DWORD);
-  value = static_cast<double>(va_arg(arguments, double));
+  color = va_arg(*values, DWORD);
   degree += 2u;
   xControl[0] = xOrigin; xControl[degree - 1u] = xTarget;
   yControl[0] = yOrigin; yControl[degree - 1u] = yTarget;
-
-  va_end(arguments);
 
   for (uint16_t currentSamples = totalSamples; currentSamples--; ) {
     uint16_t slope;
@@ -261,36 +281,68 @@ void Graphics::drawSpline(void (*const function)(uint16_t, uint16_t, uint16_t, u
 
       xSlopeInterval += xDistance;
       ySlopeInterval += yDistance;
-      function(*xControl, *yControl, x, y, value, color);
+      Graphics::putPixel(&function, values, *xControl, *yControl, x, y, color);
     }
   }
 }
 
-void Graphics::drawSquare(void (*const function)(uint16_t, uint16_t, uint16_t, uint16_t, float, DWORD), uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const size, DWORD const color, float const value) {
-  for (uint16_t iterator = size + 1u; iterator--; ) {
-    function(xOrigin, yOrigin, xOrigin + size    , yOrigin + iterator, value, color);
-    function(xOrigin, yOrigin, xOrigin + 0u      , yOrigin + iterator, value, color);
-    function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + size    , value, color);
-    function(xOrigin, yOrigin, xOrigin + iterator, yOrigin + 0u      , value, color);
+void Graphics::drawSquare(bool (*const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const size, DWORD const color) {
+  for (uint16_t iterator = size; iterator--; ) {
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + size    , yOrigin + iterator, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + 0u      , yOrigin + iterator, color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + iterator, yOrigin + size    , color);
+    Graphics::putPixel(&function, values, xOrigin, yOrigin, xOrigin + iterator, yOrigin + 0u      , color);
   }
 }
 
-void Graphics::putPixel(uint16_t const, uint16_t const, uint16_t const x, uint16_t const y, float const, DWORD const color) {
-  if (x >= Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth || y >= Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight) return;
-  Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[x + (y * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000u | color;
+void Graphics::putPixel(bool (*const *const function)(uint16_t (*)[2], uint16_t, uint16_t, ...), std::va_list* const values, uint16_t const xOrigin, uint16_t const yOrigin, uint16_t const x, uint16_t const y, DWORD const color) {
+  uint16_t coordinates[2] = {x, y};
+
+  if (NULL == *function) {}
+  else if (&Graphics::Transform::rotate    == *static_cast<bool (* const*)(uint16_t (*)[2], uint16_t, uint16_t, float)>       (static_cast<void const*>(function))) { if (false == Transform::rotate   (&coordinates, xOrigin, yOrigin, static_cast<float>(va_arg(*values, double)))) return; }
+  else if (&Graphics::Transform::scale     == *static_cast<bool (* const*)(uint16_t (*)[2], uint16_t, uint16_t, float, float)>(static_cast<void const*>(function))) { if (false == Transform::scale    (&coordinates, xOrigin, yOrigin, static_cast<float>(va_arg(*values, double)), static_cast<float>(va_arg(*values, double)))) return; }
+  else if (&Graphics::Transform::skew      == *static_cast<bool (* const*)(uint16_t (*)[2], uint16_t, uint16_t, float, float)>(static_cast<void const*>(function))) { if (false == Transform::skew     (&coordinates, xOrigin, yOrigin, static_cast<float>(va_arg(*values, double)), static_cast<float>(va_arg(*values, double)))) return; }
+  else if (&Graphics::Transform::translate == *static_cast<bool (* const*)(uint16_t (*)[2], int32_t, int32_t)>                (static_cast<void const*>(function))) { if (false == Transform::translate(&coordinates, static_cast<int32_t>(va_arg(*values, signed int)), static_cast<int32_t>(va_arg(*values, signed int)))) return; }
+  else { if (false == (**function)(&coordinates, xOrigin, yOrigin)) return; }
+
+  Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY[coordinates[0] + (coordinates[1] * Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth)] = 0xFF000000uL | color;
 }
 
-#include <cmath>
-void Graphics::Transform::rotate(uint16_t xAnchor, uint16_t yAnchor, uint16_t x, uint16_t y, float angle, DWORD const color) {
-  angle *= 245850922.0f / 78256779.0f;
-  angle /= 180.0f;
+bool Graphics::Transform::rotate(uint16_t (*const coordinates)[2], uint16_t const xOrigin, uint16_t const yOrigin, float const angle) {
+  int32_t const xTarget = xOrigin + ((::cosf(angle) * static_cast<float>(static_cast<int32_t>((*coordinates)[0]) - static_cast<int32_t>(xOrigin))) - (::sinf(angle) * static_cast<float>(static_cast<int32_t>((*coordinates)[1]) - static_cast<int32_t>(yOrigin))));
+  int32_t const yTarget = yOrigin + ((::sinf(angle) * static_cast<float>(static_cast<int32_t>((*coordinates)[0]) - static_cast<int32_t>(xOrigin))) + (::cosf(angle) * static_cast<float>(static_cast<int32_t>((*coordinates)[1]) - static_cast<int32_t>(yOrigin))));
 
-  Graphics::putPixel(x, y, color);
-  Graphics::putPixel(
-    xAnchor + ((::cosf(angle) * (x - xAnchor)) - (::sinf(angle) * (y - yAnchor))),
-    yAnchor + ((::sinf(angle) * (x - xAnchor)) + (::cosf(angle) * (y - yAnchor))),
-    0xFF00FFu
-  );
+  if (
+    (0 > xTarget && xTarget < Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth) &&
+    (0 > yTarget && yTarget < Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight)
+  ) {
+    (*coordinates)[0] = xTarget;
+    (*coordinates)[1] = yTarget;
+
+    return true;
+  }
+
+  return false;
+}
+
+bool Graphics::Transform::scale(uint16_t (*const)[2], uint16_t const, uint16_t const, float const, float const) { return false; }
+bool Graphics::Transform::skew(uint16_t (*const)[2], uint16_t const, uint16_t const, float const, float const) { return false; }
+
+bool Graphics::Transform::translate(uint16_t (*const coordinates)[2], int32_t const x, int32_t const y) {
+  int32_t const xTarget = static_cast<int32_t>((*coordinates)[0]) + static_cast<int32_t>(x);
+  int32_t const yTarget = static_cast<int32_t>((*coordinates)[1]) + static_cast<int32_t>(y);
+
+  if (
+    (0 > xTarget && xTarget < Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmWidth) &&
+    (0 > yTarget && yTarget < Window::MEMORY_DEVICE_CONTEXT_BITMAP.bmHeight)
+  ) {
+    (*coordinates)[0] = xTarget;
+    (*coordinates)[1] = yTarget;
+
+    return true;
+  }
+
+  return false;
 }
 
 /* Main */
@@ -360,7 +412,6 @@ void INITIATE() {
 }
 
 /* : Update */
-static float SUS = 0.0f;
 LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
   switch (message) {
     /* ... */
@@ -406,7 +457,7 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
       if (NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE && NULL == Window::MEMORY_DEVICE_CONTEXT_BITMAP_MEMORY) TERMINATE();
 
       /* ... */
-      // ::FreeConsole();
+      ::FreeConsole();
       ::GetObject(Window::MEMORY_DEVICE_CONTEXT_BITMAP_HANDLE, sizeof(BITMAP), &Window::MEMORY_DEVICE_CONTEXT_BITMAP);
 
       ::SelectObject(Window::DEVICE_CONTEXT_HANDLE, Window::DEVICE_CONTEXT_BITMAP_HANDLE);
@@ -424,53 +475,11 @@ LRESULT CALLBACK UPDATE(HWND const windowHandle, UINT const message, WPARAM cons
     } break;
 
     /* ... */
-    case WM_KEYUP: {
-      SUS = SUS != 360.0f ? SUS + 1.0f : 0.0f;
-      std::printf("[...]: %f" "\r\n", SUS);
-    } break;
     case WM_ERASEBKGND: return 0x1L;
     case WM_PAINT: {
-      // // [Line]
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , 0u                 , 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , Window::HEIGHT - 1u, 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, 0u                , Window::HEIGHT / 2u, 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH / 2u, 0u                 , 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, 0u                 , 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, Window::HEIGHT - 1u, 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH - 1u, Window::HEIGHT / 2u, 0x606060u, 0.0f);
-      // Graphics::drawLine(Window::WIDTH / 2u, Window::HEIGHT / 2u, Window::WIDTH / 2u, Window::HEIGHT - 1u, 0x606060u, 0.0f);
-      // Graphics::drawLine(std::rand() % Window::WIDTH, std::rand() % Window::HEIGHT, std::rand() % Window::WIDTH, std::rand() % Window::HEIGHT, 0x0F0F0Fu, 0.0f);
-
-      // // [Circle, Ellipse, Rectangle, Square]
-      // Graphics::drawSquare((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xAA0000u, 0.0f);
-      // Graphics::drawCircle((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xCCCCCCu, 0.0f);
-      // Graphics::drawCircle((Window::WIDTH - 200u) / 2u, (Window::HEIGHT - 200u) / 2u, 200u, 0xCCCCCCu, 0.0f);
-
-      // Graphics::drawRectangle((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xAA0000u, 0.0f);
-      // Graphics::drawEllipse  ((Window::WIDTH - 500u) / 2u, (Window::HEIGHT - 250u) / 2u, 500u, 250u, 0xCCCCCCu, 0.0f);
-
-      // // [Spline]
-      // Graphics::drawSpline(1u, Window::HEIGHT - 1u, Window::WIDTH - 1u, Window::HEIGHT - 1u, Graphics::LINEAR, 0x009900u, 0.0f);
-      // Graphics::drawSpline(1u, Window::HEIGHT - 1u, Window::WIDTH - 1u, Window::HEIGHT - 1u, Graphics::QUADRATIC, Window::WIDTH / 2u, 0u, 0x009900u, 0.0f);
-      // Graphics::drawSpline(1u, Window::HEIGHT - 1u, Window::WIDTH - 1u, Window::HEIGHT - 1u, Graphics::CUBIC, 0u, 0u, Window::WIDTH - 1u, 0u, 0x009900u, 0.0f);
-      // Graphics::drawSpline(1u, Window::HEIGHT - 1u, Window::WIDTH - 1u, Window::HEIGHT - 1u, 3u, 0u, 0u, Window::WIDTH / 2u, 0u, Window::WIDTH - 1u, 0u, 0x009900u, 0.0f);
-
-      // [...]
-      for (uint16_t y = Window::HEIGHT; y--; )
-      for (uint16_t x = Window::WIDTH; x--; ) {
-        Graphics::putPixel(x, y, 0x000000u);
-      }
-      // Graphics::drawLine(&Graphics::putPixel, 300u, 200u, 300u, 300u, 0x0000FFu, 0.0f);
-      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 200u, 400u, 200u, 0x00FF00u,  0.0f);
-
-      // Graphics::drawLine(&Graphics::putPixel, 300u, 275u, 300u, 375u, 0x0000FFu, SUS);
-      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 275u, 400u, 275u, 0x0000FFu, SUS);
-
-      // Graphics::drawLine(&Graphics::putPixel, 300u, 350u, 300u, 450u, 0x0000FFu, 90.0f);
-      // Graphics::drawLine(&Graphics::Transform::rotate, 300u, 350u, 400u, 350u, 0x00FFFFu, 90.0f);
-      // Graphics::drawRectangle(&Graphics::Transform::rotate, 400u, 200u, 100u, 200u, 0x0000FFu, 45.0f);
-      Graphics::drawSquare(&Graphics::putPixel, 400u, 200u, 150u, 0x0000FFu, SUS);
-      Graphics::drawSquare(&Graphics::Transform::rotate, 400u, 200u, 150u, 0x0000FFu, SUS);
+      Graphics::clear();
+      // static void drawSquare(uint16_t const x, uint16_t const y, uint16_t const size, DWORD const color);
+      Graphics::drawSquare(50u, 50u, 100u, 0xFFFFFFu);
 
       // ...
       ::BitBlt(Window::DEVICE_CONTEXT_HANDLE, 0, 0, Window::WIDTH, Window::HEIGHT, Window::MEMORY_DEVICE_CONTEXT_HANDLE, 0, 0, SRCCOPY);
