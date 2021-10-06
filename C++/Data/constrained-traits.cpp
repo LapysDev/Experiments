@@ -44,7 +44,7 @@ template <std::size_t integer> union sum<integer> { enum { value = integer }; };
 template <std::size_t integerA, std::size_t integerB, std::size_t... integers> union sum<integerA, integerB, integers...> { enum { value = sum<integerA + integerB, integers...>::value }; };
 
 /* Main */
-int main() noexcept {
+int main() {
   std::printf("[is_void<int>] : %4.5s" "\r\n", constrain<true>::typed<>::type<is_void, int>::value  ? "true" : "false");
   std::printf("[is_void<void>]: %4.5s" "\r\n", constrain<true>::typed<>::type<is_void, void>::value ? "true" : "false");
   std::printf("[sum<2, 3>]: %u", constrain<true>::untyped<std::size_t, std::size_t>::type<sum, 2u, 3u>::value);
