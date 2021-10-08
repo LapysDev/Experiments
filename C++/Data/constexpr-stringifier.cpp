@@ -259,7 +259,7 @@
 # define arity_254() arity_253() , 254
 # define arity_255() arity_254() , 255
 #define concatenate(argument1, argument2) argument1 ## argument2
-#define defer(macro, ...) macro(__VA_ARGS__)
+#define defer(function, ...) function(__VA_ARGS__)
 #define empty()
 #define parse(...) parse_12(__VA_ARGS__)
 # define parse_1(...)  __VA_ARGS__

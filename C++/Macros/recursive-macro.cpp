@@ -2,7 +2,8 @@
 
 /* ... */
 #define concatenate(argument1, argument2) argument1 ## argument2
-#define defer(macro, ...) macro(__VA_ARGS__)
+#define defer(function, ...) defer_parse(function, (__VA_ARGS__))
+# define defer_parse(function, call) function call
 #define first(argument, ...) argument
 #define second(argument1, argument2, ...) argument2
 
