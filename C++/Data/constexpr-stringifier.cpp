@@ -1,6 +1,13 @@
-#include <cstdio>
+/* Import > C++ Standard Library */
+#include <cstdio> // C Standard Input/ Output
 
-/* ... */
+/* Definitions > ... */
+#define PREPROCESSOR_FORMAT PREPROCESSOR_FORMAT_CHECK(~, __MSVC__)
+# define PREPROCESSOR_FORMAT_CHECK(...) PREPROCESSOR_FORMAT_SELECT(__VA_ARGS__)
+# define PREPROCESSOR_FORMAT_SELECT(arguments, ...) defer(concatenate, defer(concatenate, PREPROCESSOR_, second(arguments, STANDARD, ~)), _FORMAT)
+# define PREPROCESSOR_STANDARD_FORMAT 0
+#   define PREPROCESSOR___MSVC___FORMAT 1
+
 #define arity(count) arity_ ## count()
 # define arity_0()
 # define arity_1()   1
@@ -259,8 +266,11 @@
 # define arity_254() arity_253() , 254
 # define arity_255() arity_254() , 255
 #define concatenate(argument1, argument2) argument1 ## argument2
-#define defer(function, ...) function(__VA_ARGS__)
+#define defer(function, ...) defer_parse(function, (__VA_ARGS__))
+# define defer_parse(function, call) function call
 #define empty()
+#define first(argument1, ...)             argument1
+#define second(argument1, argument2, ...) argument2
 #define parse(...) parse_12(__VA_ARGS__)
 # define parse_1(...)  __VA_ARGS__
 # define parse_2(...)  parse_1(parse_1(__VA_ARGS__))
@@ -274,25 +284,19 @@
 # define parse_10(...) parse_9(parse_9(__VA_ARGS__))
 # define parse_11(...) parse_10(parse_10(__VA_ARGS__))
 # define parse_12(...) parse_11(parse_11(__VA_ARGS__))
-#define repeat(...) repeat_setup(__VA_ARGS__, until, until, ~)
-# define repeat_begin(function, separator, condition, argument, next, ...) \
-  defer(concatenate, repeat_condition_is_, condition(argument, next, __VA_ARGS__))(repeat_continue, repeat_end)( \
-    function, \
-    defer(concatenate, repeat_condition_is_, condition(next, __VA_ARGS__))(separator, repeat_separator), \
-    stall(repeat_recurse)()(function, separator, condition, next, __VA_ARGS__, ~), \
-    argument, next, __VA_ARGS__ \
-  )
-# define repeat_condition(argument, ...) defer(concatenate, repeat_condition_, defer(second, repeat_condition_found_ ## argument, pass, ~))(argument)
+#undef repeat
+# define repeat_begin(function, separator, condition, argument, next, ...) defer(concatenate, repeat_condition_is_, condition(argument, next, __VA_ARGS__))(repeat_continue, repeat_end)(function, defer(concatenate, repeat_condition_is_, condition(next, __VA_ARGS__))(separator, repeat_separator), stall(repeat_recurse)()(function, separator, condition, next, __VA_ARGS__, until), argument, next, __VA_ARGS__)
+# undef repeat_condition
 #   define repeat_condition_accept(condition)   condition
 #   define repeat_condition_fallback(condition) repeat_condition
-#   define repeat_condition_fail(argument) false
-#   define repeat_condition_pass(argument) true
+#   define repeat_condition_fail() false
+#   define repeat_condition_pass() true
 #   define repeat_condition_is_false(truthy, falsy) falsy
 #   define repeat_condition_is_true(truthy, falsy)  truthy
 #     define repeat_condition_found_until       ~, fail
 #     define repeat_condition_selection_default ~, fallback
 # define repeat_continue(function, separator, repeater, argument, ...) function(argument) separator(argument, __VA_ARGS__) repeater
-# define repeat_end(function, separator, repeater, argument, ...)
+# define repeat_end(...)
 # define repeat_function(argument) argument
 #   define repeat_function_accept(function)   function
 #   define repeat_function_fallback(function) repeat_function
@@ -301,32 +305,80 @@
 #   define repeat_separator_accept(separator)   separator
 #   define repeat_separator_fallback(separator) repeat_separator
 #     define repeat_separator_selection_default ~, fallback
-# define repeat_setup(function, condition, separator, ...) parse(repeat_begin( \
-  defer(concatenate, repeat_function_ , defer(second, repeat_function_selection_  ## function , accept, ~))(function ), \
-  defer(concatenate, repeat_separator_, defer(second, repeat_separator_selection_ ## separator, accept, ~))(separator), \
-  defer(concatenate, repeat_condition_, defer(second, repeat_condition_selection_ ## condition, accept, ~))(condition), \
-  __VA_ARGS__ \
-))
+# undef  repeat_setup
 # define repeat_recurse() repeat_begin
-#define second(argument1, argument2, ...) argument2
-#define stall(argument) stall_12(argument)
-# define stall_1(argument)  argument empty()
-# define stall_2(argument)  argument empty empty()()
-# define stall_3(argument)  argument empty empty empty()()()
-# define stall_4(argument)  argument empty empty empty empty()()()()
-# define stall_5(argument)  argument empty empty empty empty empty()()()()()
-# define stall_6(argument)  argument empty empty empty empty empty empty()()()()()()
-# define stall_7(argument)  argument empty empty empty empty empty empty empty()()()()()()()
-# define stall_8(argument)  argument empty empty empty empty empty empty empty empty()()()()()()()()
-# define stall_9(argument)  argument empty empty empty empty empty empty empty empty empty()()()()()()()()()
-# define stall_10(argument) argument empty empty empty empty empty empty empty empty empty empty()()()()()()()()()()
-# define stall_11(argument) argument empty empty empty empty empty empty empty empty empty empty empty()()()()()()()()()()()
-# define stall_12(argument) argument empty empty empty empty empty empty empty empty empty empty empty empty()()()()()()()()()()()()
+# if PREPROCESSOR_FORMAT == PREPROCESSOR_STANDARD_FORMAT
+#   define repeat(...) parse(repeat_setup(__VA_ARGS__, until, until, until))
+#     define repeat_condition(argument, ...)                   defer(concatenate, repeat_condition_, defer(second, repeat_condition_found_ ## argument, pass, ~))()
+#     define repeat_setup(function, condition, separator, ...) repeat_begin(defer(concatenate, repeat_function_ , defer(second, repeat_function_selection_ ## function, accept, ~))(function), defer(concatenate, repeat_separator_, defer(second, repeat_separator_selection_ ## separator, accept, ~))(separator), defer(concatenate, repeat_condition_, defer(second, repeat_condition_selection_ ## condition, accept, ~))(condition), __VA_ARGS__)
+# elif PREPROCESSOR_FORMAT == PREPROCESSOR___MSVC___FORMAT
+#   define repeat(...) parse(defer(repeat_setup, __VA_ARGS__))
+#     define repeat_condition(argument, ...)                   defer(concatenate, repeat_condition_, stall(defer(second, first(repeat_condition_found_ ## argument, ~), pass)))()
+#     define repeat_setup(function, condition, separator, ...) defer(repeat_begin, stall(defer(concatenate, repeat_function_, defer(second, first(repeat_function_selection_ ## function, ~), accept, ~))(function)), stall(defer(concatenate, repeat_separator_, defer(second, first(repeat_separator_selection_ ## separator, ~), accept, ~))(separator)), stall(defer(concatenate, repeat_condition_, defer(second, first(repeat_condition_selection_ ## condition, ~), accept, ~))(condition)), __VA_ARGS__, until, until)
+# endif
+#define stall(macro) stall_2(macro)
+# define stall_1(macro) macro empty()
+# define stall_2(macro) macro empty empty()()
+#define stringify(...) stringify_parse(__VA_ARGS__)
+# define stringify_parse(...) #__VA_ARGS__
+
+/* ... */
+namespace {
+  template <bool>
+  union conditional;
+
+  // ...
+  template <>
+  union conditional<false> {
+    template <typename base, typename>
+    union typed { typedef base type; };
+  };
+
+  template <>
+  union conditional<true> {
+    template <typename...>
+    union templated;
+
+    #if defined(__clang__) || defined(__clang_major__) || defined(__clang_minor__) || defined(__clang_patchlevel__)
+      template <typename... types>
+      union templated {
+        union packed {};
+        union typed {
+          template <template <typename...> class, template <typename...> class base, typename... parameters>
+          using type = base<parameters...>;
+        };
+
+        union unpacked {
+          template <template <types...> class, template <types...> class base, types... parameters>
+          using type = base<parameters...>;
+        };
+      };
+    #else
+      #define declare(index)
+      # define declare_pass(index, ...)
+      // repeat()
+    #endif
+
+    template <typename, typename base>
+    union typed { typedef base type; };
+  };
+
+  conditional<true>::templated<>::packed<>::type
+  conditional<true>::templated<>::unpacked<>::type
+  conditional<true>::templated<>::typed<>::type
+  conditional<true>::typed<>::type
+}
 
 /* Main */
-#define pass(x) union type
-repeat(pass, default, default, arity(255))
+#define declare(index) declare_pass(index, arity(index))
+# define declare_pass(index, ...) union type ## index { type ## index() { std::puts("[" stringify(__VA_ARGS__) "]"); } };
+
+repeat(declare, default, default, arity(5))
 
 int main() {
-  std::puts("Hello, World!");
+  type1();
+  type2();
+  type3();
+  type4();
+  type5();
 }
