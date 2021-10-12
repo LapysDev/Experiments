@@ -1,74 +1,72 @@
 #include <cstdio>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
 /* ... */
 enum operation {
   minus,
-  multiply
+  multiply,
+  nop
 };
 
 template <operation, typename...> struct expression;
-template <typename> class operand;
-template <unsigned char> struct parameter;
-template <typename> struct value;
+template <typename>               class  operand;    // ->> denote expression arguments (disallow user-instantiation)
+template <unsigned char>          struct parameter;  // ->> denote arguments
+template <typename>               struct function;   // ->> denote callbacks
+template <typename>               struct value;      // ->> denote objects
 
 /* ... */
-template <typename type>
-struct expression<operation::minus, operand<type> > final {
-  private:
-    operand<type> const operand;
+template <typename... types>
+struct expression<operation::nop, operand<types>...> {
+  protected:
+    std::tuple<operand<types>...> const operands;
 
   public:
-    constexpr expression(type const& operand) noexcept :
-      operand(operand)
+    constexpr expression(types const&... operands) noexcept :
+      operands(operand<types>(operands)...)
     {}
+};
 
-    template <typename... types>
-    constexpr auto operator ()(types&&... arguments) const noexcept ->
-      decltype(-(this -> operand.evaluate().operator ()(std::forward<types>(arguments)...)))
-    { return -(this -> operand.evaluate().operator ()(std::forward<types>(arguments)...)); }
+template <typename type>
+struct expression<operation::minus, operand<type> > final : private expression<operation::nop, operand<type> > {
+  using expression<operation::nop, operand<type> >::expression;
+
+  template <typename... types>
+  constexpr auto operator ()(types&&... arguments) const noexcept ->
+    decltype(-(std::get<0u>(this -> operands).evaluate().operator ()(std::forward<types>(arguments)...)))
+  { return -(std::get<0u>(this -> operands).evaluate().operator ()(std::forward<types>(arguments)...)); }
 };
 
 template <typename typeA, typename typeB>
-struct expression<operation::multiply, operand<typeA>, operand<typeB> > final {
-  private:
-    operand<typeA> const operandA;
-    operand<typeB> const operandB;
+struct expression<operation::multiply, operand<typeA>, operand<typeB> > final : private expression<operation::nop, operand<typeA>, operand<typeB> > {
+  using expression<operation::nop, operand<typeA>, operand<typeB> >::expression;
 
-  public:
-    constexpr expression(typeA const& operandA, typeB const& operandB) noexcept :
-      operandA(operandA), operandB(operandB)
-    {}
-
-    template <typename... types>
-    constexpr auto operator ()(types&&... arguments) const noexcept ->
-      decltype(
-        this -> operandA.evaluate().operator ()(std::forward<types>(arguments)...) *
-        this -> operandB.evaluate().operator ()(std::forward<types>(arguments)...)
-      )
-    {
-      return (
-        this -> operandA.evaluate().operator ()(std::forward<types>(arguments)...) *
-        this -> operandB.evaluate().operator ()(std::forward<types>(arguments)...)
-      );
-    }
+  template <typename... types>
+  constexpr auto operator ()(types&&... arguments) const noexcept ->
+    decltype(
+      std::get<0u>(this -> operands).evaluate().operator ()(std::forward<types>(arguments)...) *
+      std::get<1u>(this -> operands).evaluate().operator ()(std::forward<types>(arguments)...)
+    )
+  {
+    return (
+      std::get<0u>(this -> operands).evaluate().operator ()(std::forward<types>(arguments)...) *
+      std::get<1u>(this -> operands).evaluate().operator ()(std::forward<types>(arguments)...)
+    );
+  }
 };
 
 // ...
-template <typename>
-class operand;
-
 template <operation operation, typename... types>
 class operand<expression<operation, types...> > final {
   template <enum operation, typename...>
   friend struct expression;
 
-  expression<operation, types...> const &value;
-
   // ...
-  constexpr operand(expression<operation, types...> const& expression) noexcept : value(expression) {}
-  constexpr expression<operation, types...> const& evaluate() const noexcept { return this -> value; }
+  ::expression<operation, types...> const &value;
+
+  constexpr operand(::expression<operation, types...> const& expression) noexcept : value(expression) {}
+  constexpr ::expression<operation, types...> const& evaluate() const noexcept { return this -> value; }
 };
 
 template <unsigned char index>
@@ -77,8 +75,8 @@ class operand<parameter<index> > final {
   friend struct expression;
 
   // ...
-  constexpr operand(parameter<index> const) noexcept {}
-  constexpr parameter<index> evaluate() const noexcept { return {}; }
+  constexpr operand(::parameter<index> const) noexcept {}
+  constexpr ::parameter<index> evaluate() const noexcept { return {}; }
 };
 
 template <typename type>
@@ -86,16 +84,11 @@ class operand<value<type> > final {
   template <enum operation, typename...>
   friend struct expression;
 
+  // ...
   ::value<type> const value;
 
-  // ...
-  constexpr operand(::value<type> const value) noexcept :
-    value(value)
-  {}
-
-  constexpr ::value<type> evaluate() const noexcept {
-    return this -> value;
-  }
+  constexpr operand(::value<type> const value) noexcept : value(value) {}
+  constexpr ::value<type> evaluate() const noexcept { return this -> value; }
 };
 
 // ...

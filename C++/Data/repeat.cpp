@@ -5,15 +5,15 @@
 
 /* Main */
 int main() {
-  /* basic */
+  // basic
   repeat (int i = 0; i < 3; i++) continue; until
 
-  /* scoped */
+  // scoped
   repeat (int i = 0; i < 3; i++) {
     break; return;
   } until
 
-  /* nested */
+  // nested
   repeat (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       break;
