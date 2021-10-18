@@ -1,3 +1,6 @@
+// You should broaden your horizons in thinking up algorithms to achieve what you want,
+// and maybe ask for help with the actual problem rather than the minutiae of what you think is the solution.
+
 /* Import > C++ Standard Library */
 #include <cstdio> // C Standard Input/ Output
 

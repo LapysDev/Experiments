@@ -1,14 +1,6 @@
-template <typename type> // this allows any type to be passed in
-void function(type object) {}
+template <int... n>
+void put() { put<n..., n...>(); }
 
-/* ... */
 int main() {
-  function(0); // works!
+  put<0>();
 }
-
-// template <int... n>
-// void put() { put<n..., n...>(); }
-
-// int main() {
-//   put<0>();
-// }

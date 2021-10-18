@@ -1,80 +1,61 @@
-#include <iostream>
-#include <type_traits>  //std::true_type / std::false_type
+#include <cstddef>
+#include <cstdio>
+#include <type_traits>
 
-#define CREATE_HAS_METHOD_NAME(name, method)                                                    \
-namespace                                                                                       \
-{                                                                                               \
-    template<size_t...>                                                                         \
-    using void_t = void;                                                                        \
-                                                                                                \
-    struct X##name {bool method(); };                                                           \
-                                                                                                \
-    template <class Object>                                                                     \
-    struct Xor##name : public Object, public X##name {};                                        \
-                                                                                                \
-    template<class, class = void_t<>>                                                           \
-    struct has_##name : std::true_type {};                                                      \
-                                                                                                \
-    template<class Object>                                                                      \
-    struct has_##name<Object, void_t<sizeof(&Xor##name<Object>::method)>> : std::false_type {}; \
-}
+/* ... */
+struct fallback { unsigned char const member; };
 
-//first parameter is name and usage is has_##name
-//second parameter is method for example operator+
+template <class object>
+struct detector : public fallback, public object {};
 
-CREATE_HAS_METHOD_NAME(member, member);
-CREATE_HAS_METHOD_NAME(plus, operator+);
+// ...
+template <class object, typename = typename std::integral_constant<std::size_t, 0u>::value_type, bool derivable = std::is_final<object>::value || std::is_union<object>::value>
+union has_member {
+  enum { value = false == derivable };
+};
 
+template <class object>
+union has_member<object, typename std::integral_constant<std::size_t, sizeof(detector<object>::member)>::value_type, false> {
+  enum { value = false };
+};
 
-// Tests
-class A { public: int member; };
-class B { private: int member; };
-class C { private: int member[2]; };
-class D { private: void member(void); };
-class E { private: void member(void); void member(int); };
-class F { private: template <typename type> void member(type); };
-class G { private: typedef int member; };
-class H { private: using member = int; };
-class I { private: template <typename type> using member = type; };
-class J { private: class member {}; };
-class K { private: template <typename> class member {}; };
-class L { private: enum member {}; };
-class M {};
+template <class object>
+union has_member<object, decltype(sizeof(&object::member)), true> {
+  enum { value = true };
+};
 
-class N { public: void operator +(void); };
-class O { public: void operator +(A const&); };
-class P { protected: void operator +(A const&); };
-class Q { private: void operator +(A const&); };
-//class R { private: template<class...> void operator +(X const&); };
-class S { private: int& operator +(void); void operator +(A const&); };
-class T { private: friend void operator +(G const&); };
-class U {};
+/* Main */
+class A { int member; };
+class B { int member(); };
+class C { static int member(); };
+class D { typedef int member; };
+class E { union member; };
+class F { template <int> union member; };
+class G {};
 
-int main()
-{
-    std::cout << std::boolalpha;
-    std::cout << "member:\n";
-    std::cout << has_member<A>::value << '\n';
-    std::cout << has_member<B>::value << '\n';
-    std::cout << has_member<C>::value << '\n';
-    std::cout << has_member<D>::value << '\n';
-    std::cout << has_member<E>::value << '\n';
-    std::cout << has_member<F>::value << '\n';
-    std::cout << has_member<G>::value << '\n';
-    std::cout << has_member<H>::value << '\n';
-    std::cout << has_member<I>::value << '\n';
-    std::cout << has_member<J>::value << '\n';
-    std::cout << has_member<K>::value << '\n';
-    std::cout << has_member<L>::value << '\n';
-    std::cout << has_member<M>::value << '\n';
+union H { int member; };
+union I { int member(); };
+union J { static int member(); };
+union K { typedef int member; };
+union L { class member; };
+union M { template <int> class member; };
+union N {};
 
-    std::cout << "operator+:\n";
-    std::cout << has_plus<N>::value << '\n';
-    std::cout << has_plus<O>::value << '\n';
-    std::cout << has_plus<P>::value << '\n';
-    std::cout << has_plus<Q>::value << '\n';
-    //std::cout << has_member<R>::value << '\n';
-    std::cout << has_plus<S>::value << '\n';
-    std::cout << has_plus<T>::value << '\n';
-    std::cout << has_plus<U>::value << '\n';
+int main() {
+  std::puts("[class]");
+  std::printf("  [A]: %4.5s" "\r\n", has_member<A>::value ? "true" : "false");
+  std::printf("  [B]: %4.5s" "\r\n", has_member<B>::value ? "true" : "false");
+  std::printf("  [C]: %4.5s" "\r\n", has_member<C>::value ? "true" : "false");
+  std::printf("  [D]: %4.5s" "\r\n", has_member<D>::value ? "true" : "false");
+  std::printf("  [E]: %4.5s" "\r\n", has_member<E>::value ? "true" : "false");
+  std::printf("  [F]: %4.5s" "\r\n", has_member<F>::value ? "true" : "false");
+  std::printf("  [G]: %4.5s" "\r\n", has_member<G>::value ? "true" : "false");
+  std::puts("[union]");
+  std::printf("  [H]: %4.5s" "\r\n", has_member<H>::value ? "true" : "false");
+  std::printf("  [I]: %4.5s" "\r\n", has_member<I>::value ? "true" : "false");
+  std::printf("  [J]: %4.5s" "\r\n", has_member<J>::value ? "true" : "false");
+  std::printf("  [K]: %4.5s" "\r\n", has_member<K>::value ? "true" : "false");
+  std::printf("  [L]: %4.5s" "\r\n", has_member<L>::value ? "true" : "false");
+  std::printf("  [M]: %4.5s" "\r\n", has_member<M>::value ? "true" : "false");
+  std::printf("  [N]: %4.5s" "\r\n", has_member<N>::value ? "true" : "false");
 }

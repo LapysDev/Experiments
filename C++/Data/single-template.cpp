@@ -1,4 +1,4 @@
 template <typename>
-class Single {
-    friend void function() {}
+class singly {
+  friend void function() {}
 };
