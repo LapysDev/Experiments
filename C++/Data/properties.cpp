@@ -86,8 +86,8 @@ namespace {
     template <typename, typename, typename = typename std::integral_constant<std::size_t, 0u>::value_type> union divide_operator { enum { value = false }; };
     template <typename base, typename type> union divide_operator<base, type, typename std::integral_constant<std::size_t, sizeof(std::declval<base>() /= std::declval<type>())>::value_type> { enum { value = true }; };
 
-    template <class, typename = typename std::integral_constant<std::size_t, 0u>::value_type> union member_access_operator { enum { value = false }; };
-    template <class object> union member_access_operator<object, typename std::integral_constant<std::size_t, sizeof(std::declval<object>().operator ->(), false)>::value_type> { enum { value = true }; };
+    template <class, typename = typename std::integral_constant<std::size_t, 0u>::value_type> union member_access_pointer_operator { enum { value = false }; };
+    template <class object> union member_access_pointer_operator<object, typename std::integral_constant<std::size_t, sizeof(std::declval<object>().operator ->(), false)>::value_type> { enum { value = true }; };
 
     template <typename, typename, typename = typename std::integral_constant<std::size_t, 0u>::value_type> union modulo_operator { enum { value = false }; };
     template <typename base, typename type> union modulo_operator<base, type, typename std::integral_constant<std::size_t, sizeof(std::declval<base>() %= std::declval<type>())>::value_type> { enum { value = true }; };
@@ -237,7 +237,7 @@ struct property final {
     {}
 
     // ...
-    constexpr inline base& operator ->() const noexcept(std::is_class<typename std::remove_pointer<base>::type>::value || detect::member_access_operator<base>::value) { return accessor::get(this->evaluate()); }
+    constexpr inline base& operator ->() const noexcept(std::is_class<typename std::remove_pointer<base>::type>::value || detect::member_access_pointer_operator<base>::value) { return accessor::get(this->evaluate()); }
     constexpr inline auto operator =(property<base> const& property) const noexcept(noexcept(mutator::set(this->evaluate(), property.evaluate()))) -> decltype(request::mutator_set_copy<mutator, base>::value(this->evaluate(), property.evaluate())) { return mutator::set(this->evaluate(), property.evaluate()); }
     constexpr inline auto operator =(property<base>&& property) const noexcept(noexcept(mutator::set(this->evaluate(), property.evaluate()))) -> decltype(request::mutator_set_copy<mutator, base>::value(this->evaluate(), property.evaluate())) { return mutator::set(this->evaluate(), property.evaluate()); }
     template <typename type> constexpr inline auto operator =(type&& argument) const noexcept(noexcept(mutator::set(this->evaluate(), std::forward<type>(argument)))) -> decltype(mutator::set(this->evaluate(), std::forward<type>(argument))) { return mutator::set(this->evaluate(), std::forward<type>(argument)); }
@@ -427,47 +427,4 @@ template <typename base, class accessor, class mutator>
 struct property<property<base>, accessor, mutator>;
 
 /* Main */
-#include <stdexcept>
-
-class ClampedInteger final {
-  friend struct Internal;
-
-  private:
-    int maximum;
-    int minimum;
-    int value;
-
-    struct Internal {
-      constexpr static int& get(ClampedInteger*& integer) noexcept {
-        return integer->value;
-      }
-
-      static int& set(ClampedInteger*& integer, int const value) {
-        if (value > integer->maximum || value < integer->minimum)
-        throw std::runtime_error("Bad value");
-
-        return integer->Value;
-      }
-    };
-
-  public:
-    property<ClampedInteger*, Internal, Internal> Value;
-
-    ClampedInteger(int const value) :
-      maximum(10), minimum(0), value(value),
-      Value(const_cast<ClampedInteger*>(this))
-    {}
-};
-
-struct Number {};
-
-int main() {
-  ClampedInteger integer = 42;
-  property<Number> prop;
-
-  // ...
-  std::printf("[init]  : %i" "\r\n", +integer.Value);
-  std::printf("[update]: %i" "\r\n", integer.Value = 7);
-
-  std::printf("[ERROR] : %i" "\r\n", integer.Value = -1);
-}
+int main() {}

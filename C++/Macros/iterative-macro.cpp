@@ -38,7 +38,7 @@
     stall(repeat_recurse)()(function, separator, condition, next, __VA_ARGS__, until),                           \
     argument, next, __VA_ARGS__                                                                                  \
   )
-# undef repeat_condition
+# undef  repeat_condition
 #   define repeat_condition_accept(condition)   condition
 #   define repeat_condition_fallback(condition) repeat_condition
 #   define repeat_condition_fail() false
