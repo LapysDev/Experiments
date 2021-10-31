@@ -161,7 +161,7 @@ namespace {
   namespace request {
     template <class mutator, typename base, bool = detect::mutator_set_copy<mutator, base>::value> union mutator_set_copy;
     template <class mutator, typename base> union mutator_set_copy<mutator, base, false> { constexpr inline static property_void value(base&      , base&         ) noexcept; };
-    template <class mutator, typename base> union mutator_set_copy<mutator, base, true>  { constexpr inline static auto           value(base& value, base& argument) noexcept(noexcept(mutator::set(value, argument))) -> decltype(mutator::set(value, argument)) { return mutator::set(value, argument); } };
+    template <class mutator, typename base> union mutator_set_copy<mutator, base, true>  { constexpr inline static auto          value(base& value, base& argument) noexcept(noexcept(mutator::set(value, argument))) -> decltype(mutator::set(value, argument)) { return mutator::set(value, argument); } };
 
     template <class mutator, bool = detect::mutator_set_add<mutator>::value>         union mutator_set_add;
     template <class mutator> union mutator_set_add<mutator, false>         { template <typename base, typename type> constexpr inline static auto value(base& value, type&& argument) noexcept(noexcept(mutator::set(value, value + std::forward<type>(argument)))) -> decltype(mutator::set(value, value + std::forward<type>(argument))) { return mutator::set(value, value + std::forward<type>(argument)); } };
