@@ -144,28 +144,4 @@ void release(void* const pointer) noexcept {
 /* Main */
 int main() {
   new (BUFFER) std::size_t(false | (0u << 1u));
-
-  /* ... */
-  constexpr unsigned char count = 10u;
-  void *allocations[count] = {};
-
-  // ...
-  for (unsigned char index = 0u; count != index; ++index) {
-    allocations[index] = allocate(64u);
-    std::printf("[allocate(64) {%u}]: %lli" "\r\n", index, static_cast<std::byte*>(allocations[index]) - BUFFER);
-  }
-
-  release(allocations[2]); std::puts("[release {2}]");
-  release(allocations[4]); std::puts("[release {4}]");
-  release(allocations[5]); std::puts("[release {5}]");
-  release(allocations[7]); std::puts("[release {7}]");
-
-  for (unsigned char counter = 3u; counter; --counter)
-  std::printf("[allocate(64)]: %lli" "\r\n", static_cast<std::byte*>(allocate(64u)) - BUFFER);
-
-  for (unsigned char size = 16u; size; size /= 2u)
-  for (unsigned char counter = 3u; counter; --counter)
-  std::printf("[allocate(%u)]: %lli" "\r\n", size, static_cast<std::byte*>(allocate(size)) - BUFFER);
-
-  std::printf("[allocate(1)]: %lli", static_cast<std::byte*>(allocate(1u)) - BUFFER);
 }

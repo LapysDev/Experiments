@@ -1,16 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <bit>
-
 /* ... -> (Ideally compile-time) `return` array generated within the function. */
-int (&GetHeapArray(void))[2] {
-  // Post-C++ 20 version: `new` without `delete` is not compile-time
-  return *std::bit_cast<int (*)[2]>(
-    new int[2] {0x45, -420}
-  );
-
-  // Pre-C++ 20 version: `reinterpret_cast` is not compile-time
+int (&GetHeapArray())[2] {
+  // C++ version: `reinterpret_cast` is not compile-time
   return *reinterpret_cast<int (*)[2]>(
     // ⚠ Requires C++11 and after
     new int[2] {0x45, -420}
@@ -23,7 +16,7 @@ int (&GetHeapArray(void))[2] {
   ); // destroyed on process termination
 }
 
-static void const* GetReinterpretedArray(void) {
+static void const* GetReinterpretedArray() {
   static union array {
     public: int value[2] = {0x45, -420};
   } const array = {};
@@ -32,20 +25,20 @@ static void const* GetReinterpretedArray(void) {
   return const_cast<void*>(static_cast<void const*>(&array));
 }
 
-static int (&GetStackArray(void))[2] {
+static int (&GetStackArray())[2] {
   static int array[2] = {0x45, -420};
   return array; // destroyed on process termination
 }
 
 // ⚠ Requires C++14 and after
-static auto GetStructureArray(void) {
+static auto GetStructureArray() {
   struct array final {
     private: typedef int (&type)[2];
     public:
       int value[2] = {0x45, -420};
 
       // pretend to be an array reference
-      operator type(void) { return this -> value; }
+      operator type() { return this -> value; }
   } const array = {};
 
   // persists data via copy
@@ -53,7 +46,7 @@ static auto GetStructureArray(void) {
 }
 
 /* Main */
-int main(void) {
+int main() {
   std::printf("Heap Array (ref.)          : [%i, %i]" "\r\n", GetHeapArray()[0], GetHeapArray()[1]);
   std::printf("Stack Array (ref.)         : [%i, %i]" "\r\n", GetStackArray()[0], GetStackArray()[1]);
 
