@@ -5,9 +5,11 @@
 /* ... */
 std::byte BUFFER[32u * 1024u] = {};
 
-// ... ->> `0 != alignment + size`
+// ... ->> `0 != alignment && 0 != size`
 void* allocate(std::size_t const size, std::size_t const alignment = alignof(std::max_align_t)) noexcept {
   typedef std::size_t header_t;
+
+  constexpr std::byte *BUFFER_END = BUFFER + (sizeof(BUFFER) / sizeof(*BUFFER));
   std::byte *allocation = BUFFER;
 
   // Search for unreserved region
@@ -16,27 +18,37 @@ void* allocate(std::size_t const size, std::size_t const alignment = alignof(std
     std::size_t capacity = *reinterpret_cast<std::size_t*>(header) >> 1u;
     bool const reserved = *reinterpret_cast<std::size_t*>(header) & 1u;
 
-    // Found un-committed region
+    // Found end of `BUFFER`
+    if (BUFFER_END == allocation)
+    return NULL;
+
+    // Found uncommitted region
     if (0u == capacity) {
-      std::byte *buffer;
+      if (sizeof(header_t) > static_cast<std::size_t>(BUFFER_END - allocation))
+      return NULL; // not enough capacity for `header_t`
 
       allocation += sizeof(header_t);
       capacity = size;
 
       while (0u != (allocation - BUFFER) % alignment) {
+        if (BUFFER_END == allocation)
+        return NULL; // not enough capacity for alignment padding
+
         ++allocation;
         ++capacity;
       }
 
-      // Overflow protection
-      if (allocation + size >= BUFFER + (sizeof(BUFFER) / sizeof(*BUFFER)))
-      return NULL;
+      if (size > static_cast<std::size_t>(BUFFER_END - allocation))
+      return NULL; // not enough capacity for `size`
 
       // Mark header for next region
-      buffer = allocation + size;
-      while (0u != (buffer - BUFFER) % alignof(header_t)) ++buffer;
+      for (std::byte *next = allocation + size; sizeof(header_t) <= static_cast<std::size_t>(BUFFER_END - next); ++next)
+      if (0u == (next - BUFFER) % alignof(header_t)) {
+        capacity += next - (allocation + size);
+        new (next) header_t(false | (0u << 1u));
 
-      new (buffer) header_t(false | (0u << 1u));
+        break;
+      }
 
       // Commit region
       *reinterpret_cast<std::size_t*>(header) = true | (capacity << 1u);
@@ -45,7 +57,7 @@ void* allocate(std::size_t const size, std::size_t const alignment = alignof(std
 
     // Found unreserved region
     if (false == reserved) {
-      std::byte *boundary = BUFFER + (sizeof(BUFFER) / sizeof(*BUFFER));
+      std::byte *boundary = BUFFER_END;
       std::byte *buffer = allocation;
 
       // Merge contiguous unreserved regions
@@ -54,63 +66,59 @@ void* allocate(std::size_t const size, std::size_t const alignment = alignof(std
         std::size_t const bufferCapacity = *reinterpret_cast<std::size_t const*>(bufferHeader) >> 1u;
         bool const bufferReserved = *reinterpret_cast<std::size_t const*>(bufferHeader) & 1u;
 
-        // De-commit regions (found untouched region)
+        // De-commit regions (found uncommitted region)
         if (0u == bufferCapacity) {
           capacity = 0u;
           break;
         }
 
-        // Merge regions
+        // Merge regions (found reserved region)
         if (false != bufferReserved) {
           boundary = buffer;
           capacity = (buffer - allocation) - sizeof(header_t);
+
           break;
         }
 
         // ... next region
         buffer += bufferCapacity + sizeof(header_t);
-        while (0u != (buffer - BUFFER) % alignof(header_t)) ++buffer;
-
-        // De-commit regions (found the end)
-        if (buffer >= (BUFFER + (sizeof(BUFFER) / sizeof(*BUFFER))) - sizeof(header_t)) {
-          capacity = 0u;
-          break;
-        }
       }
 
       *reinterpret_cast<std::size_t*>(header) = false | (capacity << 1u);
 
-      // ...
+      // ... allocate as uncommitted region
       if (0u == capacity)
       continue;
 
+      // ... allocate as unreserved region
       if (capacity >= size) {
-        std::byte *body = allocation + sizeof(header_t);
+        buffer = allocation + sizeof(header_t);
+
+        while (0u != (buffer - BUFFER) % alignment)
+        ++buffer;
 
         // ...
-        while (0u != (body - BUFFER) % alignment) ++body;
+        if (boundary >= buffer + size) {
+          // Bifurcate current region
+          for (std::byte *next = buffer + size; sizeof(header_t) <= static_cast<std::size_t>(boundary - next); ++next)
+          if (0u == (next - BUFFER) % alignof(header_t)) {
+            capacity = (next - allocation) - sizeof(header_t);
+            new (next) header_t(false | (((boundary - next) - sizeof(header_t)) << 1u));
 
-        buffer = body + size;
-        while (0u != (buffer - BUFFER) % alignof(header_t)) ++buffer;
+            break;
+          }
 
-        // Possibly mark header for next region
-        if (boundary <= buffer || static_cast<std::size_t>(boundary - buffer) <= sizeof(header_t)) buffer = boundary;
-        else new (buffer) header_t(false | (((boundary - buffer) - sizeof(header_t)) << 1u));
+          // Commit region
+          allocation = buffer;
+          *reinterpret_cast<std::size_t*>(header) = true | (capacity << 1u);
 
-        // Commit region
-        *reinterpret_cast<std::size_t*>(header) = true | (((buffer - allocation) - sizeof(header_t)) << 1u);
-        allocation = body;
-
-        break;
+          break;
+        }
       }
     }
 
     // ... next region
     allocation += capacity + sizeof(header_t);
-    while (0u != (allocation - BUFFER) % alignof(header_t)) ++allocation;
-
-    if (allocation >= (BUFFER + (sizeof(BUFFER) / sizeof(*BUFFER))) - sizeof(header_t))
-    return NULL;
   }
 
   // ...
@@ -122,12 +130,12 @@ void release(void* const pointer) noexcept {
   typedef std::size_t header_t;
   std::byte *buffer = BUFFER;
 
-  for (std::byte *iterator = BUFFER; ; ) {
-    header_t *header = std::launder(reinterpret_cast<header_t*>(iterator));
+  for (std::byte *next = BUFFER; ; ) {
+    header_t *header = std::launder(reinterpret_cast<header_t*>(next));
     std::size_t const capacity = *reinterpret_cast<std::size_t*>(header) >> 1u;
 
-    // Found `pointer` within `BUFFER`
-    if (iterator > pointer) {
+    // De-commit region (found `pointer` within `BUFFER`)
+    if (next > pointer) {
       header = std::launder(reinterpret_cast<header_t*>(buffer));
       *reinterpret_cast<std::size_t*>(header) &= ~static_cast<std::size_t>(1u);
 
@@ -135,13 +143,12 @@ void release(void* const pointer) noexcept {
     }
 
     // ... next region
-    buffer = iterator;
-    iterator += capacity + sizeof(header_t);
-    while (0u != (iterator - BUFFER) % alignof(header_t)) ++iterator;
+    buffer = next;
+    next += capacity + sizeof(header_t);
   }
 }
 
 /* Main */
-int main() {
+int main() /* noexcept */ {
   new (BUFFER) std::size_t(false | (0u << 1u));
 }
