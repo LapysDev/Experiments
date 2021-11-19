@@ -7,47 +7,74 @@ template <bool assertion, bool... assertions> struct AND<assertion, assertions..
 
 enum { MAX = 2u };
 
-template <std::size_t>           struct constant;
+template <unsigned>              struct constant;
+template <class...>              struct pack;
 template <std::size_t, class...> struct pair;
-  template <std::size_t, class = pair<0u>, std::size_t = 0u > struct build_pair;
-  template <class>                                            struct assess_pair;
-  template <std::size_t, class, std::size_t = 0u>             struct generate_pair;
+  template <std::size_t, unsigned>                  struct build_pair;
+  template <class>                                  struct filled_pair;
+  template <class>                                  struct flatten_pair;
+  template <class, unsigned>                        struct push_pair;
+  template <unsigned, unsigned = 0u, unsigned = 1u> struct sequence_pair;
 
 // ...
-template <std::size_t>
+template <unsigned>
 struct constant {};
 
-// ...
-template <>
-struct pair<0u> {
-  constexpr static bool is_filled = false;
+template <class...>
+struct pack {};
 
-  template <std::size_t subvalue>
-  struct next {
-    typedef pair<0u, constant<subvalue> > type;
+template <std::size_t, class...>
+struct pair {};
+  template <std::size_t depth, unsigned value>
+  struct build_pair {
+    private:
+      template <class build, std::size_t subdepth>
+      struct valueof {
+        typedef typename valueof<pair<subdepth + 1u, build>, subdepth + 1u>::type type;
+      };
+
+      template <class build>
+      struct valueof<build, depth> {
+        typedef build type;
+      };
+
+    public:
+      typedef typename valueof<pair<0u, constant<value> >, 0u>::type type;
   };
-};
 
-template <std::size_t depth, std::size_t... values>
-struct pair<depth, constant<values>...> {
-  constexpr static bool is_filled = assess_pair<pair<depth, constant<values>...> >::filled;
+  // ...
+  template <class>
+  struct filled_pair {
+    constexpr static bool value = true;
+  };
 
-  template <std::size_t subvalue>
-  struct next {
+  template <std::size_t depth, class... values>
+  struct filled_pair<pair<depth, values...> > {
+    constexpr static bool value = MAX == sizeof...(values) && AND<filled_pair<values>::value...>::value;
+  };
+
+  // ...
+  template <class, unsigned>
+  struct push_pair {
+    typedef pair<0u> type;
+  };
+
+  template <unsigned value>
+  struct push_pair<pair<0u>, value> {
+    typedef pair<0u, constant<value> > type;
+  };
+
+  template <std::size_t depth, unsigned... values, unsigned value>
+  struct push_pair<pair<depth, constant<values>...>, value> {
     typedef typename std::conditional<
-      MAX == sizeof...(values),
-      pair<depth + 1u, pair<depth, constant<values>...>, pair<depth, constant<subvalue> > >,
-      pair<depth + 0u, constant<values>..., constant<subvalue> >
+      filled_pair<pair<depth, constant<values>...> >::value,
+      pair<depth + 1u, pair<depth, constant<values>...>, pair<depth, constant<value> > >,
+      pair<depth + 0u, constant<values>..., constant<value> >
     >::type type;
   };
-};
 
-template <std::size_t depth, class... value, class... values>
-struct pair<depth, pair<depth - 1u, value...>, values...> {
-  constexpr static bool is_filled = assess_pair<pair<depth, pair<depth - 1u, value...>, values...> >::filled;
-
-  template <std::size_t subvalue>
-  struct next {
+  template <std::size_t depth, class... values, class... pairs, unsigned value>
+  struct push_pair<pair<depth, pair<depth - 1u, values...>, pairs...>, value> {
     private:
       template <class, class...>
       struct valueof;
@@ -56,192 +83,78 @@ struct pair<depth, pair<depth - 1u, value...>, values...> {
       struct valueof<pair<0u, filled...> > {
         typedef typename std::conditional<
           MAX == sizeof...(filled),
-          pair<depth + 1u, pair<depth, filled...>, typename generate_pair<depth, constant<subvalue> >::type>,
-          pair<depth, filled..., typename generate_pair<depth - 1u, constant<subvalue> >::type>
+          pair<depth + 1u, pair<depth, filled...>, typename build_pair<depth, value>::type>,
+          pair<depth, filled..., typename build_pair<depth - 1u, value>::type>
         >::type type;
       };
 
-      template <class subsubvalue, class... filled, class... subsubvalues>
-      struct valueof<pair<0u, filled...>, subsubvalue, subsubvalues...> {
+      template <class... filled, class subpair, class... subpairs>
+      struct valueof<pair<0u, filled...>, subpair, subpairs...> {
         typedef typename std::conditional<
-          subsubvalue::is_filled,
-          typename valueof<pair<0u, filled..., subsubvalue>, subsubvalues...>::type,
-          pair<depth, filled..., typename subsubvalue::template next<subvalue>::type, subsubvalues...>
+          filled_pair<subpair>::value,
+          typename valueof<pair<0u, filled..., subpair>, subpairs...>::type,
+          pair<depth, filled..., typename push_pair<subpair, value>::type, subpairs...>
         >::type type;
       };
 
     public:
-      typedef typename valueof<pair<0u>, pair<depth - 1u, value...>, values...>::type type;
+      typedef typename valueof<pair<0u>, pair<depth - 1u, values...>, pairs...>::type type;
   };
-};
-  template <std::size_t depth, class... values>
-  struct assess_pair<pair<depth, values...> > {
+
+  // ...
+  template <unsigned begin, unsigned end, unsigned increment>
+  struct sequence_pair {
     private:
-      template <class>
+      template <class sequence, unsigned subbegin, unsigned subend>
       struct valueof {
-        constexpr static bool filled = true;
+        typedef typename valueof<typename push_pair<sequence, subbegin>::type, subbegin + 1u, subend>::type type;
       };
 
-      template <std::size_t subdepth, class... subvalues>
-      struct valueof<pair<subdepth, subvalues...> > {
-        constexpr static bool filled = MAX == sizeof...(subvalues) && AND<valueof<subvalues>::filled...>::value;
+      template <class sequence, unsigned subend>
+      struct valueof<sequence, subend, subend> {
+        typedef sequence type;
       };
 
     public:
-      constexpr static bool filled = valueof<pair<depth, values...> >::filled;
-  };
-
-  // ...
-  template <std::size_t length, class value, std::size_t count>
-  struct build_pair {
-    typedef typename build_pair<length - 1u, typename value::template next<count + 1u>::type, count + 1u>::type type;
-  };
-
-  template <class value, std::size_t count>
-  struct build_pair<0u, value, count> {
-    typedef value type;
-  };
-
-  // ...
-  template <std::size_t depth, class value, std::size_t count>
-  struct generate_pair {
-    typedef typename generate_pair<depth - 1u, pair<count, value>, count + 1u>::type type;
-  };
-
-  template <class value, std::size_t count>
-  struct generate_pair<0u, value, count> {
-    typedef pair<count, value> type;
+      typedef typename valueof<pair<0u>, 0u == end ? 0u : begin, 0u == end ? begin : end>::type type;
   };
 
 /* Main */
 int main() {
-  static_assert(std::is_same<typename build_pair<0u>::type, pair<0u> >::value, "A");
-  static_assert(std::is_same<typename build_pair<1u>::type, pair<0u, constant<1u> > >::value, "B");
-  static_assert(std::is_same<typename build_pair<2u>::type, pair<0u, constant<1u>, constant<2u> > >::value, "C");
-  static_assert(std::is_same<typename build_pair<3u>::type, pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u> > > >::value, "D");
-  static_assert(std::is_same<typename build_pair<4u>::type, pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > > >::value, "E");
-  static_assert(std::is_same<typename build_pair<5u>::type, pair<2u,
-    pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-    pair<1u, pair<0u, constant<5u> > >
-  > >::value, "F");
-  static_assert(std::is_same<typename build_pair<6u>::type, pair<2u,
-    pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-    pair<1u, pair<0u, constant<5u>, constant<6u> > >
-  > >::value, "G");
-  static_assert(std::is_same<typename build_pair<7u>::type, pair<2u,
-    pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-    pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u> > >
-  > >::value, "H");
-  static_assert(std::is_same<typename build_pair<8u>::type, pair<2u,
-    pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-    pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-  > >::value, "I");
-
-  static_assert(std::is_same<typename build_pair<9u>::type, pair<3u,
+  static_assert(std::is_same<typename sequence_pair<0u>::type, pair<0u> >::value, "Failed sequence #0");
+  static_assert(std::is_same<typename sequence_pair<1u>::type, pair<0u, constant<0u> > >::value, "Failed sequence #1");
+  static_assert(std::is_same<typename sequence_pair<2u>::type, pair<0u, constant<0u>, constant<1u> > >::value, "Failed sequence #2");
+  static_assert(std::is_same<typename sequence_pair<3u>::type, pair<1u,
+    pair<0u, constant<0u>, constant<1u> >,
+    pair<0u, constant<2u> >
+  > >::value, "Failed sequence #3");
+  static_assert(std::is_same<typename sequence_pair<4u>::type, pair<1u,
+    pair<0u, constant<0u>, constant<1u> >,
+    pair<0u, constant<2u>, constant<3u> >
+  > >::value, "Failed sequence #4");
+  static_assert(std::is_same<typename sequence_pair<5u>::type, pair<2u,
+    pair<1u, pair<0u, constant<0u>, constant<1u> >, pair<0u, constant<2u>, constant<3u> > >,
+    pair<1u, pair<0u, constant<4u> > >
+  > >::value, "Failed sequence #5");
+  static_assert(std::is_same<typename sequence_pair<6u>::type, pair<2u,
+    pair<1u, pair<0u, constant<0u>, constant<1u> >, pair<0u, constant<2u>, constant<3u> > >,
+    pair<1u, pair<0u, constant<4u>, constant<5u> > >
+  > >::value, "Failed sequence #6");
+  static_assert(std::is_same<typename sequence_pair<7u>::type, pair<2u,
+    pair<1u, pair<0u, constant<0u>, constant<1u> >, pair<0u, constant<2u>, constant<3u> > >,
+    pair<1u, pair<0u, constant<4u>, constant<5u> >, pair<0u, constant<6u> > >
+  > >::value, "Failed sequence #7");
+  static_assert(std::is_same<typename sequence_pair<8u>::type, pair<2u,
+    pair<1u, pair<0u, constant<0u>, constant<1u> >, pair<0u, constant<2u>, constant<3u> > >,
+    pair<1u, pair<0u, constant<4u>, constant<5u> >, pair<0u, constant<6u>, constant<7u> > >
+  > >::value, "Failed sequence #8");
+  static_assert(std::is_same<typename sequence_pair<9u>::type, pair<3u,
     pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
+      pair<1u, pair<0u, constant<0u>, constant<1u> >, pair<0u, constant<2u>, constant<3u> > >,
+      pair<1u, pair<0u, constant<4u>, constant<5u> >, pair<0u, constant<6u>, constant<7u> > >
     >,
-
     pair<2u,
-      pair<1u, pair<0u, constant<9u> > >
+      pair<1u, pair<0u, constant<8u> > >
     >
-  > >::value, "J");
-
-  static_assert(std::is_same<typename build_pair<10u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> > >
-    >
-  > >::value, "K");
-
-  static_assert(std::is_same<typename build_pair<11u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u> > >
-    >
-  > >::value, "L");
-
-  static_assert(std::is_same<typename build_pair<12u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u>, constant<12u> > >
-    >
-  > >::value, "M");
-
-  static_assert(std::is_same<typename build_pair<13u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u>, constant<12u> > >,
-      pair<1u, pair<0u, constant<13u> > >
-    >
-  > >::value, "N");
-
-  static_assert(std::is_same<typename build_pair<14u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u>, constant<12u> > >,
-      pair<1u, pair<0u, constant<13u>, constant<14u> > >
-    >
-  > >::value, "O");
-
-  static_assert(std::is_same<typename build_pair<15u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u>, constant<12u> > >,
-      pair<1u, pair<0u, constant<13u>, constant<14u> >, pair<0u, constant<15u> > >
-    >
-  > >::value, "O");
-
-  static_assert(std::is_same<typename build_pair<16u>::type, pair<3u,
-    pair<2u,
-      pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-      pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-    >,
-
-    pair<2u,
-      pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u>, constant<12u> > >,
-      pair<1u, pair<0u, constant<13u>, constant<14u> >, pair<0u, constant<15u>, constant<16u> > >
-    >
-  > >::value, "P");
-
-  static_assert(std::is_same<typename build_pair<17u>::type, pair<4u,
-    pair<3u,
-      pair<2u,
-        pair<1u, pair<0u, constant<1u>, constant<2u> >, pair<0u, constant<3u>, constant<4u> > >,
-        pair<1u, pair<0u, constant<5u>, constant<6u> >, pair<0u, constant<7u>, constant<8u> > >
-      >,
-
-      pair<2u,
-        pair<1u, pair<0u, constant<9u>, constant<10u> >, pair<0u, constant<11u>, constant<12u> > >,
-        pair<1u, pair<0u, constant<13u>, constant<14u> >, pair<0u, constant<15u>, constant<16u> > >
-      >
-    >,
-
-    pair<3u, pair<2u, pair<1u, pair<0u, constant<17u> > > > >
-  > >::value, "Q");
+  > >::value, "Failed sequence #9");
 }
