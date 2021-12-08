@@ -1,13 +1,13 @@
 #include <cstddef>
 #include <type_traits>
 
+#define TEMPLATE_INSTANTIATION_DEPTH_MAX 512u
+
 /* ... */
 template <bool...> struct AND { constexpr static bool value = true; };
 template <bool assertion, bool... assertions> struct AND<assertion, assertions...> { constexpr static bool value = assertion && AND<assertions...>::value; };
 
 template <std::size_t argument> struct DECREMENT { constexpr static std::size_t value = argument - 1u; };
-
-enum { MAX = 800u };
 
 template <unsigned>              struct constant;
 template <class...>              struct pack;
@@ -54,7 +54,7 @@ struct pair {};
 
   template <std::size_t depth, class... values>
   struct filled_pair<pair<depth, values...> > {
-    constexpr static bool value = MAX == sizeof...(values) && AND<filled_pair<values>::value...>::value;
+    constexpr static bool value = TEMPLATE_INSTANTIATION_DEPTH_MAX == sizeof...(values) && AND<filled_pair<values>::value...>::value;
   };
 
   template <std::size_t depth, class... values>
@@ -108,7 +108,7 @@ struct pair {};
       template <class... filled>
       struct valueof<pair<0u, filled...> > {
         typedef typename std::conditional<
-          MAX == sizeof...(filled),
+          TEMPLATE_INSTANTIATION_DEPTH_MAX == sizeof...(filled),
           pair<depth + 1u, pair<depth, filled...>, typename build_pair<depth, value>::type>,
           pair<depth, filled..., typename build_pair<depth - 1u, value>::type>
         >::type type;

@@ -28,10 +28,10 @@
 # define variadic_n(...)                             "[" #__VA_ARGS__ "]: variable arguments"
 
 /* Main */
-int main(void) {
-    std::puts(variadic());
-    std::puts(variadic(A));
-    std::puts(variadic(A, B));
-    std::puts(variadic(A, B, C));
-    std::puts(variadic(A, B, C, D));
+int main() {
+  std::puts(variadic());
+  std::puts(variadic(A));
+  std::puts(variadic(A, B));
+  std::puts(variadic(A, B, C));
+  std::puts(variadic(A, B, C, D));
 }
