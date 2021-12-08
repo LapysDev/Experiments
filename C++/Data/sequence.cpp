@@ -1,36 +1,141 @@
 #include <cstddef>
-#include <cstdio>
 
 /* ... */
-template <typename base, std::size_t count, base... objects> // ->> empty sequence
-struct sequence : sequence<base, count - 1u, objects...> {};
+template <std::size_t...>
+union sequence {};
+  template <std::size_t size>
+  struct make_sequence final {
+    union builtin;
+    union divide_and_conquer;
+    union linear;
+    union modulo;
+  };
+    // [Built-in]
+    #if __cplusplus < 201402L
+    # if defined(__clang__) || defined(_MSC_VER)
+    #   if false == defined(__clang__) || __has_builtin(__make_integer_seq)
+          template <std::size_t size>
+          union make_sequence<size>::builtin {
+            private:
+              template <typename base, base... indexes>
+              union value {
+                typedef sequence<indexes...> type;
+              };
 
-template <typename base, std::size_t count, base object, base... objects> // ->> filled sequence
-struct sequence<base, count, object, objects...> : sequence<base, count - 1u, objects...> {
-  static std::size_t const size = sizeof...(objects);
-};
+            public:
+              typedef typename __make_integer_seq<value, std::size_t, size>::type type;
+          };
+    #   else
+          template <std::size_t size>
+          union make_sequence<size>::builtin;
+    #   endif
+    # elif defined(__GNUC__)
+    #   if __has_builtin(__integer_pack)
+          template <std::size_t size>
+          union make_sequence<size>::builtin {
+            typedef sequence<__integer_pack(size)...> type;
+          };
+    #   else
+          template <std::size_t size>
+          union make_sequence<size>::builtin;
+    #   endif
+    # endif
+    #else
+    # include <utility>
 
-template <typename base, base... objects> // ->> ended sequence
-struct sequence<base, 0u, objects...> {
-  typedef base type;
-};
+      template <std::size_t size>
+      union make_sequence<size>::builtin {
+        private:
+          template <class>
+          union value;
 
-// ...
-template <std::size_t index, typename base, std::size_t count, base object, base... objects>
-constexpr base sequence_at(sequence<base, count, object, objects...> const);
+          template <std::size_t... indexes>
+          union value<std::index_sequence<indexes...> > {
+            typedef sequence<indexes...> type;
+          };
 
-template <std::size_t, bool, typename base, std::size_t, base, base...>
-struct sequence_at_impl {};
+        public:
+          typedef typename value<typename std::make_index_sequence<size>::type>::type type;
+      };
+    #endif
 
-template <std::size_t index, typename base, std::size_t count, base object, base... objects>
-struct sequence_at_impl<index, true, base, count, object, objects...> {
-  static base const value = sequence_at<index>(sequence<base, count - 1u, objects...>());
-};
+    // [Divide & Conquer]
+    template <std::size_t size>
+    union make_sequence<size>::divide_and_conquer {
+      private:
+        template <class, class>
+        union concatenate;
 
-template <std::size_t index, typename base, base object, base... objects>
-struct sequence_at_impl<index, true, base, index + 1u, object, objects...> {
-  static base const value = object;
-};
+        template <std::size_t... indexesA, std::size_t... indexesB>
+        union concatenate<sequence<indexesA...>, sequence<indexesB...> > {
+          typedef sequence<indexesA..., (indexesB + sizeof...(indexesA))...> type;
+        };
 
-template <std::size_t index, typename base, std::size_t count, base object, base... objects>
-constexpr base sequence_at(sequence<base, count, object, objects...> const) { return sequence_at_impl<index, (index < count), base, count, object, objects...>::value; }
+        // ...
+        template <unsigned char control, std::size_t remainder>
+        union value {
+          typedef typename concatenate<
+            typename value<control, remainder / 2u>::type,
+            typename value<control, remainder - (remainder / 2u)>::type
+          >::type type;
+        };
+
+        template <unsigned char control> union value<control, 0u> { typedef sequence<>   type; };
+        template <unsigned char control> union value<control, 1u> { typedef sequence<1u> type; };
+
+      public:
+        typedef typename value<0u, size>::type type;
+    };
+
+    // [Linear]
+    template <std::size_t size>
+    union make_sequence<size>::linear {
+      private:
+        template <std::size_t count, std::size_t... indexes>
+        union value {
+          typedef typename value<count - 1u, count, indexes...>::type type;
+        };
+
+        template <std::size_t... indexes>
+        union value<0u, indexes...> {
+          typedef sequence<indexes...> type;
+        };
+
+      public:
+        typedef typename value<size>::type type;
+    };
+
+    // [Modulo]
+    template <std::size_t size>
+    union make_sequence<size>::modulo {
+      private:
+        // ...
+        template <std::size_t, std::size_t, class, class>
+        union value;
+
+        template <std::size_t maximum, std::size_t remainder, std::size_t... current, std::size_t... next>
+        union value<maximum, remainder, sequence<current...>, sequence<next...> > {
+          typedef typename value<
+            maximum,
+            (maximum < remainder ? remainder - maximum : 0u),
+            sequence<current..., (next + sizeof...(current))...>,
+            typename make_sequence<(maximum < remainder ? maximum : remainder)>::linear::type
+          >::type type;
+        };
+
+        template <std::size_t maximum, std::size_t... current, std::size_t... last>
+        union value<maximum, 0u, sequence<current...>, sequence<last...> > {
+          typedef sequence<current..., (last + sizeof...(current))...> type;
+        };
+
+      public:
+        typedef typename value<500u, size, sequence<>, typename make_sequence<0u>::linear::type>::type type;
+    };
+
+/* Main */
+int main() {
+  // typename make_sequence<3u>::builtin::type{} + 1;
+  // typename make_sequence<3u>::divide_and_conquer::type{} + 1;
+  // typename make_sequence<3u>::linear::type{} + 1;
+  // typename make_sequence<3u>::modulo::type{} + 1;
+}
