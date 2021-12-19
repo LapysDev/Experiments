@@ -134,8 +134,8 @@ union sequence {};
 
 /* Main */
 int main() {
-  // typename make_sequence<3u>::builtin::type{} + 1;
-  // typename make_sequence<3u>::divide_and_conquer::type{} + 1;
-  // typename make_sequence<3u>::linear::type{} + 1;
-  // typename make_sequence<3u>::modulo::type{} + 1;
+  // typename make_sequence<+900u>::builtin           ::type{} + 1;
+  // typename make_sequence<+900u>::divide_and_conquer::type{} + 1;
+  // typename make_sequence< 900u>::linear            ::type{} + 1;
+  // typename make_sequence<+900u>::modulo            ::type{} + 1;
 }
