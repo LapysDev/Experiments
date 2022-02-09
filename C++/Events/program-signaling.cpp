@@ -8,12 +8,12 @@ static void terminate_handler(void) {
 
 static void signal_handler(int const signal) {
   switch (signal) {
-    case SIGABRT: std::puts("[ABORTED]"); break;
-    case SIGFPE: std::puts("[FLOATING-POINT ERROR]"); break;
-    case SIGILL: std::puts("[ILLEGAL INSTRUCTION]"); break;
-    case SIGINT: std::puts("[INTERRUPT]"); break;
-    case SIGSEGV: std::puts("[SEGMENTATION ERROR]"); break;
-    case SIGTERM: std::puts("[TERMINATED]"); break;
+    case SIGABRT: std::puts("[ABORTED]");              break;
+    case SIGFPE : std::puts("[FLOATING-POINT ERROR]"); break;
+    case SIGILL : std::puts("[ILLEGAL INSTRUCTION]");  break;
+    case SIGINT : std::puts("[INTERRUPT]");            break;
+    case SIGSEGV: std::puts("[SEGMENTATION ERROR]");   break;
+    case SIGTERM: std::puts("[TERMINATED]");           break;
 
     /* case SIGALRM: break; */
     /* case SIGBUS: break; */

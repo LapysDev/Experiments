@@ -151,8 +151,13 @@ int main() {
 
   std::fputs("[Pointer Recorder]: " "Key 'Q' (or 'Esc') to exit and 'R' to record/ play back" "\r\n", stdout);
   while (true) {
-    if (::GetAsyncKeyState(VK_ESCAPE) || ::GetAsyncKeyState(0x51)) Program::exit(EXIT_SUCCESS);
-    else if (::GetAsyncKeyState(0x52)) recorderToggled = true;
+    if (::GetAsyncKeyState(0x51) || ::GetAsyncKeyState(VK_ESCAPE))
+    Program::exit(EXIT_SUCCESS);
+
+    // ...
+    if (::GetAsyncKeyState(0x52))
+      recorderToggled = true;
+
     else if (recorderToggled) {
       pointsFull      = false;
       pointsNext      = 0u;
@@ -168,7 +173,7 @@ int main() {
     if (recording) {
       Point::Button buttons = 0x00u;
       POINT         cursorPosition {};
-      Point        *point   = NULL != points ? std::launder(points + (pointsLength - 1u)) : NULL;
+      Point        *point   = NULL != points ? std::launder(points + pointsNext) : NULL;
       SYSTEMTIME    systemTime     {};
 
       // ...

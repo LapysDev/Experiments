@@ -174,9 +174,9 @@ int main(int const, char* const[]) /* noexcept */ {
       }
 
       else {
-        server.sin_port        = ::htons(port);
-        server.sin_family      = AF_INET;
         server.sin_addr.s_addr = ::inet_addr(host);
+        server.sin_family      = AF_INET;
+        server.sin_port        = ::htons(port);
 
         // ...
         if (INADDR_NONE == server.sin_addr.s_addr) {

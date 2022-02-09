@@ -78,13 +78,3 @@ int main() {
     case WORDS_LITTLE_ENDIAN: std::puts("MIXED");  break;
   }
 }
-
-// int put(int const integer) {
-//   std::size_t size = sizeof(int);
-//   uintptr_t value = 0u;
-
-//   for (unsigned char const *const end = static_cast<unsigned char const*>(static_cast<void const*>(&integer)), *iterator = end + size; end != iterator; )
-//   value += *--iterator << --size;
-
-//   return value;
-// }
