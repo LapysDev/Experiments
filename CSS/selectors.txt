@@ -1,0 +1,7 @@
+• Attribute            (`[name=value]`) [Chrome 1, Edge 12, FF 1, IE 7, Op 9,   Safari 3]
+• Class                (`.class`)       [Chrome 1, Edge 12, FF 1, IE 3, Op 3.5, Safari 1]
+• ID                   (`#id`)          [Chrome 1, Edge 12, FF 1, IE 3, Op 3.5, Safari 1]
+• Type                 (`element`)      [Chrome 1, Edge 12, FF 1, IE 3, Op 3.5, Safari 1]
+• Type namespaced      (`ns | element`) [Chrome 1, Edge 12, FF 1, IE 3, Op 3.5, Safari 1]
+• Universal            (`*`)            [Chrome 1, Edge 12, FF 1, IE 7, Op 3.5, Safari 1]
+• Universal namespaced (`* | *`)        [Chrome 1, Edge 12, FF 1, IE 9, Op 8,   Safari 1.3]

@@ -1,0 +1,53 @@
+• active               [Chrome 1,   Edge 12,  FF 1,   IE 8,       Op 7,    Safari 1]    → Represents an element (such as a button) that is being activated by the user
+• any-link             [Chrome 65,  Edge 79,  FF 50,  IE ×,       Op 52,   Safari 9]    → Represents an element that acts as the source anchor of a hyperlink, independent of whether it has been visited
+• autofill             [Chrome 96,  Edge 96,  FF 86,  IE ×,       Op 82,   Safari 15]   → Matches when an <input> element has its value auto-filled by the browser
+• checked              [Chrome 1*,  Edge 12*, FF 1*,  IE 9,       Op 9*,   Safari 3.1*] → Represents any checkbox (`<input type=checkbox>`), option (`<option>` in a `<select>`), or radio (`<input type=radio>`) element that is checked or toggled to an `on` state
+• default              [Chrome 10,  Edge 79,  FF 4,   IE ×,       Op 10,   Safari 5]    → Selects form elements that are the default in a group of related elements
+• defined              [Chrome 54,  Edge 79,  FF 63,  IE ×,       Op 41,   Safari 10]   → Represents any element that has been defined
+• dir(…)              [Chrome ×,   Edge ××,  FF 49,  IE ×,       Op ×,    Safari ×]    → Matches elements based on the directionality of the text contained in them
+• disabled             [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9,    Safari 3.1]  → Represents any disabled element
+• empty                [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9.5,  Safari 3.1]  → Represents any element that has no children
+• enabled              [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9,    Safari 3.1]  → Represents any enabled element
+• first                [Chrome 18,  Edge 12,  FF ×,   IE 8,       Op 9.2,  Safari 6]    → Represents the first page of a printed document
+• first-child          [Chrome 4,   Edge 12,  FF 3,   IE 7*,      Op 9.5,  Safari 3.1]  → Represents the first element among a group of sibling elements
+• first-of-type        [Chrome 1,   Edge 12,  FF 3.5, IE 9,       Op 9.5,  Safari 3.1]  → Represents the first element of its type among a group of sibling elements
+• fullscreen           [Chrome 71,  Edge 12,  FF 64,  IE 11 -ms-, Op 58,   Safari 6*]   → Matches every element which is currently in fullscreen mode (`-webkit-full-screen` since Safari v6)
+• future               [Chrome ×,   Edge ××,  FF ×,   IE ×,       Op ×,    Safari 7]    → Time-dimensional pseudo-class that will match for any element which appears entirely after an element that matches `:current`
+• focus                [Chrome 1,   Edge 12,  FF 1,   IE 8,       Op 7,    Safari 1]    → Represents an element (such as a form input) that has received focus
+• focus-visible        [Chrome 86,  Edge 86,  FF 85,  IE ×,       Op 72,   Safari ×]    → Applies while an element matches the `:focus` pseudo-class and the UA (User Agent) determines via heuristics that the focus should be made evident on the element
+• focus-within         [Chrome 60,  Edge 79,  FF 52,  IE ×,       Op 47,   Safari 10.1] → Matches an element if the element or any of its descendants are focused
+• has(…)              [Chrome ×,   Edge ××,  FF ×,   IE ×,       Op ×,    Safari 15.4] → Represents an element if any of the selectors passed as parameters (relative to the `:scope` of the given element) match at least one element
+• host                 [Chrome 54,  Edge 79,  FF 63,  IE ×,       Op 41,   Safari 10]   → Selects the shadow host of the shadow DOM containing the CSS it is used inside — in other words, this allows you to select a custom element from inside its shadow DOM
+• host-context(…)     [Chrome 54,  Edge 79,  FF ×,   IE ×,       Op 41,   Safari ×]    → Selects the shadow host of the shadow DOM containing the CSS it is used inside (so you can select a custom element from inside its shadow DOM) — but only if the selector given as the function's parameter matches the shadow host's ancestor(s) in the place it sits inside the DOM hierarchy
+• hover                [Chrome 1,   Edge 12,  FF 1*,  IE 4*,      Op 4,    Safari 2]    → Matches when the user interacts with an element with a pointing device, but does not necessarily activate it
+• indeterminate        [Chrome 1,   Edge 12,  FF 2,   IE 10,      Op 9,    Safari 3]    → Represents any form element whose state is indeterminate, such as checkboxes which have their HTML `indeterminate` attribute set to `true`, radio buttons which are members of a group in which all radio buttons are unchecked, and indeterminate `<progress>` elements
+• in-range             [Chrome 10*, Edge 13,  FF 29*, IE ×,       Op 11*,  Safari 5.1*] → Represents an `<input>` element whose current value is within the range limits specified by the `max` and `min` attributes
+• invalid              [Chrome 10,  Edge 12,  FF 4,   IE 10*,     Op 10,   Safari 5]    → Represents any `<fieldset>`, `<form>`, `<input>` or other `<form>` element whose contents fail to validate
+• is(…)               [Chrome 88,  Edge 88,  FF 78,  IE ×,       Op 74,   Safari 14]   → Takes a selector list as its argument, and selects any element that can be selected by one of the selectors in that list
+• lang(…)             [Chrome 1,   Edge 12,  FF 1,   IE 8,       Op 8,    Safari 3.1]  → Matches elements based on the language they are determined to be in
+• last-child           [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9.5,  Safari 3.1]  → Represents the last element among a group of sibling elements
+• last-of-type         [Chrome 1,   Edge 12,  FF 3.5, IE 9,       Op 9.5,  Safari 3.1]  → Represents the last element of its type among a group of sibling elements
+• left                 [Chrome 6,   Edge 12,  FF ×,   IE 8,       Op 9.2,  Safari 5.1]  → Represents all left-hand pages of a printed document
+• link                 [Chrome 1,   Edge 12,  FF 1,   IE 3,       Op 3.5,  Safari 1]    → Represents an element that has not yet been visited
+• not(…)              [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9.5,  Safari 3.1]  → Represents elements that do not match a list of selectors
+• nth-child(…)        [Chrome 1,   Edge 12,  FF 3.5, IE 9,       Op 9.5*, Safari 3.1]  → Matches elements based on their position among a group of siblings
+• nth-last-child(…)   [Chrome 4,   Edge 12,  FF 3.5, IE 9,       Op 9,    Safari 3.1]  → Matches elements based on their position among a group of siblings, counting from the end
+• nth-last-of-type(…) [Chrome 4,   Edge 12,  FF 3.5, IE 9,       Op 9.5,  Safari 3.1]  → Matches elements based on their position among siblings of the same type (tag name), counting from the end
+• nth-of-type(…)      [Chrome 1,   Edge 12,  FF 3.5, IE 9,       Op 9.5,  Safari 3.1]  → Matches elements based on their position among siblings of the same type (tag name)
+• only-child           [Chrome 2,   Edge 12,  FF 1.5, IE 9,       Op 9.5,  Safari 3.1]  → Represents an element without any siblings
+• only-of-type         [Chrome 1,   Edge 12,  FF 3.5, IE 9,       Op 9.5,  Safari 3.1]  → Represents an element that has no siblings of the same type
+• optional             [Chrome 10,  Edge 12,  FF 4,   IE 10,      Op 10,   Safari 5]    → Represents any `<input>`, `<select>`, or `<textarea>` element that does not have the `required` attribute set on it
+• out-of-range         [Chrome 10,  Edge 13,  FF 29,  IE ×,       Op 11,   Safari 5.1]  → Represents an `<input>` element whose current value is outside the range limits specified by the `max` and `min` attributes
+• past                 [Chrome ×,   Edge ××,  FF ×,   IE ×,       Op ×,    Safari 7]    → Time-dimensional pseudo-class that will match for any element which appears entirely before an element that matches `:current`
+• placeholder-shown    [Chrome 67,  Edge 79,  FF 51,  IE 10,      Op 34,   Safari 9]    → Represents any `<input>` or `<textarea>` element that is currently displaying placeholder text (`-ms-input-placeholder` since Internet Explorer v10)
+• read-only            [Chrome 1,   Edge 13,  FF 78,  IE ×,       Op 9,    Safari 4]    → Represents an element (such as `<input>` or `<textarea>`) that is not editable by the user
+• read-write           [Chrome 1,   Edge 13,  FF 78,  IE ×,       Op 9,    Safari 4]    → Represents an element (such as `<input>` or `<textarea>`) that is editable by the user
+• required             [Chrome 10,  Edge 12,  FF 4,   IE 10,      Op 10,   Safari 5]    → Represents any `<input>`, `<select>`, or `<textarea>` element that has the `required` attribute set on it
+• right                [Chrome 6,   Edge 12,  FF ×,   IE 8,       Op 9.2,  Safari 5.1]  → Represents all right-hand pages of a printed document
+• root                 [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9.5,  Safari 1]    → Matches the root element of a tree representing the document
+• scope                [Chrome 27,  Edge 29,  FF 32*, IE ×,       Op 15,   Safari 7]    → Represents elements that are a reference point for selectors to match against
+• target               [Chrome 1,   Edge 12,  FF 1,   IE 9,       Op 9.5,  Safari 1.3]  → Represents a unique element (the target element) with an id matching the URL's fragment
+• user-invalid         [Chrome ×,   Edge ××,  FF 88,  IE ×,       Op ×,    Safari ×]    → Represents any validated form element whose value isn't valid based on their validation constraints, after the user has interacted with it
+• valid                [Chrome 10,  Edge 12,  FF 4,   IE 10,      Op 10,   Safari 5]    → Represents any `<input>` or other `<form>` element whose contents validate successfully
+• visited              [Chrome 1,   Edge 12,  FF 1,   IE 4,       Op 3.5,  Safari 1]    → Represents links that the user has already visited
+• where(…)            [Chrome 88,  Edge 88,  FF 78,  IE ×,       Op 74,   Safari 14]   → Function takes a selector list as its argument, and selects any element that can be selected by one of the selectors in that list

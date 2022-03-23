@@ -1,0 +1,13 @@
+• after                [Chrome 1,  Edge 12, FF 1.5, IE 9,       Op 7,   Safari 4]     → Creates a pseudo-element that is the last child of the selected element
+• backdrop             [Chrome 37, Edge 79, FF 47,  IE 11 -ms-, Op 24,  Safari 15.4]  → Is a box the size of the viewport which is rendered immediately beneath any element being presented in fullscreen mode
+• before               [Chrome 1,  Edge 12, FF 1.5, IE 9,       Op 7,   Safari 4]     → Creates a pseudo-element that is the first child of the selected element
+• cue                  [Chrome 26, Edge 79, FF 55,  IE ×,       Op 15,  Safari 7]     → Pseudo-element matches WebVTT cues within a selected element
+• first-letter         [Chrome 1,  Edge 12, FF 1,   IE 9,       Op 7,   Safari 1]     → Pseudo-element applies styles to the first letter of the first line of a block-level element, but only when not preceded by other content (such as images or inline tables)
+• first-line           [Chrome 1,  Edge 12, FF 1,   IE 9,       Op 7,   Safari 1]     → Pseudo-element applies styles to the first line of a block-level element
+• file-selector-button [Chrome 89, Edge 89, FF 82,  IE 10,      Op 75,  Safari 14.1]  → Pseudo-element represents the button of an `<input>` of `type=file` (`-ms-browse` since Internet Explorer v10)
+• marker               [Chrome 86, Edge 86, FF 68,  IE ×,       Op 72,  Safari 11.1*] → Pseudo-element selects the marker box of a list item, which typically contains a bullet or number
+• part(…)             [Chrome 73, Edge 79, FF 72,  IE ×,       Op 60,  Safari 13.1]  → Pseudo-element represents any element within a shadow tree that has a matching part attribute
+• placeholder          [Chrome 57, Edge 79, FF 51,  IE ×,       Op 44,  Safari 10.1]  → Pseudo-element represents the placeholder text in an `<input>` or `<textarea>` element
+• selection            [Chrome 1,  Edge 12, FF 62,  IE 9,       Op 9.5, Safari 1.1]   → Pseudo-element applies styles to the part of a document that has been highlighted by the user (such as clicking and dragging the mouse across text)
+• slotted(…)          [Chrome 50, Edge 79, FF 63,  IE ×,       Op 37,  Safari 10]    → Pseudo-element represents any element that has been placed into a slot inside an HTML template
+• target-text          [Chrome 89, Edge 89, FF ×,   IE ×,       Op 75,  Safari ×]     → Pseudo-element represents the text that has been scrolled to if the browser supports scroll-to-text fragments
