@@ -262,7 +262,7 @@
   ascent-override         [Chrome 87, Edge 87, FF 89,  IE ×, Op 73, Safari ×]    → Defines the ascent metric for the font
   descent-override        [Chrome 87, Edge 87, FF 89,  IE ×, Op 73, Safari ×]    → Defines the descent metric for the font
   font-display            [Chrome 72, Edge 79, FF 58,  IE ×, Op 60, Safari 11.1] → Determines how a font face is displayed based on whether and when it is downloaded and ready to use
-  font-family             [Chrome 87, Edge 87, FF 89,  IE ×, Op 73, Safari ×]    → Specifies a name that will be used as the font face value for font properties
+  font-family             [Chrome 4,  Edge 12, FF 3.5, IE 6, Op 10, Safari 3.1]  → Specifies a name that will be used as the font face value for font properties
   font-feature-settings   [Chrome ×,  Edge ×,  FF 34,  IE ×, Op ×,  Safari ×]    → Allows control over advanced typographic features in OpenType fonts
   font-stretch            [Chrome 62, Edge 17, FF 62,  IE ×, Op 49, Safari 10.1]
   font-style              [Chrome 4,  Edge 12, FF 3.5, IE 4, Op 10, Safari 3.1]

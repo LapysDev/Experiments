@@ -162,23 +162,23 @@
                 }
 
                 // Initialize the movement
-                function initMove(evt) {
+                function initMove(event) {
                     clearTimeout(autorotate_timeout);
                     mousedown = true;
-                    mx = evt.clientX;
-                    my = evt.clientY;
+                    mx = event.clientX;
+                    my = event.clientY;
                 }
 
-                function move(evt) {
+                function move(event) {
                     if (mousedown) {
-                        var theta = (evt.clientX - mx) * Math.PI / 360;
-                        var phi = (evt.clientY - my) * Math.PI / 180;
+                        var theta = (event.clientX - mx) * Math.PI / 360;
+                        var phi = (event.clientY - my) * Math.PI / 180;
 
                         for (var i = 0; i < 8; ++i)
                             rotate(cube.vertices[i], cube_center, theta, phi);
 
-                        mx = evt.clientX;
-                        my = evt.clientY;
+                        mx = event.clientX;
+                        my = event.clientY;
 
                         render(objects, ctx, dx, dy);
                     }

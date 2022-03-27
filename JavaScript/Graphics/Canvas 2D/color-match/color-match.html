@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Document Stylesheet -->
+    <style media=all type=text/css>
+      /* @font-face */
+      @font-face { font-family: "Google Sans";                                   src: local("Google Sans"), url(fonts/google_sans.ttf) format("opentype")        }
+      @font-face { font-family: "Google Sans"; font-weight: 500 600 700 800 900; src: local("Google Sans"), url(fonts/google_sans-bold.ttf) format("opentype")   }
+      @font-face { font-family: "Google Sans"; font-style: italic;               src: local("Google Sans"), url(fonts/google_sans-italic.ttf) format("opentype") }
+
+      /* <body>  */
+      body {
+        font-family: "Google Sans", sans-serif;
+        overflow-x : hidden
+      }
+
+      /* <body>, <html> */
+      body, html {
+        height: 100%;
+        margin: 0;
+        width : 100%
+      }
+
+      /* Features */
+        /* Canvas */
+        #canvas {
+          bottom    : 0;
+          box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.075), inset 0 0 0 4000px rgba(0, 0, 0, 0.075);
+          left      : 0;
+          margin    : auto;
+          max-height: 100%;
+          max-width : 100%;
+          position  : absolute;
+          right     : 0;
+          top       : 0
+        }
+
+        /* Display */
+        #display {
+          background-color: #090909;
+          box-shadow      : inset 0 0 1080px 0 rgba(0, 0, 0, 0.05);
+          height          : 100%;
+          left            : 0;
+          margin-left     : auto;
+          margin-right    : auto;
+          outline         : 1px solid #666666;
+          overflow        : hidden;
+          /*position        : absolute;*/
+          right           : 0;
+          top             : 0;
+          width           : 100%
+        }
+
+        #display.rendered {
+          background-image: url(images/transparent.png);
+          position        : relative
+        }
+
+        #display, #display .render { color: #F0F0F0 }
+          /* @media */
+          @media (max-height: 4320px) and (max-width: 7680px) { #display.rendered { background-image: url(images/transparent-4320p.png) } }
+          @media (max-height: 2160px) and (max-width: 3840px) { #display.rendered { background-image: url(images/transparent-2160p.png) } }
+          @media (max-height: 1440px) and (max-width: 2560px) { #display.rendered { background-image: url(images/transparent-1440p.png) } }
+          @media (max-height: 1080px) and (max-width: 1920px) { #display.rendered { background-image: url(images/transparent-1080p.png) } }
+          @media (max-height: 720px)  and (max-width: 1280px) { #display.rendered { background-image: url(images/transparent-720p.png)  } }
+
+          /* Input Box */
+          #display .input-box {
+            background-color: rgba(0, 0, 0, 0.15);
+            bottom    : 5%;
+            font-size : 110%;
+            left      : 15%;
+            position  : absolute;
+            right     : 15%;
+            text-align: center;
+            transition: all 150ms linear 0ms;
+            width     : 70%
+          }
+
+          #display .input-box.concealed {
+            background-color: rgba(0, 0, 0, 0)
+          }
+            /* <tbody>, <tr> */
+            #display .input-box.concealed tbody,
+            #display .input-box.concealed tr { transition: inherit }
+
+            /* Input (Field, Toggle) */
+            #display .input-field,
+            #display .input-toggle {
+              opacity       : 1.0;
+              padding-left  : 3%;
+              padding-bottom: 5px;
+              padding-right : 3%;
+              padding-top   : 5px;
+              transition    : inherit
+            }
+
+            #display .input-box.concealed .input-field,
+            #display .input-box.concealed .input-toggle {
+              opacity            : 0.0;
+              transition-duration: inherit
+            }
+              /* ... */
+              #display .input-field input,
+              #display .input-toggle button {
+                border-radius: 3px;
+                transition   : all 100ms ease-in 0ms
+              }
+                /* :hover */
+                #display .input-field input:focus,
+                #display .input-toggle button:focus {
+                  border-color: #0099FF;
+                  outline     : none
+                }
+
+            /* Input Field  */
+            #display .input-field {
+              text-align         : right;
+              transition-duration: 110ms;
+              visibility         : visible
+            }
+
+            #display .input-box.concealed .input-field { visibility: hidden }
+              /* <input>  */
+              #display .input-field input {
+                background-color: rgba(0, 0, 0, 0);
+                border          : 1px solid #AFAFAF;
+                color           : #999999;
+                cursor          : default;
+                font            : inherit;
+                float           : right;
+                padding         : 1%;
+                width           : 98%
+              }
+
+              #display.rendered .input-field input {
+                background-color: #FFFFFF;
+                background-color: rgba(255, 255, 255, 0.675);
+                color           : #333333
+              }
+
+            /* Input Toggle */
+            #display .input-toggle {
+              letter-spacing: 2px;
+              text-align    : left;
+              width         : 25%
+            }
+              /* <button> */
+              #display .input-toggle button {
+                background-color: #FFFFFF;
+                border          : 1px solid #999999;
+                border-radius   : 50%;
+                box-shadow      : 2px 3px 0 1px rgba(0, 0, 0, 0.375);
+                color           : #3F3F3F;
+                cursor          : pointer;
+                float           : left;
+                font-size       : 125%;
+                font-weight     : 700;
+                letter-spacing  : inherit;
+                line-height     : 0;
+                height          : 50px;
+                padding         : 0;
+                text-align      : center;
+                touch-action    : none;
+                transform       : translateY(0px);
+                user-select     : none;
+                width           : 50px
+              }
+
+              #display .input-box.concealed .input-toggle:hover { opacity: 1.0 }
+                /* ::selection */
+                #display .input-toggle button::selection {
+                  background-color: inherit;
+                  color           : inherit;
+                  text-shadow     : inherit
+                }
+
+                /* :hover */
+                #display .input-toggle button:hover {
+                  box-shadow: 1px 3px 0 5px rgba(0, 0, 0, 0.25);
+                  transform : translateY(-3px)
+                }
+
+                /* :focus, :hover */
+                #display .input-toggle button:focus,
+                #display .input-toggle button:hover { color: #333333 }
+
+                /* :active */
+                #display .input-toggle button:active {
+                  box-shadow         : 2px 3px 0 1px rgba(0, 0, 0, 0.375);
+                  transform          : translateY(-1px);
+                  transition-duration: 50ms
+                }
+
+          /* Render */
+          #display .render {
+            font-size     : 50px;
+            font-weight   : 600;
+            height        : 100%;
+            pointer-events: none;
+            text-align    : center;
+            touch-action  : none;
+            user-select   : none;
+            vertical-align: middle;
+            width         : 100%
+          }
+
+          #display.rendered .render { pointer-events: auto }
+            /* ::selection */
+            #display .render ::selection {
+              background-color: inherit;
+              color           : inherit;
+              text-shadow     : inherit
+            }
+
+        /* Display, Palette  */
+          /* <table> */
+          #display table,
+          #palette table {
+            border-collapse: collapse;
+            border-spacing : 0;
+            table-layout   : fixed
+          }
+
+          #display td,
+          #palette td { padding: 0 }
+
+        /* Tooltip */
+        #tooltip {
+          background-color   : #060606;
+          background-color   : rgba(6, 6, 6, 0.9);
+          border             : 1px solid #FFFFFF;
+          border-color       : rgba(255, 255, 255, 0.3);
+          border-radius      : 2px;
+          box-shadow         : 0 3px 3px 0 rgba(0, 0, 0, 0.25);
+          color              : rgba(255, 255, 255, 0.9);
+          color              : #FFFFFF;
+          display            : inline-block;
+          float              : left;
+          font-family        : sans-serif;
+          font-size          : 16px;
+          font-weight        : 300;
+          min-height         : 16px;
+          min-width          : 16px;
+          opacity            : 1.0;
+          padding            : 3px;
+          pointer-events     : none;
+          position           : absolute;
+          position           : fixed;
+          overflow           : hidden;
+          overflow-wrap      : break-word;
+          touch-action       : none;
+          transition         : 100ms linear 300ms;
+          transition-property: background-color, border-color, color, opacity;
+          user-select        : none;
+          visibility         : visible;
+          white-space        : pre;
+          word-break         : break-word;
+          word-wrap          : break-word
+        }
+
+        #tooltip.concealed {
+          background-color   : rgba(6, 6, 6, 0.0);
+          border-color       : rgba(255, 255, 255, 0.0);
+          color              : rgba(255, 255, 255, 0.0);
+          font-size          : 0px;
+          left               : -16px !important;
+          min-height         : 0;
+          min-width          : 0;
+          opacity            : 0.0;
+          top                : -16px !important;
+          transition-duration: 0ms;
+          visibility         : hidden;
+          z-index            : 2147483647
+        }
+          /* ::selection */
+          #tooltip::selection {
+            background-color: initial;
+            background-color: rgba(0, 0, 0, 0.9);
+            color           : #FFFFFF;
+            color           : rgba(255, 255, 255, 0.9);
+            text-shadow     : none
+          }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+    </noscript>
+
+    <div id=display>
+      <table class=render style="min-height: 320px; min-width: 480px">
+        <tbody>
+          <tr>
+            <td id=output> No picture displayed </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class=input-box>
+        <tbody>
+          <tr>
+            <td class=input-field> <input accept=image/* id=input title="Send a picture" type="file"/> </td>
+            <td class=input-toggle> <button id=toggle title="Toggle controls">&#128065;</button> </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <table id=palette>
+      <tbody>
+        <tr class=raw>
+          <td> Colors </td>
+          <td>
+            <table>
+              <tbody>
+                <tr>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <div class=color-unit style="background-color: #000000"> </div>
+                            <div class=color-unit style="background-color: #FF0000"> </div>
+                            <div class=color-unit style="background-color: #00FF00"> </div>
+                            <div class=color-unit style="background-color: #0000FF"> </div>
+                            <div class=color-unit style="background-color: #FFFF00"> </div>
+                            <div class=color-unit style="background-color: #FF00FF"> </div>
+                            <div class=color-unit style="background-color: #00FFFF"> </div>
+                            <div class=color-unit style="background-color: #FFFFFF"> </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+
+                  <td>
+                    <a download target=_self>D</a>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td class=color-range style="background-color: #000000; width: 38.248478%"> </td>
+                          <td class=color-range style="background-color: #FF0000; width: 19.115765%"> </td>
+                          <td class=color-range style="background-color: #00FF00; width: 17.255064%"> </td>
+                          <td class=color-range style="background-color: #0000FF; width: 12.478175%"> </td>
+                          <td class=color-range style="background-color: #FFFF00; width: 05.453096%"> </td>
+                          <td class=color-range style="background-color: #FF00FF; width: 04.441672%"> </td>
+                          <td class=color-range style="background-color: #00FFFF; width: 02.836903%"> </td>
+                          <td class=color-range style="background-color: #FFFFFF; width: 00.170843%"> </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                  <td>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <tr class=unique>
+          <td> </td>
+          <td>
+            <table>
+              <tbody>
+                <tr>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <div class=color-unit style="background-color: #FF0000"> </div>
+                            <div class=color-unit style="background-color: #00FF00"> </div>
+                            <div class=color-unit style="background-color: #0000FF"> </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+
+                  <td>
+                    <a download target=_self>D</a>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td class=color-range style="background-color: #000000; width: 27.821445%"> </td>
+                          <td class=color-range style="background-color: #FF0000; width: 33.298922%"> </td>
+                          <td class=color-range style="background-color: #00FF00; width: 38.879631%"> </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+
+                  <td>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <tr class=step>
+          <td> Range </td>
+          <td> <input max=255 min=1 step=1 type=number value="1"/> </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class=concealed id=tooltip>&nbsp;</div>
+
+    <!-- Document Script -->
+    <script language=javascript type=text/javascript>
+      /* ... */
+      void function(display, input, palette, output, toggle, tooltip) {
+        var canvas    = document.createElement("canvas");
+        var context   = "function" === typeof canvas.getContext ? canvas.getContext("2d", {alpha: true}) : null;
+        var image     = document.createElement("img");
+        var imageName = "";
+        var text      = output.childNodes.item(+0) || null;
+
+        /* Function > ... */
+        function adjust() {
+          var bounds       = output.getBoundingClientRect();
+          var boundsHeight = bounds.bottom - bounds.top;
+          var boundsWidth  = bounds.right - bounds.left;
+          var imageHeight  = image.height;
+          var imageWidth   = image.width;
+
+          // ... --- UPDATE (Lapys)
+          if (false) {}
+          else if (boundsHeight > boundsWidth && imageHeight > imageWidth) { imageHeight *= boundsWidth / imageWidth; imageWidth = boundsWidth }
+          else if (boundsHeight < boundsWidth && imageHeight > imageWidth) { imageWidth *= boundsHeight / imageHeight; imageHeight = boundsHeight }
+          else if (boundsHeight < boundsWidth && imageHeight < imageWidth) { imageWidth *= boundsHeight / imageHeight; imageHeight = boundsHeight }
+          else if (boundsHeight > boundsWidth && imageHeight < imageWidth) { imageHeight *= boundsWidth / imageWidth; imageWidth = boundsWidth }
+          else { var boundsSize = boundsHeight < boundsWidth ? boundsHeight : boundsWidth; imageHeight = boundsSize; imageWidth = boundsSize }
+
+          canvas.style.height = (canvas.height = imageHeight | +0) + "px";
+          canvas.style.width  = (canvas.width  = imageWidth  | +0) + "px";
+
+          context.drawImage(image, +0, +0, image.width, image.height, +0, +0, imageWidth, imageHeight)
+        }
+
+        function diagnose() {
+          display.className = "";
+
+          if (output === canvas.parentNode) output.removeChild(canvas);
+          if (null !== text) { output.appendChild(text); text.data = "Could not display picture" }
+        }
+
+        function getElementByClassName(node, className) /* UPDATE (Lapys) -> Only recognizes ASCII whitespace as the class name delimiter */ {
+          var classList = split(className);
+
+          // ...
+          function split(name) {
+            var index = +0;
+            var list  = [""];
+
+            // ...
+            for (var subindex = +0; subindex !== name.length; ++subindex) {
+              var character = name.charAt(subindex);
+
+              // ...
+              if (character === ' ' || character === '\f' || character === '\n' || character === '\r' || character === '\t' || character === '\v') {
+                if ("" !== list[index]) index = list.push("") - 1;
+                continue
+              }
+
+              list[index] += character
+            }
+
+            if ("" === list[index])
+            list.pop();
+
+            // ...
+            return list
+          }
+
+          if (+0 !== classList.length) {
+            var list       = node.childNodes;
+            var queue      = [];
+            var queueCount = +0;
+
+            // ...
+            while (true) {
+              search:
+              for (var index = list.length; index; ) {
+                var childNode = list.item(--index);
+
+                if (0x1 /* --> Node.ELEMENT_NODE */ === childNode.nodeType) {
+                  var elementClassName = childNode.className;
+                  var elementClassList = null;
+
+                  // ...
+                  queueCount = queue.push(childNode.childNodes);
+                  if (className === elementClassName) return childNode;
+
+                  elementClassList = split(elementClassName);
+                  if (+0 === elementClassList.length) continue search;
+
+                  for (var elementClassListIndex = elementClassList.length; elementClassListIndex; )
+                  if (className === elementClassList[--elementClassListIndex]) return childNode;
+
+                  for (var classListIndex = classList.length, classListMatch = true; classListIndex--; ) {
+                    for (var elementClassListIndex = elementClassList.length; ; ) {
+                      if (classList[classListIndex] === elementClassList[--elementClassListIndex]) break;
+                      if (+0 === elementClassListIndex) { classListMatch = false; break }
+                    }
+
+                    if (false === classListMatch) break;
+                    if (+0 === classListIndex) return childNode
+                  }
+                }
+              }
+
+              if (+0 === queueCount--) break;
+              list = queue[+0];
+
+              for (var index = +0; index !== queueCount; ++index) queue[index] = queue[index + 1];
+              queue.pop()
+            }
+          }
+
+          return null
+        }
+
+        function mode() {
+          with (mode.prototype) {
+            detailed = false === detailed;
+
+            if (null === input) input = getElementByClassName(document, "input-box");
+            if (null !== input) input.className = "input-box" + (false === detailed ? ' ' + "concealed" : "")
+          }
+        } mode.prototype = {
+          detailed: true,
+          input   : getElementByClassName(document, "input-box")
+        };
+
+        function paint() {
+          with (paint.prototype) {
+            if (null !== wait)
+            clearInterval(wait);
+
+            wait = setInterval(function() {
+              if (image.complete) {
+                display.className = "rendered";
+
+                // ...
+                adjust();
+                clearInterval(wait);
+
+                output.appendChild(canvas);
+                if (null !== text && output === text.parentNode) { output.removeChild(text); text.data = imageName }
+              }
+            })
+          }
+        } paint.prototype = {wait: null};
+
+        function reset() {
+          display.className = "";
+
+          if (output === canvas.parentNode) output.removeChild(canvas);
+          if (null !== text) { output.appendChild(text); text.data = "No picture displayed" }
+        }
+
+        function snap() {
+          var value = input.value;
+
+          // ...
+          if ("" === input.value) return reset();
+          imageName = "";
+
+          // ...
+          if ("files" in input) {
+            var file = input.files.item(+0);
+
+            imageName = file.name;
+            if ("function" === typeof URL) { image.src = URL.createObjectURL(file); return }
+          }
+
+          // ...
+          if ("" === imageName)
+          for (var index = value.length; index; ) {
+            var character = value.charAt(--index);
+
+            if (character === '/' || character === '\\') break;
+            imageName = character + imageName
+          }
+
+          image.src = value
+        }
+
+        function tip(event) {
+          with (tip.prototype) {
+            if (null === event) return;
+            var target = "object" === typeof event.target ? event.target : "object" === typeof event.srcElement ? event.srcElement : null;
+
+            // ...
+            if (null === target)
+            return;
+
+            if (recent !== target) {
+              if (0x1 /* --> Node.ELEMENT_NODE */ === target.nodeType) {
+                if ("" !== target.title) {
+                  if (recent !== target)
+                  setTimeout(function() {
+                    var bounds = tooltip.getBoundingClientRect();
+                    var x      = event.clientX + 8;
+                    var y      = event.clientY + 8;
+
+                    // ...
+                    tooltip.style.left = x + "px";
+                    tooltip.style.top  = y + "px";
+
+                    // if (window.innerWidth  < x + (bounds.right - bounds.left)) { tooltip.style.bottom = '0'; tooltip.style.top = "initial" }
+                    // if (window.innerHeight < y + (bounds.bottom - bounds.top)) { tooltip.style.right = '0'; tooltip.style.left = "initial" }
+                  });
+
+                  tooltip.innerText = target.title;
+                  tooltip.className = "";
+                  target.title      = "";
+                  recent            = target;
+
+                  return
+                }
+              }
+
+              if (null !== recent) {
+                recent.title      = tooltip.innerText;
+                tooltip.innerText = "";
+
+                recent = null
+              }
+
+              tooltip.className = "concealed"
+            }
+          }
+        } tip.prototype = {recent: null};
+
+        /* ... */
+        // if (null === context) {
+        //   if (null !== text) text.data = "Unable to display pictures";
+        //   throw new Error("Unable to pick color information from pictures")
+        // }
+
+        canvas.id = "canvas";
+
+        /* Event > ... */
+        "function" === typeof document.body.addEventListener                                             ? document.body.addEventListener("mousemove",   function(event) { tip(event) }) :
+        "function" === typeof document.body.attachEvent || "object" === typeof document.body.attachEvent ? document.body.attachEvent     ("onmousemove", function(event) { tip(event) }) :
+        document.body.onmousemove = function(event) { tip(arguments.length ? event : null) };
+
+        document.body.onresize = function() { adjust() };
+
+        image.onerror = function() { diagnose() };
+        image.onload  = function() { paint() };
+
+        input.onchange = function() { snap() };
+        input.oninput  = function() { snap() };
+
+        toggle.onclick = function() { mode() }
+      }(display, input, palette, output, toggle, tooltip);
+    </script>
+  </body>
+</html>
