@@ -1,4 +1,4 @@
-function getElementsByClassName(node, className) /* UPDATE (Lapys) -> Only recognizes ASCII whitespace as the class name delimiter */ {
+function getElementsByClassName(node, className) {
   var classList = split(className);
   var elements  = [];
 
@@ -12,7 +12,7 @@ function getElementsByClassName(node, className) /* UPDATE (Lapys) -> Only recog
       var character = name.charAt(subindex);
 
       // ...
-      if (character === ' ' || character === '\f' || character === '\n' || character === '\r' || character === '\t' || character === '\v') {
+      if (character === ' ' || character === '\f' || character === '\t' || character === '\u00A0' || character === '\u1680' || character === '\u2000' || character === '\u2001' || character === '\u2002' || character === '\u2003' || character === '\u2004' || character === '\u2005' || character === '\u2006' || character === '\u2007' || character === '\u2008' || character === '\u2009' || character === '\u200A' || character === '\u202F' || character === '\u205F' || character === '\u3000' || character === '\uFEFF' || character === '\v') {
         if ("" !== list[index]) index = list.push("") - 1;
         continue
       }

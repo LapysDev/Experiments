@@ -960,7 +960,7 @@
           if (null !== information) information.className = "info-box active"
         }
 
-        // : [Get Element By Class Name] --- UPDATE (Lapys) -> Only recognizes ASCII whitespace as the class name delimiter
+        // : [Get Element By Class Name]
         function getElementByClassName(node, className) {
           var classList = split(className);
 
@@ -972,7 +972,7 @@
             // ...
             for (var subindex = +0; subindex !== name.length; ++subindex)
             switch (name.charAt(subindex)) {
-              case ' ': case '\f': case '\n': case '\r': case '\t': case '\v': if ("" !== list[index]) index = list.push("") - 1; break;
+              case ' ': case '\f': case '\t': case '\u00A0': case '\u1680': case '\u2000': case '\u2001': case '\u2002': case '\u2003': case '\u2004': case '\u2005': case '\u2006': case '\u2007': case '\u2008': case '\u2009': case '\u200A': case '\u202F': case '\u205F': case '\u3000': case '\uFEFF': case '\v': if ("" !== list[index]) index = list.push("") - 1; break;
               default: list[index] += name.charAt(subindex)
             }
 
