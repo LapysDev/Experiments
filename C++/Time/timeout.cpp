@@ -62,7 +62,7 @@ struct Timeout final {
       template <typename type>
       constexpr timeout_info_t(type& function, unsigned const milliseconds, types&... arguments) noexcept : arguments{}, function(reinterpret_cast<void (*)(...) noexcept>(&function)), milliseconds(milliseconds), set(true) {
         typename timeout_info_t::argument_t *iterator = this -> arguments;
-        ([](...) { /* Do nothing... */ })(iterator, timeout_info_t::iterative_copy(&iterator, reinterpret_cast<std::byte const volatile*>(std::addressof(arguments)), sizeof(types))...);
+        ([](...) noexcept { /* Do nothing... */ })(iterator, timeout_info_t::iterative_copy(&iterator, reinterpret_cast<std::byte const volatile*>(std::addressof(arguments)), sizeof(types))...);
       }
   };
 
