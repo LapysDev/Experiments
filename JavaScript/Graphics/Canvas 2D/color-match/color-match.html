@@ -8,30 +8,1124 @@
       @font-face { font-family: "Google Sans"; font-weight: 500 600 700 800 900; src: local("Google Sans"), url(fonts/google_sans-bold.ttf)   format("opentype") }
       @font-face { font-family: "Google Sans"; font-style: italic;               src: local("Google Sans"), url(fonts/google_sans-italic.ttf) format("opentype") }
 
-      /* <body>  */
-      body {
-        background-color: #FCFCFC;
-        font-family     : "Google Sans", sans-serif
-      }
+      /* DOM Elements */
+        /* <a> */
+        a {
+          color          : inherit;
+          text-decoration: none
+        }
+          /* :visited */
+          a:visited { color: inherit }
+
+        /* <a>, <button> */
+        a, button { cursor: pointer }
+
+        /* <body> */
+        body {
+          background-color: #FCFCFC;
+          color           : #303030;
+          font-family     : Tahoma, "Google Sans", sans-serif;
+          margin          : 0
+        }
+          /* @media */
+          @media screen and (prefers-color-scheme: dark) {
+            body {
+              background-color: #363636;
+              color           : #CFCFCF
+            }
+          }
+
+        /* <body>, <html> */
+        body, html {
+          height: 100%;
+          width : 100%
+        }
+
+        /* <button>, <input> */
+        button, input {
+          color: inherit;
+          font : inherit
+        }
+          /* :focus */
+          button:focus,
+          input:focus { outline: none }
+
+        /* <table> */
+        table {
+          border-collapse: collapse;
+          border-spacing : 0;
+          vertical-align : middle
+        }
+
+        /* <td>, <th> */
+        td, th { padding: 0 }
+
+      /* Features */
+        /* ... */
+        #colortip,
+        #console .toggle,
+        #controls th,
+        #count,
+        #download,
+        #footer,
+        #format,
+        #input,
+        #range input,
+        #rangeToggle *,
+        #render .status,
+        #tooltip {
+          touch-action: none;
+          user-select : none
+        }
+          /* ::selection */
+          #colortip::selection,
+          #console .toggle::selection,
+          #controls th::selection,
+          #count::selection,
+          #download::selection,
+          #footer::selection,
+          #format::selection,
+          #input::selection,
+          #range input::selection,
+          #rangeToggle ::selection,
+          #render .status::selection,
+          #tooltip::selection {
+            background-color: inherit;
+            background-color: rgba(0, 0, 0, 0.0);
+            background-color: transparent;
+            color           : inherit;
+            text-shadow     : none
+          }
+
+        /* Controls */
+        #controls {
+          margin-bottom: 20px;
+          margin-left  : 12.5%;
+          margin-right : 12.5%;
+          margin-top   : 20px;
+          width        : 75%
+        }
+          /* Colors */
+            /* <table> */
+            #controls .colors table { width: 90% }
+              /* Ratios */
+                /* <table> */
+                #controls .color-ratios table {
+                  border-radius: 8px;
+                  height       : 8px;
+                  margin-bottom: 15px;
+                  margin-left  : 5%;
+                  margin-right : 5%;
+                  margin-top   : 10px;
+                  overflow     : hidden;
+                  width        : 90%
+                }
+                  /* Ratio */
+                  #controls .color-ratio {
+                    background-color: rgba(0, 0, 0, 0.125);
+                    border-bottom   : 1px solid rgba(0, 0, 0, 0.125);
+                    border-top      : 1px solid rgba(0, 0, 0, 0.125);
+                    height          : 100%
+                  }
+                    /* @media */
+                    @media screen and (prefers-color-scheme: dark) {
+                      #controls .color-ratio { border-color: rgba(255, 255, 255, 0.125) }
+                    }
+
+                    /* <div> */
+                    #controls .color-ratio div {
+                      animation: color_ratio__entry 250ms ease-in 0ms 1 normal both running;
+                      height   : 100%;
+                      width    : 100%
+                    }
+                      /* @keyframes */
+                      @keyframes color_ratio__entry {
+                        000% { width: 0%   }
+                        100% { width: 100% }
+                      }
+
+              /* Ratios, Units */
+                /* Ratio, Unit */
+                #controls .color-ratio,
+                #controls .color-unit {
+                  opacity   : 0.8;
+                  transition: opacity 200ms ease-in 0ms
+                }
+                  /* :hover */
+                  #controls .color-ratio:hover,
+                  #controls .color-unit:hover { opacity: 1.0 }
+
+              /* Units */
+                /* <table> */
+                #controls .color-units table {
+                  margin-bottom: 5px;
+                  margin-left  : 2.5%;
+                  margin-right : 2.5%;
+                  margin-top   : 5px;
+                  width        : 95%
+                }
+
+                /* <td> */
+                #controls .color-units td { overflow-x: hidden }
+
+                /* Unit */
+                #controls .color-unit {
+                  animation    : color_unit__entry 250ms ease-in 0ms 1 normal both running;
+                  border       : 1px solid rgba(0, 0, 0, 0.5);
+                  border-radius: 3px;
+                  display      : block;
+                  float        : left;
+                  font-family  : monospace;
+                  font-size    : 0px;
+                  line-height  : 0.0;
+                  margin-bottom: 2.5px;
+                  margin-left  : 5px;
+                  margin-right : 5px;
+                  margin-top   : 2.5px;
+                  padding      : 12.5px;
+                  position     : relative
+                }
+                  /* @keyframes */
+                  @keyframes color_unit__entry {
+                    000% { left: 50px; opacity: 0.0; visibility: hidden  }
+                    001% {                           visibility: visible }
+                    100% { left: 0px;  opacity: 1.0; visibility: visible }
+                  }
+
+                  @media screen and (prefers-color-scheme: dark) {
+                    #controls .color-unit { border-color: rgba(255, 255, 255, 0.5) }
+                  }
+
+          /* Console ..., Count, Download, Format, Range ... */
+          #count,
+          #download,
+          #format,
+          #range input {
+            border      : 1px solid #606060;
+            border-color: rgba(0, 0, 0, 0.5);
+            font-size   : 18px;
+            transition  : border-color 200ms ease-in 0ms
+          }
+
+          #console .toggle[disabled],
+          #count[disabled],
+          #download[disabled],
+          #format[disabled],
+          #range input[disabled] {
+            border-color: #999999 !important;
+            border-color: rgba(0, 0, 0, 0.25) !important;
+            cursor      : not-allowed;
+            opacity     : 0.7
+          }
+            /* @media */
+            @media screen and (prefers-color-scheme: dark) {
+              #count,
+              #download,
+              #format,
+              #range input {
+                border-color: #AAAAAA;
+                border-color: rgba(255, 255, 255, 0.5)
+              }
+
+              #console .toggle[disabled],
+              #count[disabled],
+              #download[disabled],
+              #format[disabled],
+              #range input[disabled] {
+                border-color: #666666 !important;
+                border-color: rgba(255, 255, 255, 0.25) !important
+              }
+            }
+
+            /* :focus */
+            #console .toggle:focus,
+            #count:focus,
+            #download:focus,
+            #format:focus,
+            #range input:focus { border-color: #0099FF }
+
+            /* :hover */
+            #count:hover,
+            #download:hover,
+            #format:hover,
+            #range input:hover,
+            #rangeToggle :hover { border-color: #0F0F0F }
+              /* @media */
+              @media screen and (prefers-color-scheme: dark) {
+                #count:hover,
+                #download:hover,
+                #format:hover,
+                #range input:hover,
+                #rangeToggle :hover { border-color: #CCCCCC }
+              }
+
+          /* Count, Format, Range ... */
+          #count,
+          #format,
+          #range {
+            margin-bottom: 5px;
+            margin-left  : 3%;
+            margin-top   : 5px
+          }
+
+          #count,
+          #format,
+          #range input {
+            background-color   : inherit;
+            color              : inherit;
+            font-family        : monospace;
+            padding-bottom     : 5px;
+            padding-left       : 10px;
+            padding-right      : 10px;
+            padding-top        : 5px;
+            transition-duration: 0ms
+          }
+
+          #count,
+          #format,
+          #range,
+          #rangeAllStep .range-all-step,
+          #rangeRGBStep .range-rgb-step { border-radius: 4px }
+
+          /* Download */
+          #download {
+            background   : none;
+            border       : 1px solid rgba(0, 0, 0, 0.25);
+            border-radius: 3px;
+            color        : inherit;
+            display      : block;
+            float        : right;
+            font         : inherit;
+            font-size    : 165%;
+            font-weight  : 400;
+            height       : 35px;
+            overflow     : hidden;
+            text-align   : center;
+            width        : 35px
+          }
+            /* @media */
+            @media screen and (prefers-color-scheme: dark) {
+              #download { border-color: rgba(255, 255, 255, 0.25) }
+            }
+
+          /* Range */
+          #range {
+            height  : 70px;
+            overflow: hidden;
+            width   : 100%
+          }
+            /* (All, RGB) Step */
+            #rangeAllStep,
+            #rangeRGBStep {
+              padding-left : 20px;
+              padding-right: 20px
+            }
+              /* (All, RGB) Step */
+              #rangeAllStep .range-all-step,
+              #rangeRGBStep .range-rgb-step {
+                margin-bottom: 5px;
+                margin-top   : 5px
+              }
+
+            /* RGB Step */
+              /* RGB Step */
+              #rangeRGBStep .range-rgb-step {
+                display     : inline-block;
+                float       : left;
+                overflow    : hidden;
+                margin-right: 15px
+              }
+                /* <input> */
+                #rangeRGBStep .range-rgb-step input { border-left: none }
+
+                /* Icon */
+                #rangeRGBStep .range-rgb-step .icon {
+                  box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.075);
+                  width     : 20px
+                }
+
+            /* Toggle */
+            #rangeToggle {
+              overflow  : hidden;
+              text-align: center;
+              width     : 50px
+            }
+              /* Toggle */
+              #rangeToggle .range-toggle {
+                background-color: #CCCCCC;
+                box-shadow      : 0 0 60px 0 #606060;
+                cursor          : pointer;
+                height          : 30%
+              }
+
+              /* Toggle ... */
+              #rangeToggle .range-toggle,
+              #rangeToggle .range-toggle-all,
+              #rangeToggle .range-toggle-rgb { overflow-y: hidden }
+
+              /* Toggle (All, RGB) */
+              #rangeToggle .range-toggle-all,
+              #rangeToggle .range-toggle-rgb {
+                background-color: #909090;
+                color           : #F0F0F0;
+                height          : 0%
+              }
+
+              #rangeToggle.range-all .range-toggle-all,
+              #rangeToggle.range-rgb .range-toggle-rgb { height: 70% }
+                /* <table> */
+                #rangeToggle .range-toggle-all table,
+                #rangeToggle .range-toggle-rgb table {
+                  height  : 100%;
+                  overflow: hidden;
+                  width   : 100%
+                }
+                  /* <tbody> */
+                  #rangeToggle .range-toggle-all tbody,
+                  #rangeToggle .range-toggle-rgb tbody {
+                    pointer-events: none;
+                    touch-action  : none;
+                    user-select   : none
+                  }
+
+        /* Controls, Display, Footer */
+        #controls, #display, #footer { cursor: default }
+
+        /* Display */
+        #display {
+          font-family: "Google Sans", sans-serif;
+          font-size  : 20px;
+          height     : 70%;
+          width      : 100%
+        }
+          /* :hover */
+            /* Console */
+            #display:hover #console {
+              opacity   : 1.0;
+              transition: all 75ms ease-in 0ms, visibility 0ms linear 0ms;
+              visibility: visible
+            }
+
+          /* Console */
+          #console {
+            bottom      : 97.5px;
+            height      : 65px;
+            margin-left : 17.5%;
+            margin-right: 17.5%;
+            opacity     : 0.0;
+            position    : relative;
+            text-align  : center;
+            transition  : all 75ms ease-in 0ms, visibility 0ms linear 75ms;
+            visibility  : hidden;
+            width       : 65%;
+            z-index     : 2
+          }
+
+          #console.active {
+            background-color: #FFFFFF;
+            background-color: rgba(127, 127, 127, 0.675);
+            border-radius   : 3px;
+            box-shadow      : 0 0 0 1px #AFAFAF;
+            box-shadow      : 0 0 0 1px rgba(255, 255, 255, 0.5)
+          }
+            /* <td> */
+            #console td {
+              padding-bottom: 5px;
+              padding-left  : 10px;
+              padding-right : 10px;
+              padding-top   : 5px
+            }
+
+            /* Input */
+            #input {
+              border       : 1px solid #999999;
+              border-radius: 3px;
+              cursor       : pointer;
+              opacity      : 0.0;
+              transition   : inherit;
+              visibility   : hidden;
+              width        : 80%
+            }
+
+            #input[disabled] { cursor: inherit }
+
+            #console.active #input {
+              opacity   : 1.0;
+              visibility: inherit
+            }
+
+            /* Toggle */
+            #console .toggle {
+              border       : 1px solid #AFAFAF;
+              border-radius: 50px;
+              box-shadow   : 0 1px 3px 1px rgba(0, 0, 0, 0.25);
+              bottom       : 0px;
+              color        : #333333;
+              float        : left;
+              font-size    : inherit;
+              height       : 50px;
+              padding      : 0;
+              position     : relative;
+              transition   : all 65ms ease-in 0ms;
+              width        : 50px
+            }
+              /* :hover */
+              #console .toggle:hover {
+                bottom    : 3px;
+                color     : #0F0F0F;
+                box-shadow: 0 3px 3px 3px rgba(0, 0, 0, 0.125)
+              }
+
+          /* Color Tip */
+          #colortip {
+            background-color: #CCCCCC;
+            border          : solid #999999;
+            border          : solid #999999;
+            border-radius   : 5px;
+            border-width    : 1.5px;
+            border-width    : 1px;
+            box-shadow      : 0 0 5px 0 #000000;
+            box-shadow      : 0 0 5px 0 rgba(0, 0, 0, 0.75);
+            color           : #333333;
+            display         : none;
+            font-size       : 85%;
+            opacity         : 0.0;
+            padding-bottom  : 1px;
+            padding-left    : 10px;
+            padding-right   : 10px;
+            padding-top     : 1px;
+            visibility      : hidden
+          }
+
+          #display.active #colortip {
+            display   : block;
+            opacity   : 0.975;
+            visibility: visible
+          }
+
+          /* Render */
+          #render {
+            background-color: #0F0F0F;
+            color           : #F0F0F0;
+            height          : 100%;
+            text-align      : center;
+            width           : 100%;
+            z-index         : 1
+          }
+
+          #display.active #render { background-image: url(images/transparent.png) }
+            /* @media */
+            @media (max-height: 4320px) and (max-width: 7680px) { #display.active #render { background-image: url(images/transparent-4320p.png) } }
+            @media (max-height: 2160px) and (max-width: 3840px) { #display.active #render { background-image: url(images/transparent-2160p.png) } }
+            @media (max-height: 1440px) and (max-width: 2560px) { #display.active #render { background-image: url(images/transparent-1440p.png) } }
+            @media (max-height: 1080px) and (max-width: 1920px) { #display.active #render { background-image: url(images/transparent-1080p.png) } }
+            @media (max-height: 720px)  and (max-width: 1280px) { #display.active #render { background-image: url(images/transparent-720p.png)  } }
+
+            /* Data */
+            #render .data { position: absolute }
+              /* Output */
+              #output {
+                background     : none;
+                display        : none;
+                image-rendering: crisp-edges;
+                image-rendering: smooth;
+                image-rendering: optimizeQuality;
+                image-rendering: high-quality;
+                opacity        : 0.0;
+                visibility     : hidden
+              }
+
+              #display.active #output {
+                display   : block;
+                opacity   : 1.0;
+                visibility: visible
+              }
+
+            /* Status */
+            #render .status {
+              font-size     : 175%;
+              pointer-events: none;
+              text-shadow   : 0 0 4px #000000;
+              text-shadow   : 0 0 4px rgba(0, 0, 0, 0.5)
+            }
+
+        /* Display ..., Tooltip */
+        #display #colortip,
+        #tooltip {
+          pointer-events: none;
+          position      : absolute;
+          position      : fixed;
+          word-break    : keep-all;
+          z-index       : 2147483647
+        }
+
+        /* Footer */
+        #footer {
+          background-color: #F9F9F9;
+          box-shadow      : 0 -1px 5px 0 rgba(0, 0, 0, 0.125);
+          color           : #333333;
+          font-size       : 18px;
+          line-height     : 0.0;
+          padding-bottom  : 15px;
+          padding-top     : 10px;
+          text-align      : center
+        }
+          /* @media */
+          @media screen and (prefers-color-scheme: dark) {
+            #footer {
+              background-color: #303030;
+              box-shadow      : 0 -1px 5px 0 rgba(255, 255, 255, 0.25);
+              color           : #F0F0F0
+            }
+          }
+
+          /* * */
+          #footer * {
+            color       : inherit;
+            display     : inline;
+            font-size   : inherit;
+            line-height : inherit;
+            touch-action: inherit;
+            user-select : inherit
+          }
+            /* ::selection */
+            #footer ::selection {
+              background-color: inherit;
+              color           : inherit;
+              text-shadow     : inherit
+            }
+
+          /* Icon */
+          #footer .icon {
+            height         : 16px;
+            image-rendering: crisp-edges;
+            image-rendering: optimizeSpeed;
+            object-fit     : contain
+          }
+
+        /* Tooltip */
+        #tooltip {
+          background-color: #0F0F0F;
+          border          : 1px solid #CFCFCF;
+          border-radius   : 3px;
+          color           : #C0C0C0;
+          font-size       : 85%;
+          opacity         : 0.0;
+          padding-bottom  : 2.5px;
+          padding-left    : 6.5px;
+          padding-right   : 6.5px;
+          padding-top     : 2.5px;
+          transition      : opacity 150ms ease-in 0ms;
+          visibility      : hidden;
+          white-space     : pre
+        }
+
+        #tooltip.active {
+          opacity   : 1.0;
+          visibility: visible
+        }
     </style>
 
     <!-- Document Title -->
-    <title> Color Parser </title>
+    <title> Color Parser 🎨 </title>
   </head>
 
   <body>
     <noscript> </noscript>
 
-    <div id=display>
-      <table border=1 id=render style="min-height: 320px; min-width: 480px">
+    <div id=tooltip> </div>
+
+    <div id=display style="min-height: 320px; min-width: 480px">
+      <div id=colortip> &hellip; </div>
+
+      <table id=render>
         <tbody>
           <tr>
-            <td id=output style="text-align: center">
-              <div> Centered? This is a really long sentence, isn't it? </div>
-            </td>
+            <td class=data> <canvas id=output style="height: 0px; margin-left: 0px; margin-top: 0px; position: absolute; width: 0px"> </canvas> </td>
+            <td class=status> No picture displayed </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class=active id=console style="min-width: 320px">
+        <tbody>
+          <tr>
+            <td> <input accept=image/* disabled id=input readonly tabindex=0 title="Send a picture" type="file"/> </td>
+            <td> <button class=toggle disabled tabindex=-1 title="Toggle display"> &#128065; </button> </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <table id=controls>
+      <tbody>
+        <tr class=colors>
+          <th> <label for=download> Color </label> </th>
+          <td>
+            <a disabled download id=download name=download style="float: right" tabindex=0 target=_self title="Download picture color data"> &#11123; </a>
+
+            <table>
+              <tbody>
+                <tr class=color-units>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <!-- var delays = []; for (var count = 48, delay = 0, rate = 30; --count; (delay += rate), (rate -= 0 !== rate)) delays.push(delay); -->
+
+                            <span class=color-unit style="animation-delay: 0ms;   background-color: #000000" title=#000000>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 30ms;  background-color: #0000FF" title=#0000FF>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 59ms;  background-color: #00FF00" title=#00FF00>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 87ms;  background-color: #FF0000" title=#FF0000>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 114ms; background-color: #00FFFF" title=#00FFFF>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 140ms; background-color: #FF00FF" title=#FF00FF>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 165ms; background-color: #FFFF00" title=#FFFF00>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 189ms; background-color: #FFFFFF" title=#FFFFFF>&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 212ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 234ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 255ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 275ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 294ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 312ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 329ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 345ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 360ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 374ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 387ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 399ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 410ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 420ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 429ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 437ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 444ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 450ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 455ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 459ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 462ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 464ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                            <span class=color-unit style="animation-delay: 465ms; background-color: transparent">&nbsp;</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr class=color-ratios>
+                  <td>
+                    <table>
+                      <tbody>
+                        <tr>
+                          <td class=color-ratio style="width: 12.500000%" title=#000000> <div style="animation-delay: 0ms;   background-color: #000000"> </div> </td>
+                          <td class=color-ratio style="width: 10.937500%" title=#0000FF> <div style="animation-delay: 30ms;  background-color: #0000FF"> </div> </td>
+                          <td class=color-ratio style="width: 8.522958%"  title=#00FF00> <div style="animation-delay: 59ms;  background-color: #00FF00"> </div> </td>
+                          <td class=color-ratio style="width: 8.378833%"  title=#FF0000> <div style="animation-delay: 87ms;  background-color: #FF0000"> </div> </td>
+                          <td class=color-ratio style="width: 6.657631%"  title=#00FFFF> <div style="animation-delay: 114ms; background-color: #00FFFF"> </div> </td>
+                          <td class=color-ratio style="width: 6.399658%"  title=#FF00FF> <div style="animation-delay: 140ms; background-color: #FF00FF"> </div> </td>
+                          <td class=color-ratio style="width: 5.825427%"  title=#FFFF00> <div style="animation-delay: 165ms; background-color: #FFFF00"> </div> </td>
+                          <td class=color-ratio style="width: 5.097249%"  title=#FFFFFF> <div style="animation-delay: 189ms; background-color: #FFFFFF"> </div> </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <tr class=counts>
+          <th> <label for=count> Count </label> </th>
+          <td> <input disabled id=count min=1 name=count step=1 tabindex=0 type=number value="1"/> </td>
+        </tr>
+
+        <tr class=ranges>
+          <th> <label for=range> Range </label> </th>
+          <td>
+            <table id=range name=range tabindex=0>
+              <tbody>
+                <tr>
+                  <td class=range-all id=rangeToggle rowspan=2 title="Color channels">
+                    <div class=range-toggle-all> <table title="How unique each pixel is: [0] Always distinct [255] Everything same"> <tbody> <tr> <td> All </td> </tr> </tbody> </table> </div>
+                    <div class=range-toggle> </div>
+                    <div class=range-toggle-rgb> <table title="How unique each color channel is: [0] Always different [255] All the same"> <tbody> <tr> <td> RGB </td> </tr> </tbody> </table> </div>
+                  </td>
+
+                  <td id=rangeAllStep>
+                    <input class=range-all-step disabled max=255 min=0 step=1 type=number value="0"/>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td id=rangeRGBStep>
+                    <table class=range-rgb-step> <tbody> <tr> <td class=icon style="background-color: #F00"> </td> <td> <input disabled max=255 min=0 step=1 type=number value="0"/> </td> </tr> </tbody> </table>
+                    <table class=range-rgb-step> <tbody> <tr> <td class=icon style="background-color: #0F0"> </td> <td> <input disabled max=255 min=0 step=1 type=number value="0"/> </td> </tr> </tbody> </table>
+                    <table class=range-rgb-step> <tbody> <tr> <td class=icon style="background-color: #00F"> </td> <td> <input disabled max=255 min=0 step=1 type=number value="0"/> </td> </tr> </tbody> </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <tr class=formats>
+          <th> <label for=format> Format </label> </th>
+          <td>
+            <select disabled id=format name=format value=Hexadecimal>
+              <option value=cmyk> CMYK </option>
+              <option selected value=hexadecimal> Hexadecimal </option>
+              <option value=hsl> HSL </option>
+              <option value=rgb> RGB </option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div id=footer>
+      Made with <img class=icon src="images/pixel-heart.png" style="height: 16px"/> by Lapys &copy; <span class=current-year title="Tuesday 5th April, 2022">2022</span>
+    </div>
+
+    <!-- Document Script -->
+    <script language=javascript type=text/javascript>
+      /* ... */
+      var print = console.log;
+      ;(function(colortip, count, display, download, format, input, output, rangeAllStep, rangeRGBStep, render, tooltip) {
+        var console        = getElementById(document, "console");
+        var documentBody   = document.body;
+        var dummy          = document.createElement("div");
+        var displayToggle  = null !== console ? getElementByClass(console, "toggle") : dummy;
+        var picture        = document.createElement("img");
+        var pictureName    = "";
+        var renderer       = "function" === typeof output.getContext ? output.getContext("2d") : null;
+        var tooltipContent = "";
+        var tooltipElement = null;
+        var tooltipStyle   = tooltip.style;
+        var rangeToggle    = rangeAllStep;
+        var status         = getElementByClass(render, "status");
+
+        /* Function */
+        // : [Add Event Listener]
+        function addEventListener(target, type, callback) {
+          if ("function" === typeof target.addEventListener) target.addEventListener(type, callback);
+          else if ("function" === typeof target.attachEvent) target.attachEvent("on" + type, callback);
+          else target["on" + type] = callback
+        }
+
+        // : [Disable]
+        function disable(element) {
+          switch (element.nodeName) {
+            case "BUTTON": case "COMMAND": case "FIELDSET": case "INPUT": case "KEYGEN": case "OPTGROUP": case "OPTION": case "SELECT": case "TEXTAREA": element.disabled = true; break;
+            default: if ("function" === typeof element.setAttribute) element.setAttribute("disabled", "")
+          }
+        }
+
+        // : [Enable]
+        function enable(element) {
+          switch (element.nodeName) {
+            case "BUTTON": case "COMMAND": case "FIELDSET": case "INPUT": case "KEYGEN": case "OPTGROUP": case "OPTION": case "SELECT": case "TEXTAREA": element.disabled = false; break;
+            default: if ("function" === typeof element.removeAttribute) element.removeAttribute("disabled")
+          }
+        }
+
+        // : [Get Elements ...]
+        function getElements(functor, node, value, subvalue) {
+          var elements = [];
+          var subvalue = subvalue;
+
+          // ...
+          for (var tree = [node.childNodes]; +0 !== tree.length; ) {
+            var nodes = tree[+0];
+
+            // ...
+            search:
+            for (var index = +0; index !== nodes.length; ++index) {
+              var node = nodes[index];
+
+              // ...
+              if (0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType) {
+                tree.push(node.childNodes);
+
+                // ...
+                if (functor === getElementsByClass) {
+                  var classList;
+                  var metavalue = trim(value);
+                  var subvalue  = subvalue;
+
+                  // ...
+                  function is_space(character) {
+                    return character === ' ' || character === '\f' || character === '\t' || character === '\u00A0' || character === '\u1680' || character === '\u2000' || character === '\u2001' || character === '\u2002' || character === '\u2003' || character === '\u2004' || character === '\u2005' || character === '\u2006' || character === '\u2007' || character === '\u2008' || character === '\u2009' || character === '\u200A' || character === '\u202F' || character === '\u205F' || character === '\u3000' || character === '\uFEFF' || character === '\v'
+                  }
+
+                  function split(className) {
+                    var index   = +0;
+                    var length  = className.length;
+                    var list      = [""];
+                    var listIndex = +0;
+
+                    // ...
+                    while (index !== length) {
+                      var character = className.charAt(index++);
+
+                      if (is_space(character)) { listIndex = list.push("") - 1; continue }
+                      list[listIndex] += character
+                    }
+
+                    if ("" === list[listIndex]) list.pop();
+                    return list
+                  }
+
+                  function trim(className) {
+                    var index      = +0;
+                    var length     = className.length;
+                    var trimmed    = "";
+                    var whitespace = "";
+
+                    // ...
+                    while (index !== length && is_space(className.charAt(index))) ++index;
+                    while (index !== length) {
+                      var character = className.charAt(index++);
+
+                      if (is_space(character)) whitespace += character;
+                      else { trimmed += whitespace + character; whitespace = "" }
+                    }
+
+                    // ...
+                    return trimmed
+                  }
+
+                  // ...
+                  if ("" === metavalue || "" === trim(node.className)) continue search;
+                  if (value === node.className) { elements.push(node); continue search }
+                  if (metavalue === trim(node.className)) { elements.push(node); continue search }
+
+                  classList = split(node.className);
+                  for (var subindex = classList.length; subindex; )
+                  switch (classList[--subindex]) { case value: case metavalue: elements.push(node); continue search }
+
+                  subvalue = split(value);
+                  for (var subindex = subvalue.length, match = true; subindex--; ) {
+                    for (var subsubindex = classList.length; subsubindex; ) {
+                      if (subvalue[subindex] === classList[--subsubindex]) break;
+                      if (+0 === subsubindex) { match = false; break }
+                    }
+
+                    if (false === match) break;
+                    if (+0 === subindex) { elements.push(node); continue search }
+                  }
+
+                  continue search
+                }
+
+                if (functor === getElementsById) { if (value === node.id) { elements.push(node) } continue search }
+                if (functor === getElementsByTagName) { if (value === node.tagName) { elements.push(node) } continue search }
+              }
+            }
+
+            for (var index = +0; index !== tree.length - 1; ++index)
+            tree[index] = tree[index + 1];
+
+            tree.pop()
+          }
+
+          // ...
+          return elements
+        }
+
+        function getElementByClass(node, className) { var elements = getElementsByClass(node, className, null); return +0 === elements.length ? null : elements[0] }
+        function getElementsByClass(node, className) { return getElements(getElementsByClass, node, className, null) }
+
+        function getElementById(node, id) { var elements = getElementsById(node, id, null); return +0 === elements.length ? null : elements[0] }
+        function getElementsById(node, id) { return getElements(getElementsById, node, id, null) }
+
+        function getElementByTagName(node, tagName) { var elements = getElementsByTagName(node, tagName, null); return +0 === elements.length ? null : elements[0] }
+        function getElementsByTagName(node, tagName) { return getElements(getElementsByTagName, node, tagName, null) }
+
+        // : [Hide Tooltip]
+        function hideTooltip() {
+          if (null === tooltipElement) return;
+
+          tooltipStyle.top     = "";
+          tooltipStyle.left    = "";
+          tooltipElement.title = tooltipContent;
+          tooltipElement       = null;
+          tooltipContent       = "";
+          tooltip.innerText    = "";
+          tooltip.className    = ""
+        }
+
+        // : [Inform]
+        function inform(message) {
+          if (null !== status)
+          status.innerText = message
+        }
+
+        // : [Is Disabled]
+        function isDisabled(element) {
+          switch (element.nodeName) { case "BUTTON": case "COMMAND": case "FIELDSET": case "INPUT": case "KEYGEN": case "OPTGROUP": case "OPTION": case "SELECT": case "TEXTAREA": return element.disabled }
+          if ("function" === typeof element.getAttribute) { var disabled = element.getAttribute("disabled"); return null !== disabled }
+
+          return false
+        }
+
+        // : [Process Picture]
+        function processPicture() {
+          display.className = "active";
+
+          inform(pictureName);
+          enable(count);
+          enable(displayToggle);
+          enable(download);
+          enable(format);
+          for (var rangeAllSteps = getElementsByClass(rangeAllStep, "range-all-step"), index = rangeAllSteps.length; index; ) enable(rangeAllSteps[--index])
+        }
+
+        // : [Show Tooltip]
+        function showTooltip(element, x, y) {
+          if (null === element || tooltip === element || 0x1 /* --> Node.ELEMENT_NODE */ !== element.nodeType)
+          return;
+
+          for (var node = element; null !== tooltipElement; node = node.parentNode) {
+            if (null === node || "" !== node.title) return hideTooltip();
+            if (node === tooltipElement) return
+          }
+
+          if ("" === element.title) {
+            var parent = element.parentNode;
+
+            // ...
+            if (null !== parent && "function" === typeof parent.getBoundingClientRect) {
+              var bounds = parent.getBoundingClientRect();
+              if (x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) showTooltip(parent, x, y)
+            }
+
+            return
+          }
+
+          // ...
+          if (false === isDisabled(element)) {
+            tooltipStyle.top  = y + "px";
+            tooltipStyle.left = x + "px";
+            tooltip.className = "active"
+          }
+
+          tooltipElement    = element;
+          tooltipContent    = element.title;
+          tooltip.innerText = tooltipContent;
+          element.title     = ""
+        }
+
+        // : [Timeout]
+        function timeout(functor) {
+          var callbacks = [null, null, null], capacity = 3, count = +0;
+          var timeoutFunction = setTimeout;
+          var timeoutHandler  = function timeout() { for (var index = +0; count !== index; ++index) callbacks[index](); count = +0 };
+
+          // ...
+          if      ("function" === typeof requestIdleCallback)   timeoutFunction = requestIdleCallback;
+          else if ("function" === typeof requestAnimationFrame) timeoutFunction = requestAnimationFrame;
+
+          (timeout = function timeout(functor) {
+            capacity > count ? (callbacks[count++] = functor) : (capacity = count = callbacks.push(functor));
+            timeoutFunction(timeoutHandler)
+          })(functor)
+        }
+
+        // : [Triage Picture]
+        function triagePicture() {
+          display.className = "";
+          inform("Could not display picture")
+        }
+
+        // : [Upload Picture] ->> Calls `triagePicture()` afterward
+        function uploadPicture() {
+          var uploadName = "";
+
+          // ...
+          if ("" !== input.value) {
+            if ("files" in input) {
+              var file = input.files.item(+0);
+
+              // ...
+              uploadName = file.name;
+              if (pictureName === uploadName) return;
+
+              if ("function" === typeof URL) {
+                if (picture.src) URL.revokeObjectURL(picture.src);
+                picture.src = URL.createObjectURL(file);
+                pictureName = uploadName;
+
+                return
+              }
+            }
+
+            // ...
+            if ("" === uploadName)
+            for (var index = input.value.length; index--; )
+            switch (input.value.charAt(index)) {
+              case '\\': case '/': index = +0; break;
+              default: uploadName = input.value.charAt(index) + uploadName
+            }
+
+            if (pictureName === uploadName) return;
+            picture.src = input.value;
+            pictureName = uploadName
+          }
+        }
+
+        /* Event > ... */
+        addEventListener(documentBody, "mousemove", function tip(event) { if (+0 !== arguments.length) showTooltip("object" === typeof event.target ? event.target : event.srcElement, event.clientX, event.clientY) });
+        addEventListener(window, "blur", function untip() { hideTooltip() });
+
+        /* ... */
+        if (null === renderer) {
+          inform("Unable to display pictures");
+          throw new Error("Unable to pick color information from pictures")
+        }
+
+        enable(input);
+
+        /* Event > ... */
+        addEventListener(displayToggle, "click", function toggle() { console.className = console.className === "active" ? "" : "active" });
+
+        addEventListener(download, "click", function downloadPictureData() { if (false === isDisabled(download)) return });
+
+        addEventListener(input, "change", function uploadPictureByPath() { uploadPicture() });
+        addEventListener(input, "input",  function uploadPictureByPath() { uploadPicture() });
+
+        addEventListener(picture, "error", function triagePictureUpload() { triagePicture() });
+        addEventListener(picture, "load",  function processPictureUpload() { processPicture() })
+      })(colortip, count, display, download, format, input, output, rangeAllStep, rangeRGBStep, render, tooltip);
+      // colortip
+      // count; // <input>
+      // display.className = "active";
+      // download.onclick = null; // <a>
+      // download.onkeydown = null;
+      // format.value; // <select>
+      // output.getContext("2d");
+      // rangeAllStep.getElementsByTagName("input")
+      // rangeRGBStep.getElementsByTagName("input")
+      // rangeToggle.getElementsByClassName("range-toggle-all").item(0)
+      // rangeToggle.getElementsByClassName("range-toggle").item(0)
+      // rangeToggle.getElementsByClassName("range-toggle-rgb").item(0)
+      // tooltip
+    </script>
   </body>
 </html>
