@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Document Title -->
+    <title> WebAssembly </title>
+  </head>
+
+  <body>
+    <script language=javascript type=text/javascript>
+      var benchmark = null; // ->> WebAssembly-compiled function
+
+      // ...
+      void function compile() {
+        var imports = (function() {
+          var temporary = +0;
+
+          return {"env": {
+            // "getTempRet0"    : function() { return temporary },
+            // "memory"         : new WebAssembly.Memory({"initial": 256, "maximum": 512}),
+            // "memoryBase"     : +0,
+            // "setTempRet0"    : function(value) { temporary = value },
+            // "table"          : new WebAssembly.Table({"element": "anyfunc", "initial": +0, "maximum": +0}),
+            // "tableBase"      : +0,
+            // "__memory_base"  : +0,
+            // "__stack_pointer": new WebAssembly.Global({"mutable": true, value: "i32"}, +0),
+            // "__table_base"   : +0,
+
+            // --> std::time()
+            "time": function time() { return new Date().valueOf() }
+          }}
+        })();
+        var request;
+        var source  = "source.wasm";
+
+        // ...
+        function oncompile(module) {
+          benchmark = module.instance.exports["benchmark"]
+        }
+
+        // ...
+        if ("function" === typeof WebAssembly.instantiateStreaming) {
+          request = fetch(source, {"headers": {"Content-Type": "application/wasm"}});
+          WebAssembly.instantiateStreaming(request, imports).then(oncompile)
+        }
+
+        else {
+          request = new XMLHttpRequest;
+
+          // ...
+          request.onload       = function() { WebAssembly.instantiate(request.response, imports).then(oncompile) };
+          request.responseType = "arraybuffer";
+
+          request.open("GET", source);
+          request.setRequestHeader("Content-Type", "application/wasm");
+          request.send()
+        }
+      }()
+    </script>
+  </body>
+</html>

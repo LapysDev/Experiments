@@ -315,7 +315,6 @@
 • shape-image-threshold       [Chrome 37,          Edge 79,          FF 62,          IE ×,           Op 24,            Safari 10.1]         → Sets the alpha channel threshold used to extract the shape using an image as the value for `shape-outside`
 • shape-margin                [Chrome 37,          Edge 79,          FF 62,          IE ×,           Op 24,            Safari 10.1]         → Sets a margin for a CSS shape created using `shape-outside`
 • shape-outside               [Chrome 37,          Edge 79,          FF 62,          IE ×,           Op 24,            Safari 10.1]         → Defines a shape—which may be non-rectangular—around which adjacent inline content should wrap
-• symbols                     [Chrome ×,           Edge ×,           FF 35,          IE ×,           Op ×,             Safari ×]            → Defines counter styles inline, directly as the value of a property such as `list-style`
 • tab-size                    [Chrome 21,          Edge 79,          FF 91,          IE ×,           Op 15,            Safari 7]            → Used to customize the width of tab characters (U+0009)
 • table-layout                [Chrome 14,          Edge 12,          FF 1,           IE 5,           Op 7,             Safari 1]            → Sets the algorithm used to lay out `<table>` cells, columns, and rows
 • text-align                  [Chrome 1,           Edge 12,          FF 1,           IE 3,           Op 3.5,           Safari 1]            → Sets the horizontal alignment of the content inside a block element or table-cell box
