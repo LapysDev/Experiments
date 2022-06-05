@@ -95,17 +95,13 @@ struct $ {
     template <typename type, typename... types>                    struct value<0u,    true,  type, types...> final { friend struct $; private: constexpr static type function(types..., ...) noexcept { return static_cast<void>(0x0); } }; // ->> `$0` does nothing with the `va_args`
 
   public:
-    constexpr inline $()         noexcept {}
-    constexpr inline $($ const&) noexcept {}
-
-    /* ... */
-    // ->> call `$`
+    // ... ->> call `$`
     template <typename... types>
     constexpr decltype($::template invoke<index>(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
       return $::template invoke<index>(std::forward<types>(arguments)...);
     }
 
-    // ->> cast `$` to its base function pointer
+    // ... ->> cast `$` to its base function pointer
     template <typename type>
     constexpr explicit operator type() const volatile noexcept {
       return $::template cast<assess_function<type>::variadic, typename assess_function<type>::type>(typename assess_function<type>::types{});
@@ -206,6 +202,29 @@ struct $expr final {
         template <typename... types> constexpr inline $ref(collection<> const, types&&...) noexcept {}
     };
 
+    template <class subexpression>
+    struct $ref<1u, subexpression> final {
+      template <enum $op subop, class...> friend struct $expr;
+      private:
+        subexpression const operand;
+
+        /* ... */
+        constexpr inline $ref($ref const& reference) noexcept : operand(reference.operand) {}
+        template <std::size_t index, typename... types> constexpr inline $ref(collection<index> const, types&&... operands) noexcept : operand($<index, false>{}(std::forward<types>(operands)...)) {}
+    };
+
+    template <class subexpressionA, class subexpressionB>
+    struct $ref<2u, subexpressionA, subexpressionB> final {
+      template <enum $op subop, class...> friend struct $expr;
+      private:
+        subexpressionA const operandA;
+        subexpressionB const operandB;
+
+        /* ... */
+        constexpr inline $ref($ref const& reference) noexcept : operandA(reference.operandA), operandB(reference.operandB) {}
+        template <std::size_t indexA, std::size_t indexB, typename... types> constexpr inline $ref(collection<indexA, indexB> const, types&&... operands) noexcept : operandA($<indexA, false>{}(std::forward<types>(operands)...)), operandB($<indexB, false>{}(std::forward<types>(operands)...)) {}
+    };
+
     // ...
     template <class>                                                     struct is_referenced                                                   final { template <enum $op subop, class...> friend struct $expr; private: static bool const value = false; };
     template <enum $op suboperation, class subexpression, typename type> struct is_referenced<$expr<suboperation, $obj<type>, subexpression> >  final { template <enum $op subop, class...> friend struct $expr; private: static bool const value = true; };
@@ -270,30 +289,6 @@ struct $expr final {
       return $expr::template cast<assess_function<type>::variadic, typename assess_function<type>::type>(typename assess_function<type>::types{});
     }
 };
-  template <enum $op operation, class... expressions>
-  template <class subexpression>
-  struct $expr<operation, expressions...>::$ref<1u, subexpression> final {
-    template <enum $op subop, class...> friend struct $expr;
-    private:
-      subexpression const operand;
-
-      /* ... */
-      constexpr inline $ref($ref const& reference) noexcept : operand(reference.operand) {}
-      template <std::size_t index, typename... types> constexpr inline $ref(collection<index> const, types&&... operands) noexcept : operand($<index, false>{}(std::forward<types>(operands)...)) {}
-  };
-
-  template <enum $op operation, class... expressions>
-  template <class subexpressionA, class subexpressionB>
-  struct $expr<operation, expressions...>::$ref<2u, subexpressionA, subexpressionB> final {
-    template <enum $op subop, class...> friend struct $expr;
-    private:
-      subexpressionA const operandA;
-      subexpressionB const operandB;
-
-      /* ... */
-      constexpr inline $ref($ref const& reference) noexcept : operandA(reference.operandA), operandB(reference.operandB) {}
-      template <std::size_t indexA, std::size_t indexB, typename... types> constexpr inline $ref(collection<indexA, indexB> const, types&&... operands) noexcept : operandA($<indexA, false>{}(std::forward<types>(operands)...)), operandB($<indexB, false>{}(std::forward<types>(operands)...)) {}
-  };
 
 template <>
 struct $expr<$nop> final {
@@ -318,7 +313,16 @@ template <enum $op operation, class... expressions, typename type>              
 template <std::size_t index, bool referenced, typename type>                                      constexpr inline $expr<$add, $obj<type>,                         $<index, referenced>               > operator +(type&&                                            object,      $<index, referenced>               const volatile unit)        noexcept { return {std::forward<type>(object), const_cast<$<index, referenced> const&>(unit)}; }
 
 /* ... */
-constexpr $<0u, false> $0 {};
-constexpr $<1u, false> $1 {};
-constexpr $<2u, false> $2 {};
-constexpr $<3u, false> $3 {};
+#if defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+  constexpr static $<0u, false> $0 {};
+  constexpr static $<1u, false> $1 {};
+  constexpr static $<2u, false> $2 {};
+  constexpr static $<3u, false> $3 {};
+#else
+  constexpr static union {
+    $<0u, false> $0;
+    $<1u, false> $1;
+    $<2u, false> $2;
+    $<3u, false> $3;
+  };
+#endif
