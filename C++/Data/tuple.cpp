@@ -26,9 +26,9 @@ namespace {
   struct collection final {};
 
   // ...
-  template <typename, bool membered, typename = void> struct has_overloaded_addressof final { static bool const value = false; };
-  template <typename base> struct has_overloaded_addressof<base, false, decltype(static_cast<void>(operator &(instanceof<base>())))>  final { static bool const value = true; };
-  template <typename base> struct has_overloaded_addressof<base, true,  decltype(static_cast<void>(instanceof<base>().operator &()))> final { static bool const value = true; };
+  template <typename, bool membered, typename = void> struct has_overloaded_addressof                                                                            final { static bool const value = false; };
+  template <typename base>                            struct has_overloaded_addressof<base, false, decltype(static_cast<void>(operator &(instanceof<base>())))>  final { static bool const value = true; };
+  template <typename base>                            struct has_overloaded_addressof<base, true,  decltype(static_cast<void>(instanceof<base>().operator &()))> final { static bool const value = true; };
 
   // ...
   template <typename... bases>
