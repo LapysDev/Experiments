@@ -7,14 +7,14 @@
 # pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
 #endif
 
-/* ... */
+/* Trait */
 namespace {
   template <bool boolean, bool...>                          struct boolean_or                                  final { static bool const value = boolean; };
   template <bool booleanA, bool booleanB, bool... booleans> struct boolean_or<booleanA, booleanB, booleans...> final { static bool const value = boolean_or<booleanA || booleanB, booleans...>::value; };
 
   // ...
   template <typename base, typename = base> struct can_default_initialize                         final { static bool const value = false; };
-  template <typename base>                  struct can_default_initialize<base, decltype(base())> final { static bool const value = true; };
+  template <typename base>                  struct can_default_initialize<base, decltype(base())> final { static bool const value = true;  };
 
   // ...
   template <std::size_t...>
@@ -26,8 +26,8 @@ namespace {
 
   // ...
   template <typename, bool membered, typename = void> struct has_overloaded_addressof                                                                            final { static bool const value = false; };
-  template <typename base>                            struct has_overloaded_addressof<base, false, decltype(static_cast<void>(operator &(instanceof<base>())))>  final { static bool const value = true; };
-  template <typename base>                            struct has_overloaded_addressof<base, true,  decltype(static_cast<void>(instanceof<base>().operator &()))> final { static bool const value = true; };
+  template <typename base>                            struct has_overloaded_addressof<base, false, decltype(static_cast<void>(operator &(instanceof<base>())))>  final { static bool const value = true;  };
+  template <typename base>                            struct has_overloaded_addressof<base, true,  decltype(static_cast<void>(instanceof<base>().operator &()))> final { static bool const value = true;  };
 
   // ...
   template <typename... bases>
@@ -35,28 +35,16 @@ namespace {
     template <std::size_t index>
     struct at final {
       private:
-        template <std::size_t, typename...>
-        struct valueof;
-
-        template <std::size_t subindex, typename subbase, typename... subbases>
-        struct valueof<subindex, subbase, subbases...> final {
-          friend struct at;
-          private: typedef typename valueof<subindex - 1u, subbases...>::type type;
-        };
-
-        template <typename subbase, typename... subbases>
-        struct valueof<0u, subbase, subbases...> final {
-          friend struct at;
-          private: typedef subbase type;
-        };
+        template <std::size_t, typename...>                                     struct valueof;
+        template <std::size_t subindex, typename subbase, typename... subbases> struct valueof<subindex, subbase, subbases...> final { friend struct at; private: typedef typename valueof<subindex - 1u, subbases...>::type type; };
+        template <typename subbase, typename... subbases>                       struct valueof<0u, subbase, subbases...>       final { friend struct at; private: typedef subbase type; };
 
       public:
         typedef typename valueof<index, bases...>::type type;
     };
   };
-}
 
-namespace {
+  // ...
   template <typename base> constexpr inline typename std::enable_if<false == (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&  object) noexcept { return &object; }
   template <typename base> constexpr inline typename std::enable_if<false == (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&& object) noexcept { return &static_cast<base&>(object); }
 
@@ -67,8 +55,38 @@ namespace {
   template <typename base, std::size_t length> constexpr inline base (*addressof(base (&&object)[length]) noexcept)[length] { return &static_cast<base (&)[length]>(object); }
 }
 
-/* ... */
-struct $function;
+/* Declaration */
+struct $function;                  // ->> namespace for function pointers from captured shorthands
+enum   $operation : unsigned char; // ->> shorthand `$expression` operator
+
+template <std::size_t, bool = true> struct $;           // ->> shorthand
+template <typename type, type>      struct $c;          // ->> shorthand constant
+template <typename>                 struct $captured;   // ->> shorthand capture
+template <$operation, class...>     struct $expression; // ->> composited shorthands
+template <signed long long>         struct $i;          // ->> shorthand signed integer constant
+template <unsigned long long>       struct $u;          // ->> shorthand unsigned integer constant
+#ifdef __cpp_nontype_template_parameter_auto            //
+  template <auto>        struct $f;                     // ->> shorthand floating-point constant
+#elif __cplusplus >= 202002L                            //
+  template <long double> struct $f;                     // ->> shorthand floating-point constant
+#elif defined(_MSVC_LANG)                               //
+# if _MSVC_LANG >= 202002L                              //
+  template <long double> struct $f;                     // ->> shorthand floating-point constant
+# endif                                                 //
+#endif                                                  //
+#ifdef __cpp_nontype_template_parameter_auto            //
+  template <auto>  struct $p;                           // ->> shorthand pointer constant
+  template <auto>  struct $s;                           // ->> shorthand user-defined constant
+#else                                                   //
+  template <void*> struct $p;                           // ->> shorthand pointer constant
+#endif                                                  //
+
+/* Class, Enumeration */
+// $1 + $2
+// $as<Object>($1).do_stuff()
+// $for<n>{}($1.do_stuff())
+// $for<x>{}($for<y>{}($1.do_stuff() + $2 + $3))
+// std::printf&($1, $2)
 enum $operation : unsigned char {
   $add,
   $address,
@@ -118,47 +136,140 @@ enum $operation : unsigned char {
   $unequals
 };
 
-template <std::size_t, bool = true> struct $;
-template <$operation, class...>     struct $expression;
-template <typename>                 struct $object;
-
-/* ... */
+// ...
 template <>
-struct $<0u, false> final {
-  template <std::size_t, bool>
-  friend struct $;
+struct $expression<$nop> final {
+  template <std::size_t, bool>    friend struct $;
+  template <$operation, class...> friend struct $expression;
 
   private:
-    template <std::size_t, typename>
+    /* Trait */
+    template <class>                                      struct is_captured                                          final { static bool const value = false; };
+    template <typename type>                              struct is_captured<$captured<type> >                        final { static bool const value = true;  };
+    template <$operation operation, class... expressions> struct is_captured<$expression<operation, expressions...> > final { static bool const value = boolean_or<is_captured<expressions>::value...>::value; };
+
+    // ...
+    template <class shorthand, typename, bool = is_captured<shorthand>::value>
     struct cast;
 
+    template <$operation operation, class... expressions, typename type, typename... types>
+    struct cast<$expression<operation, expressions...>, type (types...) noexcept, false> final {
+      friend struct $expression<operation, expressions...>;
+      private: constexpr static type value(types... arguments) noexcept { return $expression<$nop>::template invoke<operation>($expression<operation, expressions...>().value, std::forward<types>(arguments)...); }
+    };
+
     template <std::size_t index, typename type, typename... types>
-    struct cast<index, type (types...) noexcept> final {
-      template <std::size_t, bool> friend struct $;
-      private: constexpr static type value(types... arguments) noexcept { return static_cast<type>($<0u, false>::template invoke<index>(std::forward<types>(arguments)...)); }
+    struct cast<$<index, false>, type (types...) noexcept, false> final {
+      friend struct $expression<$nop, $<index, false> >;
+      private: constexpr static type value(types... arguments) noexcept { return static_cast<type>($expression<$nop>::template invoke<index>(std::forward<types>(arguments)...)); }
     };
 
     template <typename type, typename... types>
-    struct cast<0u, type (types..., ...) noexcept> final {
-      template <std::size_t, bool> friend struct $;
-      private: constexpr static type value(types... arguments, ...) noexcept { return static_cast<type>($<0u, false>::template invoke<0u>(std::forward<types>(arguments)...)); }
+    struct cast<$<0u, false>, type (types..., ...) noexcept, false> final {
+      friend struct $expression<$nop, $<0u, false> >;
+      private: constexpr static type value(types... arguments, ...) noexcept { return static_cast<type>($expression<$nop>::template invoke<0u>(std::forward<types>(arguments)...)); }
     };
 
     #ifdef __cpp_noexcept_function_type
-      template <std::size_t index, typename type, typename... types>
-      struct cast<index, type (types...)> final {
-        template <std::size_t, bool> friend struct $;
-        private: constexpr static type value(types... arguments) { return static_cast<type>($<0u, false>::template invoke<index>(std::forward<types>(arguments)...)); }
+      template <class shorthand, typename type, typename... types>
+      struct cast<shorthand, type (types...), false> final {
+        friend struct shorthand;
+        private: constexpr static type (&value)(types...) = cast<shorthand, type (types...) noexcept, false>::value;
       };
 
-      template <typename type, typename... types>
-      struct cast<0u, type (types..., ...)> final {
-        template <std::size_t, bool> friend struct $;
-        private: constexpr static type value(types... arguments, ...) { return static_cast<type>($<0u, false>::template invoke<0u>(std::forward<types>(arguments)...)); }
+      template <class shorthand, typename type, typename... types>
+      struct cast<shorthand, type (types..., ...), false> final {
+        friend struct shorthand;
+        private: constexpr static type (&value)(types..., ...) = cast<shorthand, type (types..., ...) noexcept, false>::value;
       };
     #endif
 
-    // ...
+    /* Class */
+    template <class...>
+    struct $operands {
+      template <$operation, class...>
+      friend struct $expression;
+
+      private:
+        /* Class */
+        template <std::size_t>
+        struct $index final {};
+
+        // ...
+        template <class expression, bool = is_captured<expression>::value>
+        struct $operand final {
+          template <class...>
+          friend struct $operands;
+
+          private:
+            typedef expression const& type;
+            expression const value;
+
+            /* ... */
+            constexpr inline $operand() noexcept : value() {}
+            constexpr inline $operand(expression const& value) noexcept : value(value) {}
+
+            constexpr inline operator expression const&() const noexcept { return this -> value; }
+        };
+
+        template <class expression>
+        struct $operand<expression, false> final {
+          template <class...>
+          friend struct $operands;
+
+          private:
+            typedef expression type;
+
+            /* ... ->> explicit empty-base-optimization */
+            constexpr inline $operand() noexcept {}
+            constexpr inline $operand(expression const&) noexcept {}
+
+            /* ... */
+            constexpr inline operator expression() const noexcept {
+              return {};
+            }
+        };
+
+        /* ... */
+        template <std::size_t index>
+        constexpr void operator []($index<index> const) const noexcept = delete;
+    };
+
+    template <class expression, class... expressions>
+    struct $operands<expression, expressions...> : public $operands<expressions...> {
+      template <$operation, class...>
+      friend struct $expression;
+
+      private:
+        $operands<>::$operand<expression> const value;
+
+        /* ... */
+        constexpr inline $operands() noexcept :
+          $operands<expressions...>::$operands(), value()
+        {}
+
+        constexpr inline $operands(expression const& operand, expressions const&... operands) noexcept :
+          $operands<expressions...>::$operands(operands...), value(operand)
+        {}
+
+      protected:
+        template <std::size_t index>
+        constexpr inline typename std::enable_if<0u == index, typename $operands<>::$operand<expression>::type>::type operator []($operands<>::$index<index> const) const noexcept {
+          return this -> value;
+        }
+
+        template <std::size_t index>
+        constexpr inline typename std::enable_if<0u != index && index <= sizeof...(expressions), typename $operands<>::$operand<typename pack<expression, expressions...>::template at<index <= sizeof...(expressions) ? index : 0u>::type>::type>::type const& operator []($operands<>::$index<index> const) const noexcept {
+          return this -> $operands<expressions...>::operator []($<index - 1u, false>{});
+        }
+    };
+
+    /* ... */
+    constexpr static $operands<>::$index<0u> $0 {};
+    constexpr static $operands<>::$index<1u> $1 {};
+    constexpr static $operands<>::$index<2u> $2 {};
+
+    /* ... */
     template <std::size_t count, typename type>
     constexpr inline static typename std::enable_if<count == 0u && false != std::is_scalar<type>::value, type>::type invoke() noexcept {
       return 0;
@@ -176,7 +287,7 @@ struct $<0u, false> final {
 
     template <std::size_t count, typename type, typename... types>
     constexpr inline static typename std::enable_if<count == 0u && can_default_initialize<type>::value, type>::type invoke(type&&, types&&...) noexcept {
-      return $<0u, false>::template invoke<0u, type>();
+      return $expression<$nop>::template invoke<0u, type>();
     }
 
     template <std::size_t count, typename type, typename... types>
@@ -186,200 +297,17 @@ struct $<0u, false> final {
 
     template <std::size_t count, typename type, typename... types>
     constexpr inline static typename std::enable_if<(count > 1u), typename pack<type&&, types&&...>::template at<(count > 1u ? count - 1u : 0u)>::type>::type invoke(type&&, types&&... objects) noexcept {
-      return $<0u, false>::template invoke<count - 1u>(std::forward<types>(objects)...);
+      return $expression<$nop>::template invoke<count - 1u>(std::forward<types>(objects)...);
     }
-
-  public:
-    template <typename... types>
-    constexpr decltype($<0u, false>::template invoke<0u>(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
-      return $<0u, false>::template invoke<0u>(std::forward<types>(arguments)...);
-    }
-
-    template <typename type>
-    constexpr inline operator type() const volatile noexcept {
-      return $<0u, false>::template cast<0u, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
-    }
-};
-
-template <std::size_t index, bool>
-struct $ final {
-  private:
-    constexpr friend $expression<$cast, $> as($ const unit) noexcept {
-      return {unit};
-    }
-
-  public:
-    template <typename... types>
-    constexpr typename pack<types&&...>::template at<index - 1u>::type operator ()(types&&... arguments) const volatile noexcept {
-      return $<0u, false>::template invoke<index>(std::forward<types>(arguments)...);
-    }
-
-    template <typename type>
-    constexpr inline operator type() const volatile noexcept {
-      return $<0u, false>::template cast<index, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
-    }
-};
-
-template <>
-struct $<0u, true> final {
-  template <typename... types>
-  constexpr inline $(types&&...) noexcept {}
-
-  /* ... */
-  template <typename... types>
-  constexpr inline decltype($<0u, false>::template invoke<0u>(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
-    return $<0u, false>::template invoke<0u>(std::forward<types>(arguments)...);
-  }
-
-  template <typename type>
-  constexpr inline operator type() const volatile noexcept {
-    return $<0u, false>::template invoke<0u, type>();
-  }
-};
-
-template <std::size_t index>
-struct $<index, true> final {
-  private:
-    void *const value;
-
-  public:
-    constexpr $() noexcept :
-      value(NULL)
-    {}
-
-    template <std::size_t subindex, bool referrable>
-    constexpr inline $($<subindex, referrable> const volatile& unit) noexcept :
-      value(static_cast<typename std::enable_if<(index >= subindex), void*>::type>(unit.value))
-    {}
-
-    template <std::size_t subindex, bool referrable>
-    constexpr inline $($<subindex, referrable> const volatile&& unit) noexcept :
-      value(static_cast<typename std::enable_if<(index >= subindex), void*>::type>(unit.value))
-    {}
-
-    template <typename... types>
-    constexpr inline $(types&&... objects) noexcept :
-      value(const_cast<void*>(static_cast<void const volatile*>(addressof($<0u, false>::template invoke<index>(std::forward<types>(objects)...)))))
-    {}
-
-    /* ... */
-    template <typename... types>
-    constexpr decltype($<0u, false>::template invoke<index>(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
-      return $<0u, false>::template invoke<index>(std::forward<types>(arguments)...);
-    }
-
-    template <typename type>
-    constexpr inline operator type() const volatile noexcept {
-      return static_cast<type>(*static_cast<typename std::remove_reference<type>::type*>(this -> value));
-    }
-};
-  #if defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
-    constexpr static $<0u, false> $0 {};
-    constexpr static $<1u, false> $1 {};
-    constexpr static $<2u, false> $2 {};
-    constexpr static $<3u, false> $3 {};
-    constexpr static $<3u, false> $4 {};
-    constexpr static $<3u, false> $5 {};
-    constexpr static $<3u, false> $6 {};
-    constexpr static $<3u, false> $7 {};
-    constexpr static $<3u, false> $8 {};
-    constexpr static $<3u, false> $9 {};
-  #else
-    #if defined(_MSC_VER)
-    # pragma warning(disable: 4172)
-    #endif
-
-    constexpr static union {
-      $<0u, false> $0;
-      $<1u, false> $1;
-      $<2u, false> $2;
-      $<3u, false> $3;
-      $<3u, false> $4;
-      $<3u, false> $5;
-      $<3u, false> $6;
-      $<3u, false> $7;
-      $<3u, false> $8;
-      $<3u, false> $9;
-    };
-  #endif
-
-template <>
-struct $expression<$nop> final {
-  template <$operation, class...>
-  friend struct $expression;
-
-  private:
-    template <class... subexpressions>
-    struct $operands {
-      template <$operation, class...>
-      friend struct $expression;
-
-      private:
-        template <std::size_t index>
-        constexpr typename pack<subexpressions...>::template at<index>::type operator []($<index, false> const) const noexcept;
-    };
-
-    template <class subexpression, class... subexpressions>
-    struct $operands<subexpression, subexpressions...> : public $operands<subexpressions...> {
-      template <$operation, class...>
-      friend struct $expression;
-
-      private:
-        subexpression const value;
-
-        /* ... */
-        constexpr inline $operands() noexcept :
-          $operands<subexpressions...>::$operands(),
-          value()
-        {}
-
-        constexpr inline $operands(subexpression const& operand, subexpressions const&... operands) noexcept :
-          $operands<subexpressions...>::$operands(operands...),
-          value(operand)
-        {}
-
-      protected:
-        constexpr inline subexpression const& operator []($<0u, false> const) const noexcept {
-          return this -> value;
-        }
-
-        template <std::size_t index>
-        constexpr inline typename std::enable_if<(index <= sizeof...(subexpressions)), typename pack<subexpression, subexpressions...>::template at<index * (index <= sizeof...(subexpressions))>::type>::type const& operator []($<index, false> const) const noexcept {
-          return this -> $operands<subexpressions...>::operator []($<index - 1u, false>{});
-        }
-    };
 
     // ...
-    template <class expression>                              struct is_referrable                                             final { static bool const value = false; };
-    template <$operation operation, class... subexpressions> struct is_referrable<$expression<operation, subexpressions...> > final { static bool const value = boolean_or<is_referrable<subexpressions>::value...>::value; };
-    template <typename type>                                 struct is_referrable<$object<type> >                             final { static bool const value = true; };
-
-    // ...
-    template <class $expression, typename, bool = is_referrable<$expression>::value>
-    struct cast;
-
-    template <$operation operation, class... subexpressions, typename type, typename... types>
-    struct cast<$expression<operation, subexpressions...>, type (types...) noexcept, false> final {
-      friend struct $expression<operation, subexpressions...>;
-      private: constexpr static type value(types... arguments) noexcept { return $expression<$nop>::template invoke<operation>($expression<operation, subexpressions...>().value, std::forward<types>(arguments)...); }
-    };
-
-    #ifdef __cpp_noexcept_function_type
-      template <$operation operation, class... subexpressions, typename type, typename... types>
-      struct cast<$expression<operation, subexpressions...>, type (types...), false> final {
-        friend struct $expression<operation, subexpressions...>;
-        private: constexpr static type value(types... arguments) { return $expression<$nop>::template invoke<operation>($expression<operation, subexpressions...>().value, std::forward<types>(arguments)...); }
-      };
-    #endif
-
-    /* ... */
     template <$operation operation, class $operands, class... types>
-    constexpr inline static typename std::enable_if<operation == $add, decltype(std::declval<$operands>()[$0](std::declval<types>()...) + std::declval<$operands>()[$1](std::declval<types>()...))>::type invoke($operands const& operands, types&&... arguments) noexcept {
+    constexpr inline static typename std::enable_if<operation == $add, decltype(std::declval<$operands>()[$0](std::declval<types>()...) + std::declval<$operands>()[$1](std::declval<types>()...))>::type reinvoke($operands const& operands, types&&... arguments) noexcept {
       return operands[$0](std::forward<types>(arguments)...) + operands[$1](std::forward<types>(arguments)...);
     }
 
     template <$operation operation, class $operands, class... types>
-    constexpr inline static typename std::enable_if<operation == $minus, decltype(-std::declval<$operands>()[$0](std::declval<types>()...))>::type invoke($operands const& operands, types&&... arguments) noexcept {
+    constexpr inline static typename std::enable_if<operation == $minus, decltype(-std::declval<$operands>()[$0](std::declval<types>()...))>::type reinvoke($operands const& operands, types&&... arguments) noexcept {
       return -operands[$0](std::forward<types>(arguments)...);
     }
 };
@@ -392,20 +320,19 @@ struct $expression final {
   private:
     $expression<$nop>::$operands<subexpressions...> const value;
 
-    /* ... */
+  public:
     constexpr inline $expression() noexcept :
       value()
     {}
 
-  public:
     constexpr inline $expression(subexpressions const&... operands) noexcept :
       value(operands...)
     {}
 
     /* ... */
     template <typename... types>
-    constexpr inline decltype($expression<$nop>::template invoke<operation>(std::declval<$expression<$nop>::$operands<subexpressions...> >(), std::declval<types>()...)) operator ()(types&&... arguments) const noexcept {
-      return $expression<$nop>::template invoke<operation>(this -> value, std::forward<types>(arguments)...);
+    constexpr inline decltype($expression<$nop>::template reinvoke<operation>(std::declval<$expression<$nop>::$operands<subexpressions...> >(), std::declval<types>()...)) operator ()(types&&... arguments) const noexcept {
+      return $expression<$nop>::template reinvoke<operation>(this -> value, std::forward<types>(arguments)...);
     }
 
     template <typename type>
@@ -414,38 +341,109 @@ struct $expression final {
     }
 };
 
+template <std::size_t index>
+struct $expression<$nop, $<index, false> > {
+  template <typename... types>
+  constexpr inline decltype($expression<$nop>::template invoke<index>(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
+    return $expression<$nop>::template invoke<index>(std::forward<types>(arguments)...);
+  }
+
+  template <typename type>
+  constexpr inline operator type() const volatile noexcept {
+    return $expression<$nop>::template cast<$<index, false>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
+  }
+};
+
+template <>
+struct $expression<$nop, $<0u, true> > : public $expression<$nop, $<0u, false> > {
+  template <typename... types>
+  constexpr inline $expression(types&&...) noexcept {}
+
+  /* ... */
+  template <typename type>
+  constexpr inline operator type() const volatile noexcept {
+    return $expression<$nop>::template invoke<0u, type>();
+  }
+};
+
+template <std::size_t index>
+struct $expression<$nop, $<index, true> > : public $expression<$nop, $<index, false> > {
+  template <$operation, class...>
+  friend struct $expression;
+
+  private:
+    void *const value;
+
+  public:
+    constexpr inline $expression() noexcept :
+      value(NULL)
+    {}
+
+    template <std::size_t subindex>
+    constexpr inline $expression($expression<$nop, $<subindex, true> > const unit) noexcept :
+      value(static_cast<typename std::enable_if<(index >= subindex && 0u != subindex), void*>::type>(unit.value))
+    {}
+
+    template <typename... types>
+    constexpr inline $expression(types&&... objects) noexcept :
+      value(const_cast<void*>(static_cast<void const volatile*>(addressof($expression<$nop>::template invoke<index>(std::forward<types>(objects)...)))))
+    {}
+
+    /* ... */
+    template <typename type>
+    constexpr inline operator type() const volatile noexcept {
+      return static_cast<type>(*static_cast<typename std::remove_reference<type>::type*>(this -> value));
+    }
+};
+
+// ...
+template <std::size_t index, bool referrable>
+struct $ final : public $expression<$nop, $<index, referrable> > {
+  using $expression<$nop, $<index, referrable> >::$expression;
+};
+  constexpr static $<0u, false> $0 {};
+  constexpr static $<1u, false> $1 {};
+  constexpr static $<2u, false> $2 {};
+  constexpr static $<3u, false> $3 {};
+  constexpr static $<3u, false> $4 {};
+  constexpr static $<3u, false> $5 {};
+  constexpr static $<3u, false> $6 {};
+  constexpr static $<3u, false> $7 {};
+  constexpr static $<3u, false> $8 {};
+  constexpr static $<3u, false> $9 {};
+
 struct $function final {
   public:
   static void *BUFFER;
 };
 
-template <typename base>
-struct $object final {
-  private:
-    base&& value;
+// template <typename base>
+// struct $captured final {
+//   private:
+//     base&& value;
 
-  public:
-    template <typename type>
-    constexpr $object(type&& object) noexcept :
-      value(std::forward<type>(object))
-    {}
+//   public:
+//     template <typename type>
+//     constexpr $captured(type&& object) noexcept :
+//       value(std::forward<type>(object))
+//     {}
 
-    /* ... */
-    template <typename... types>
-    constexpr inline base&& operator ()(types&&...) const noexcept {
-      return static_cast<base&&>(this -> value);
-    }
-};
+//     /* ... */
+//     template <typename... types>
+//     constexpr inline base&& operator ()(types&&...) const noexcept {
+//       return static_cast<base&&>(this -> value);
+//     }
+// };
 
-/* ... */
-template <std::size_t index, bool referrable>            constexpr inline $expression<$minus, $<index, false> >                           operator -($<index, referrable>                      const)            noexcept { return {$<index, false>{}}; }
-template <$operation operation, class... subexpressions> constexpr inline $expression<$minus, $expression<operation, subexpressions...> > operator -($expression<operation, subexpressions...> const expression) noexcept { return {expression}; }
+// /* ... */
+template <$operation operation, class... subexpressions>
+constexpr inline $expression<$minus, $expression<operation, subexpressions...> > operator -($expression<operation, subexpressions...> const expression) noexcept { return {expression}; }
 
-template <std::size_t indexA, bool referrableA, std::size_t indexB, bool referrableB>                       constexpr inline $expression<$add, $<indexA, false>, $<indexB, false> >                                                       operator +($<indexA, referrableA>                      const,             $<indexB, referrableB>                      const)             noexcept { return {$<indexA, false>{}, $<indexB, false>{}}; }
-template <std::size_t index, bool referrable, $operation operation, class... subexpressions>                constexpr inline $expression<$add, $<index, false>, $expression<operation, subexpressions...> >                               operator +($<index, referrable>                        const,             $expression<operation, subexpressions...>   const expression)  noexcept { return {$<index, false>{}, expression}; }
-template <$operation operation, class... subexpressions, std::size_t index, bool referrable>                constexpr inline $expression<$add, $expression<operation, subexpressions...>, $<index, false> >                               operator +($expression<operation, subexpressions...>   const expression,  $<index, referrable>                        const)             noexcept { return {expression, $<index, false>{}}; }
-template <$operation operationA, class... subexpressionsA, $operation operationB, class... subexpressionsB> constexpr inline $expression<$add, $expression<operationA, subexpressionsA...>, $expression<operationB, subexpressionsB...> > operator +($expression<operationA, subexpressionsA...> const expressionA, $expression<operationB, subexpressionsB...> const expressionB) noexcept { return {expressionA, expressionB}; }
-template <std::size_t index, bool referrable, typename type>                                                constexpr inline $expression<$add, $<index, false>, $object<type> >                                                           operator +($<index, referrable>                      const,            type&& object)                                                    noexcept { return {$<index, false>{}, std::forward<type>(object)}; }
-template <$operation operation, class... subexpressions, typename type>                                     constexpr inline $expression<$add, $expression<operation, subexpressions...>, $object<type> >                                 operator +($expression<operation, subexpressions...> const expression, type&& object)                                                    noexcept { return {expression, std::forward<type>(object)}; }
-template <typename type, std::size_t index, bool referrable>                                                constexpr inline $expression<$add, $object<type>, $<index, false> >                                                           operator +(type&& object, $<index, referrable>                      const)                                                               noexcept { return {std::forward<type>(object), $<index, false>{}}; }
-template <typename type, $operation operation, class... subexpressions>                                     constexpr inline $expression<$add, $object<type>, $expression<operation, subexpressions...> >                                 operator +(type&& object, $expression<operation, subexpressions...> const expression)                                                    noexcept { return {std::forward<type>(object), expression}; }
+// template <std::size_t indexA, bool referrableA, std::size_t indexB, bool referrableB>                       constexpr inline $expression<$add, $<indexA, false>, $<indexB, false> >                                                       operator +($<indexA, referrableA>                      const,             $<indexB, referrableB>                      const)             noexcept { return {$<indexA, false>{}, $<indexB, false>{}}; }
+// template <std::size_t index, bool captured, $operation operation, class... subexpressions>                constexpr inline $expression<$add, $<index, false>, $expression<operation, subexpressions...> >                               operator +($<index, captured>                        const,             $expression<operation, subexpressions...>   const expression)  noexcept { return {$<index, false>{}, expression}; }
+// template <$operation operation, class... subexpressions, std::size_t index, bool captured>                constexpr inline $expression<$add, $expression<operation, subexpressions...>, $<index, false> >                               operator +($expression<operation, subexpressions...>   const expression,  $<index, captured>                        const)             noexcept { return {expression, $<index, false>{}}; }
+// template <$operation operationA, class... subexpressionsA, $operation operationB, class... subexpressionsB> constexpr inline $expression<$add, $expression<operationA, subexpressionsA...>, $expression<operationB, subexpressionsB...> > operator +($expression<operationA, subexpressionsA...> const expressionA, $expression<operationB, subexpressionsB...> const expressionB) noexcept { return {expressionA, expressionB}; }
+// template <std::size_t index, bool captured, typename type>                                                constexpr inline $expression<$add, $<index, false>, $captured<type> >                                                           operator +($<index, captured>                      const,            type&& object)                                                    noexcept { return {$<index, false>{}, std::forward<type>(object)}; }
+// template <$operation operation, class... subexpressions, typename type>                                     constexpr inline $expression<$add, $expression<operation, subexpressions...>, $captured<type> >                                 operator +($expression<operation, subexpressions...> const expression, type&& object)                                                    noexcept { return {expression, std::forward<type>(object)}; }
+// template <typename type, std::size_t index, bool captured>                                                constexpr inline $expression<$add, $captured<type>, $<index, false> >                                                           operator +(type&& object, $<index, captured>                      const)                                                               noexcept { return {std::forward<type>(object), $<index, false>{}}; }
+// template <typename type, $operation operation, class... subexpressions>                                     constexpr inline $expression<$add, $captured<type>, $expression<operation, subexpressions...> >                                 operator +(type&& object, $expression<operation, subexpressions...> const expression)                                                    noexcept { return {std::forward<type>(object), expression}; }
