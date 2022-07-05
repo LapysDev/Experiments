@@ -449,7 +449,9 @@ struct $function final {
 
 // ...
 template <typename base>
-struct $captured final : public $expression<$nop, $captured<base> > {};
+struct $captured final : public $expression<$nop, $captured<base> > {
+  using $expression<$nop, $captured<base> >::$expression;
+};
 
 // ...
 template <std::size_t index, bool referrable>
