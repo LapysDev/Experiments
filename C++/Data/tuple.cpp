@@ -116,8 +116,13 @@ namespace {
   template <typename base> inline typename std::enable_if<false != (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&  object) noexcept { return const_cast<base*>(reinterpret_cast<base const volatile*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
   template <typename base> inline typename std::enable_if<false != (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&& object) noexcept { return const_cast<base*>(reinterpret_cast<base const volatile*>(&reinterpret_cast<unsigned char const volatile&>(static_cast<base&>(object)))); }
 
-  template <typename base, std::size_t length> constexpr inline base (*addressof(base (&object)[length])  noexcept)[length] { return &object; }
-  template <typename base, std::size_t length> constexpr inline base (*addressof(base (&&object)[length]) noexcept)[length] { return &static_cast<base (&)[length]>(object); }
+  template <typename base, std::size_t capacity> constexpr inline base (*addressof(base (&object)[capacity])  noexcept)[capacity] { return &object; }
+  template <typename base, std::size_t capacity> constexpr inline base (*addressof(base (&&object)[capacity]) noexcept)[capacity] { return &static_cast<base (&)[capacity]>(object); }
+
+  #if __cplusplus >= 202002L || defined(__cpp_lib_bounded_array_traits) || (defined(_MSVC_LANG) && _MSVC_LANG <= 202002L)
+    template <typename base> constexpr inline base (*addressof(base (&object)[])  noexcept)[] { return &object; }
+    template <typename base> constexpr inline base (*addressof(base (&&object)[]) noexcept)[] { return &static_cast<base (&)[]>(object); }
+  #endif
 }
 
 // ...

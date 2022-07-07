@@ -22,6 +22,33 @@ struct pack final {
       typedef typename valueof<index, bases...>::type type;
   };
 
+  // ...
+  template <typename type>
+  struct has final {
+    private:
+      template <typename...>
+      struct valueof final {
+        friend struct has;
+        private: static bool const value = false;
+      };
+
+      template <typename subbase, typename... subbases>
+      struct valueof<subbase, subbases...> final {
+        friend struct has;
+        private: static bool const value = valueof<subbases...>::value;
+      };
+
+      template <typename... subbases>
+      struct valueof<type, subbases...> final {
+        friend struct has;
+        private: static bool const value = true;
+      };
+
+    public:
+      static bool const value = valueof<bases...>::value;
+  };
+
+  // ...
   template <std::size_t begin, std::size_t end>
   struct slice final {
     private:
@@ -62,4 +89,30 @@ struct pack final {
   struct slice<index, index> final {
     typedef pack<> type;
   };
+
+  // ...
+  struct uniqueof final {
+    private:
+      template <class pack, typename...>
+      struct valueof final {
+        friend struct uniqueof;
+        private: typedef pack type;
+      };
+
+      template <typename... packed, typename subbase, typename... subbases>
+      struct valueof<pack<packed...>, subbase, subbases...> final {
+        friend struct uniqueof;
+        private: typedef typename std::conditional<
+          pack<packed...>::template has<subbase>::value,
+          typename valueof<pack<packed...>,          subbases...>::type,
+          typename valueof<pack<packed..., subbase>, subbases...>::type
+        >::type type;
+      };
+
+    public:
+      typedef typename valueof<pack<>, bases...>::type type;
+  };
+
+  /* ... */
+  static std::size_t const length = sizeof...(bases);
 };
