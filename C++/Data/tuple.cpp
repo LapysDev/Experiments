@@ -12,7 +12,7 @@
 /* ... */
 namespace {
   template <typename base>
-  constexpr inline base instanceof() noexcept;
+  constexpr base instanceof() noexcept;
 }
 
 namespace {
@@ -110,18 +110,18 @@ namespace {
 }
 
 namespace {
-  template <typename base> constexpr inline typename std::enable_if<false == (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&  object) noexcept { return &object; }
-  template <typename base> constexpr inline typename std::enable_if<false == (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&& object) noexcept { return &static_cast<base&>(object); }
+  template <typename base> constexpr typename std::enable_if<false == (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&  object) noexcept { return &object; }
+  template <typename base> constexpr typename std::enable_if<false == (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&& object) noexcept { return &static_cast<base&>(object); }
 
   template <typename base> inline typename std::enable_if<false != (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&  object) noexcept { return const_cast<base*>(reinterpret_cast<base const volatile*>(&reinterpret_cast<unsigned char const volatile&>(object))); }
   template <typename base> inline typename std::enable_if<false != (has_overloaded_addressof<base, false>::value || has_overloaded_addressof<base, true>::value), base>::type* addressof(base&& object) noexcept { return const_cast<base*>(reinterpret_cast<base const volatile*>(&reinterpret_cast<unsigned char const volatile&>(static_cast<base&>(object)))); }
 
-  template <typename base, std::size_t capacity> constexpr inline base (*addressof(base (&object)[capacity])  noexcept)[capacity] { return &object; }
-  template <typename base, std::size_t capacity> constexpr inline base (*addressof(base (&&object)[capacity]) noexcept)[capacity] { return &static_cast<base (&)[capacity]>(object); }
+  template <typename base, std::size_t capacity> constexpr base (*addressof(base (&object)[capacity])  noexcept)[capacity] { return &object; }
+  template <typename base, std::size_t capacity> constexpr base (*addressof(base (&&object)[capacity]) noexcept)[capacity] { return &static_cast<base (&)[capacity]>(object); }
 
   #if __cplusplus >= 202002L || defined(__cpp_lib_bounded_array_traits) || (defined(_MSVC_LANG) && _MSVC_LANG <= 202002L)
-    template <typename base> constexpr inline base (*addressof(base (&object)[])  noexcept)[] { return &object; }
-    template <typename base> constexpr inline base (*addressof(base (&&object)[]) noexcept)[] { return &static_cast<base (&)[]>(object); }
+    template <typename base> constexpr base (*addressof(base (&object)[])  noexcept)[] { return &object; }
+    template <typename base> constexpr base (*addressof(base (&&object)[]) noexcept)[] { return &static_cast<base (&)[]>(object); }
   #endif
 }
 
@@ -183,7 +183,7 @@ struct tuple<base, bases...> final {
 
         // ...
         template <typename type>
-        constexpr inline typename std::enable_if<false != std::is_convertible<subbase&, type>::value, type>::type cast(std::size_t index) const noexcept {
+        constexpr typename std::enable_if<false != std::is_convertible<subbase&, type>::value, type>::type cast(std::size_t index) const noexcept {
           #if defined(_MSC_VER)
             if (0u == index) return static_cast<type>(*(this -> value));
             return this -> values.template cast<type>(--index);
@@ -193,25 +193,25 @@ struct tuple<base, bases...> final {
         }
 
         template <typename type>
-        constexpr inline typename std::enable_if<false == std::is_convertible<subbase&, type>::value, type>::type cast(std::size_t index) const noexcept {
+        constexpr typename std::enable_if<false == std::is_convertible<subbase&, type>::value, type>::type cast(std::size_t index) const noexcept {
           return this -> values.template cast<type>(--index);
         }
 
         /* ... */
-        constexpr inline members(std::size_t const index, subbase& value) noexcept : index(index), value(addressof(value)) {}
-        constexpr inline members(std::size_t const index, submembers&& members) noexcept : index(index), values(members) {}
+        constexpr members(std::size_t const index, subbase& value) noexcept : index(index), value(addressof(value)) {}
+        constexpr members(std::size_t const index, submembers&& members) noexcept : index(index), values(members) {}
 
       public:
-        constexpr inline operator typename memberstype<0u>::type&() const& noexcept { return this -> cast<typename memberstype<0u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<1u>::type&() const& noexcept { return this -> cast<typename memberstype<1u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<2u>::type&() const& noexcept { return this -> cast<typename memberstype<2u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<3u>::type&() const& noexcept { return this -> cast<typename memberstype<3u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<4u>::type&() const& noexcept { return this -> cast<typename memberstype<4u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<5u>::type&() const& noexcept { return this -> cast<typename memberstype<5u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<6u>::type&() const& noexcept { return this -> cast<typename memberstype<6u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<7u>::type&() const& noexcept { return this -> cast<typename memberstype<7u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<8u>::type&() const& noexcept { return this -> cast<typename memberstype<8u>::type&>(this -> index); }
-        constexpr inline operator typename memberstype<9u>::type&() const& noexcept { return this -> cast<typename memberstype<9u>::type&>(this -> index); }
+        constexpr operator typename memberstype<0u>::type&() const& noexcept { return this -> cast<typename memberstype<0u>::type&>(this -> index); }
+        constexpr operator typename memberstype<1u>::type&() const& noexcept { return this -> cast<typename memberstype<1u>::type&>(this -> index); }
+        constexpr operator typename memberstype<2u>::type&() const& noexcept { return this -> cast<typename memberstype<2u>::type&>(this -> index); }
+        constexpr operator typename memberstype<3u>::type&() const& noexcept { return this -> cast<typename memberstype<3u>::type&>(this -> index); }
+        constexpr operator typename memberstype<4u>::type&() const& noexcept { return this -> cast<typename memberstype<4u>::type&>(this -> index); }
+        constexpr operator typename memberstype<5u>::type&() const& noexcept { return this -> cast<typename memberstype<5u>::type&>(this -> index); }
+        constexpr operator typename memberstype<6u>::type&() const& noexcept { return this -> cast<typename memberstype<6u>::type&>(this -> index); }
+        constexpr operator typename memberstype<7u>::type&() const& noexcept { return this -> cast<typename memberstype<7u>::type&>(this -> index); }
+        constexpr operator typename memberstype<8u>::type&() const& noexcept { return this -> cast<typename memberstype<8u>::type&>(this -> index); }
+        constexpr operator typename memberstype<9u>::type&() const& noexcept { return this -> cast<typename memberstype<9u>::type&>(this -> index); }
 
         template <typename type>
         constexpr explicit inline operator type() const noexcept {
@@ -226,7 +226,7 @@ struct tuple<base, bases...> final {
 
       private:
         template <typename type>
-        constexpr inline type cast(std::size_t const index) const noexcept {
+        constexpr type cast(std::size_t const index) const noexcept {
           return (this ->* static_cast<type (members::*)(std::size_t) const noexcept>(NULL))(index);
         }
     };
@@ -250,10 +250,10 @@ struct tuple<base, bases...> final {
         typedef members<void, void> tuplemembers;
 
         /* ... */
-        constexpr inline tuplevalue() noexcept {}
+        constexpr tuplevalue() noexcept {}
 
         template <typename type>
-        constexpr inline tuplemembers operator [](type&&) const volatile noexcept {
+        constexpr tuplemembers operator [](type&&) const volatile noexcept {
           return {};
         }
     };
@@ -269,30 +269,30 @@ struct tuple<base, bases...> final {
         typedef members<subbase, typename tuplevalue<subbases...>::tuplemembers> tuplemembers;
 
         /* ... */
-        constexpr inline tuplevalue() noexcept :
+        constexpr tuplevalue() noexcept :
           tuplevalue<subbases...>::tuplevalue(),
           member()
         {}
 
         template <typename type, typename... types>
-        constexpr inline tuplevalue(type&& argument, types&&... arguments) noexcept :
+        constexpr tuplevalue(type&& argument, types&&... arguments) noexcept :
           tuplevalue<subbases...>::tuplevalue(std::forward<types>(arguments)...),
           member(std::forward<type>(argument))
         {}
 
         // ...
-        constexpr inline tuplemembers operator [](std::size_t const index) const volatile noexcept {
+        constexpr tuplemembers operator [](std::size_t const index) const volatile noexcept {
           return 0u == index
           ? tuplemembers{index, const_cast<subbase&>(const_cast<subbase const volatile&>(this -> member))}
           : tuplemembers{index, this -> tuplevalue<subbases...>::operator [](index - 1u)};
         }
 
-        constexpr inline subbase& operator [](std::integral_constant<std::size_t, 0u> const) const volatile noexcept {
+        constexpr subbase& operator [](std::integral_constant<std::size_t, 0u> const) const volatile noexcept {
           return const_cast<subbase&>(this -> member);
         }
 
         template <std::size_t index>
-        constexpr inline decltype(std::declval<tuplevalue<subbases...> const volatile&>().operator [](std::integral_constant<std::size_t, index - 1u>{})) operator [](std::integral_constant<std::size_t, index> const) const volatile noexcept {
+        constexpr decltype(std::declval<tuplevalue<subbases...> const volatile&>().operator [](std::integral_constant<std::size_t, index - 1u>{})) operator [](std::integral_constant<std::size_t, index> const) const volatile noexcept {
           return this -> tuplevalue<subbases...>::operator [](std::integral_constant<std::size_t, index - 1u>{});
         }
     };
@@ -314,12 +314,12 @@ struct tuple<base, bases...> final {
 };
 
 template <std::size_t index, typename... types>
-constexpr inline decltype(std::declval<tuple<types...> const volatile&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const volatile& tuple) noexcept {
+constexpr decltype(std::declval<tuple<types...> const volatile&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const volatile& tuple) noexcept {
   return tuple.operator [](std::integral_constant<std::size_t, index>{});
 }
 
 template <std::size_t index, typename... types>
-constexpr inline decltype(std::declval<tuple<types...> const volatile&&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const volatile&& tuple) noexcept {
+constexpr decltype(std::declval<tuple<types...> const volatile&&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const volatile&& tuple) noexcept {
   return tuple.operator [](std::integral_constant<std::size_t, index>{});
 }
 
