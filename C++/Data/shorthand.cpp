@@ -201,7 +201,7 @@ struct $shorthand {
             subexpression const value;
 
             /* ... */
-            constexpr $operand() noexcept : value() {}
+            constexpr $operand()                           noexcept : value() {}
             constexpr $operand(subexpression const& value) noexcept : value(value) {}
 
             constexpr operator type() const noexcept {
@@ -218,7 +218,7 @@ struct $shorthand {
             typedef subexpression type;
 
             /* ... */
-            constexpr $operand() noexcept {}
+            constexpr $operand()                     noexcept {}
             constexpr $operand(subexpression const&) noexcept {}
 
             /* ... */
@@ -238,13 +238,8 @@ struct $shorthand {
         $operands<>::$operand<expression> const value;
 
         /* ... */
-        constexpr $operands() noexcept :
-          $operands<expressions...>::$operands(), value()
-        {}
-
-        constexpr $operands(expression const& operand, expressions const&... operands) noexcept :
-          $operands<expressions...>::$operands(operands...), value(operand)
-        {}
+        constexpr $operands()                                                          noexcept : $operands<expressions...>::$operands(), value() {}
+        constexpr $operands(expression const& operand, expressions const&... operands) noexcept : $operands<expressions...>::$operands(operands...), value(operand) {}
 
       public:
         template <std::size_t index>
@@ -362,6 +357,14 @@ struct $shorthand {
       }
     };
 
+    template <typename base, base constant>
+    struct invoke<$c<base, constant> > final {
+      template <typename... types>
+      constexpr static base value(types&&...) noexcept {
+        return constant;
+      }
+    };
+
     template <class... expressions> // ->> for `function&(...)`s
     struct invoke<$expression<$call, expressions...> > final {
       private:
@@ -416,15 +419,15 @@ struct $shorthand {
 
     template <typename base, base constant, typename type, typename... types>
     struct cast<$c<base, constant>, type (types...) noexcept, true, false> final {
-      constexpr static type value(types...) noexcept {
-        return static_cast<type>(constant);
+      constexpr static type value(types... arguments) noexcept {
+        return invoke<$c<base, constant> >::value(std::forward<types>(arguments)...);
       }
     };
 
     template <typename base, base constant, typename type, typename... types>
     struct cast<$c<base, constant>, type (types..., ...) noexcept, true, false> final {
-      constexpr static type value(types..., ...) noexcept {
-        return static_cast<type>(constant);
+      constexpr static type value(types... arguments, ...) noexcept {
+        return invoke<$c<base, constant> >::value(std::forward<types>(arguments)...);
       }
     };
 
@@ -471,30 +474,22 @@ struct $shorthand {
 // ...
 template <$operation operation, class... expressions>
 struct $expression : public $shorthand {
-  template <class, typename, bool> friend struct $shorthand::cast;
-  template <class...>              friend struct $shorthand::$operands;
-
   private:
     $shorthand::$operands<expressions...> const value;
 
   public:
-    constexpr $expression() noexcept :
-      value()
-    {}
-
-    constexpr $expression(expressions const&... operands) noexcept :
-      value(operands...)
-    {}
+    constexpr $expression()                               noexcept : value() {}
+    constexpr $expression(expressions const&... operands) noexcept : value(operands...) {}
 
     /* ... */
     template <typename... types>
-    constexpr decltype($shorthand::template invoke<$expression>::value(std::declval<$shorthand::$operands<expressions...> >(), std::declval<types>()...)) operator ()(types&&... arguments) const noexcept {
-      return $shorthand::template invoke<$expression>::value(this -> value, std::forward<types>(arguments)...);
+    constexpr decltype($shorthand::invoke<$expression>::value(std::declval<$shorthand::$operands<expressions...> >(), std::declval<types>()...)) operator ()(types&&... arguments) const noexcept {
+      return $shorthand::invoke<$expression>::value(this -> value, std::forward<types>(arguments)...);
     }
 
     template <typename type>
     constexpr operator type() const noexcept {
-      return $shorthand::template cast<$expression, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
+      return $shorthand::cast<$expression, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
     }
 };
 
@@ -504,13 +499,8 @@ struct $expression<$nop, $capture<base> > : public $shorthand {
     base&& value;
 
   public:
-    constexpr $expression(base&& object) noexcept :
-      value(static_cast<base&&>(object))
-    {}
-
-    constexpr $expression($expression const& expression) noexcept :
-      value(static_cast<base&&>(expression.value))
-    {}
+    constexpr $expression(base&& object)                 noexcept : value(static_cast<base&&>(object)) {}
+    constexpr $expression($expression const& expression) noexcept : value(static_cast<base&&>(expression.value)) {}
 
     /* ... */
     template <typename... types>
@@ -522,26 +512,26 @@ struct $expression<$nop, $capture<base> > : public $shorthand {
 template <typename base, base constant>
 struct $expression<$nop, $c<base, constant> > : public $shorthand {
   template <typename... types>
-  constexpr base operator ()(types&&...) const volatile noexcept {
-    return constant;
+  constexpr decltype($shorthand::invoke<$c<base, constant> >::value(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
+    return $shorthand::invoke<$c<base, constant> >::value(std::forward<types>(arguments)...);
   }
 
   template <typename type>
   constexpr operator type() const volatile noexcept {
-    return $shorthand::template cast<$c<base, constant>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
+    return $shorthand::cast<$c<base, constant>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
   }
 };
 
 template <std::size_t index>
 struct $expression<$nop, $<index, false> > : public $shorthand {
   template <typename... types>
-  constexpr decltype($shorthand::template invoke<$<index, false> >::value(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
-    return $shorthand::template invoke<$<index, false> >::value(std::forward<types>(arguments)...);
+  constexpr decltype($shorthand::invoke<$<index, false> >::value(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
+    return $shorthand::invoke<$<index, false> >::value(std::forward<types>(arguments)...);
   }
 
   template <typename type>
   constexpr operator type() const volatile noexcept {
-    return $shorthand::template cast<$<index, false>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
+    return $shorthand::cast<$<index, false>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
   }
 };
 
@@ -553,7 +543,7 @@ struct $expression<$nop, $<0u, true> > : public $expression<$nop, $<0u, false> >
   /* ... */
   template <typename type>
   constexpr operator type() const volatile noexcept {
-    return $shorthand::template invoke<$<0u, false> >::value<type>();
+    return $shorthand::invoke<$<0u, false> >::value<type>();
   }
 };
 
@@ -577,7 +567,7 @@ struct $expression<$nop, $<index, true> > : public $expression<$nop, $<index, fa
 
     template <typename... types>
     constexpr $expression(types&&... objects) noexcept :
-      value(const_cast<void*>(static_cast<void const volatile*>(addressof($shorthand::template invoke<$<index, false> >::value(std::forward<types>(objects)...)))))
+      value(const_cast<void*>(static_cast<void const volatile*>(addressof($shorthand::invoke<$<index, false> >::value(std::forward<types>(objects)...)))))
     {}
 
     /* ... */
@@ -598,54 +588,39 @@ template <typename base, base constant>
 struct $c : public $expression<$nop, $c<base, constant> > {};
   #ifdef __cpp_nontype_template_parameter_auto
     template <auto constant>
-    struct $u final : public $c<typename std::enable_if<std::is_integral<decltype(constant)>::value && std::is_unsigned<decltype(constant)>::value, decltype(constant)>::type, constant> {};
-  #else
-    template <unsigned long long constant>
-    struct $u final : public $c<unsigned long long, constant> {};
-  #endif
+    struct $e final : public $c<typename std::enable_if<std::is_enum<decltype(constant)>::value, decltype(constant)>::type, constant> {};
 
-  // ...
-  #ifdef __cpp_nontype_template_parameter_auto
+    template <auto constant>
+    struct $f final : public $c<typename std::enable_if<std::is_floating_point<decltype(constant)>::value, decltype(constant)>::type, constant> {};
+
+    template <auto constant>
+    struct $i final : public $c<typename std::enable_if<std::is_integral<decltype(constant)>::value && std::is_signed<decltype(constant)>::value, decltype(constant)>::type, constant> {};
+
     template <auto constant>
     struct $p final : public $c<typename std::enable_if<std::is_pointer<decltype(constant)>::value, decltype(constant)>::type, constant> {};
 
     template <auto constant>
     struct $s final : public $c<typename std::enable_if<std::is_class<decltype(constant)>::value || std::is_union<decltype(constant)>::value, decltype(constant)>::type, constant> {};
-  #else
-    template <void* constant>
-    struct $p final : public $c<void*, constant> {};
-  #endif
 
-  // ...
-  #ifdef __cpp_nontype_template_parameter_auto
     template <auto constant>
-    struct $i final : public $c<typename std::enable_if<std::is_integral<decltype(constant)>::value && std::is_signed<decltype(constant)>::value, decltype(constant)>::type, constant> {};
-  #else
-    template <signed long long constant>
-    struct $i final : public $c<signed long long, constant> {};
-  #endif
-
-  // ...
-  #ifdef __cpp_nontype_template_parameter_auto
-    template <auto constant>
-    struct $f final : public $c<typename std::enable_if<std::is_floating_point<decltype(constant)>::value, decltype(constant)>::type, constant> {};
-  #elif __cplusplus >= 202002L
-    template <long double constant>
-    struct $f final : public $c<long double, constant> {};
-  #elif defined(_MSVC_LANG)
-  # if _MSVC_LANG >= 202002L
-    template <long double constant>
-    struct $f final : public $c<long double, constant> {};
-  # endif
-  #endif
-
-  // ...
-  #ifdef __cpp_nontype_template_parameter_auto
-    template <auto constant>
-    struct $e final : public $c<typename std::enable_if<std::is_enum<decltype(constant)>::value, decltype(constant)>::type, constant> {};
+    struct $u final : public $c<typename std::enable_if<std::is_integral<decltype(constant)>::value && std::is_unsigned<decltype(constant)>::value, decltype(constant)>::type, constant> {};
   #else
     template <std::size_t constant>
     struct $e final : public $c<std::size_t, constant> {};
+
+    #if __cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)
+      template <long double constant>
+      struct $f final : public $c<long double, constant> {};
+    #endif
+
+    template <signed long long constant>
+    struct $i final : public $c<signed long long, constant> {};
+
+    template <void* constant>
+    struct $p final : public $c<void*, constant> {};
+
+    template <unsigned long long constant>
+    struct $u final : public $c<unsigned long long, constant> {};
   #endif
 
 // ...
@@ -653,16 +628,31 @@ template <std::size_t index, bool referrable>
 struct $ final : public $expression<$nop, $<index, referrable> > {
   using $expression<$nop, $<index, referrable> >::$expression;
 };
-  constexpr static $<0u, false> $0 {};
-  constexpr static $<1u, false> $1 {};
-  constexpr static $<2u, false> $2 {};
-  constexpr static $<3u, false> $3 {};
-  constexpr static $<4u, false> $4 {};
-  constexpr static $<5u, false> $5 {};
-  constexpr static $<6u, false> $6 {};
-  constexpr static $<7u, false> $7 {};
-  constexpr static $<8u, false> $8 {};
-  constexpr static $<9u, false> $9 {};
+  #if defined(__clang__) || (defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+    constexpr static $<0u, false> $0 {};
+    constexpr static $<1u, false> $1 {};
+    constexpr static $<2u, false> $2 {};
+    constexpr static $<3u, false> $3 {};
+    constexpr static $<4u, false> $4 {};
+    constexpr static $<5u, false> $5 {};
+    constexpr static $<6u, false> $6 {};
+    constexpr static $<7u, false> $7 {};
+    constexpr static $<8u, false> $8 {};
+    constexpr static $<9u, false> $9 {};
+  #else
+    constexpr static union {
+      $<0u, false> $0;
+      $<1u, false> $1;
+      $<2u, false> $2;
+      $<3u, false> $3;
+      $<4u, false> $4;
+      $<5u, false> $5;
+      $<6u, false> $6;
+      $<7u, false> $7;
+      $<8u, false> $8;
+      $<9u, false> $9;
+    };
+  #endif
 
 /* ... */
 template <$operation operation, class... expressions> constexpr $expression<$minus, $expression<operation, expressions...> > operator -($expression<operation, expressions...> const expression) noexcept { return {expression}; }
