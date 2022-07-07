@@ -162,12 +162,6 @@ struct $shorthand {
 
   private:
     /* Trait */
-    template <class>                                      struct can_variadic_cast                                          final { static bool const value = false; };
-    template <bool referrable /* --> false */>            struct can_variadic_cast<$<0u, referrable> >                      final { static bool const value = true; };
-    template <typename base, base constant>               struct can_variadic_cast<$c<base, constant> >                     final { static bool const value = true; };
-    template <typename base>                              struct can_variadic_cast<$capture<base> >                         final { static bool const value = true; };
-    template <$operation operation, class... expressions> struct can_variadic_cast<$expression<operation, expressions...> > final { static bool const value = boolean_or<can_variadic_cast<expressions>::value...>::value; };
-
     template <class>                                      struct can_capture_cast                                          final { static bool const value = false; };
     template <typename base>                              struct can_capture_cast<$capture<base> >                         final { static bool const value = true; };
     template <$operation operation, class... expressions> struct can_capture_cast<$expression<operation, expressions...> > final { static bool const value = boolean_or<can_capture_cast<expressions>::value...>::value; };
@@ -400,70 +394,77 @@ struct $shorthand {
     };
 
     // ...
-    template <class shorthand, typename, bool = can_variadic_cast<shorthand>::value, bool = can_capture_cast<shorthand>::value>
+    template <class shorthand, typename, bool = can_capture_cast<shorthand>::value>
     struct cast;
 
-    template <std::size_t index, typename type, typename... types, bool variadic>
-    struct cast<$<index, false>, type (types...) noexcept, variadic, false> final {
-      constexpr static type value(types... arguments) noexcept {
-        return static_cast<type>(invoke<$<index, false>, type>::value(std::forward<types>(arguments)...));
-      }
-    };
-
     template <typename type, typename... types>
-    struct cast<$<0u, false>, type (types..., ...) noexcept, true, false> final {
+    struct cast<$<0u, false>, type (types..., ...) noexcept, false> final {
       constexpr static type value(types... arguments, ...) noexcept {
         return static_cast<type>(invoke<$<0u, false>, type>::value(std::forward<types>(arguments)...));
       }
     };
 
+    template <std::size_t index, typename type, typename... types>
+    struct cast<$<index, false>, type (types..., ...) noexcept, false> final {
+      constexpr static type value(types... arguments, ...) noexcept {
+        return static_cast<type>(invoke<$<index, false>, type>::value(std::forward<types>(arguments)...));
+      }
+    };
+
+    template <std::size_t index, typename type, typename... types>
+    struct cast<$<index, false>, type (types...) noexcept, false> final {
+      constexpr static type value(types... arguments) noexcept {
+        return static_cast<type>(invoke<$<index, false>, type>::value(std::forward<types>(arguments)...));
+      }
+    };
+
     template <typename base, base constant, typename type, typename... types>
-    struct cast<$c<base, constant>, type (types...) noexcept, true, false> final {
+    struct cast<$c<base, constant>, type (types...) noexcept, false> final {
       constexpr static type value(types... arguments) noexcept {
         return invoke<$c<base, constant>, type>::value(std::forward<types>(arguments)...);
       }
     };
 
     template <typename base, base constant, typename type, typename... types>
-    struct cast<$c<base, constant>, type (types..., ...) noexcept, true, false> final {
+    struct cast<$c<base, constant>, type (types..., ...) noexcept, false> final {
       constexpr static type value(types... arguments, ...) noexcept {
         return invoke<$c<base, constant>, type>::value(std::forward<types>(arguments)...);
       }
     };
 
-    template <$operation operation, class... expressions, typename type, typename... types, bool variadic>
-    struct cast<$expression<operation, expressions...>, type (types...) noexcept, variadic, false> final {
+    template <$operation operation, class... expressions, typename type, typename... types>
+    struct cast<$expression<operation, expressions...>, type (types...) noexcept, false> final {
       constexpr static type value(types... arguments) noexcept {
         return invoke<$expression<operation, expressions...>, type>::value($expression<operation, expressions...>{}.value, std::forward<types>(arguments)...);
       }
     };
 
-    template <$operation operation, class... expressions, typename type, typename... types, bool variadic>
-    struct cast<$expression<operation, expressions...>, type (types...) noexcept, variadic, true> final {
+    template <$operation operation, class... expressions, typename type, typename... types>
+    struct cast<$expression<operation, expressions...>, type (types...) noexcept, true> final {
       constexpr static type value(types...) noexcept;
     };
 
     template <$operation operation, class... expressions, typename type, typename... types>
-    struct cast<$expression<operation, expressions...>, type (types..., ...) noexcept, true, false> final {
+    struct cast<$expression<operation, expressions...>, type (types..., ...) noexcept, false> final {
       constexpr static type value(types... arguments, ...) noexcept {
         return invoke<$expression<operation, expressions...>, type>::value($expression<operation, expressions...>{}.value, std::forward<types>(arguments)...);
       }
     };
 
     template <$operation operation, class... expressions, typename type, typename... types>
-    struct cast<$expression<operation, expressions...>, type (types...) noexcept, true, true> final {
+    struct cast<$expression<operation, expressions...>, type (types..., ...) noexcept, true> final {
       constexpr static type value(types..., ...) noexcept;
     };
 
     #ifdef __cpp_noexcept_function_type // ->> implicitly converts `noexcept` signatures to their exception-prone counterparts
-      template <class shorthand, typename type, typename... types, bool variadic, bool captured>
-      struct cast<shorthand, type (types...), variadic, captured> final {
-        constexpr static type (&value)(types...) = cast<shorthand, type (types...) noexcept, variadic, captured>::value;
+      template <class shorthand, typename type, typename... types, bool captured>
+      struct cast<shorthand, type (types...), captured> final {
+        constexpr static type (&value)(types...) = cast<shorthand, type (types...) noexcept, captured>::value;
       };
 
-      template <class shorthand, typename type, typename... types, bool variadic, bool captured>
-      struct cast<shorthand, type (types..., ...), variadic, captured> final {
-        constexpr static type (&value)(types..., ...) = cast<shorthand, type (types..., ...) noexcept, variadic, captured>::value;
+      template <class shorthand, typename type, typename... types, bool captured>
+      struct cast<shorthand, type (types..., ...), captured> final {
+        constexpr static type (&value)(types..., ...) = cast<shorthand, type (types..., ...) noexcept, captured>::value;
       };
     #endif
 
@@ -562,14 +563,26 @@ struct $expression<$nop, $<index, false> > : public $shorthand {
 
 template <>
 struct $expression<$nop, $<0u, true> > : public $expression<$nop, $<0u, false> > {
-  template <typename... types>
-  constexpr $expression(types&&...) noexcept {}
+  private:
+    template <typename type>
+    constexpr typename std::enable_if<false == std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, type>::type cast() const volatile noexcept {
+      return $shorthand::invoke<$<0u, false> >::value<type>();
+    }
 
-  /* ... */
-  template <typename type>
-  constexpr operator type() const volatile noexcept {
-    return $shorthand::invoke<$<0u, false> >::value<type>();
-  }
+    template <typename type>
+    constexpr typename std::enable_if<false != std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, type>::type cast() const volatile noexcept {
+      return $shorthand::cast<$<0u, false>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
+    }
+
+  public:
+    template <typename... types>
+    constexpr $expression(types&&...) noexcept {}
+
+    /* ... */
+    template <typename type>
+    constexpr operator type() const volatile noexcept {
+      return this -> cast<type>();
+    }
 };
 
 template <std::size_t index>
@@ -579,6 +592,17 @@ struct $expression<$nop, $<index, true> > : public $expression<$nop, $<index, fa
 
   private:
     void *const value;
+
+    /* ... */
+    template <typename type>
+    constexpr typename std::enable_if<false == std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, type>::type cast() const volatile noexcept {
+      return static_cast<type>(*static_cast<typename std::remove_reference<type>::type*>(this -> value));
+    }
+
+    template <typename type>
+    constexpr typename std::enable_if<false != std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, type>::type cast() const volatile noexcept {
+      return $shorthand::cast<$<index, false>, typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value;
+    }
 
   public:
     constexpr $expression() noexcept :
@@ -598,7 +622,7 @@ struct $expression<$nop, $<index, true> > : public $expression<$nop, $<index, fa
     /* ... */
     template <typename type>
     constexpr operator type() const volatile noexcept {
-      return static_cast<type>(*static_cast<typename std::remove_reference<type>::type*>(this -> value));
+      return this -> cast<type>();
     }
 };
 
