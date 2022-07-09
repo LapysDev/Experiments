@@ -474,6 +474,24 @@ struct $shorthand {
       };
     #endif
 
+    // ...
+    template <class>
+    struct baseof final {
+      typedef struct base final {
+        typedef void type;
+      } type;
+    };
+
+    template <$operation operation, class shorthand>
+    struct baseof<$expression<operation, shorthand> > final {
+      typedef shorthand type;
+    };
+
+    template <$operation operation, $operation suboperation, class... subexpressions>
+    struct baseof<$expression<operation, $expression<suboperation, subexpressions...> > > final {
+      typedef typename baseof<$expression<suboperation, subexpressions...> >::type type;
+    };
+
   public:
     static void *BUFFER;
 };
@@ -481,10 +499,13 @@ struct $shorthand {
 // ...
 template <$operation operation, class... expressions>
 struct $expression : public $shorthand {
+  template <$operation, class...>  friend struct $expression;
+  template <class>                 friend struct $shorthand::baseof;
   template <class, typename, bool> friend struct $shorthand::cast;
   template <class, typename>       friend struct $shorthand::invoke;
 
   private:
+    typedef struct {} type;
     $shorthand::$operands<expressions...> const value;
 
   public:
@@ -495,6 +516,10 @@ struct $expression : public $shorthand {
     template <typename... types>
     constexpr decltype($shorthand::invoke<$expression>::value(std::declval<$shorthand::$operands<expressions...> >(), std::declval<types>()...)) operator ()(types&&... arguments) const noexcept {
       return $shorthand::invoke<$expression>::value(this -> value, std::forward<types>(arguments)...);
+    }
+
+    constexpr operator typename $shorthand::baseof<$expression>::type::type() const noexcept {
+      return $shorthand::cast<$expression, typename std::remove_pointer<typename baseof<$expression>::type::type>::type>::value;
     }
 
     template <typename type>
@@ -511,10 +536,13 @@ struct $expression : public $shorthand {
 
 template <typename base>
 struct $expression<$nop, $capture<base> > : public $shorthand {
+  template <$operation, class...>  friend struct $expression;
+  template <class>                 friend struct $shorthand::baseof;
   template <class, typename, bool> friend struct $shorthand::cast;
   template <class, typename>       friend struct $shorthand::invoke;
 
   private:
+    typedef struct {} type;
     base&& value;
 
     /* ... */
@@ -530,13 +558,22 @@ struct $expression<$nop, $capture<base> > : public $shorthand {
 
 template <typename base, base constant>
 struct $expression<$nop, $c<base, constant> > : public $shorthand {
+  template <$operation, class...>  friend struct $expression;
+  template <class>                 friend struct $shorthand::baseof;
   template <class, typename, bool> friend struct $shorthand::cast;
   template <class, typename>       friend struct $shorthand::invoke;
+
+  private:
+    typedef base (*type)();
 
   public:
     template <typename... types>
     constexpr decltype($shorthand::invoke<$c<base, constant> >::value(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
       return $shorthand::invoke<$c<base, constant> >::value(std::forward<types>(arguments)...);
+    }
+
+    constexpr operator type() const volatile noexcept {
+      return $shorthand::cast<$c<base, constant>, typename std::remove_pointer<type>::type>::value;
     }
 
     template <typename type>
@@ -553,6 +590,8 @@ struct $expression<$nop, $c<base, constant> > : public $shorthand {
 
 template <std::size_t index>
 struct $expression<$nop, $<index, false> > : public $shorthand {
+  template <$operation, class...>  friend struct $expression;
+  template <class>                 friend struct $shorthand::baseof;
   template <class, typename, bool> friend struct $shorthand::cast;
   template <class, typename>       friend struct $shorthand::invoke;
 
@@ -568,6 +607,9 @@ struct $expression<$nop, $<index, false> > : public $shorthand {
     }
 
   private:
+    typedef struct {} type;
+
+    /* ... */
     template <typename type, typename... types>
     constexpr typename std::enable_if<0u == index, type>::type call(types&&...) const noexcept {
       return $shorthand::invoke<$<0u, false> >::value<type>();
