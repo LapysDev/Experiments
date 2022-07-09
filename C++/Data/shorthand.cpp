@@ -179,6 +179,9 @@ struct $shorthand {
     // ...
     template <class...>
     struct $operands {
+      friend struct $shorthand;
+      template <class...> friend struct $operands;
+
       private:
         /* Class */
         template <std::size_t>
@@ -187,8 +190,8 @@ struct $shorthand {
         // ... ->> for explicit empty-base-optimization
         template <class subexpression, bool = can_capture_cast<subexpression>::value>
         struct $operand final {
-          template <class...>
-          friend struct $operands;
+          template <$operation, class...> friend struct $expression;
+          template <class...>             friend struct $operands;
 
           private:
             typedef subexpression const& type;
@@ -205,8 +208,8 @@ struct $shorthand {
 
         template <class subexpression>
         struct $operand<subexpression, false> final {
-          template <class...>
-          friend struct $operands;
+          template <$operation, class...> friend struct $expression;
+          template <class...>             friend struct $operands;
 
           private:
             typedef subexpression type;
@@ -228,7 +231,10 @@ struct $shorthand {
 
     template <class expression, class... expressions>
     struct $operands<expression, expressions...> : public $operands<expressions...> {
-      private:
+      template <$operation, class...>
+      friend struct $expression;
+
+      protected:
         $operands<>::$operand<expression> const value;
 
         /* ... */
@@ -250,7 +256,7 @@ struct $shorthand {
     /* Constant */
     constexpr static $operands<>::$index<0u> $0i {};
     constexpr static $operands<>::$index<1u> $1i {};
-    constexpr static $operands<>::$index<2u> $2i {}; // ->> possible `?:` overload?
+    constexpr static $operands<>::$index<2u> $2i {}; // ->> possible ternary overloads?
 
     /* Trait */
     template <class shorthand> struct to_nop                                final { typedef $expression<$nop, shorthand> type; };
@@ -475,6 +481,9 @@ struct $shorthand {
 // ...
 template <$operation operation, class... expressions>
 struct $expression : public $shorthand {
+  template <class, typename, bool> friend struct $shorthand::cast;
+  template <class, typename>       friend struct $shorthand::invoke;
+
   private:
     $shorthand::$operands<expressions...> const value;
 
@@ -502,6 +511,9 @@ struct $expression : public $shorthand {
 
 template <typename base>
 struct $expression<$nop, $capture<base> > : public $shorthand {
+  template <class, typename, bool> friend struct $shorthand::cast;
+  template <class, typename>       friend struct $shorthand::invoke;
+
   private:
     base&& value;
 
@@ -518,6 +530,9 @@ struct $expression<$nop, $capture<base> > : public $shorthand {
 
 template <typename base, base constant>
 struct $expression<$nop, $c<base, constant> > : public $shorthand {
+  template <class, typename, bool> friend struct $shorthand::cast;
+  template <class, typename>       friend struct $shorthand::invoke;
+
   public:
     template <typename... types>
     constexpr decltype($shorthand::invoke<$c<base, constant> >::value(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
@@ -538,6 +553,9 @@ struct $expression<$nop, $c<base, constant> > : public $shorthand {
 
 template <std::size_t index>
 struct $expression<$nop, $<index, false> > : public $shorthand {
+  template <class, typename, bool> friend struct $shorthand::cast;
+  template <class, typename>       friend struct $shorthand::invoke;
+
   public:
     template <typename... types>
     constexpr decltype($shorthand::invoke<$<index, false> >::value(std::declval<types>()...)) operator ()(types&&... arguments) const volatile noexcept {
@@ -563,6 +581,9 @@ struct $expression<$nop, $<index, false> > : public $shorthand {
 
 template <>
 struct $expression<$nop, $<0u, true> > : public $expression<$nop, $<0u, false> > {
+  template <class, typename, bool> friend struct $shorthand::cast;
+  template <class, typename>       friend struct $shorthand::invoke;
+
   private:
     template <typename type>
     constexpr typename std::enable_if<false == std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, type>::type cast() const volatile noexcept {
@@ -587,8 +608,8 @@ struct $expression<$nop, $<0u, true> > : public $expression<$nop, $<0u, false> >
 
 template <std::size_t index>
 struct $expression<$nop, $<index, true> > : public $expression<$nop, $<index, false> > {
-  template <$operation, class...>
-  friend struct $expression;
+  template <class, typename, bool> friend struct $shorthand::cast;
+  template <class, typename>       friend struct $shorthand::invoke;
 
   private:
     void *const value;
