@@ -12,5 +12,5 @@ int main() {
   Person const clara;
   Person const timothy;
 
-  std::printf("%s", (clara) .💙 (timothy) ? "true" : "false");
+  std::puts((clara) .💙 (timothy) ? "true" : "false");
 }

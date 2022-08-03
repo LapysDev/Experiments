@@ -342,7 +342,7 @@ int main(int, char*[]) /* noexcept */ {
   std::printf("[07]: '%c'" "\r\n", tuple<char const (&) [6]>{"Hello"}[0][1]);
   std::printf("[08]: '%c'" "\r\n", tuple<char const (&&)[6]>{static_cast<char const (&&)[6]>("Hello")}[0][2]);
 
-  // ->> of course `static_cast`/ C-style casting works
+  // ->> of course, `static_cast`/ C-style casting works
   std::printf("[09]: '%c'" "\r\n", static_cast<char const*>(tuple<char const*>{"Hello"}[0])[3]);
   std::printf("[08]: '%c'" "\r\n", ((char const*) tuple<char const*>{static_cast<char const (&&)[6]>("Hello")}[0])[4]);
 
