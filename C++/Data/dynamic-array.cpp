@@ -114,6 +114,26 @@ class Array<void> {
     struct fixed<base, 0u> {};
 
     // ...
+    template <typename base, std::size_t capacity, bool = true>
+    struct iterator {
+      Array<base, capacity> *const array;
+      std::size_t                  index;
+
+      /* ... */
+      constexpr base& operator *() const noexcept { return this -> array -> at(this -> index); }
+      /* constexpr */ inline void operator ++() noexcept { ++(this -> index); }
+
+      constexpr bool operator !=(iterator const end) const noexcept { return this -> index != end.index; }
+    };
+
+    template <typename base, std::size_t capacity>
+    struct iterator<base, capacity, true> : public iterator<base, capacity, false> {
+      constexpr base&& operator *() const noexcept {
+        return static_cast<base&&>(this -> iterator<base, capacity, false>::operator *());
+      }
+    };
+
+    // ...
     template <class base, std::size_t capacity>
     union length {
       Array<base, capacity> *array;
@@ -130,7 +150,7 @@ class Array<void> {
       /* constexpr */ inline length& operator <<=(std::size_t const length) const /* volatile noexcept */ { this -> array -> resize(this -> value << length); return *this; }
       /* constexpr */ inline length& operator >>=(std::size_t const length) const /* volatile noexcept */ { this -> array -> resize(this -> value >> length); return *this; }
 
-      /* constexpr */ inline operator std::size_t() const /* volatile noexcept */ { return NULL == this -> array -> heaped ? 0u : *launder(reinterpret_cast<std::size_t*>(+(this -> array -> heaped))); }
+      /* constexpr */ inline operator std::size_t() const /* volatile noexcept */ { return capacity + (NULL == this -> array -> heaped ? 0u : *launder(reinterpret_cast<std::size_t*>(+(this -> array -> heaped)))); }
     };
 
     // ...
@@ -249,7 +269,7 @@ template <typename base, std::size_t capacity, void* (*allocator)(std::size_t), 
 
       template <typename... types>
       inline bool add(types&&... elements) /* volatile */ noexcept {
-        if (this -> grow(sizeof...(elements) + 1u)) {
+        if (this -> grow(sizeof...(elements))) {
           std::size_t   &length  = *launder(reinterpret_cast<std::size_t*>(+(this -> heaped)));
           unsigned char *element = reinterpret_cast<unsigned char*>(&length + 1);
 
@@ -264,21 +284,31 @@ template <typename base, std::size_t capacity, void* (*allocator)(std::size_t), 
       }
 
       // ...
-      inline typename Array<void>::element<base>::type& at(std::size_t const index) const /* volatile */ noexcept {
-        if (index < capacity) return this -> stacked[index];
+      inline base& at(std::size_t const index) const& /* volatile */ noexcept {
+        if (index < capacity) return (base&) this -> stacked[index];
         unsigned char *element = reinterpret_cast<unsigned char*>(+(this -> heaped)) + sizeof(std::size_t);
 
         // ...
         while (0u != (element - reinterpret_cast<unsigned char*>(+(this -> heaped))) % alignof(typename Array<void>::element<base>::type))
         ++element;
 
-        return *launder(reinterpret_cast<typename Array<void>::element<base>::type*>(element) + (index - capacity));
+        return (base&) *launder(reinterpret_cast<typename Array<void>::element<base>::type*>(element) + (index - capacity));
+      }
+
+      constexpr base&& at(std::size_t const index) const&& /* volatile */ noexcept {
+        return static_cast<base&&>(this -> at(index));
       }
 
       // ...
-      inline typename Array<void>::element<base>::type& operator [](std::size_t const index) const /* volatile */ noexcept {
-        return this -> at(index);
-      }
+      constexpr Array<void>::iterator<base, capacity, false> begin() const&  /* volatile */ noexcept { return {const_cast<Array<base, capacity>*>(this), 0u}; }
+      constexpr Array<void>::iterator<base, capacity, true>  begin() const&& /* volatile */ noexcept { return {const_cast<Array<base, capacity>*>(this), 0u}; }
+
+      // ...
+      constexpr Array<void>::iterator<base, capacity, false> end() const /* volatile */ noexcept { return {NULL, this -> length}; }
+
+      /* ... */
+      constexpr base&  operator [](std::size_t const index) const&  /* volatile */ noexcept { return (base&)  this -> at(index); }
+      constexpr base&& operator [](std::size_t const index) const&& /* volatile */ noexcept { return (base&&) this -> at(index); }
   };
 #else
   class Array {
@@ -304,6 +334,9 @@ template <typename base, std::size_t capacity, void* (*allocator)(std::size_t), 
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  Array<int, 3> array = {1, 2, 3, 4};
-  std::printf("[]: {%i, %i, %i, %i}", array[0], array[1], array[2], array[3]);
+  Array<int, 3> array = {1, 2, 3};
+
+  array.add(4);
+  for (int &element : array) std::printf("[]: %i" "\r\n", element);
+  // std::printf("[]: {%i, %i, %i, %i}", array[0], array[1], array[2], array[3]);
 }
