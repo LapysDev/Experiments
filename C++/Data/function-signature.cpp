@@ -1,14 +1,16 @@
-#include <stdio.h>
+#include <cstdio>
 
-auto put_deferred(char const message[]) -> void { ::puts(message); }
-put_deprecated(message) char const message[]; { ::puts(message); return; }
-constexpr static auto const &put_lambda = [](char const message[]) { ::puts(message); return; };
+/* ... */
+auto put_deferred(char const message[]) -> void { std::puts(message); }
+put_deprecated(message) char const message[]; { std::puts(message); return; }
+constexpr static auto const &put_lambda = *[](char const message[]) { std::puts(message); return; };
 
-void put(char const message[]) { ::puts(message); }
+void put(char const message[]) { std::puts(message); }
 
-int main(void) {
-  put_deprecated("[1] Hello, World!");
-  put_deferred("[2] Hello, World!");
-  put_lambda("[3] Hello, World!");
-  put("[4] Hello, World!");
+/* Main */
+int main(int, char*[]) /* noexcept */ {
+  put_deferred  ("[1] Hello, World!");
+  put_deprecated("[2] Hello, World!");
+  put_lambda    ("[3] Hello, World!");
+  put           ("[4] Hello, World!");
 }

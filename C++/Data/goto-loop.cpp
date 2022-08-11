@@ -1,18 +1,14 @@
-/* Import */
-#include <stdio.h> // Standard Input-Output
-#include <stdlib.h> // Standard Library
+#include <cstddef>
+#include <cstdio>
 
 /* Main */
-int main() {
+int main(int, char*[]) /* noexcept */ {
   // Loop
-  { size_t iterator = 0u; iterate: if (iterator != 10u) {
+  { std::size_t iterator = 0u; iterate: if (iterator != 10u) {
     // ...
-    ::printf("%s%u\n\r", "[DEBUG]: ", iterator);
+    std::printf("%1.9s%u\n\r", "[DEBUG]: ", iterator);
 
     // Continue
     ++iterator; goto iterate;
   } }
-
-  // Return
-  return EXIT_SUCCESS;
 }

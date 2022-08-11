@@ -40,6 +40,7 @@
 • dt         → Specifies a term in a description or definition list
 • element    → Defines custom DOM elements
 • em         → Stresses emphasis on its content
+• embed      → Embeds external content at the specified point in the document
 • fieldset   → Group several controls
 • figcaption → Represents a caption or legend describing the rest of the contents of its parent `<figure>` element
 • figure     → Represents self-contained content
@@ -88,54 +89,55 @@
 • noembed    → Provide alternative content for browsers that do not support the `<embed>` element
 • noframes   → Provide alternative content for browsers that do not support the `<frame>` element
 • noscript   → Provide alternative content for browsers that do not support the `<script>` element
-• ol        → Ordered list
-• optgroup  → Group of options within a `<select>` element
-• option    → Item within a `<datalist>`, `<optgroup>` or `<select>` element
-• output    → Container for the result of an external app
-• p         → Paragraph
-• param     → Parameters for an `<object>` element
-• picture   → Contains multiple `<source>` elements and a single `<img>` to provide alternative versions of an image for differing devices/ viewports
-• plaintext → Renders HTML syntax as raw text
-• pre       → Pre-formatted text
-• progress  → Indicator showing completion progress of a task
-• q         → Specifies inline quotation
-• rb        → Delimits base text components of `<ruby>` elements
-• rp        → Provides fallback parenthesis for browsers that do not support display of ruby annotations using the `<ruby>` element
-• rt        → Specifies ruby text component of a ruby annotation. Which is used to provide pronunciation, translation or transliteration information for East-Asian typography
-• rtc       → Embraces semantic annotations of characters presented in a ruby of `<rb>` elements inside a `<ruby>` element
-• ruby      → Represents a ruby annotation
-• s         → Renders text with a strike-through
-• samp      → Encloses inline text with sample (or quoted) output from a computer program
-• script    → Embed or reference executable code (which is typically JavaScript code)
-• section   → Standalone-section
-• select    → Provides a menu of options
-• shadow    → Used as a shadow DOM insertion point
-• small     → Represents minimal font-sized text
-• source    → Specifies multiple media resources for the `<audio>`, `<picture>` or `<video>` element
-• spacer    → Inserts empty spaces on pages (made by Netscape, so ignore it…)
-• span      → Generic inline container for phrasing content
-• strike    → Strikes a line through over text
-• strong    → Indicates content with strong importance
-• style     → Style information for a document
-• sub       → Renders subscript text
-• summary   → Caption for a `<details>` element
-• sup       → Renders superscript text
-• table     → Represents tabular data (information within a table)
-• tbody     → Set of table rows composing the body of a table
-• td        → Represents the cell of a table
-• template  → Holds HTML that is only rendered via JavaScript
-• textarea  → Multi-line plaintext editing control
-• tfoot     → Set of table rows composing the footer of a table
-• th        → Represents the header or identifier cell of a table
-• thead     → Set of table rows composing the header of a table
-• time      → Represents time-based content
-• title     → Title of the document
-• tr        → Groups of cells of a table. Row within a table
-• track     → Child of `<audio>` or `<video>` element that allows specified timed text tracks
-• tt        → Creates inline text that uses the `monospace` font face (i.e.: HTML Teletype Text Element)
-• u         → Inline text with non-textual annotation (HTML Unarticulated Annotation Element)
-• ul        → Unordered list
-• var       → Denotes name of a variable in a mathematical expression or programming context
-• video     → Embeds video playbacks in documents
-• wbr       → Injects word breaks
-• xmp       → Renders HTML syntax as raw text in `monospace` font (i.e.: HTML Example Element)
+• object     → Represents an external resource, which can be treated as an image, a nested browsing context, or a resource to be handled by a plugin
+• ol         → Ordered list
+• optgroup   → Group of options within a `<select>` element
+• option     → Item within a `<datalist>`, `<optgroup>` or `<select>` element
+• output     → Container for the result of an external app
+• p          → Paragraph
+• param      → Parameters for an `<object>` element
+• picture    → Contains multiple `<source>` elements and a single `<img>` to provide alternative versions of an image for differing devices/ viewports
+• plaintext  → Renders HTML syntax as raw text
+• pre        → Pre-formatted text
+• progress   → Indicator showing completion progress of a task
+• q          → Specifies inline quotation
+• rb         → Delimits base text components of `<ruby>` elements
+• rp         → Provides fallback parenthesis for browsers that do not support display of ruby annotations using the `<ruby>` element
+• rt         → Specifies ruby text component of a ruby annotation. Which is used to provide pronunciation, translation or transliteration information for East-Asian typography
+• rtc        → Embraces semantic annotations of characters presented in a ruby of `<rb>` elements inside a `<ruby>` element
+• ruby       → Represents a ruby annotation
+• s          → Renders text with a strike-through
+• samp       → Encloses inline text with sample (or quoted) output from a computer program
+• script     → Embed or reference executable code (which is typically JavaScript code)
+• section    → Standalone-section
+• select     → Provides a menu of options
+• shadow     → Used as a shadow DOM insertion point
+• small      → Represents minimal font-sized text
+• source     → Specifies multiple media resources for the `<audio>`, `<picture>` or `<video>` element
+• spacer     → Inserts empty spaces on pages (made by Netscape, so ignore it…)
+• span       → Generic inline container for phrasing content
+• strike     → Strikes a line through over text
+• strong     → Indicates content with strong importance
+• style      → Style information for a document
+• sub        → Renders subscript text
+• summary    → Caption for a `<details>` element
+• sup        → Renders superscript text
+• table      → Represents tabular data (information within a table)
+• tbody      → Set of table rows composing the body of a table
+• td         → Represents the cell of a table
+• template   → Holds HTML that is only rendered via JavaScript
+• textarea   → Multi-line plaintext editing control
+• tfoot      → Set of table rows composing the footer of a table
+• th         → Represents the header or identifier cell of a table
+• thead      → Set of table rows composing the header of a table
+• time       → Represents time-based content
+• title      → Title of the document
+• tr         → Groups of cells of a table. Row within a table
+• track      → Child of `<audio>` or `<video>` element that allows specified timed text tracks
+• tt         → Creates inline text that uses the `monospace` font face (i.e.: HTML Teletype Text Element)
+• u          → Inline text with non-textual annotation (HTML Unarticulated Annotation Element)
+• ul         → Unordered list
+• var        → Denotes name of a variable in a mathematical expression or programming context
+• video      → Embeds video playbacks in documents
+• wbr        → Injects word breaks
+• xmp        → Renders HTML syntax as raw text in `monospace` font (i.e.: HTML Example Element)

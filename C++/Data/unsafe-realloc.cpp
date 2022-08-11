@@ -17,7 +17,7 @@ int main(void) {
   std::size_t length = 0u;
   bool moved = false;
 
-  // keep reallocating additinoal memory until the `array` block "moves"
+  // keep reallocating additional memory until the `array` block "moves"
   for (Object *buffer; false == moved; ++length) {
     std::size_t const newLength = base * (length + 1u);
     std::ptrdiff_t const offset = base * length;
