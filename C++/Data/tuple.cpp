@@ -377,8 +377,8 @@ constexpr decltype(std::declval<tuple<types...> const /* volatile */&&>().operat
 /* Main */
 int main(int, char*[]) /* noexcept */ {
   // ->> accessing different members (an explicit/ implicit cast is necessary)
-  constexpr tuple<int, float, int, int> object = {1, 2.5f, 3 /* default-initialized... */};
-  std::printf("[01]: {%i, %f, %i, %i}" "\r\n", object[0].operator int&(), object[1].operator float&(), object[2].operator int&(), object[3].operator int&());
+  constexpr tuple<char, float, int, int> object = {'1', 2.5f, 3 /* default-initialized... */};
+  std::printf("[01]: {%c, %f, %i, %i}" "\r\n", object[0].operator char&(), object[1].operator float&(), object[2].operator int&(), object[3].operator int&());
 
   // ->> accessing members of compatible types (copies, convertibles, ...)
   std::printf("[02]: %i"  "\r\n", tuple<int>{4}[0].operator int());
