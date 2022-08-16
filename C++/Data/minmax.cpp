@@ -12,7 +12,6 @@
 #if defined(__clang__)
 # pragma clang diagnostic ignored "-Wc++17-compat-mangling"
 #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
-# pragma warning (push)
 # pragma warning (disable: 177)
 # pragma warning (disable: 383)
 # pragma warning (disable: 3346)

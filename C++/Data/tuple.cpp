@@ -56,6 +56,11 @@ namespace {
     };
 
     // ...
+    struct first final {
+      typedef typename at<0u>::type type;
+    };
+
+    // ...
     template <typename type>
     struct has final {
       private:
@@ -79,6 +84,11 @@ namespace {
 
       public:
         static bool const value = valueof<bases...>::value;
+    };
+
+    // ...
+    struct last final {
+      typedef typename at<sizeof...(bases) - (0u != sizeof...(bases))>::type type;
     };
 
     // ...
@@ -106,6 +116,27 @@ namespace {
 
     /* ... */
     static std::size_t const length = sizeof...(bases);
+  };
+
+  // ...
+  template <std::size_t value>
+  struct sequence final {
+    private:
+      template <std::size_t...>
+      struct valueof;
+
+      template <std::size_t... subvalues>
+      struct valueof<0u, subvalues...> final {
+        typedef ::collection<0u, subvalues...> type;
+      };
+
+      template <std::size_t subvalue, std::size_t... subvalues>
+      struct valueof<subvalue, subvalues...> final {
+        typedef typename valueof<subvalue - 1u, subvalue, subvalues...>::type type;
+      };
+
+    public:
+      typedef typename valueof<value>::type collection;
   };
 }
 
@@ -250,8 +281,10 @@ struct tuple<base, bases...> final {
         typedef members<void, void> tuplemembers;
 
         /* ... */
-        constexpr tuplevalue() noexcept {}
+        template <std::size_t... indexes>
+        constexpr tuplevalue(collection<indexes...> const) noexcept {}
 
+        // ...
         template <typename type>
         constexpr tuplemembers operator [](type&&) const volatile noexcept {
           return {};
@@ -269,30 +302,48 @@ struct tuple<base, bases...> final {
         typedef members<subbase, typename tuplevalue<subbases...>::tuplemembers> tuplemembers;
 
         /* ... */
-        constexpr tuplevalue() noexcept :
-          tuplevalue<subbases...>::tuplevalue(),
+        constexpr tuplevalue(collection<0u> const) noexcept :
+          tuplevalue<subbases...>::tuplevalue(collection<0u>{}),
           member()
         {}
 
+        template <std::size_t... indexes>
+        constexpr tuplevalue(collection<0u, 1u, indexes...> const) noexcept :
+          tuplevalue<subbases...>::tuplevalue(collection<0u>{}),
+          member{}
+        {}
+
         template <typename type, typename... types>
-        constexpr tuplevalue(type&& argument, types&&... arguments) noexcept :
-          tuplevalue<subbases...>::tuplevalue(std::forward<types>(arguments)...),
+        constexpr tuplevalue(collection<0u> const, type&& argument, types&&... arguments) noexcept :
+          tuplevalue<subbases...>::tuplevalue(typename sequence<std::is_array<subbase>::value * std::extent<typename pack<typename std::remove_reference<types>::type..., void>::first::type>::value>::collection{}, std::forward<types>(arguments)...),
           member(std::forward<type>(argument))
         {}
 
+        template <std::size_t... indexes, typename type, std::size_t capacity, typename... types>
+        constexpr tuplevalue(collection<0u, 1u, indexes...> const, type (&argument)[capacity], types&&... arguments) noexcept :
+          tuplevalue<subbases...>::tuplevalue(typename sequence<std::is_array<subbase>::value * std::extent<typename pack<typename std::remove_reference<types>::type..., void>::first::type>::value>::collection{}, std::forward<types>(arguments)...),
+          member{*argument, argument[indexes - 1u]...}
+        {}
+
+        template <std::size_t... indexes, typename type, std::size_t capacity, typename... types>
+        constexpr tuplevalue(collection<0u, 1u, indexes...> const, type (&&argument)[capacity], types&&... arguments) noexcept :
+          tuplevalue<subbases...>::tuplevalue(typename sequence<std::is_array<subbase>::value * std::extent<typename pack<typename std::remove_reference<types>::type..., void>::first::type>::value>::collection{}, std::forward<types>(arguments)...),
+          member{static_cast<type&&>(*argument), static_cast<type&&>(argument[indexes - 1u])...}
+        {}
+
         // ...
-        constexpr tuplemembers operator [](std::size_t const index) const volatile noexcept {
+        constexpr tuplemembers operator [](std::size_t const index) const /* volatile */ noexcept {
           return 0u == index
           ? tuplemembers{index, const_cast<subbase&>(const_cast<subbase const volatile&>(this -> member))}
           : tuplemembers{index, this -> tuplevalue<subbases...>::operator [](index - 1u)};
         }
 
-        constexpr subbase& operator [](std::integral_constant<std::size_t, 0u> const) const volatile noexcept {
+        constexpr subbase& operator [](std::integral_constant<std::size_t, 0u> const) const /* volatile */ noexcept {
           return const_cast<subbase&>(this -> member);
         }
 
         template <std::size_t index>
-        constexpr decltype(std::declval<tuplevalue<subbases...> const volatile&>().operator [](std::integral_constant<std::size_t, index - 1u>{})) operator [](std::integral_constant<std::size_t, index> const) const volatile noexcept {
+        constexpr decltype(std::declval<tuplevalue<subbases...> const /* volatile */&>().operator [](std::integral_constant<std::size_t, index - 1u>{})) operator [](std::integral_constant<std::size_t, index> const) const /* volatile */ noexcept {
           return this -> tuplevalue<subbases...>::operator [](std::integral_constant<std::size_t, index - 1u>{});
         }
     };
@@ -303,23 +354,23 @@ struct tuple<base, bases...> final {
   public:
     template <typename... types>
     constexpr tuple(types&&... arguments) noexcept :
-      value(std::forward<types>(arguments)...)
+      value(typename sequence<std::is_array<base>::value * std::extent<typename pack<typename std::remove_reference<types>::type..., void>::first::type>::value>::collection{}, std::forward<types>(arguments)...)
     {}
 
     // ...
     template <typename type>
-    constexpr decltype(std::declval<decltype(tuple::value)>().operator [](std::declval<type>())) operator [](type&& index) const volatile noexcept {
+    constexpr decltype(std::declval<decltype(tuple::value)>().operator [](std::declval<type>())) operator [](type&& index) const /* volatile */ noexcept {
       return this -> value.operator [](std::forward<type>(index));
     }
 };
 
 template <std::size_t index, typename... types>
-constexpr decltype(std::declval<tuple<types...> const volatile&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const volatile& tuple) noexcept {
+constexpr decltype(std::declval<tuple<types...> const /* volatile */&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const /* volatile */& tuple) noexcept {
   return tuple.operator [](std::integral_constant<std::size_t, index>{});
 }
 
 template <std::size_t index, typename... types>
-constexpr decltype(std::declval<tuple<types...> const volatile&&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const volatile&& tuple) noexcept {
+constexpr decltype(std::declval<tuple<types...> const /* volatile */&&>().operator [](std::integral_constant<std::size_t, index>{})) get(tuple<types...> const /* volatile */&& tuple) noexcept {
   return tuple.operator [](std::integral_constant<std::size_t, index>{});
 }
 
