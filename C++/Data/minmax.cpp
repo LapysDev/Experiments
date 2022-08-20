@@ -82,7 +82,7 @@ struct assess_greater_than_equals<baseA, baseB, decltype(static_cast<void>(insta
 };
 
 // ...
-template <typename baseA, typename baseB, typename = baseA>
+template <typename baseA, typename, typename = baseA>
 struct assess_instantiate final {
   static bool const value = false;
 };
@@ -827,10 +827,10 @@ constexpr decltype(max(instanceof<typeA&&>(), instanceof<typeB&&>())) max(typeA&
 }
 
 template <typename typeA, typename typeB>
-constexpr typename conditional<is_void<typename pack<typeA, typeB>::common::type>::value, typeA, typename pack<typeA, typeB>::common::type>::type&& max(typeA&& objectA, typeB&& objectB, bool (*const comparator)(typeA&&, typeB&&)) noexcept(noexcept((NULL == comparator || comparator == static_cast<bool (*)(typeA&&, typeB&&) noexcept>(&max_compare)) && noexcept(max_compare(instanceof<typeA&&>(), instanceof<typeB&&>())))) {
+constexpr typename conditional<is_void<typename pack<typeA, typeB>::common::type>::value, typeB, typename pack<typeA, typeB>::common::type>::type&& max(typeA&& objectA, typeB&& objectB, bool (*const comparator)(typeA&&, typeB&&)) noexcept(noexcept((NULL == comparator || comparator == static_cast<bool (*)(typeA&&, typeB&&) noexcept>(&max_compare)) && noexcept(max_compare(instanceof<typeA&&>(), instanceof<typeB&&>())))) {
   return (NULL == comparator || comparator == static_cast<bool (*)(typeA&&, typeB&&) noexcept>(&max_compare) ? static_cast<bool (*)(typeA&&, typeB&&)>(&max_compare) : comparator)(pass<typeA>(objectA), pass<typeB>(objectB)) ?
-    (typename conditional<is_void<typename pack<typeA, typeB>::common::type>::value, typeA, typename pack<typeA, typeB>::common::type>::type&&) pass<typeA>(objectA) :
-    (typename conditional<is_void<typename pack<typeA, typeB>::common::type>::value, typeA, typename pack<typeA, typeB>::common::type>::type&&) pass<typeB>(objectB);
+    (typename conditional<is_void<typename pack<typeA, typeB>::common::type>::value, typeB, typename pack<typeA, typeB>::common::type>::type&&) pass<typeA>(objectA) :
+    (typename conditional<is_void<typename pack<typeA, typeB>::common::type>::value, typeB, typename pack<typeA, typeB>::common::type>::type&&) pass<typeB>(objectB);
 }
 
 #ifdef __cpp_noexcept_function_type
