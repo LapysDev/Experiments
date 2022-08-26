@@ -7,29 +7,42 @@
 #include <stdint.h>
 #include <version>
 
-/* ... */
-template <typename = void>
+/* Trait */
 struct null /* final */ {
   template <typename base>
-  struct constant /* final */ {
-    #ifdef __cpp_constexpr
-      constexpr
-    #endif
+  struct constant {
     static base const value = 0;
   };
 
-  template <typename base>
-  struct constant<base*> /* final */ {
-    static base const value = NULL;
-  };
+  #if __cplusplus >= 201103L
+    template <typename base>
+    struct constant<base*> {
+      constexpr static base *value = nullptr;
+    };
+  #elif defined(__cpp_constexpr)
+    template <typename base>
+    struct constant<base*> {
+      constexpr static base *value = NULL;
+    };
+  #else
+    template <typename base>
+    struct constant<base (*)(std::size_t)> {
+      static base value(std::size_t const) /* throw() */;
+    };
+
+    template <typename baseA, typename baseB>
+    struct constant<baseA (*)(baseB, std::size_t)> {
+      static baseA value(baseB const, std::size_t const) /* throw() */;
+    };
+  #endif
 };
 
 // ...
-template <bool, typename, typename = null<> >
+template <bool, typename, typename = null const volatile>
 struct conditional;
 
 template <typename base>
-struct conditional<false, base, null<> > /* final */ {};
+struct conditional<false, base, null const volatile> /* final */ {};
 
 template <typename baseA, typename baseB>
 struct conditional<false, baseA, baseB> /* final */ {
@@ -238,11 +251,6 @@ struct is_scalar<wchar_t> /* final */ {
   static bool const value = true;
 };
 
-template <>
-struct is_scalar<std::nullptr_t> /* final */ {
-  static bool const value = true;
-};
-
 template <typename base>
 struct is_scalar<base*> /* final */ {
   static bool const value = true;
@@ -292,6 +300,13 @@ template <class object, typename base>
 struct is_scalar<object base::* volatile> /* final */ {
   static bool const value = true;
 };
+
+#if __cplusplus >= 201103L
+  template <>
+  struct is_scalar<std::nullptr_t> /* final */ {
+    static bool const value = true;
+  };
+#endif
 
 // ...
 template <typename>
@@ -368,190 +383,149 @@ inline type instanceof(); /* noexcept */
   }
 #endif
 
-/* Class */
-#ifndef ARRAY_REF_INITIAL_COUNT
-# define ARRAY_REF_INITIAL_COUNT 31u
+/* Constant */
+enum
+#if __cplusplus >= 201103L
+  : std::size_t
 #endif
+{ ARRAY_REF_INITIAL_COUNT = 31u };
 
 #ifndef ARRAY_SOO_SIZE
-# define ARRAY_SOO_SIZE maxof<128u / CHAR_BIT, sizeof(long double), sizeof(uintmax_t), sizeof(void*), sizeof(void (*)()), sizeof(void (null<>::*)())>::value - (sizeof(std::size_t) / sizeof(base))
+# define ARRAY_SOO_SIZE (maxof<128u / CHAR_BIT, sizeof(long double), sizeof(uintmax_t), sizeof(void*), sizeof(void (*)()), sizeof(void (null::*)())>::value - sizeof(std::size_t)) / sizeof(base)
 #endif
 
+/* Class */
 template <typename base,
   // ->> user-specified automatic-allocated elements, or otherwise type-specific Small-Object-Optimization
   std::size_t = 0u,
 
   // ->> allow for (compile-time) custom memory management functions
   typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)
-  = null<>::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value,
+  = null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value,
 
-  void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*)
-  = null<>::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*)>::value,
+  void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)
+  = null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value,
 
-  typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*, std::size_t)
-  = null<>::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*, std::size_t)>::value,
-
-  // ->> internal or user-facing namespace
-  bool = true
+  typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)
+  = null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value
 > class Array;
 
-template <
-  typename    base,
-  std::size_t capacity,
-  typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)  (std::size_t),
-  void                                                                                                 (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[]),
-  typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)
-> class Array<base, capacity, allocator, deallocator, reallocator, false> {
+template <>
+class Array<null> {
   protected:
-    static void *AUTOMATIC[(std::size_t) (ARRAY_REF_INITIAL_COUNT)], **DYNAMIC; // ->> Register C++98 `Array`s for their dynamically-computed `length`s
-    static void *BUFFER;                                                        // ->> Memory bucket for trivially-copyable types using the default allocators ie: `std::malloc(...)`
-
-    /* ... */
-    template <typename subbase>
-    union is_soo_optimized {
-      static bool const value = 0u == capacity && (is_reference<subbase>::value || is_scalar<subbase>::value || is_trivially_copyable<subbase>::value);
-    };
-
     /* ... ->> container for "array-of-reference" elements */
-    template <typename subbase>
+    template <typename base>
     union reference {
       private:
         // ... ->> allow `reference`s exist in `union` containers
-        typename remove_reference<subbase>::type *const value;
+        typename remove_reference<base>::type *const value;
 
       public:
         #ifdef __cpp_constexpr
           constexpr
         #endif
-        inline reference(subbase reference) /* noexcept */ :
-          value(&(subbase&) reference)
+        inline reference(base const reference) /* noexcept */ :
+          value(&(base&) reference)
         {}
 
         // ...
         #ifdef __cpp_constexpr
           constexpr
         #endif
-        inline operator subbase() const /* volatile noexcept */ {
-          return (subbase) *(this -> value);
+        inline operator base() const /* volatile noexcept */ {
+          return (base) *(this -> value);
         }
     };
 
-    // ... ->> container for possible `Array` array-member
-    template <typename subbase, std::size_t, bool referrable = is_reference<subbase>::value, bool = is_scalar<subbase>::value || is_trivially_copyable<subbase>::value, bool soo_optimized = false>
-    struct automatic {
+    // ...
+    template <class Array, bool /* membered */, bool inherited = false>
+    struct length {
       private:
-        template <typename type, bool>
-        struct members;
+        inline Array& getFromBuffer() const /* volatile noexcept */;
 
-        template <typename type>
-        struct members<type, false> /* final */ {
-          // ->> allow modification of non-`const`-qualified `base`s through their `const`-qualified `Array` (through `launder(...)`ing)
-          union {
-            type         elements  [capacity];
-            type mutable modifiable[capacity];
-          };
-        };
-
-        template <typename type>
-        struct members<type, true> /* final */ {
-          union {
-            type         elements  [capacity];
-            type mutable modifiable[capacity];
-          };
-
-          std::size_t length;
-        };
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline Array& get() const /* volatile noexcept */ {
+          return inherited ? *(static_cast<length<Array, true> const /* volatile */*>(this) -> array) : this -> getFromBuffer();
+        }
 
       public:
-        union {
-          #if __cplusplus < 201103L
-            members<typename conditional<referrable, reference<subbase>, subbase>::type, false> initializer;
-          #endif
-          members<typename conditional<referrable, reference<subbase>, subbase>::type, soo_optimized> value;
-        };
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator =(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator +=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() + length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator -=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() - length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator *=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() * length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator /=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() / length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator &=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() & length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator |=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() | length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator ^=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() ^ length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator <<=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() << length); return *this; }
+
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length& operator >>=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() >> length); return *this; }
 
         // ...
         #ifdef __cpp_constexpr
           constexpr
         #endif
-        inline std::size_t lengthof() const volatile /* noexcept */ {
-          return capacity;
-        }
+        inline operator std::size_t() const /* volatile noexcept */ { return this -> get().automatic.lengthof() + this -> get().dynamic.lengthof(); }
     };
 
-    template <typename subbase, bool referrable, bool trivial>
-    struct automatic<subbase, 0u, referrable, trivial, false> /* final */ : public automatic<subbase, ARRAY_SOO_SIZE, referrable, trivial, true> {
-      #if __cplusplus >= 201103L
-        private:
-          struct delegator /* final */ {};
-
-          /* ... */
-          template <std::size_t... rest, typename... types>
-          constexpr automatic(delegator const, collection<rest...> const, types&&... elements) noexcept :
-            automatic<subbase, ARRAY_SOO_SIZE, referrable, trivial, true>::automatic{
-              pass<types>(elements)...,
-              (static_cast<void>(rest), typename conditional<referrable, reference<subbase>, subbase>::type())...,
-              sizeof...(elements)
-            }
-          {}
-
-          template <typename... types>
-          constexpr automatic(delegator (*const)[false + 1], types&&...) noexcept;
-
-          template <typename... types>
-          constexpr automatic(delegator (*const)[true + 1], types&&... elements) noexcept :
-            automatic(delegator{}, typename sequence<ARRAY_SOO_SIZE - sizeof...(elements)>::collection{}, pass<types>(elements)...)
-          {}
-
-        public:
-          template <typename... types>
-          constexpr automatic(types&&... elements) noexcept :
-            automatic(static_cast<delegator (*)[(ARRAY_SOO_SIZE >= sizeof...(elements)) + 1u]>(NULL), pass<types>(elements)...)
-          {}
-
-          // ...
-          constexpr std::size_t lengthof() const /* volatile */ noexcept {
-            return this -> value.length;
-          }
-      #else
-        inline std::size_t lengthof() const /* volatile */ throw() {
-          // ->> assumed `launder(...)`ed into validity for access
-          return this -> value.length;
-        }
-      #endif
+    template <class Array>
+    struct length<Array, true> /* final */ : public length<Array, false, true> {
+      private:
+        Array *array;
     };
 
-    template <typename subbase>
-    struct automatic<subbase, 0u, false, false, false> /* final */ {};
-
-    // ... ->> container for dynamically-allocated `Array` elements
-    template <typename base>
-    union dynamic {
-      union {
-        typename conditional<is_reference<base>::value, reference<base>, base>::type *elements;
-      } value;
-
-      /* ... */
-      #ifdef __cpp_constexpr
-        constexpr
-      #endif
-      inline std::size_t lengthof() const /* volatile noexcept */ {
-        return NULL != this -> value.elements ? *launder(reinterpret_cast<std::size_t*>(this -> value.elements)) : 0u;
-      }
-    };
-
-    // ... ->> for range-based `for` loops
+    // ... ->> intended for range-based `for` loops only
     #ifdef __cpp_range_based_for
-      template <typename subbase, std::size_t subcapacity, decltype(allocator) suballocator, decltype(deallocator) subdeallocator, decltype(reallocator) subreallocator>
+      template <class Array>
       struct iterator /* final */ {
-        Array<subbase, subcapacity, suballocator, subdeallocator, subreallocator> *const array;
-        std::size_t index;
+        Array *const array;
+        std::size_t  index;
 
         /* ... */
         #ifdef __cpp_constexpr
           constexpr
         #endif
-        inline decltype(instanceof<Array<subbase, subcapacity, suballocator, subdeallocator, subreallocator> >() -> at(instanceof<std::size_t>())) operator *() const /* noexcept */ {
+        inline decltype(instanceof<Array>() -> at(instanceof<std::size_t>())) operator *() const /* noexcept */ {
           return this -> array -> at(this -> index);
         }
 
@@ -572,329 +546,280 @@ template <
       };
     #endif
 
-    /* ... */
-    #ifdef __cpp_constexpr
-      constexpr
-    #endif
-    inline static typename conditional<NULL != allocator, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*, null<> >::type allocate(std::size_t const count) /* noexcept(noexcept(allocator(count))) */ {
-      return allocator(count);
-    }
-
-    inline static typename conditional<NULL == allocator, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*, null<> >::type allocate(std::size_t const count) /* noexcept */ {
-      // ... ->> allocate zero-bit'ed memory
-      return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::calloc(count, sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
-    }
-
-    // ...
-    #ifdef __cpp_constexpr
-      constexpr
-    #endif
-    inline static void deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const) /* noexcept(noexcept(deallocator(address))) */ {
-      deallocator(address);
-    }
-
-    inline static void deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept */ {
-      // ... ->> scrub the released memory (with zeroes)
-      std::fill(const_cast<void volatile*>(static_cast<void const volatile*>(address + 0)), const_cast<void volatile*>(static_cast<void const volatile*>(address + count)), static_cast<unsigned char const&>(0x0u));
-      std::free(const_cast<void*>(static_cast<void const volatile*>(address)));
-    }
-
-    // ...
-    #ifdef __cpp_constexpr
-      constexpr
-    #endif
-    inline static typename conditional<NULL != reallocator, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*, null<> >::type reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept(noexcept(reallocator(address, count))) */ {
-      return reallocator(address, count);
-    }
-
-    inline static typename conditional<NULL == reallocator, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*, null<> >::type reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept */ {
-      return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::realloc(const_cast<void*>(static_cast<void const volatile*>(address)), count * sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
-    }
-
-    /* ... ->> prevent `automatic` member from redundantly occupying storage */
-    #ifdef _MSC_VER
-      [[msvc::no_unique_address]]
-    #elif __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
-      [[no_unique_address]]
-    #endif
-    automatic<base, capacity> automatic;
-};
-
-template <
-  typename    base,
-  std::size_t capacity,
-  typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)  (std::size_t),
-  void                                                                                                 (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[]),
-  typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)
->
-#if __cplusplus >= 201103L
-  class Array : private Array<base, capacity, allocator, deallocator, reallocator, false> {
-    private:
-      dynamic<base> dynamic;
-
-    public:
-      union length {
-        Array *array;
-
-        /* ... */
-        constexpr length& operator =  (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(length); return *this; }
-        constexpr length& operator += (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value +  length); return *this; }
-        constexpr length& operator -= (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value -  length); return *this; }
-        constexpr length& operator *= (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value *  length); return *this; }
-        constexpr length& operator /= (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value /  length); return *this; }
-        constexpr length& operator &= (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value &  length); return *this; }
-        constexpr length& operator |= (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value |  length); return *this; }
-        constexpr length& operator ^= (std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value ^  length); return *this; }
-        constexpr length& operator <<=(std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value << length); return *this; }
-        constexpr length& operator >>=(std::size_t const length) const /* volatile */ noexcept { this -> array -> resize(this -> value >> length); return *this; }
-
-        constexpr operator std::size_t() const /* volatile */ noexcept { return this -> array.automatic.lengthof() + this -> array.dynamic.lengthof(); }
-      } const length;
-
-    /* ... */
-    private:
-      template <std::size_t... indexesA, std::size_t... indexesB, typename... types>
-      constexpr Array(collection<0u, indexesA...> const, collection<0u, indexesB...> const, types&&... elements) noexcept :
-        automatic{at<indexesA - 1u>(pass<types>(elements))...},
-        dynamic  {NULL},
-        length   {this -> add(at<capacity + (indexesB - 1u)>(pass<types>(elements))...), this}
-      { /* ->> C++11 `constexpr` constructor body must be empty */ }
-
-      template <typename... types>
-      constexpr Array(bool (*const)[true + 1], types&&... elements) noexcept :
-        Array<base, capacity>::Array(
-          typename sequence<capacity>                      ::collection{},
-          typename sequence<sizeof...(elements) - capacity>::collection{},
-          pass<types>(elements)...
-        )
-      {}
-
-      template <typename... types>
-      constexpr Array(bool (*const)[false + 1], types&&... elements) noexcept :
-        automatic{pass<types>(elements)...},
-        dynamic  {NULL},
-        length   {this}
-      {}
+    // ... ->> container for dynamically-allocated `Array` elements
+    template <typename base>
+    union dynamic {
+      struct /* final */ {
+        typename conditional<is_reference<base>::value, reference<base>, base>::type *elements;
+        std::size_t                                                                   length;
+      } value;
 
       /* ... */
-      inline bool grow(std::size_t count) /* volatile */ noexcept {
-        typedef typename conditional<is_reference<base>::value, reference<base>, base>::type type;
-        void *allocation;
+      #ifdef __cpp_constexpr
+        constexpr
+      #endif
+      inline std::size_t lengthof() const /* volatile noexcept */ {
+        return this -> length;
+      }
+    };
+
+    // ... ->> container for possible `Array` array-member
+    template <typename base, std::size_t capacity, bool referrable = is_reference<base>::value, bool = is_scalar<base>::value || is_trivially_copyable<base>::value, bool = 0u != (ARRAY_SOO_SIZE), bool soo_optimized = false>
+    struct automatic {
+      static std::size_t const maximum = capacity;
+
+      private:
+        template <bool, typename>
+        struct members;
+
+        template <typename dummy>
+        struct members<false, dummy> /* final */ {
+          // ->> allow modification of non-`const`-qualified `base`s through
+          union {
+            typename conditional<referrable, reference<base>, base>::type         elements  [capacity];
+            typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
+          };
+        };
+
+        template <typename dummy>
+        struct members<true, dummy> /* final */ {
+          // -- their `const`-qualified `Array` (through `launder(...)`ing)
+          union {
+            typename conditional<referrable, reference<base>, base>::type         elements  [capacity];
+            typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
+          };
+
+          std::size_t length;
+        };
+
+      public:
+        union {
+          #if __cplusplus < 201103L
+            // ->> dummy members for C++98 aggregate-initialization;
+            //       C++11 and after may use constructors compatible with initializer-lists and such
+            members<false, void> initializer;
+          #endif
+          members<soo_optimized, void> value;
+        };
 
         // ...
-        if (NULL == this -> dynamic.value) {
-          if (SIZE_MAX == capacity) return false;
-          allocation = allocator(sizeof(std::size_t) + sizeof(std::size_t) + alignof(type) + (count * sizeof(type)));
-
-          if (NULL == allocation) return false;
-          ::new (allocation) std::size_t(0u);
-          ::new (allocation) std::size_t(count);
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline std::size_t lengthof() const volatile /* noexcept */ {
+          return capacity;
         }
+    };
 
-        else if (SIZE_MAX - capacity < count)
-          return false;
+    template <typename base, bool referrable, bool trivial>
+    struct automatic<base, 0u, referrable, trivial, true, false> /* final */ : public automatic<base, (ARRAY_SOO_SIZE), referrable, trivial, true> {
+      #if __cplusplus >= 201103L
+        private:
+          template <std::size_t... rest, typename... types>
+          constexpr automatic(null const, collection<rest...> const, types&&... elements) noexcept :
+            automatic<base, (ARRAY_SOO_SIZE), referrable, trivial, true>::automatic{
+              pass<types>(elements)...,
+              (static_cast<void>(rest), typename conditional<referrable, reference<base>, base>::type())...,
+              sizeof...(elements) // ->> initialize additional `soo_optimized` `automatic::length` member
+            }
+          {}
 
-        else for (std::size_t (&metadata)[2] = *launder(reinterpret_cast<std::size_t (*)[2]>(+(this -> dynamic))); metadata[1] < count + metadata[0]; ) {
-          /* constexpr */ void* (*const function)(void*, std::size_t) = reallocator;
+          template <typename... types>
+          constexpr automatic(null (*const)[false + 1], types&&...) noexcept;
 
-          // ... ->> reallocate memory for the dynamically-allocated elements
-          count += *metadata;
+          template <typename... types>
+          constexpr automatic(null (*const)[true + 1], types&&... elements) noexcept :
+            automatic(null(), typename sequence<(ARRAY_SOO_SIZE) - sizeof...(elements)>::collection{}, pass<types>(elements)...)
+          {}
 
-          if (NULL != function && (allocator == &std::malloc) == (function == &std::realloc)) {
-            allocation = reallocator((void*) this -> dynamic, sizeof(std::size_t[2]) + alignof(type) + (count * sizeof(type)));
-            if (NULL != allocation) break;
+        public:
+          template <typename... types>
+          constexpr automatic(types&&... elements) noexcept :
+            automatic(static_cast<null (*)[((ARRAY_SOO_SIZE) >= sizeof...(elements)) + 1]>(NULL), pass<types>(elements)...)
+          {}
+
+          // ...
+          constexpr std::size_t lengthof() const /* volatile */ noexcept {
+            return this -> value.length;
           }
-
-          // ... ->> "transfer" all dynamically-allocated elements to a more fitting memory region (hope copying/ destructing is cost-effective)
-          allocation = allocator(sizeof(std::size_t[2]) + alignof(type) + ((capacity + count) * sizeof(type)));
-          if (NULL == allocation) return false;
-
-          for (unsigned char *element = reinterpret_cast<unsigned char*>(::new (allocation) std::size_t[2] {*metadata, capacity + count} + 2); ; ++element)
-          if (0u == (element - static_cast<unsigned char*>(allocation)) % alignof(type)) {
-            count           = *metadata;
-            this -> dynamic = reinterpret_cast<type*>(reinterpret_cast<unsigned char*>(+(this -> dynamic)) + (element - static_cast<unsigned char*>(allocation)));
-
-            for (; count--; ++(this -> dynamic), element += sizeof(type)) {
-              ::new (element) type(*launder(+(this -> dynamic)));
-              this -> dynamic -> ~type();
-            }
-
-            // ... ->> near-consistently apply the "transfer" to the automatically-allocated elements, as well
-            deallocator((void*) this -> dynamic);
-            this -> dynamic = this -> automatic;
-
-            for (count = capacity; count--; ++(this -> dynamic), element += sizeof(type)) {
-              ::new (element) type(*(this -> dynamic));
-              this -> dynamic -> ~type();
-            }
-
-            // ...
-            this -> dynamic = this -> automatic;
-            element        -= capacity * sizeof(type);
-
-            for (count = capacity; count--; ++(this -> dynamic), element += sizeof(type)) {
-              ::new (this -> dynamic) type(*launder(reinterpret_cast<type*>(element)));
-              launder(reinterpret_cast<type*>(element)) -> ~type();
-            }
-
-            break;
-          }
-
-          break;
+      #else
+        inline std::size_t lengthof() const /* volatile */ throw() {
+          // ->> assumed `launder(...)`ed into validity for access
+          return this -> value.length;
         }
+      #endif
+    };
 
-        // ...
-        this -> dynamic = static_cast<type*>(allocation);
-        return true;
-      }
+    template <typename base>
+    struct automatic<base, 0u, false, false, false, false> /* final */ {
+      static std::size_t const maximum = 0u;
+    };
 
-      // ...
-      constexpr bool push(typename conditional<is_reference<base>::value, reference<base>, base>::type[], std::size_t&) /* volatile */ noexcept {
-        return true;
-      }
+    template <typename base>
+    struct automatic<base, 0u, false, false, true, false> /* final */ {
+      static std::size_t const maximum = 0u;
+    };
 
-      template <typename type, typename... types>
-      constexpr bool push(typename conditional<is_reference<base>::value, reference<base>, base>::type dynamic[], std::size_t& length, type&& element, types&&... elements) /* volatile */ noexcept {
-        return this -> push(::new (dynamic) typename conditional<is_reference<base>::value, reference<base>, base>::type(pass<type>(element)) + 1, ++length, pass<types>(elements)...);
-      }
+    // ...
+    template <class>
+    struct members;
+
+    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+    struct members<Array<base, capacity, allocator, deallocator, reallocator> > /* final */ {
+      friend class Array<base, capacity, allocator, deallocator, reallocator>;
+      private:
+        #ifdef _MSC_VER
+          [[msvc::no_unique_address]]
+        #elif __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
+          [[no_unique_address]]
+        #endif
+        automatic<base, capacity> automatic;
+        dynamic  <base>           dynamic;
+    };
+
+    /* ... */
+    static void *AUTOMATIC[(std::size_t) (ARRAY_REF_INITIAL_COUNT)], **DYNAMIC; // ->> Register C++98 `Array`s for their dynamically-computed `length`s
+    static void *BUFFER;                                                        // ->> Memory bucket for trivially-copyable types using the default allocators ie: `std::malloc(...)`
+};
+  void  *Array<null>::AUTOMATIC[(std::size_t) (ARRAY_REF_INITIAL_COUNT)] = {NULL};
+  void  *Array<null>::BUFFER                                             = NULL;
+  void **Array<null>::DYNAMIC                                            = NULL;
+
+template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+class Array /* final */ : private Array<null> {
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t), typename = void>
+  struct is_default_allocator /* final */ {
+    static bool const value = false;
+  };
+
+  template <typename dummy>
+  struct is_default_allocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, dummy> /* final */ {
+    static bool const value = true;
+  };
+
+  // ...
+  template <void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
+  struct is_default_deallocator /* final */ {
+    static bool const value = false;
+  };
+
+  template <typename dummy>
+  struct is_default_deallocator<null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
+    static bool const value = true;
+  };
+
+  // ...
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
+  struct is_default_reallocator /* final */ {
+    static bool const value = false;
+  };
+
+  template <typename dummy>
+  struct is_default_reallocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
+    static bool const value = true;
+  };
+
+  /* ... */
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*suballocator)(std::size_t)>
+  #ifdef __cpp_constexpr
+    constexpr
+  #endif
+  inline static typename conditional<false == is_default_allocator<suballocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type allocate(std::size_t const count) /* noexcept(noexcept(suballocator(count))) */ {
+    return suballocator(count);
+  }
+
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*suballocator)(std::size_t)>
+  inline typename conditional<false != is_default_allocator<suballocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type allocate(std::size_t const count) /* noexcept */ {
+    // ... ->> allocate zero-bit'ed memory
+    return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::calloc(count, sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
+  }
+
+  // ...
+  template <void (*subdeallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+  #ifdef __cpp_constexpr
+    constexpr
+  #endif
+  inline static typename conditional<false == is_default_deallocator<subdeallocator>::value, void>::type deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const) /* noexcept(noexcept(subdeallocator(address))) */ {
+    subdeallocator(address);
+  }
+
+  template <void (*subdeallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+  inline typename conditional<false != is_default_deallocator<subdeallocator>::value, void>::type deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept */ {
+    // ... ->> scrub the released memory (with zeroes)
+    std::fill(const_cast<void volatile*>(static_cast<void const volatile*>(address + 0)), const_cast<void volatile*>(static_cast<void const volatile*>(address + count)), static_cast<unsigned char const&>(0x0u));
+    std::free(const_cast<void*>(static_cast<void const volatile*>(address)));
+  }
+
+  // ...
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+  #ifdef __cpp_constexpr
+    constexpr
+  #endif
+  inline static typename conditional<false == is_default_reallocator<subreallocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept(noexcept(subreallocator(address, count))) */ {
+    return subreallocator(address, count);
+  }
+
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+  inline typename conditional<false != is_default_reallocator<subreallocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept */ {
+    return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::realloc(const_cast<void*>(static_cast<void const volatile*>(address)), count * sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
+  }
+
+  #if __cplusplus >= 201103L
+    private: members<Array>             _;
+    public : length <Array, true> const length;
+
+    private:
+      template <typename... types>
+      constexpr Array(null (*const)[false + 1], types&&... elements) noexcept {}
+
+      template <typename... types>
+      constexpr Array(null (*const)[true + 1], types&&... elements) noexcept {}
 
     public:
       template <typename... types>
       constexpr Array(types&&... elements) noexcept :
-        Array<base, capacity>::Array(
-          static_cast<bool (*)[(sizeof...(elements) > capacity) + 1]>(NULL),
-          pass<types>(elements)...
-        )
+        Array<base, capacity, allocator, deallocator, reallocator>::Array(static_cast<null (*)[automatic<base, capacity>::maximum >= sizeof...(elements)]>(NULL), pass<types>(elements)...)
       {}
 
-      /* constexpr */ inline ~Array() noexcept {
-        if (NULL != this -> dynamic)
-        deallocator(this -> dynamic);
-      }
+      inline ~Array() noexcept {}
 
       /* ... */
-      constexpr bool add() const /* volatile */ noexcept {
-        return true;
-      }
-
-      template <typename... types>
-      inline bool add(types&&... elements) /* volatile */ noexcept {
-        if (this -> grow(sizeof...(elements))) {
-          std::size_t (&metadata)[2] = *launder(reinterpret_cast<std::size_t (*)[2]>(+(this -> dynamic)));
-          unsigned char *element     = reinterpret_cast<unsigned char*>(&metadata + 1);
-
-          while (0u != (element - reinterpret_cast<unsigned char*>(+(this -> dynamic))) % alignof(typename conditional<is_reference<base>::value, reference<base>, base>::type)) ++element;
-          return this -> push(reinterpret_cast<typename conditional<is_reference<base>::value, reference<base>, base>::type*>(element) + *metadata, *metadata, pass<types>(elements)...);
-        }
-
-        return false;
-      }
-
-      // ...
-      inline base& at(std::size_t const index) const& /* volatile */ noexcept {
-        if (index < capacity) return (base&) this -> automatic[index];
-        unsigned char *element = reinterpret_cast<unsigned char*>(+(this -> dynamic)) + sizeof(std::size_t[2]);
-
-        while (0u != (element - reinterpret_cast<unsigned char*>(+(this -> dynamic))) % alignof(typename conditional<is_reference<base>::value, reference<base>, base>::type)) ++element;
-        return (base&) *launder(reinterpret_cast<typename conditional<is_reference<base>::value, reference<base>, base>::type*>(element) + (index - capacity));
-      }
-
-      constexpr base&& at(std::size_t const index) const&& /* volatile */ noexcept {
-        return static_cast<base&&>(this -> at(index));
-      }
-
-      // ...
-      constexpr Array<void>::iterator<base, capacity> begin() const /* volatile */ noexcept {
+      constexpr iterator<Array> begin() const /* volatile */ noexcept {
         return {const_cast<Array<base, capacity>*>(this), 0u};
       }
 
       // ...
-      constexpr Array<void>::iterator<base, capacity> end() const /* volatile */ noexcept {
+      constexpr iterator<Array> end() const /* volatile */ noexcept {
         return {NULL, this -> length};
       }
 
       /* ... */
       constexpr base&  operator [](std::size_t const index) const&  /* volatile */ noexcept { return (base&)  this -> at(index); }
       constexpr base&& operator [](std::size_t const index) const&& /* volatile */ noexcept { return (base&&) this -> at(index); }
-  };
-#else
-  class Array : public Array<base, capacity, allocator, deallocator, reallocator, false> {
+  #else
     private:
-      // union length {
-      //   private:
-      //     inline Array* get() const /* volatile */ throw() {}
-
-      //   public:
-      //     inline length& operator =  (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(length); return *this; }
-      //     inline length& operator += (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value +  length); return *this; }
-      //     inline length& operator -= (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value -  length); return *this; }
-      //     inline length& operator *= (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value *  length); return *this; }
-      //     inline length& operator /= (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value /  length); return *this; }
-      //     inline length& operator &= (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value &  length); return *this; }
-      //     inline length& operator |= (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value |  length); return *this; }
-      //     inline length& operator ^= (std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value ^  length); return *this; }
-      //     inline length& operator <<=(std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value << length); return *this; }
-      //     inline length& operator >>=(std::size_t const length) const /* volatile */ throw() { this -> get() -> resize(this -> value >> length); return *this; }
-
-      //     inline operator std::size_t() const /* volatile */ throw() { return capacity + (NULL == this -> get() -> dynamic ? 0u : *launder(reinterpret_cast<std::size_t*>(+(this -> array -> dynamic)))); }
-      // };
-
-      // ...
-      struct members {
-        friend class Array;
-        private:
-          automatic<base, capacity> mutable automatic;
-          dynamic  <base, capacity> dynamic;
-      };
-
-      /* ... */
-      inline void initiate() {
-        // Array<void const>::add(this);
-        // // ... ->> subobjects aren't being initialized here, the `union` storage is incidentally used to instantiate valid objects
-        // // ... ->> -- or `_` is being activated/ initialized by virtue of being written to
-        // // (::new (&this -> _.length) Array<void>::length<base, capacity>) -> array = this;
-
-        // (::new (&this -> _.heaped) Array<void>::dynamic<base, capacity>) -> value = NULL;
-      }
+      inline void initiate() throw() {}
 
     public:
       union {
-        automatic<base, capacity> value;
-        length                    length;
-        members                   _;
+        struct { automatic<base, capacity> _; } initializer;
+        length <Array, false>                   length;
+        members<Array>                          _;
       };
 
       /* ... */
-      inline ~Array() throw() {
-        // this -> initiate();
-        // Array<void const>::remove(this);
-
-        // if (NULL != this -> _.heaped)
-        // deallocator(this -> _.heaped);
-      }
-
-      /* ... */
-  };
-    void  *Array<void>::AUTOMATIC[(std::size_t) (ARRAY_REF_INITIAL_COUNT)] = {NULL};
-    void **Array<void>::DYNAMIC                                            = NULL;
-#endif
-
-#undef ARRAY_REF_INITIAL_COUNT
-#undef ARRAY_SOO_SIZE
+      inline ~Array() throw() {}
+  #endif
+};
 
 /* Main */
+#include <string>
+
 int main(int, char*[]) /* noexcept */ {
-  Array<int> array = {};
-
-  // ...
-  // static_cast<void>(array);
-  for (std::size_t count = 0u; count != 5u; ++count) {
-    if (0u == array.length) array.add(1);
-    else for (std::size_t length = array.length; length--; ) array.add(array[array.length - 1u] + 1);
-
-    std::printf("%1.5s", "[]: {");
-      for (std::size_t index = 0u; index != array.length; ++index)
-      std::printf("%i%s", array[index], index == array.length - 1u ? "" : ", ");
-    std::printf("%1.3s", "}" "\r\n");
-  }
+  std::printf("int                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(int)));
+  std::printf("Array<int>            : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<int>)));
+  std::printf("Array<int, 1u>        : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<int, 1u>)));
+  std::printf("std::string           : %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string)));
+  std::printf("Array<std::string>    : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string>)));
+  std::printf("Array<std::string, 1u>: %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string, 1u>)));
 }
