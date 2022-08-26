@@ -589,7 +589,16 @@ class Array<null> {
             typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
           };
 
-          std::size_t length;
+          typename conditional<(CHAR_BIT * sizeof(capacity) > 64u),
+            std::size_t,
+          typename conditional<(CHAR_BIT * sizeof(capacity) > 32u),
+            uint_fast64_t,
+          typename conditional<(CHAR_BIT * sizeof(capacity) > 16u),
+            uint_fast32_t,
+          typename conditional<(CHAR_BIT * sizeof(capacity) > 8u),
+            uint_fast16_t,
+            uint_fast8_t
+          >::type>::type>::type>::type length;
         };
 
       public:
@@ -612,7 +621,7 @@ class Array<null> {
     };
 
     template <typename base, bool referrable, bool trivial>
-    struct automatic<base, 0u, referrable, trivial, true, false> /* final */ : public automatic<base, (ARRAY_SOO_SIZE), referrable, trivial, true> {
+    struct automatic<base, 0u, referrable, trivial, true, false> /* final */ : public automatic<base, (ARRAY_SOO_SIZE), referrable, trivial, true, true> {
       #if __cplusplus >= 201103L
         private:
           template <std::size_t... rest, typename... types>
