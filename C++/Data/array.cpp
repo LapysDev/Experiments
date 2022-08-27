@@ -445,7 +445,10 @@ template <typename base,
 
 template <>
 class Array<null> {
-  protected:
+  template <typename base, std::size_t, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t), void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+  friend class Array;
+
+  private:
     /* ... ->> container for "array-of-reference" elements */
     template <typename base>
     union reference {
@@ -687,7 +690,7 @@ class Array<null> {
   void **Array<null>::DYNAMIC                                            = NULL;
 
 template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
-class Array /* final */ : private Array<null> {
+class Array /* final */ {
   #if defined(__GNUC__) && false == (defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
   # pragma GCC diagnostic push
   # pragma GCC diagnostic ignored "-Waddress"
@@ -738,8 +741,8 @@ class Array /* final */ : private Array<null> {
   #if __cplusplus >= 201103L
     public:
       union {
-        members<Array> _;
-        length <Array> const length;
+        Array<null>::members<Array> _;
+        Array<null>::length <Array> const length;
       };
 
     /* ... */
@@ -752,19 +755,19 @@ class Array /* final */ : private Array<null> {
 
     public:
       template <typename... types>
-      constexpr Array(types&&... elements) noexcept :
-        Array<base, capacity, allocator, deallocator, reallocator>::Array(static_cast<null (*)[automatic<base, capacity>::maximum >= sizeof...(elements)]>(NULL), pass<types>(elements)...)
+      constexpr Array(types&&... /*elements*/) noexcept //:
+        // Array<base, capacity, allocator, deallocator, reallocator>::Array(static_cast<null (*)[automatic<base, capacity>::maximum >= sizeof...(elements)]>(NULL), pass<types>(elements)...)
       {}
 
       inline ~Array() noexcept {}
 
       /* ... */
-      constexpr iterator<Array> begin() const /* volatile */ noexcept {
+      constexpr Array<null>::iterator<Array> begin() const /* volatile */ noexcept {
         return {const_cast<Array<base, capacity>*>(this), 0u};
       }
 
       // ...
-      constexpr iterator<Array> end() const /* volatile */ noexcept {
+      constexpr Array<null>::iterator<Array> end() const /* volatile */ noexcept {
         return {NULL, this -> length};
       }
 
@@ -777,9 +780,9 @@ class Array /* final */ : private Array<null> {
 
     public:
       union {
-        struct { automatic<base, capacity> _; } initializer;
-        members<Array>                          _;
-        length <Array>                          length;
+        struct { Array<null>::automatic<base, capacity> _; } initializer;
+        Array<null>::members<Array>                          _;
+        Array<null>::length <Array>                          length;
       };
 
       /* ... */
@@ -788,19 +791,7 @@ class Array /* final */ : private Array<null> {
 };
 
 /* Main */
-#include <string>
-
 int main(int, char*[]) /* noexcept */ {
-  struct throwaway {
-    struct { int  elements[1]; uint_fast8_t length; } automatic;
-    struct { int *elements;    std::size_t  length; } dynamic;
-  };
-
-  std::printf("...                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(struct throwaway)));
-  std::printf("int                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(int)));
-  std::printf("Array<int>            : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<int>)));
-  std::printf("Array<int, 1u>        : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<int, 1u>)));
-  std::printf("std::string           : %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string)));
-  std::printf("Array<std::string>    : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string>)));
-  std::printf("Array<std::string, 1u>: %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string, 1u>)));
+  Array<int, 3u> integers = {1, 2, 3};
+  static_cast<void>(integers);
 }
