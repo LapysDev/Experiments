@@ -15,15 +15,39 @@ struct null /* final */ {
   };
 
   #if __cplusplus >= 201103L
-    template <typename base>
-    struct constant<base*> {
-      constexpr static base *value = nullptr;
-    };
+    template <typename base>                    struct constant<base*>                                 /* final */ { constexpr static base *                        value                 = nullptr; };
+    template <typename base>                    struct constant<base* const>                           /* final */ { constexpr static base *const                   value                 = nullptr; };
+    template <typename base>                    struct constant<base* const volatile>                  /* final */ { constexpr static base *const volatile          value                 = nullptr; };
+    template <typename base>                    struct constant<base* volatile>                        /* final */ { constexpr static base *volatile                value                 = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*)              (bases...)>      /* final */ { constexpr static base (*                       value)(bases...)      = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*)              (bases..., ...)> /* final */ { constexpr static base (*                       value)(bases..., ...) = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*const)         (bases...)>      /* final */ { constexpr static base (*const                  value)(bases...)      = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*const)         (bases..., ...)> /* final */ { constexpr static base (*const                  value)(bases..., ...) = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*const volatile)(bases...)>      /* final */ { constexpr static base (*const volatile         value)(bases...)      = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*const volatile)(bases..., ...)> /* final */ { constexpr static base (*const volatile         value)(bases..., ...) = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*volatile)      (bases...)>      /* final */ { constexpr static base (*volatile               value)(bases...)      = nullptr; };
+    template <typename base, typename... bases> struct constant<base (*volatile)      (bases..., ...)> /* final */ { constexpr static base (*volatile               value)(bases..., ...) = nullptr; };
+    template <class object, typename base>      struct constant<base object::*>                        /* final */ { constexpr static base object:: *               value                 = nullptr; };
+    template <class object, typename base>      struct constant<base object::* const>                  /* final */ { constexpr static base object:: *const          value                 = nullptr; };
+    template <class object, typename base>      struct constant<base object::* const volatile>         /* final */ { constexpr static base object:: *const volatile value                 = nullptr; };
+    template <class object, typename base>      struct constant<base object::* volatile>               /* final */ { constexpr static base object:: *volatile       value                 = nullptr; };
   #elif defined(__cpp_constexpr)
-    template <typename base>
-    struct constant<base*> {
-      constexpr static base *value = NULL;
-    };
+    template <typename base>                    struct constant<base*>                                 /* final */ { constexpr static base *                        value                 = NULL; };
+    template <typename base>                    struct constant<base* const>                           /* final */ { constexpr static base *const                   value                 = NULL; };
+    template <typename base>                    struct constant<base* const volatile>                  /* final */ { constexpr static base *const volatile          value                 = NULL; };
+    template <typename base>                    struct constant<base* volatile>                        /* final */ { constexpr static base *volatile                value                 = NULL; };
+    template <typename base, typename... bases> struct constant<base (*)              (bases...)>      /* final */ { constexpr static base (*                       value)(bases...)      = NULL; };
+    template <typename base, typename... bases> struct constant<base (*)              (bases..., ...)> /* final */ { constexpr static base (*                       value)(bases..., ...) = NULL; };
+    template <typename base, typename... bases> struct constant<base (*const)         (bases...)>      /* final */ { constexpr static base (*const                  value)(bases...)      = NULL; };
+    template <typename base, typename... bases> struct constant<base (*const)         (bases..., ...)> /* final */ { constexpr static base (*const                  value)(bases..., ...) = NULL; };
+    template <typename base, typename... bases> struct constant<base (*const volatile)(bases...)>      /* final */ { constexpr static base (*const volatile         value)(bases...)      = NULL; };
+    template <typename base, typename... bases> struct constant<base (*const volatile)(bases..., ...)> /* final */ { constexpr static base (*const volatile         value)(bases..., ...) = NULL; };
+    template <typename base, typename... bases> struct constant<base (*volatile)      (bases...)>      /* final */ { constexpr static base (*volatile               value)(bases...)      = NULL; };
+    template <typename base, typename... bases> struct constant<base (*volatile)      (bases..., ...)> /* final */ { constexpr static base (*volatile               value)(bases..., ...) = NULL; };
+    template <class object, typename base>      struct constant<base object::*>                        /* final */ { constexpr static base object:: *               value                 = NULL; };
+    template <class object, typename base>      struct constant<base object::* const>                  /* final */ { constexpr static base object:: *const          value                 = NULL; };
+    template <class object, typename base>      struct constant<base object::* const volatile>         /* final */ { constexpr static base object:: *const volatile value                 = NULL; };
+    template <class object, typename base>      struct constant<base object::* volatile>               /* final */ { constexpr static base object:: *volatile       value                 = NULL; };
   #else
     template <typename base>
     struct constant<base (*)(std::size_t)> {
@@ -35,6 +59,12 @@ struct null /* final */ {
       static baseA value(baseB const, std::size_t const) /* throw() */;
     };
   #endif
+
+  /* ... */
+  #ifdef __cpp_constexpr
+    constexpr
+  #endif
+  null(...);
 };
 
 // ...
@@ -361,7 +391,10 @@ struct remove_reference<base&> /* final */ {
   using std::launder;
 #else
   template <typename type>
-  inline type* launder(type* const address) noexcept {
+  #ifdef __cpp_constexpr
+    constexpr
+  #endif
+  inline type* launder(type* const address) /* noexcept */ {
     return address;
   }
 #endif
@@ -524,20 +557,28 @@ class Array<null> {
 
         template <typename dummy>
         struct members<false, dummy> /* final */ {
-          // ->> allow modification of non-`const`-qualified `base`s through
-          union {
-            typename conditional<referrable, reference<base>, base>::type         elements  [capacity];
-            typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
-          };
+          #if __cplusplus < 201103L
+            typename conditional<referrable, reference<base>, base>::type mutable elements[capacity];
+          #else
+            // ->> allow modification of non-`const`-qualified `base`s through
+            union {
+              typename conditional<referrable, reference<base>, base>::type         elements  [capacity];
+              typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
+            };
+          #endif
         };
 
         template <typename dummy>
         struct members<true, dummy> /* final */ {
-          // -- their `const`-qualified `Array` (through `launder(...)`ing)
-          union {
-            typename conditional<referrable, reference<base>, base>::type         elements  [capacity];
-            typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
-          };
+          #if __cplusplus < 201103L
+            typename conditional<referrable, reference<base>, base>::type mutable elements[capacity];
+          #else
+            // -- their `const`-qualified `Array` (through `launder(...)`ing)
+            union {
+              typename conditional<referrable, reference<base>, base>::type         elements  [capacity];
+              typename conditional<referrable, reference<base>, base>::type mutable modifiable[capacity];
+            };
+          #endif
 
           typename conditional<(CHAR_BIT * sizeof(capacity) > 64u),
             std::size_t,
@@ -584,7 +625,7 @@ class Array<null> {
           {}
 
           template <typename... types>
-          constexpr automatic(null (*const)[false + 1], types&&...) noexcept;
+          constexpr automatic(null (*const)[false + 1], types&&...) noexcept = delete;
 
           template <typename... types>
           constexpr automatic(null (*const)[true + 1], types&&... elements) noexcept :
@@ -647,82 +688,51 @@ class Array<null> {
 
 template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
 class Array /* final */ : private Array<null> {
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t), typename = void>
-  struct is_default_allocator /* final */ {
-    static bool const value = false;
-  };
-
-  template <typename dummy>
-  struct is_default_allocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, dummy> /* final */ {
-    static bool const value = true;
-  };
-
-  // ...
-  template <void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
-  struct is_default_deallocator /* final */ {
-    static bool const value = false;
-  };
-
-  template <typename dummy>
-  struct is_default_deallocator<null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
-    static bool const value = true;
-  };
-
-  // ...
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
-  struct is_default_reallocator /* final */ {
-    static bool const value = false;
-  };
-
-  template <typename dummy>
-  struct is_default_reallocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
-    static bool const value = true;
-  };
-
-  /* ... */
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*suballocator)(std::size_t)>
-  #ifdef __cpp_constexpr
-    constexpr
+  #if defined(__GNUC__) && false == (defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+  # pragma GCC diagnostic push
+  # pragma GCC diagnostic ignored "-Waddress"
   #endif
-  inline static typename conditional<false == is_default_allocator<suballocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type allocate(std::size_t const count) /* noexcept(noexcept(suballocator(count))) */ {
-    return suballocator(count);
-  }
+    #ifdef __cpp_constexpr
+      constexpr
+    #endif
+    inline static typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* allocate(typename conditional<allocator != +null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, std::size_t, null>::type const count) /* noexcept(noexcept(suballocator(count))) */ {
+      return allocator(count);
+    }
 
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*suballocator)(std::size_t)>
-  inline typename conditional<false != is_default_allocator<suballocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type allocate(std::size_t const count) /* noexcept */ {
-    // ... ->> allocate zero-bit'ed memory
-    return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::calloc(count, sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
-  }
+    inline static typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* allocate(typename conditional<allocator == +null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, std::size_t, null>::type const count) /* noexcept */ {
+      // ... ->> allocate zero-bit'ed memory
+      return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::calloc(count, sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
+    }
 
-  // ...
-  template <void (*subdeallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
-  #ifdef __cpp_constexpr
-    constexpr
+    // ...
+    #ifdef __cpp_constexpr
+      constexpr
+    #endif
+    inline static void deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], typename conditional<deallocator != +null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, std::size_t, null>::type const) /* noexcept(noexcept(subdeallocator(address))) */ {
+      subdeallocator(address);
+    }
+
+    inline void deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], typename conditional<deallocator == +null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, std::size_t, null>::type const count) /* noexcept */ {
+      // ... ->> scrub the released memory (with zeroes)
+      std::fill(const_cast<void volatile*>(static_cast<void const volatile*>(address + 0)), const_cast<void volatile*>(static_cast<void const volatile*>(address + count)), static_cast<unsigned char const&>(0x0u));
+      std::free(const_cast<void*>(static_cast<void const volatile*>(address)));
+    }
+
+    // ...
+    #ifdef __cpp_constexpr
+      constexpr
+    #endif
+    inline static typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], typename conditional<reallocator != +null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, std::size_t, null>::type const count) /* noexcept(noexcept(subreallocator(address, count))) */ {
+      return subreallocator(address, count);
+    }
+
+    template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
+    inline typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], typename conditional<reallocator == +null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, std::size_t, null>::type const count) /* noexcept */ {
+      return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::realloc(const_cast<void*>(static_cast<void const volatile*>(address)), count * sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
+    }
+  #if defined(__GNUC__) && false == (defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+  # pragma GCC diagnostic pop
   #endif
-  inline static typename conditional<false == is_default_deallocator<subdeallocator>::value, void>::type deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const) /* noexcept(noexcept(subdeallocator(address))) */ {
-    subdeallocator(address);
-  }
-
-  template <void (*subdeallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
-  inline typename conditional<false != is_default_deallocator<subdeallocator>::value, void>::type deallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept */ {
-    // ... ->> scrub the released memory (with zeroes)
-    std::fill(const_cast<void volatile*>(static_cast<void const volatile*>(address + 0)), const_cast<void volatile*>(static_cast<void const volatile*>(address + count)), static_cast<unsigned char const&>(0x0u));
-    std::free(const_cast<void*>(static_cast<void const volatile*>(address)));
-  }
-
-  // ...
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
-  #ifdef __cpp_constexpr
-    constexpr
-  #endif
-  inline static typename conditional<false == is_default_reallocator<subreallocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept(noexcept(subreallocator(address, count))) */ {
-    return subreallocator(address, count);
-  }
-
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
-  inline typename conditional<false != is_default_reallocator<subreallocator>::value, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>::type reallocate(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type address[], std::size_t const count) /* noexcept */ {
-    return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::realloc(const_cast<void*>(static_cast<void const volatile*>(address)), count * sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
-  }
 
   /* ... */
   #if __cplusplus >= 201103L
@@ -768,8 +778,8 @@ class Array /* final */ : private Array<null> {
     public:
       union {
         struct { automatic<base, capacity> _; } initializer;
-        length <Array, false>                   length;
         members<Array>                          _;
+        length <Array>                          length;
       };
 
       /* ... */
