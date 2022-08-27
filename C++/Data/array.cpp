@@ -386,7 +386,7 @@ inline type instanceof(); /* noexcept */
 /* Constant */
 enum
 #if __cplusplus >= 201103L
-  : std::size_t
+  : uint_fast8_t
 #endif
 { ARRAY_REF_INITIAL_COUNT = 31u };
 
@@ -438,80 +438,30 @@ class Array<null> {
     };
 
     // ...
-    template <class Array, bool /* membered */, bool inherited = false>
-    struct length {
+    template <class Array>
+    struct length /* final */ {
       private:
-        inline Array& getFromBuffer() const /* volatile noexcept */;
+        inline Array& get() const /* volatile noexcept */;
 
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline Array& get() const /* volatile noexcept */ {
-          return inherited ? *(static_cast<length<Array, true> const /* volatile */*>(this) -> array) : this -> getFromBuffer();
+        // ...
+        inline std::size_t valueof(Array& array) const /* volatile noexcept */ {
+          return array.automatic.lengthof() + array.dynamic.lengthof();
         }
 
       public:
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator =(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator +=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() + length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator -=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() - length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator *=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() * length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator /=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() / length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator &=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() & length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator |=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() | length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator ^=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() ^ length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator <<=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() << length); return *this; }
-
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline length& operator >>=(std::size_t const length) const /* volatile noexcept */ { this -> get().resize(this -> operator std::size_t() >> length); return *this; }
+        inline length& operator =  (std::size_t const length) const /* volatile noexcept */ { this -> get().resize(length); return *this; }
+        inline length& operator += (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) +  length); return *this; }
+        inline length& operator -= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) -  length); return *this; }
+        inline length& operator *= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) *  length); return *this; }
+        inline length& operator /= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) /  length); return *this; }
+        inline length& operator &= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) &  length); return *this; }
+        inline length& operator |= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) |  length); return *this; }
+        inline length& operator ^= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) ^  length); return *this; }
+        inline length& operator <<=(std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) << length); return *this; }
+        inline length& operator >>=(std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) >> length); return *this; }
 
         // ...
-        #ifdef __cpp_constexpr
-          constexpr
-        #endif
-        inline operator std::size_t() const /* volatile noexcept */ { return this -> get().automatic.lengthof() + this -> get().dynamic.lengthof(); }
-    };
-
-    template <class Array>
-    struct length<Array, true> /* final */ : public length<Array, false, true> {
-      private:
-        Array *array;
+        inline operator std::size_t() const /* volatile noexcept */ { return this -> valueof(this -> get()); }
     };
 
     // ... ->> intended for range-based `for` loops only
@@ -678,8 +628,9 @@ class Array<null> {
       friend class Array<base, capacity, allocator, deallocator, reallocator>;
       private:
         #ifdef _MSC_VER
+        # pragma warning(disable: 4848)
           [[msvc::no_unique_address]]
-        #elif __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
+        #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
           [[no_unique_address]]
         #endif
         automatic<base, capacity> automatic;
@@ -773,10 +724,15 @@ class Array /* final */ : private Array<null> {
     return static_cast<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type*>(std::realloc(const_cast<void*>(static_cast<void const volatile*>(address)), count * sizeof(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type)));
   }
 
+  /* ... */
   #if __cplusplus >= 201103L
-    private: members<Array>             _;
-    public : length <Array, true> const length;
+    public:
+      union {
+        members<Array> _;
+        length <Array> const length;
+      };
 
+    /* ... */
     private:
       template <typename... types>
       constexpr Array(null (*const)[false + 1], types&&... elements) noexcept {}
@@ -825,6 +781,12 @@ class Array /* final */ : private Array<null> {
 #include <string>
 
 int main(int, char*[]) /* noexcept */ {
+  struct throwaway {
+    struct { int  elements[1]; uint_fast8_t length; } automatic;
+    struct { int *elements;    std::size_t  length; } dynamic;
+  };
+
+  std::printf("...                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(struct throwaway)));
   std::printf("int                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(int)));
   std::printf("Array<int>            : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<int>)));
   std::printf("Array<int, 1u>        : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<int, 1u>)));
