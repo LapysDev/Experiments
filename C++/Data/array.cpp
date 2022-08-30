@@ -824,37 +824,37 @@ class Array<null> {
 
 template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
 class Array /* final */ {
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t), typename = void>
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*suballocator)(std::size_t), typename = void>
   struct is_default_allocator /* final */ {
-    static bool const value = false;
+    static bool const value = suballocator == null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value;
   };
 
-  template <typename dummy>
-  struct is_default_allocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, dummy> /* final */ {
-    static bool const value = true;
-  };
-
-  // ...
-  template <void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
+  template <void (*subdeallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
   struct is_default_deallocator /* final */ {
-    static bool const value = false;
+    static bool const value = subdeallocator == null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value;
   };
 
-  template <typename dummy>
-  struct is_default_deallocator<null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
-    static bool const value = true;
-  };
-
-  // ...
-  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
+  template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
   struct is_default_reallocator /* final */ {
-    static bool const value = false;
+    static bool const value = subreallocator == null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value;
   };
 
-  template <typename dummy>
-  struct is_default_reallocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value> /* final */ {
-    static bool const value = true;
-  };
+  #ifndef _MSC_VER
+    template <typename dummy>
+    struct is_default_allocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, dummy> /* final */ {
+      static bool const value = true;
+    };
+
+    template <typename dummy>
+    struct is_default_deallocator<null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
+      static bool const value = true;
+    };
+
+    template <typename dummy>
+    struct is_default_reallocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value, dummy> /* final */ {
+      static bool const value = true;
+    };
+  #endif
 
   /* ... */
   #ifdef __cpp_constexpr
@@ -900,7 +900,7 @@ class Array /* final */ {
   #if __cplusplus >= 201103L
     public:
       union {
-        Array<null>::members<Array> _;
+        Array<null>::members<Array>       _;
         Array<null>::length <Array> const length;
       };
 
@@ -946,8 +946,8 @@ class Array /* final */ {
       # pragma GCC diagnostic push
       # pragma GCC diagnostic ignored "-Wmissing-field-initializers"
       #endif
-      Array<null>::members<Array> _;
-      Array<null>::length <Array> length;
+      Array<null>::members<Array>       _;
+      // Array<null>::length <Array> const length;
 
       /* ... */
       inline ~Array() throw() {}
@@ -956,8 +956,4 @@ class Array /* final */ {
 
 /* Main */
 #include <string>
-
-int main(int, char*[]) /* noexcept */ {
-  Array<std::string, 3u> strings = {"A", "B", "C"};
-  static_cast<void>(strings);
-}
+int main(int, char*[]) /* noexcept */ {}
