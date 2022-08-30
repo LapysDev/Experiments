@@ -4,7 +4,7 @@
 template <std::size_t...>
 union sequence {};
   template <std::size_t size>
-  struct make_sequence final {
+  union make_sequence {
     union builtin;
     union divide_and_conquer;
     union linear;
