@@ -799,19 +799,18 @@ class Array<null> {
     };
 
     // ...
-    template <class>
-    struct members;
-
-    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
-    struct members<Array<base, capacity, allocator, deallocator, reallocator> > /* final */ {
-      #ifdef _MSC_VER
-      # pragma warning(disable: 4848)
-        [[msvc::no_unique_address]]
-      #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
-        [[no_unique_address]]
-      #endif
+    template <typename base, std::size_t capacity, std::size_t = automatic<base, capacity>::maximum>
+    struct members /* final */ {
       Array<null>::automatic<base, capacity> automatic;
       Array<null>::dynamic  <base>           dynamic;
+    };
+
+    template <typename base, std::size_t capacity>
+    struct members<base, capacity, 0u> /* final */ {
+      union {
+        Array<null>::automatic<base, capacity> automatic;
+        Array<null>::dynamic  <base>           dynamic;
+      };
     };
 
     /* ... */
@@ -900,8 +899,8 @@ class Array /* final */ {
   #if __cplusplus >= 201103L
     public:
       union {
-        Array<null>::members<Array>       _;
-        Array<null>::length <Array> const length;
+        Array<null>::members<base, capacity> _;
+        Array<null>::length <Array> const    length;
       };
 
     /* ... */
@@ -914,8 +913,8 @@ class Array /* final */ {
 
     public:
       template <typename... types>
-      constexpr Array(types&&... /*elements*/) noexcept //:
-        // Array<base, capacity, allocator, deallocator, reallocator>::Array(static_cast<null (*)[automatic<base, capacity>::maximum >= sizeof...(elements)]>(NULL), pass<types>(elements)...)
+      constexpr Array(types&&... elements) noexcept :
+        Array<base, capacity, allocator, deallocator, reallocator>::Array(static_cast<null (*)[Array<null>::automatic<base, capacity>::maximum >= sizeof...(elements)]>(NULL), pass<types>(elements)...)
       {}
 
       inline ~Array() noexcept {}
@@ -946,8 +945,15 @@ class Array /* final */ {
       # pragma GCC diagnostic push
       # pragma GCC diagnostic ignored "-Wmissing-field-initializers"
       #endif
-      Array<null>::members<Array>       _;
-      // Array<null>::length <Array> const length;
+      Array<null>::members<base, capacity> _;
+
+      #if defined(_MSC_VER)
+      # pragma warning(disable: 4848)
+        [[msvc::no_unique_address]]
+      #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
+        [[no_unique_address]]
+      #endif
+      Array<null>::length<Array> const length;
 
       /* ... */
       inline ~Array() throw() {}
