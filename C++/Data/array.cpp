@@ -13,54 +13,44 @@
 #endif
 
 /* Trait */
+template <typename type>
+inline type instanceof(); /* noexcept */
+
+// ...
 struct null /* final */ {
   template <typename base>
-  struct constant {
+  struct constant /* fianl */ {
     static base const value = 0;
   };
 
   #if __cplusplus >= 201103L
-    template <typename base>                    struct constant<base*>                                 /* final */ { constexpr static base *                        value                 = nullptr; };
-    template <typename base>                    struct constant<base* const>                           /* final */ { constexpr static base *const                   value                 = nullptr; };
-    template <typename base>                    struct constant<base* const volatile>                  /* final */ { constexpr static base *const volatile          value                 = nullptr; };
-    template <typename base>                    struct constant<base* volatile>                        /* final */ { constexpr static base *volatile                value                 = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*)              (bases...)>      /* final */ { constexpr static base (*                       value)(bases...)      = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*)              (bases..., ...)> /* final */ { constexpr static base (*                       value)(bases..., ...) = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*const)         (bases...)>      /* final */ { constexpr static base (*const                  value)(bases...)      = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*const)         (bases..., ...)> /* final */ { constexpr static base (*const                  value)(bases..., ...) = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*const volatile)(bases...)>      /* final */ { constexpr static base (*const volatile         value)(bases...)      = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*const volatile)(bases..., ...)> /* final */ { constexpr static base (*const volatile         value)(bases..., ...) = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*volatile)      (bases...)>      /* final */ { constexpr static base (*volatile               value)(bases...)      = nullptr; };
-    template <typename base, typename... bases> struct constant<base (*volatile)      (bases..., ...)> /* final */ { constexpr static base (*volatile               value)(bases..., ...) = nullptr; };
-    template <class object, typename base>      struct constant<base object::*>                        /* final */ { constexpr static base object:: *               value                 = nullptr; };
-    template <class object, typename base>      struct constant<base object::* const>                  /* final */ { constexpr static base object:: *const          value                 = nullptr; };
-    template <class object, typename base>      struct constant<base object::* const volatile>         /* final */ { constexpr static base object:: *const volatile value                 = nullptr; };
-    template <class object, typename base>      struct constant<base object::* volatile>               /* final */ { constexpr static base object:: *volatile       value                 = nullptr; };
+    template <typename base>
+    struct constant<base (*)(std::size_t)> final {
+      constexpr static base (*value)(std::size_t) = nullptr;
+    };
+
+    template <typename baseA, typename baseB>
+    struct constant<baseA (*)(baseB, std::size_t)> final {
+      constexpr static baseA (*value)(baseB, std::size_t) = nullptr;
+    };
   #elif defined(__cpp_constexpr)
-    template <typename base>                    struct constant<base*>                                 /* final */ { constexpr static base *                        value                 = NULL; };
-    template <typename base>                    struct constant<base* const>                           /* final */ { constexpr static base *const                   value                 = NULL; };
-    template <typename base>                    struct constant<base* const volatile>                  /* final */ { constexpr static base *const volatile          value                 = NULL; };
-    template <typename base>                    struct constant<base* volatile>                        /* final */ { constexpr static base *volatile                value                 = NULL; };
-    template <typename base, typename... bases> struct constant<base (*)              (bases...)>      /* final */ { constexpr static base (*                       value)(bases...)      = NULL; };
-    template <typename base, typename... bases> struct constant<base (*)              (bases..., ...)> /* final */ { constexpr static base (*                       value)(bases..., ...) = NULL; };
-    template <typename base, typename... bases> struct constant<base (*const)         (bases...)>      /* final */ { constexpr static base (*const                  value)(bases...)      = NULL; };
-    template <typename base, typename... bases> struct constant<base (*const)         (bases..., ...)> /* final */ { constexpr static base (*const                  value)(bases..., ...) = NULL; };
-    template <typename base, typename... bases> struct constant<base (*const volatile)(bases...)>      /* final */ { constexpr static base (*const volatile         value)(bases...)      = NULL; };
-    template <typename base, typename... bases> struct constant<base (*const volatile)(bases..., ...)> /* final */ { constexpr static base (*const volatile         value)(bases..., ...) = NULL; };
-    template <typename base, typename... bases> struct constant<base (*volatile)      (bases...)>      /* final */ { constexpr static base (*volatile               value)(bases...)      = NULL; };
-    template <typename base, typename... bases> struct constant<base (*volatile)      (bases..., ...)> /* final */ { constexpr static base (*volatile               value)(bases..., ...) = NULL; };
-    template <class object, typename base>      struct constant<base object::*>                        /* final */ { constexpr static base object:: *               value                 = NULL; };
-    template <class object, typename base>      struct constant<base object::* const>                  /* final */ { constexpr static base object:: *const          value                 = NULL; };
-    template <class object, typename base>      struct constant<base object::* const volatile>         /* final */ { constexpr static base object:: *const volatile value                 = NULL; };
-    template <class object, typename base>      struct constant<base object::* volatile>               /* final */ { constexpr static base object:: *volatile       value                 = NULL; };
+    template <typename base>
+    struct constant<base (*)(std::size_t)> /* final */ {
+      constexpr static base (*value)(std::size_t) = NULL;
+    };
+
+    template <typename baseA, typename baseB>
+    struct constant<baseA (*)(baseB, std::size_t)> /* final */ {
+      constexpr static baseA (*value)(baseB, std::size_t) = NULL;
+    };
   #else
     template <typename base>
-    struct constant<base (*)(std::size_t)> {
+    struct constant<base (*)(std::size_t)> /* final */ {
       static base value(std::size_t const) /* throw() */;
     };
 
     template <typename baseA, typename baseB>
-    struct constant<baseA (*)(baseB, std::size_t)> {
+    struct constant<baseA (*)(baseB, std::size_t)> /* final */ {
       static baseA value(baseB const, std::size_t const) /* throw() */;
     };
   #endif
@@ -71,26 +61,6 @@ struct null /* final */ {
 };
 
 // ...
-template <typename type>
-inline type instanceof(); /* noexcept */
-
-// ...
-template <bool, typename, typename = null const volatile>
-struct conditional;
-
-template <typename base>
-struct conditional<false, base, null const volatile> /* final */ {};
-
-template <typename baseA, typename baseB>
-struct conditional<false, baseA, baseB> /* final */ {
-  typedef baseB type;
-};
-
-template <typename baseA, typename baseB>
-struct conditional<true, baseA, baseB> /* final */ {
-  typedef baseA type;
-};
-
 #if __cplusplus >= 201103L
   template <std::size_t...>
   struct collection final {};
@@ -140,6 +110,46 @@ struct conditional<true, baseA, baseB> /* final */ {
 #endif
 
 // ...
+template <bool, typename, typename = null const volatile>
+struct conditional;
+
+template <typename base>
+struct conditional<false, base, null const volatile> /* final */ {};
+
+template <typename baseA, typename baseB>
+struct conditional<false, baseA, baseB> /* final */ {
+  typedef baseB type;
+};
+
+template <typename baseA, typename baseB>
+struct conditional<true, baseA, baseB> /* final */ {
+  typedef baseA type;
+};
+
+// ...
+template <typename base, base = null::template constant<base>::value>
+struct constant /* final */ {
+  template <base, base>
+  struct is_same /* final */ {
+    static bool const value = false;
+  };
+
+  template <base argument>
+  struct is_same<argument, argument> /* final */ {
+    static bool const value = true;
+  };
+
+  // ...
+  template <base argument>
+  struct is_null /* final */ {
+    static bool const value = is_same<argument, null::template constant<base>::value>::value;
+  };
+
+  /* ... */
+  static base const value;
+};
+
+// ...
 template <typename base>
 struct is_enum /* final */ {
   #if defined(__clang__)
@@ -158,8 +168,8 @@ struct is_enum /* final */ {
     static bool const value = __is_enum(base);
   #else
     private:
-      null (*valueof(uintmax_t const) /* noexcept */)[true + 1];
-      null (*valueof(...) /* noexcept */)[false + 1];
+      static null (*valueof(uintmax_t const) /* noexcept */)[true + 1];
+      static null (*valueof(...) /* noexcept */)[false + 1];
 
     public:
       static bool const value = sizeof(valueof(instanceof<base>())) == sizeof(null (*)[true + 1]);
@@ -558,6 +568,11 @@ struct remove_reference<base&> /* final */ {
 #endif
 
 /* Constant */
+template <typename type>
+type ARRAY_FIXED(std::size_t const) /* noexcept */ {
+  return NULL;
+}
+
 enum
 #if __cplusplus >= 201103L
   : uint_fast8_t
@@ -589,6 +604,14 @@ class Array<null> {
   template <typename base, std::size_t, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t), void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
   friend class Array;
 
+  enum {
+    automatic_membered = 0x1u,
+    dynamic_membered   = 0x2u,
+    soo_membered       = 0x3u,
+    unmembered         = 0x0u
+  };
+
+  /* ... */
   private:
     /* ... ->> container for "array-of-reference" elements */
     template <typename base>
@@ -614,28 +637,34 @@ class Array<null> {
         }
     };
 
-    // ...
-    template <class Array>
+    // ... --- CITE (Lapys) -> https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length
+    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
     struct length /* final */ {
       private:
-        inline Array& get() const /* volatile noexcept */;
+        inline Array<base, capacity, allocator, deallocator, reallocator>& get() const /* volatile noexcept */;
 
         // ...
-        inline std::size_t valueof(Array& array) const /* volatile noexcept */ {
+        inline std::size_t valueof(Array<base, capacity, allocator, deallocator, reallocator>& array) const /* volatile noexcept */ {
           return array.automatic.lengthof() + array.dynamic.lengthof();
         }
 
       public:
+        #ifdef __cpp_constexpr
+          constexpr
+        #endif
+        inline length() /* noexcept */ {}
+
+        /* ... */
         inline length& operator =  (std::size_t const length) const /* volatile noexcept */ { this -> get().resize(length); return *this; }
-        inline length& operator += (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) +  length); return *this; }
-        inline length& operator -= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) -  length); return *this; }
-        inline length& operator *= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) *  length); return *this; }
-        inline length& operator /= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) /  length); return *this; }
-        inline length& operator &= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) &  length); return *this; }
-        inline length& operator |= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) |  length); return *this; }
-        inline length& operator ^= (std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) ^  length); return *this; }
-        inline length& operator <<=(std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) << length); return *this; }
-        inline length& operator >>=(std::size_t const length) const /* volatile noexcept */ { Array &array = this -> get(); array.resize(this -> valueof(array) >> length); return *this; }
+        inline length& operator += (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) +  length); return *this; }
+        inline length& operator -= (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) -  length); return *this; }
+        inline length& operator *= (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) *  length); return *this; }
+        inline length& operator /= (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) /  length); return *this; }
+        inline length& operator &= (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) &  length); return *this; }
+        inline length& operator |= (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) |  length); return *this; }
+        inline length& operator ^= (std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) ^  length); return *this; }
+        inline length& operator <<=(std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) << length); return *this; }
+        inline length& operator >>=(std::size_t const length) const /* volatile noexcept */ { Array<base, capacity, allocator, deallocator, reallocator> &array = this -> get(); array.resize(this -> valueof(array) >> length); return *this; }
 
         // ...
         inline operator std::size_t() const /* volatile noexcept */ { return this -> valueof(this -> get()); }
@@ -643,16 +672,16 @@ class Array<null> {
 
     // ... ->> intended for range-based `for` loops only
     #ifdef __cpp_range_based_for
-      template <class Array>
+      template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), void (*deallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*reallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>
       struct iterator /* final */ {
-        Array *const array;
-        std::size_t  index;
+        Array<base, capacity, allocator, deallocator, reallocator> *const array;
+        std::size_t                                                       index;
 
         /* ... */
         #ifdef __cpp_constexpr
           constexpr
         #endif
-        inline iterator(Array* const array, std::size_t const index) /* noexcept */ :
+        inline iterator(Array<base, capacity, allocator, deallocator, reallocator>* const array, std::size_t const index) /* noexcept */ :
           array(array),
           index(index)
         {}
@@ -661,7 +690,7 @@ class Array<null> {
         #ifdef __cpp_constexpr
           constexpr
         #endif
-        inline decltype(instanceof<Array>() -> at(instanceof<std::size_t>())) operator *() const /* noexcept */ {
+        inline decltype(instanceof<Array<base, capacity, allocator, deallocator, reallocator> >() -> at(instanceof<std::size_t>())) operator *() const /* noexcept */ {
           return this -> array -> at(this -> index);
         }
 
@@ -799,19 +828,33 @@ class Array<null> {
     };
 
     // ...
-    template <typename base, std::size_t capacity, std::size_t = automatic<base, capacity>::maximum>
+    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), unsigned = static_cast<unsigned>(soo_membered) & ~(
+      static_cast<unsigned>(0u == automatic<base, capacity>::maximum ? static_cast<unsigned>(automatic_membered) : 0x0u) |
+      static_cast<unsigned>(constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::template is_same<ARRAY_FIXED, allocator>::value ? static_cast<unsigned>(dynamic_membered) : 0x0u)
+    )>
     struct members /* final */ {
       Array<null>::automatic<base, capacity> automatic;
       Array<null>::dynamic  <base>           dynamic;
     };
 
-    template <typename base, std::size_t capacity>
-    struct members<base, capacity, 0u> /* final */ {
-      union {
-        Array<null>::automatic<base, capacity> automatic;
-        Array<null>::dynamic  <base>           dynamic;
-      };
+    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t)>
+    struct members<base, capacity, allocator, automatic_membered> /* final */ {
+      #if defined(_MSC_VER)
+      # pragma warning(disable: 4848)
+        [[msvc::no_unique_address]]
+      #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
+        [[no_unique_address]]
+      #endif
+      Array<null>::automatic<base, capacity> automatic;
     };
+
+    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t)>
+    struct members<base, capacity, allocator, dynamic_membered> /* final */ {
+      Array<null>::dynamic<base> dynamic;
+    };
+
+    template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t)>
+    struct members<base, capacity, allocator, unmembered> /* final */ {};
 
     /* ... */
     static void *AUTOMATIC[(std::size_t) (ARRAY_REF_INITIAL_COUNT)], **DYNAMIC; // ->> Register C++98 `Array`s for their dynamically-computed `length`s
@@ -825,20 +868,25 @@ template <typename base, std::size_t capacity, typename conditional<is_reference
 class Array /* final */ {
   template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*suballocator)(std::size_t), typename = void>
   struct is_default_allocator /* final */ {
-    static bool const value = suballocator == null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value;
+    static bool const value = constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::template is_null<suballocator>::value;
   };
 
   template <void (*subdeallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
   struct is_default_deallocator /* final */ {
-    static bool const value = subdeallocator == null::template constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value;
+    static bool const value = constant<void (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::template is_null<subdeallocator>::value;
   };
 
   template <typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*subreallocator)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t), typename = void>
   struct is_default_reallocator /* final */ {
-    static bool const value = subreallocator == null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::value;
+    static bool const value = constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type[], std::size_t)>::template is_null<subreallocator>::value;
   };
 
   #ifndef _MSC_VER
+    template <typename dummy>
+    struct is_default_allocator<&ARRAY_FIXED, dummy> /* final */ {
+      static bool const value = false;
+    };
+
     template <typename dummy>
     struct is_default_allocator<null::template constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::value, dummy> /* final */ {
       static bool const value = true;
@@ -899,17 +947,21 @@ class Array /* final */ {
   #if __cplusplus >= 201103L
     public:
       union {
-        Array<null>::members<base, capacity> _;
-        Array<null>::length <Array> const    length;
+        Array<null>::members<base, capacity, allocator>                           _;
+        Array<null>::length <base, capacity, allocator, deallocator, reallocator> length;
       };
 
     /* ... */
     private:
       template <typename... types>
-      constexpr Array(null (*const)[false + 1], types&&...) noexcept {}
+      constexpr Array(null (*const)[false + 1], types&&...) noexcept :
+        _{}
+      {}
 
       template <typename... types>
-      constexpr Array(null (*const)[true + 1], types&&...) noexcept {}
+      constexpr Array(null (*const)[true + 1], types&&...) noexcept :
+        _{}
+      {}
 
     public:
       template <typename... types>
@@ -920,12 +972,12 @@ class Array /* final */ {
       inline ~Array() noexcept {}
 
       /* ... */
-      constexpr Array<null>::iterator<Array> begin() const /* volatile */ noexcept {
-        return {const_cast<Array<base, capacity>*>(this), 0u};
+      constexpr Array<null>::iterator<base, capacity, allocator, deallocator, reallocator> begin() const /* volatile */ noexcept {
+        return {const_cast<Array<base, capacity, allocator, deallocator, reallocator>*>(this), 0u};
       }
 
       // ...
-      constexpr Array<null>::iterator<Array> end() const /* volatile */ noexcept {
+      constexpr Array<null>::iterator<base, capacity, allocator, deallocator, reallocator> end() const /* volatile */ noexcept {
         return {NULL, this -> length};
       }
 
@@ -945,15 +997,8 @@ class Array /* final */ {
       # pragma GCC diagnostic push
       # pragma GCC diagnostic ignored "-Wmissing-field-initializers"
       #endif
-      Array<null>::members<base, capacity> _;
-
-      #if defined(_MSC_VER)
-      # pragma warning(disable: 4848)
-        [[msvc::no_unique_address]]
-      #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
-        [[no_unique_address]]
-      #endif
-      Array<null>::length<Array> const length;
+      Array<null>::members<base, capacity, allocator>                                 _;
+      Array<null>::length <base, capacity, allocator, deallocator, reallocator> const length;
 
       /* ... */
       inline ~Array() throw() {}
@@ -962,4 +1007,29 @@ class Array /* final */ {
 
 /* Main */
 #include <string>
-int main(int, char*[]) /* noexcept */ {}
+
+std::string* allocator(std::size_t const) { return NULL; }
+int main(int, char*[]) /* noexcept */ {
+  // Array<std::string>                  A = {"A", "B", "C"};
+  Array<std::string, 3u>              B = {"A", "B", "C"};
+  Array<std::string, 3u, allocator>   C = {"A", "B", "C"};
+  Array<std::string, 3u, ARRAY_FIXED> D = {"A", "B", "C"};
+
+  // static_cast<void>(A);
+  static_cast<void>(B);
+  static_cast<void>(C);
+  static_cast<void>(D);
+
+  // ...
+  std::printf("[std::string*; std::size_t]: %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string*) + sizeof(std::size_t)));
+  std::printf("[Array<std::string>]       : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string>)));
+  std::puts("");
+
+  std::printf("[std::string[3]; std::string*; std::size_t]: %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string[3]) + sizeof(std::string*) + sizeof(std::size_t)));
+  std::printf("[Array<std::string, 3u>]                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string, 3u>)));
+  std::puts("");
+
+  std::printf("[std::string[3]]                     : %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string[3])));
+  std::printf("[Array<std::string, 3u, ARRAY_FIXED>]: %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string, 3u, ARRAY_FIXED>)));
+  std::puts("");
+}
