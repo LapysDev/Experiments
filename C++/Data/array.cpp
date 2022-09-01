@@ -62,51 +62,21 @@ struct null /* final */ {
 
 // ...
 #if __cplusplus >= 201103L
+  template <bool boolean, bool...>
+  struct boolean_and final {
+    static bool const value = boolean;
+  };
+
+  template <bool booleanA, bool booleanB, bool... booleans>
+  struct boolean_and<booleanA, booleanB, booleans...> final {
+    static bool const value = boolean_and<booleanA && booleanB, booleans...>::value;
+  };
+#endif
+
+// ...
+#if __cplusplus >= 201103L
   template <std::size_t...>
   struct collection final {};
-
-  template <typename... bases>
-  struct pack final {
-    template <std::size_t index>
-    struct at final {
-      private:
-        template <std::size_t, class>
-        struct valueof;
-
-        template <typename subbase, typename... subbases>
-        struct valueof<0u, pack<subbase, subbases...> > final {
-          typedef subbase type;
-        };
-
-        template <std::size_t subindex, typename subbase, typename... subbases>
-        struct valueof<subindex, pack<subbase, subbases...> > final {
-          typedef typename valueof<subindex - 1u, pack<subbases...> >::type type;
-        };
-
-      public:
-        typedef typename valueof<index, pack<bases...> >::type type;
-    };
-  };
-
-  template <std::size_t value>
-  struct sequence final {
-    private:
-      template <std::size_t...>
-      struct valueof;
-
-      template <std::size_t... subvalues>
-      struct valueof<0u, subvalues...> final {
-        typedef ::collection<0u, subvalues...> type;
-      };
-
-      template <std::size_t subvalue, std::size_t... subvalues>
-      struct valueof<subvalue, subvalues...> final {
-        typedef typename valueof<subvalue - 1u, subvalue, subvalues...>::type type;
-      };
-
-    public:
-      typedef typename valueof<value>::type collection;
-  };
 #endif
 
 // ...
@@ -373,9 +343,35 @@ struct maxof /* final */ {
 };
 
 template <std::size_t maximum>
-struct maxof<maximum, 0u> /* final */ {
+struct maxof<maximum> /* final */ {
   static std::size_t const value = maximum;
 };
+
+// ...
+#if __cplusplus >= 201103L
+  template <typename... bases>
+  struct pack final {
+    template <std::size_t index>
+    struct at final {
+      private:
+        template <std::size_t, class>
+        struct valueof;
+
+        template <typename subbase, typename... subbases>
+        struct valueof<0u, pack<subbase, subbases...> > final {
+          typedef subbase type;
+        };
+
+        template <std::size_t subindex, typename subbase, typename... subbases>
+        struct valueof<subindex, pack<subbase, subbases...> > final {
+          typedef typename valueof<subindex - 1u, pack<subbases...> >::type type;
+        };
+
+      public:
+        typedef typename valueof<index, pack<bases...> >::type type;
+    };
+  };
+#endif
 
 // ...
 template <typename base>
@@ -392,6 +388,29 @@ struct remove_reference<base&> /* final */ {
   template <typename base>
   struct remove_reference<base&&> /* final */ {
     typedef base type;
+  };
+#endif
+
+// ...
+#if __cplusplus >= 201103L
+  template <std::size_t value>
+  struct sequence final {
+    private:
+      template <std::size_t...>
+      struct valueof;
+
+      template <std::size_t... subvalues>
+      struct valueof<0u, subvalues...> final {
+        typedef ::collection<0u, subvalues...> type;
+      };
+
+      template <std::size_t subvalue, std::size_t... subvalues>
+      struct valueof<subvalue, subvalues...> final {
+        typedef typename valueof<subvalue - 1u, subvalue, subvalues...>::type type;
+      };
+
+    public:
+      typedef typename valueof<value>::type collection;
   };
 #endif
 
@@ -802,7 +821,10 @@ class Array<null> {
         public:
           template <typename... types>
           constexpr automatic(types&&... elements) noexcept :
-            automatic(static_cast<null (*)[((ARRAY_SOO_SIZE) >= sizeof...(elements)) + 1]>(NULL), pass<types>(elements)...)
+            automatic(
+              static_cast<null (*)[((ARRAY_SOO_SIZE) >= sizeof...(elements)) + 1]>(NULL),
+              pass<types>(elements)...
+            )
           {}
 
           // ...
@@ -833,12 +855,16 @@ class Array<null> {
       static_cast<unsigned>(constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::template is_same<ARRAY_FIXED, allocator>::value ? static_cast<unsigned>(dynamic_membered) : 0x0u)
     )>
     struct members /* final */ {
+      enum { type = soo_membered };
+
       Array<null>::automatic<base, capacity> automatic;
       Array<null>::dynamic  <base>           dynamic;
     };
 
     template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t)>
     struct members<base, capacity, allocator, automatic_membered> /* final */ {
+      enum { type = automatic_membered };
+
       #if defined(_MSC_VER)
       # pragma warning(disable: 4848)
         [[msvc::no_unique_address]]
@@ -850,11 +876,14 @@ class Array<null> {
 
     template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t)>
     struct members<base, capacity, allocator, dynamic_membered> /* final */ {
+      enum { type = dynamic_membered };
       Array<null>::dynamic<base> dynamic;
     };
 
     template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t)>
-    struct members<base, capacity, allocator, unmembered> /* final */ {};
+    struct members<base, capacity, allocator, unmembered> /* final */ {
+      enum { type = unmembered };
+    };
 
     /* ... */
     static void *AUTOMATIC[(std::size_t) (ARRAY_REF_INITIAL_COUNT)], **DYNAMIC; // ->> Register C++98 `Array`s for their dynamically-computed `length`s
@@ -953,27 +982,66 @@ class Array /* final */ {
 
     /* ... */
     private:
+      template <std::size_t... indexes, std::size_t... rest, typename... types>
+      constexpr Array(null* const, collection<0u, indexes...> const, collection<0u, rest...> const, types&&... elements) noexcept(boolean_and<noexcept(base(instanceof<typename pack<types...>::template at<indexes - 1u>::type&&>()))...>::value && noexcept(instanceof<Array>().add(static_cast<null*>(NULL), instanceof<std::size_t&>(), instanceof<typename pack<types...>::template at<(rest + sizeof...(indexes)) - 1u>::type&&>()...))) :
+        _{
+          {at<indexes - 1u>(pass<types>(elements)...)...},
+          {NULL, this -> add(static_cast<null*>(NULL), const_cast<std::size_t&>(static_cast<std::size_t const&>(static_cast<std::size_t&&>(0u))), at<(rest + sizeof...(indexes)) - 1u>(pass<types>(elements)...)...) ? sizeof...(rest) : 0u}
+        }
+      {}
+
+      // ...
       template <typename... types>
-      constexpr Array(null (*const)[false + 1], types&&...) noexcept :
-        _{}
+      constexpr Array(null (*const)[Array<null>::automatic_membered], types&&... elements) noexcept(boolean_and<noexcept(base(instanceof<types&&>()))...>::value) :
+        _{pass<types>(elements)...}
+      { static_assert(Array<null>::automatic<base, capacity>::maximum >= sizeof...(elements), "Excessive number of elements upon initializing fixed-sized `Array`"); }
+
+      template <typename... types>
+      constexpr Array(null (*const)[Array<null>::dynamic_membered], types&&... elements) noexcept(noexcept(instanceof<Array>().add(static_cast<null*>(NULL), instanceof<std::size_t&>(), instanceof<types&&>()...))) :
+        _{NULL, this -> add(static_cast<null*>(NULL), const_cast<std::size_t&>(static_cast<std::size_t const&>(static_cast<std::size_t&&>(0u))), pass<types>(elements)...) ? sizeof...(elements) : 0u}
       {}
 
       template <typename... types>
-      constexpr Array(null (*const)[true + 1], types&&...) noexcept :
-        _{}
+      constexpr Array(null (*const)[Array<null>::soo_membered], types&&... elements) noexcept(noexcept(Array(static_cast<null*>(NULL), instanceof<typename sequence<(Array<null>::automatic<base, capacity>::maximum < sizeof...(elements)) ? Array<null>::automatic<base, capacity>::maximum : sizeof...(elements)>::collection>(), instanceof<typename sequence<(Array<null>::automatic<base, capacity>::maximum < sizeof...(elements)) ? sizeof...(elements) - Array<null>::automatic<base, capacity>::maximum : 0u>::collection>(), instanceof<types&&>()...))) :
+        Array(
+          static_cast<null*>(NULL),
+          typename sequence<(Array<null>::automatic<base, capacity>::maximum < sizeof...(elements)) ? Array<null>::automatic<base, capacity>::maximum                       : sizeof...(elements)>::collection{},
+          typename sequence<(Array<null>::automatic<base, capacity>::maximum < sizeof...(elements)) ? sizeof...(elements) - Array<null>::automatic<base, capacity>::maximum : 0u>                 ::collection{},
+          pass<types>(elements)...
+        )
       {}
+
+      template <typename... types>
+      constexpr Array(null (*const)[Array<null>::unmembered], types&&... elements) noexcept :
+        _{}
+      { static_assert(0u != sizeof...(elements), "Expected no elements upon initializing fixed zero-sized `Array`"); }
+
+      /* ... */
+      template <typename... types>
+      constexpr bool add(null* const, std::size_t&, types&&...) noexcept {
+        return std::printf("[...]: %lu" "\r\n", static_cast<unsigned long>(sizeof...(types))), true;
+      }
 
     public:
       template <typename... types>
-      constexpr Array(types&&... elements) noexcept :
-        Array<base, capacity, allocator, deallocator, reallocator>::Array(static_cast<null (*)[Array<null>::automatic<base, capacity>::maximum >= sizeof...(elements)]>(NULL), pass<types>(elements)...)
+      constexpr Array(types&&... elements) noexcept(noexcept(Array(static_cast<null (*)[Array<null>::members<base, capacity, allocator>::type]>(NULL), instanceof<types&&>()...))) :
+        Array(
+          static_cast<null (*)[Array<null>::members<base, capacity, allocator>::type]>(NULL),
+          pass<types>(elements)...
+        )
       {}
 
       inline ~Array() noexcept {}
 
       /* ... */
+      template <typename... types>
+      constexpr bool add(types&&... elements) /* volatile */ noexcept(noexcept(instanceof<Array /* volatile */>().add(static_cast<null*>(NULL), instanceof<std::size_t&>(), instanceof<types&&>()...))) {
+        // return true;
+        return this -> add(static_cast<null*>(NULL), this -> _.dynamic.value.length, pass<types>(elements)...);
+      }
+
       constexpr Array<null>::iterator<base, capacity, allocator, deallocator, reallocator> begin() const /* volatile */ noexcept {
-        return {const_cast<Array<base, capacity, allocator, deallocator, reallocator>*>(this), 0u};
+        return {const_cast<Array*>(this), 0u};
       }
 
       // ...
@@ -1010,12 +1078,12 @@ class Array /* final */ {
 
 std::string* allocator(std::size_t const) { return NULL; }
 int main(int, char*[]) /* noexcept */ {
-  // Array<std::string>                  A = {"A", "B", "C"};
-  Array<std::string, 3u>              B = {"A", "B", "C"};
-  Array<std::string, 3u, allocator>   C = {"A", "B", "C"};
+  Array<std::string>                  A = {"A", "B", "C", "..."};
+  Array<std::string, 3u>              B = {"A", "B", "C", "..."};
+  Array<std::string, 3u, allocator>   C = {"A", "B", "C", "..."};
   Array<std::string, 3u, ARRAY_FIXED> D = {"A", "B", "C"};
 
-  // static_cast<void>(A);
+  static_cast<void>(A);
   static_cast<void>(B);
   static_cast<void>(C);
   static_cast<void>(D);

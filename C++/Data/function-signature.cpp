@@ -3,7 +3,7 @@
 /* ... */
 auto put_deferred(char const message[]) -> void { std::puts(message); }
 put_deprecated(message) char const message[]; { std::puts(message); return; }
-constexpr static auto const &put_lambda = *[](char const message[]) { std::puts(message); return; };
+constexpr static auto &put_lambda = *[](char const message[]) { std::puts(message); return; };
 
 void put(char const message[]) { std::puts(message); }
 
