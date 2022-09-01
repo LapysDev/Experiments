@@ -852,7 +852,7 @@ class Array<null> {
     // ...
     template <typename base, std::size_t capacity, typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*allocator)(std::size_t), unsigned = static_cast<unsigned>(soo_membered) & ~(
       static_cast<unsigned>(0u == automatic<base, capacity>::maximum ? static_cast<unsigned>(automatic_membered) : 0x0u) |
-      static_cast<unsigned>(constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::template is_same<ARRAY_FIXED, allocator>::value ? static_cast<unsigned>(dynamic_membered) : 0x0u)
+      static_cast<unsigned>(constant<typename conditional<is_reference<base>::value, typename remove_reference<base>::type*, base>::type* (*)(std::size_t)>::template is_same<&ARRAY_FIXED, allocator>::value ? static_cast<unsigned>(dynamic_membered) : 0x0u)
     )>
     struct members /* final */ {
       enum { type = soo_membered };
@@ -1019,7 +1019,7 @@ class Array /* final */ {
       /* ... */
       template <typename... types>
       constexpr bool add(null* const, std::size_t&, types&&...) noexcept {
-        return std::printf("[...]: %lu" "\r\n", static_cast<unsigned long>(sizeof...(types))), true;
+        return true;
       }
 
     public:
@@ -1036,7 +1036,6 @@ class Array /* final */ {
       /* ... */
       template <typename... types>
       constexpr bool add(types&&... elements) /* volatile */ noexcept(noexcept(instanceof<Array /* volatile */>().add(static_cast<null*>(NULL), instanceof<std::size_t&>(), instanceof<types&&>()...))) {
-        // return true;
         return this -> add(static_cast<null*>(NULL), this -> _.dynamic.value.length, pass<types>(elements)...);
       }
 
@@ -1074,14 +1073,26 @@ class Array /* final */ {
 };
 
 /* Main */
-#include <string>
+union string {
+  char const *value;
+  struct {
+    inline operator std::size_t() const {
+      for (char const *iterator = launder(reinterpret_cast<string const*>(this)) -> value; ; ++iterator)
+      if ('\0' == *iterator) return iterator - launder(reinterpret_cast<string const*>(this)) -> value;
+    }
+  } length;
 
-std::string* allocator(std::size_t const) { return NULL; }
+  inline string(char const string[]) : value(string) {}
+
+  static string* allocator(std::size_t const) { return NULL; }
+  inline operator char const*() const { return this -> value; }
+};
+
 int main(int, char*[]) /* noexcept */ {
-  Array<std::string>                  A = {"A", "B", "C", "..."};
-  Array<std::string, 3u>              B = {"A", "B", "C", "..."};
-  Array<std::string, 3u, allocator>   C = {"A", "B", "C", "..."};
-  Array<std::string, 3u, ARRAY_FIXED> D = {"A", "B", "C"};
+  Array<string>                        A = {"A", "B", "C", "..."};
+  Array<string, 3u>                    B = {"A", "B", "C", "..."};
+  Array<string, 3u, string::allocator> C = {"A", "B", "C", "..."};
+  Array<string, 3u, ARRAY_FIXED>       D = {"A", "B", "C"};
 
   static_cast<void>(A);
   static_cast<void>(B);
@@ -1089,15 +1100,15 @@ int main(int, char*[]) /* noexcept */ {
   static_cast<void>(D);
 
   // ...
-  std::printf("[std::string*; std::size_t]: %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string*) + sizeof(std::size_t)));
-  std::printf("[Array<std::string>]       : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string>)));
+  std::printf("[string*; std::size_t]: %lu" "\r\n", static_cast<unsigned long>(sizeof(string*) + sizeof(std::size_t)));
+  std::printf("[Array<string>]       : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<string>)));
   std::puts("");
 
-  std::printf("[std::string[3]; std::string*; std::size_t]: %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string[3]) + sizeof(std::string*) + sizeof(std::size_t)));
-  std::printf("[Array<std::string, 3u>]                   : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string, 3u>)));
+  std::printf("[string[3]; string*; std::size_t]: %lu" "\r\n", static_cast<unsigned long>(sizeof(string[3]) + sizeof(string*) + sizeof(std::size_t)));
+  std::printf("[Array<string, 3u>]              : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<string, 3u>)));
   std::puts("");
 
-  std::printf("[std::string[3]]                     : %lu" "\r\n", static_cast<unsigned long>(sizeof(std::string[3])));
-  std::printf("[Array<std::string, 3u, ARRAY_FIXED>]: %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<std::string, 3u, ARRAY_FIXED>)));
+  std::printf("[string[3]]                     : %lu" "\r\n", static_cast<unsigned long>(sizeof(string[3])));
+  std::printf("[Array<string, 3u, ARRAY_FIXED>]: %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<string, 3u, ARRAY_FIXED>)));
   std::puts("");
 }
