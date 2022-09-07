@@ -52,7 +52,7 @@ struct derived final : public base {
     // ... ->> generate compile-time static (string) member function value
     template <class = typename identity_to_subvalue<identity>::type>
     struct get_value final {
-      #if (defined(__clang__) || defined(__GNUC__)) && false == defined(CIRCLE)
+      #if (defined(__clang__) || defined(__GNUC__)) && false == defined(__circle_lang__)
         using type = char const (&)[13];
       #else
         using type = char[13];
@@ -62,7 +62,7 @@ struct derived final : public base {
 
     template <char subvalue, char... subvalues>
     struct get_value<derived::subvalue<subvalue, subvalues...> > final {
-      #if (defined(__clang__) || defined(__GNUC__)) && false == defined(CIRCLE)
+      #if (defined(__clang__) || defined(__GNUC__)) && false == defined(__circle_lang__)
         using type = char const (&)[sizeof...(subvalues) + 13u];
       #else
         using type = char[sizeof...(subvalues) + 13u];
