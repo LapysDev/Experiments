@@ -245,7 +245,7 @@ struct tuple<base, bases...> final {
         constexpr operator typename memberstype<9u>::type&() const& noexcept { return this -> cast<typename memberstype<9u>::type&>(this -> index); }
 
         template <typename type>
-        constexpr explicit inline operator type() const noexcept {
+        constexpr explicit operator type() const noexcept {
           return this -> cast<type>(this -> index);
         }
     };

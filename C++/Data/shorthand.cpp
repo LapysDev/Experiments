@@ -794,3 +794,91 @@ template <typename type, typename... types, $operation operation, class... expre
   template <typename type, typename... types, $operation operation, class... expressions> constexpr typename std::enable_if<operation == $comma || operation == $nop, $expression<$call, $expression<$nop, $capture<type (&)(types...)      noexcept> >, $expression<operation, expressions...> > >::type operator &(type (&&function)(types...)      noexcept, $expression<operation, expressions...> const arguments) noexcept { return {function, arguments}; }
   template <typename type, typename... types, $operation operation, class... expressions> constexpr typename std::enable_if<operation == $comma || operation == $nop, $expression<$call, $expression<$nop, $capture<type (&)(types..., ...) noexcept> >, $expression<operation, expressions...> > >::type operator &(type (&&function)(types..., ...) noexcept, $expression<operation, expressions...> const arguments) noexcept { return {function, arguments}; }
 #endif
+
+/* Main ->> */
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+
+int main(int, char*[]) /* noexcept */ {
+  std::signal(SIGSEGV, +[](int const) { std::fputs("\r\n" "SEGFAULT", stderr); std::exit(EXIT_SUCCESS); });
+  #if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+  # pragma warning(disable: 383)
+  #endif
+
+  /* 1 - call like a functor */
+  std::printf("[01]: %i" "\r\n", $1(1));
+  std::printf("[02]: %i" "\r\n", $2(1, 2));
+  std::printf("[03]: %i" "\r\n", $3(1, 2, 3));
+
+  std::printf("[04]: %i" "\r\n", $1.operator ()(1));
+
+  /* 2 - send them to the `void` -- acts as `$1` when provided with arguments, but default-/ zero-constructs its given type (as if decayed) rather than referring to it */
+  $0();                                                      // --> void
+  $0(0u);                                                    // --> unsigned {0u}
+  $0("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"); // --> char const* {NULL}
+
+  /* 3 - convert (implicitly) to function pointers -- must have at least `$n` parameters */
+  std::printf("[05]: %1.1s" "\r\n", static_cast<char const*  (*)(char const[])                                                /* noexcept */>    ($1)("1")); // -- the simplest signature
+  std::printf("[06]: %1.1s" "\r\n", static_cast<char const (&(*)(char const (&)[2])                                           /* noexcept */)[2]>($1)("1"));
+  std::printf("[07]: %1.1s" "\r\n", static_cast<char const (&(*)(char const[], char const (&)[2])                             /* noexcept */)[2]>($2)("1", "2"));
+  std::printf("[08]: %1.1s" "\r\n", static_cast<char const (&(*)(char const[], char const[], char const (&)[2])               /* noexcept */)[2]>($3)("1", "2", "3"));
+  std::printf("[09]: %1.1s" "\r\n", static_cast<char const (&(*)(char const[], char const[], char const[], char const (&)[2]) /* noexcept */)[2]>($<4u>{})("1", "2", "3", "4"));
+
+  static_cast<void (*)()    /* noexcept */>($0)();
+  static_cast<void (*)(...) /* noexcept */>($0)();
+
+  /* 4 - constructs like a function call */
+  std::printf("[10]: %i" "\r\n", (int) $<1u>(1));
+
+  #if defined(__GNUC__) || defined(_MSC_VER) // -- `$0`s can cast to anything
+    std::printf("[11]: %i" "\r\n", $<0u>{}.operator int());
+  #else
+    std::printf("[11]: %i" "\r\n", (int) $<0u>{});
+  #endif
+
+  /* 5 - build shorthand expressions */
+  std::printf("[12]: %i" "\r\n", (-$1)(1));
+  std::printf("[13]: %i" "\r\n", (-(-$1))(1));
+  std::printf("[14]: %i" "\r\n", static_cast<int (*)(...) /* noexcept */>(-$0)()); // -- return type was used as `hint` for `$0`'s type
+  std::printf("[15]: %i" "\r\n", static_cast<int (*)(int) /* noexcept */>(-$1)(1));
+  std::printf("[16]: %i" "\r\n", static_cast<int (*)(int) /* noexcept */>(-(-$1))(1));
+
+  std::printf("[17]: %i" "\r\n", (-$<1u>{})(1)); // -- works with these, as well
+  std::printf("[18]: %i" "\r\n", static_cast<int (*)(int) /* noexcept */>(-$<1u>{})(1));
+
+  std::printf("[19]: %i" "\r\n", ($1 + $2)(2, 3));
+  std::printf("[20]: %i" "\r\n", static_cast<int (*)(int, int) /* noexcept */>($1 + $2)(2, 3));
+
+  std::printf("[21]: %i" "\r\n", ($1 + -$2)(2, 3));
+  std::printf("[22]: %i" "\r\n", static_cast<int (*)(int, int) /* noexcept */>($1 + -$2)(2, 3));
+
+  std::printf("[23]: %i" "\r\n", (-$1 + $2)(2, 3));
+  std::printf("[24]: %i" "\r\n", static_cast<int (*)(int, int) /* noexcept */>(-$1 + $2)(2, 3));
+
+  std::printf("[25]: %i" "\r\n", (-$1 + -$2)(2, 3));
+  std::printf("[26]: %i" "\r\n", static_cast<int (*)(int, int) /* noexcept */>(-$1 + -$2)(2, 3));
+
+  /* 6 - work with compile-time objects */
+  std::printf("[27]: %i" "\r\n", (int) $i<0>{}());
+  std::printf("[28]: %i" "\r\n", (int) (+$i<1>{})()); // -- implicitly convert to function pointer
+  std::printf("[29]: %i" "\r\n", static_cast<int (*)() /* noexcept */>($i<1>{})());
+
+  std::printf("[30]: %i" "\r\n", (int) ($1 + $i<3>{})(2));
+  std::printf("[31]: %i" "\r\n", static_cast<int (*)(int) /* noexcept */>($1 + $i<3>{})(2));
+
+  std::printf("[32]: %i" "\r\n", (int) ($i<2>{} + $1)(3));
+  std::printf("[33]: %i" "\r\n", static_cast<int (*)(int) /* noexcept */>($i<2>{} + $1)(3));
+
+  std::printf("[34]: %i" "\r\n", (int) ($i<2>{} + $i<3>{})());
+  std::printf("[35]: %i" "\r\n", (int) (+($i<2>{} + $i<3>{}))()); // -- also convert to function pointer
+  std::printf("[36]: %i" "\r\n", static_cast<int (*)() /* noexcept */>($i<2>{} + $i<3>{})());
+
+  /* 7 - work with runtime objects */
+  std::printf("[37]: %i" "\r\n", ($1 + 3)(2));
+  // std::printf("[38]: %i" "\r\n", static_cast<int (*)(int) /* noexcept */>($1 + 3)(2));
+
+  /* 8 - work with functions */
+  // (std::puts&($1))("A");
+  // (std::printf&($1, $2))("%1.1s" "\r\n", "B");
+}

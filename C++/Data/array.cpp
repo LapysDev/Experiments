@@ -506,7 +506,7 @@ class Array<null> {
     #ifdef _MSC_VER
     # pragma warning(disable: 4848)
       [[msvc::no_unique_address]]
-    #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
+    #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__circle_lang__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
       [[no_unique_address]]
     #endif
     Array<null>::automatic<base, capacity> automatic;
@@ -538,18 +538,20 @@ class Array<null> {
     }
 
     template <class Array, typename... types>
-    constexpr static typename conditional<false != remove_reference<Array>::type::is_default_allocator && (static_cast<unsigned>(decltype(remove_reference<Array>::type::_)::layout) & static_cast<unsigned>(layout::dynamic)), bool>::type add(Array&&, std::size_t&, types&&...) /* noexcept */ {
+    static typename conditional<false != remove_reference<Array>::type::is_default_allocator && (static_cast<unsigned>(decltype(remove_reference<Array>::type::_)::layout) & static_cast<unsigned>(layout::dynamic)), bool>::type add(Array&&, std::size_t&, types&&...) /* noexcept */ {
       return true;
     }
 
     template <class Array, typename... types>
     constexpr static typename conditional<false == remove_reference<Array>::type::is_default_allocator && (static_cast<unsigned>(decltype(remove_reference<Array>::type::_)::layout) & static_cast<unsigned>(layout::dynamic)), bool>::type add(Array&&, std::size_t&, types&&...) /* noexcept */ {
-      return NULL != remove_reference<Array>::type::allocate(sizeof...(types));
+      return true;
+      // return NULL != remove_reference<Array>::type::allocate(sizeof...(types));
     }
 
     template <class Array, typename... types>
     constexpr static typename conditional<false == (static_cast<unsigned>(decltype(remove_reference<Array>::type::_)::layout) & static_cast<unsigned>(layout::dynamic)), bool>::type add(Array&&, std::size_t&, types&&...) /* noexcept */ {
-      return false;
+      return true;
+      // return false;
     }
   #else
   #endif
@@ -618,7 +620,7 @@ class Array {
       #ifdef _MSC_VER
       # pragma warning(disable: 4848)
         [[msvc::no_unique_address]]
-      #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
+      #elif defined(__GNUC__) ? __cplusplus >= 201103L : __has_cpp_attribute(no_unique_address) || (__cplusplus >= 201103L && (defined(__circle_lang__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)))
         [[no_unique_address]]
       #endif
       Array<null>::members<base, capacity, allocator>                           _;
@@ -629,7 +631,7 @@ class Array {
       template <std::size_t... indexes, std::size_t... rest, typename... types>
       constexpr Array(null (*const)[Array<null>::layout::automatic + 1], collection<indexes...> const, collection<rest...> const, types&&... elements) noexcept(boolean_and<noexcept(base(instanceof<types&&>()))...>::value) :
         _     {pass<types>(elements)...},
-        length{sizeof...(elements)}
+        length{Array<null>::automatic<base, capacity>::maximum}
       { static_assert(Array<null>::automatic<base, capacity>::maximum >= sizeof...(elements), "Excessive number of elements upon initializing fixed-sized `Array`"); }
 
       template <std::size_t... indexes, std::size_t... rest, typename... types>
@@ -647,7 +649,7 @@ class Array {
       template <std::size_t... indexes, std::size_t... rest, typename... types>
       constexpr Array(null (*const)[Array<null>::layout::small_object_optimized + 1], collection<0u, indexes...> const, collection<0u, rest...> const, types&&... elements) noexcept(boolean_and<true, noexcept(base(instanceof<typename pack<types...>::template at<indexes - 1u>::type&&>()))...>::value && noexcept(Array<null>::add(instanceof<Array>(), instanceof<std::size_t&>(), instanceof<typename pack<types...>::template at<(rest + sizeof...(indexes)) - 1u>::type&&>()...))) :
         _     {{at<indexes - 1u>(pass<types>(elements)...)...}, {NULL}},
-        length{Array<null>::add(*this, const_cast<std::size_t&>(static_cast<std::size_t const&>(static_cast<std::size_t&&>(0u))), at<(rest + sizeof...(indexes)) - 1u>(pass<types>(elements)...)...) ? sizeof...(rest) : 0u}
+        length{Array<null>::add(*this, const_cast<std::size_t&>(static_cast<std::size_t const&>(static_cast<std::size_t&&>(0u))), at<(rest + sizeof...(indexes)) - 1u>(pass<types>(elements)...)...) ? sizeof...(elements) : sizeof...(indexes)}
       {}
 
     public:
@@ -738,6 +740,9 @@ int main(int, char*[]) /* noexcept */ {
     constexpr Array<string, 3u>                    B = {"A", "B", "C", "..."};
     constexpr Array<string, 3u, string::allocator> C = {"A", "B", "C", "..."};
     constexpr Array<string, 3u, ARRAY_FIXED>       D = {"A", "B", "C"};
+
+    enum { length = A.length + B.length + C.length + D.length };
+    std::printf("[...]: %u {%u, %u, %u, %u}" "\r\n", length, static_cast<unsigned>(+A.length), static_cast<unsigned>(+B.length), static_cast<unsigned>(+C.length), static_cast<unsigned>(+D.length));
   #else
     Array<string, 3u>                    const A = {string("A"), string("B"), string("C")};
     Array<string, 3u, string::allocator> const B = {string("A"), string("B"), string("C")};
@@ -752,6 +757,5 @@ int main(int, char*[]) /* noexcept */ {
   std::printf("[Array<string, 3, ARRAY_FIXED>]  : %lu" "\r\n", static_cast<unsigned long>(sizeof(Array<string, 3u, ARRAY_FIXED>)));
 
   /* ... */
-  std::puts("[...]");
   return EXIT_SUCCESS;
 }
