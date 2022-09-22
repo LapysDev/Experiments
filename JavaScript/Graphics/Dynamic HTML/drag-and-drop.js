@@ -22,19 +22,21 @@ function onmousedrag(event) {
   var bounds = target.getBoundingClientRect();
 
   if (false === targetBounded) {
-    targetBoundsX = event.x; targetBoundsY = event.y;
-    targetBoundsOffsetX = bounds.left; targetBoundsOffsetY = bounds.top;
+    targetBoundsX = event.x;
+    targetBoundsY = event.y;
+    targetBoundsOffsetX = bounds.left;
+    targetBoundsOffsetY = bounds.top;
 
     targetBounded = (
       (event.x >= bounds.left && event.x <= bounds.right) &&
-      (event.y >= bounds.top && event.y <= bounds.bottom)
+      (event.y >= bounds.top  && event.y <= bounds.bottom)
     )
   }
 
   else with (target.style) {
     backgroundColor = "blue";
-    left = targetBoundsOffsetX + (event.x - targetBoundsX);
-    top = targetBoundsOffsetY + (event.y - targetBoundsY)
+    left            = targetBoundsOffsetX + (event.x - targetBoundsX);
+    top             = targetBoundsOffsetY + (event.y - targetBoundsY)
   }
 }
 
