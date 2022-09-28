@@ -1,4 +1,4 @@
 • Adjacent Sibling (`A + B`) [Chrome 1,  Edge 12, FF 1, IE 7*, Op 3.5, Safari 1]
 • Child            (`A > B`) [Chrome 1,  Edge 12, FF 1, IE 7*, Op 4,   Safari 1]
 • Descendant       (`A B`)   [Chrome 61, Edge 12, FF 1, IE 3,  Op 3.5, Safari 1]
-• General          (`A ~ B`) [Chrome 1,  Edge 12, FF 1, IE 7*, Op 9,   Safari 3]
+• General Sibling  (`A ~ B`) [Chrome 1,  Edge 12, FF 1, IE 7*, Op 9,   Safari 3]

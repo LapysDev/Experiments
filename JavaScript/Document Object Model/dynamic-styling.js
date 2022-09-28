@@ -44,6 +44,7 @@ try {
     else {
       var cssRuleCount;
 
+      // ...
       if ("cssRules" in stylesheet) cssRuleCount = stylesheet.cssRules.length;
       else if ("rules" in stylesheet) cssRuleCount = stylesheet.rules.length;
 

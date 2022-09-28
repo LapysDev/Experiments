@@ -1,0 +1,9 @@
+• name                  [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name`
+• name  = value         [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name` and value `value`
+• name ~= value         [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name` and whitespace-separated value containing `value` as an item in the list
+• name |= value         [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name` and hyphen-delimited value containing `value` as an item in the list
+• name ^= value         [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name` and value prefixed with `value`
+• name $= value         [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name` and value suffixed with `value`
+• name *= value         [Chrome 1,  Edge 12, FF 1,  IE 7, Op 9,  Safari 3] → Matches elements with attributes of name `name` and value containing `value`
+• name operator value i [Chrome 49, Edge 79, FF 47, IE ×, Op 36, Safari 9] → Manipulates match to select elements with attributes using a case-insensitive `value`
+• name operator value s [Chrome ×,  Edge ×,  FF 66, IE ×, Op ×,  Safari ×] → Manipulates match to select elements with attributes using a case-sensitive `value`
