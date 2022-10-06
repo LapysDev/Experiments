@@ -1,3 +1,4 @@
+/* OPTION TO RENAME HIDDEN FILES, TOO? */
 /* Definitions */
 #if defined(__NT__) || defined(__TOS_WIN__) || defined(_WIN16) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN32_WCE) || defined(_WIN64) || defined(__WINDOWS__)
 # define UNICODE
