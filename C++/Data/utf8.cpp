@@ -1,6 +1,9 @@
 #include <climits>
 #include <cstdio>
 #include <stdint.h>
+#if __cplusplus >= 202002L || _MSVC_LANG >= 202002L
+# include <version>
+#endif
 #if defined(__cpp_lib_endian)
 # include <bit>
 #elif defined(__GLIBC__)
@@ -9,9 +12,6 @@
 # include <machine/endian.h>
 #elif defined(__bsdi__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__FreeBSD_version) || defined(__NETBSD__) || defined(__NETBSD_version) || defined(NetBSD0_8) || defined(NetBSD0_9) || defined(NetBSD1_0) || defined(__OpenBSD__) || defined(OpenBSD2_0) || defined(OpenBSD2_1) || defined(OpenBSD2_2) || defined(OpenBSD2_3) || defined(OpenBSD2_4) || defined(OpenBSD2_5) || defined(OpenBSD2_6) || defined(OpenBSD2_7) || defined(OpenBSD2_8) || defined(OpenBSD2_9) || defined(OpenBSD3_0) || defined(OpenBSD3_1) || defined(OpenBSD3_2) || defined(OpenBSD3_3) || defined(OpenBSD3_4) || defined(OpenBSD3_5) || defined(OpenBSD3_6) || defined(OpenBSD3_7) || defined(OpenBSD3_8) || defined(OpenBSD3_9) || defined(OpenBSD4_0) || defined(OpenBSD4_1) || defined(OpenBSD4_2) || defined(OpenBSD4_3) || defined(OpenBSD4_4) || defined(OpenBSD4_5) || defined(OpenBSD4_6) || defined(OpenBSD4_7) || defined(OpenBSD4_8) || defined(OpenBSD4_9)
 # include <sys/endian.h>
-#endif
-#if __cplusplus >= 202002L || _MSVC_LANG >= 202002L
-# include <version>
 #endif
 
 /* ... */
@@ -58,23 +58,23 @@ uint_least32_t get_utf8_codepoint_value(char const unit[]) {
 
   switch (get_utf8_codepoint_length(unit)) {
     case 1u:
-      return 0x00uL | (static_cast<unsigned char>(*unit) & 0x7Fu);
+      return static_cast<unsigned char>(*unit) & 0x7Fu;
 
     case 2u: switch (endian) {
-      case big_endian                    : return ((0xC0uL | (static_cast<unsigned char>(unit[0]) & 0x1Fu)) << (0u * CHAR_BIT)) | ((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (1u * CHAR_BIT));
-      case little_endian: case pdp_endian: return ((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (0u * CHAR_BIT)) | ((0xC0uL | (static_cast<unsigned char>(unit[0]) & 0x1Fu)) << (1u * CHAR_BIT));
+      case big_endian                    : return ((static_cast<unsigned char>(unit[0]) & 0x1Fu) << 0u) | ((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 6u);
+      case little_endian: case pdp_endian: return ((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 0u) | ((static_cast<unsigned char>(unit[0]) & 0x1Fu) << 6u);
     } break;
 
     case 3u: switch (endian) {
-      case big_endian   : return (((0xE0uL | (static_cast<unsigned char>(unit[0]) & 0x0Fu)) << (0u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (1u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[2]) & 0x3Fu)) << (2u * CHAR_BIT)));
-      case little_endian: return (((0x80uL | (static_cast<unsigned char>(unit[2]) & 0x3Fu)) << (0u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (1u * CHAR_BIT))) | (((0xE0uL | (static_cast<unsigned char>(unit[0]) & 0x0Fu)) << (2u * CHAR_BIT)));
-      case pdp_endian   : return (((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (0u * CHAR_BIT))) | (((0xE0uL | (static_cast<unsigned char>(unit[0]) & 0x0Fu)) << (1u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[2]) & 0x3Fu)) << (2u * CHAR_BIT)));
+      case big_endian   : return (((static_cast<unsigned char>(unit[0]) & 0x0Fu) << 0u)) | (((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 6u)) | (((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 12u));
+      case little_endian: return (((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 0u)) | (((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 6u)) | (((static_cast<unsigned char>(unit[0]) & 0x0Fu) << 12u));
+      case pdp_endian   : return (((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 0u)) | (((static_cast<unsigned char>(unit[0]) & 0x0Fu) << 6u)) | (((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 12u));
     } break;
 
     case 4u: switch (endian) {
-      case big_endian   : return (((0xF0uL | (static_cast<unsigned char>(unit[0]) & 0x07u)) << (0u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (1u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[2]) & 0x3Fu)) << (2u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[3]) & 0x3Fu)) << (3u * CHAR_BIT)));
-      case little_endian: return (((0x80uL | (static_cast<unsigned char>(unit[3]) & 0x3Fu)) << (0u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[2]) & 0x3Fu)) << (1u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (2u * CHAR_BIT))) | (((0xF0uL | (static_cast<unsigned char>(unit[0]) & 0x07u)) << (3u * CHAR_BIT)));
-      case pdp_endian   : return (((0x80uL | (static_cast<unsigned char>(unit[2]) & 0x3Fu)) << (0u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[3]) & 0x3Fu)) << (1u * CHAR_BIT))) | (((0xF0uL | (static_cast<unsigned char>(unit[0]) & 0x07u)) << (2u * CHAR_BIT))) | (((0x80uL | (static_cast<unsigned char>(unit[1]) & 0x3Fu)) << (3u * CHAR_BIT)));
+      case big_endian   : return (((static_cast<unsigned char>(unit[0]) & 0x07u) << 0u)) | (((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 6u)) | (((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 12u)) | (((static_cast<unsigned char>(unit[3]) & 0x3Fu) << 18u));
+      case little_endian: return (((static_cast<unsigned char>(unit[3]) & 0x3Fu) << 0u)) | (((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 6u)) | (((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 12u)) | (((static_cast<unsigned char>(unit[0]) & 0x07u) << 18u));
+      case pdp_endian   : return (((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 0u)) | (((static_cast<unsigned char>(unit[3]) & 0x3Fu) << 6u)) | (((static_cast<unsigned char>(unit[0]) & 0x07u) << 12u)) | (((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 18u));
     }
   }
 
@@ -83,16 +83,16 @@ uint_least32_t get_utf8_codepoint_value(char const unit[]) {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  // char const unit[] = "$"; // --> 0x24
-  // char const unit[] = "£"; // --> 0xC2A3
-  // char const unit[] = "€"; // --> 0xE282AC
-  // char const unit[] = "𐍈"; // --> 0xF0908D88
-  char const unit[] = "💙";
+  char const unit[] = "$"; // --> U+0024
+  // char const unit[] = "£"; // --> U+00A3
+  // char const unit[] = "€"; // --> U+20AC
+  // char const unit[] = "𐍈"; // --> U+10348
+  // char const unit[] = "💙";
 
   // ...
-  for (char const *point = unit; point != unit + (sizeof(unit) / sizeof(char)); ++point)
-  std::printf("0x%.2X" " ", static_cast<unsigned char>(*point));
+  for (char const *byte = unit; byte != unit + (sizeof(unit) / sizeof(char)); ++byte)
+  std::printf("0x%.2X" " ", static_cast<unsigned char>(*byte));
 
   std::printf("(%hu)" "\r\n", get_utf8_codepoint_length(unit));
-  std::printf("0x%llX" "\r\n", static_cast<unsigned long long>(get_utf8_codepoint_value(unit)));
+  std::printf("0x%lX" "\r\n", static_cast<unsigned long>(get_utf8_codepoint_value(unit)));
 }
