@@ -44,7 +44,7 @@ int main(int, char*[]) /* noexcept */ {
   )
     endian = word_little_endian;
   #else
-    endian = 1u == reinterpret_cast<unsigned char const&>(static_cast<uintmax_t const&>(1u)) ? byte_little_endian : byte_big_endian;
+    endian = sizeof(unsigned char) == sizeof(uintmax_t) || 1u == reinterpret_cast<unsigned char const&>(static_cast<uintmax_t const&>(1u)) ? byte_little_endian : byte_big_endian;
   #endif
 
   switch (endian) {
