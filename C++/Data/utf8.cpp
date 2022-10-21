@@ -6,8 +6,8 @@
 #endif
 
 /* ... */
-uint_least8_t get_utf8_codepoint_length(char const unit[]) {
-  unsigned char const value = static_cast<unsigned char>(*unit);
+uint_least8_t get_utf8_codepoint_length(char const units[]) {
+  unsigned char const value = static_cast<unsigned char>(*units);
 
   // ...
   if (/* value >= 0x00u && */ value <= 0x7Fu) return 1u;
@@ -18,36 +18,57 @@ uint_least8_t get_utf8_codepoint_length(char const unit[]) {
   return -1;
 }
 
-// • a non-continuation byte before the end of the character
-// • the string ending before the end of the character (which can happen in simple string truncation)
-// • an overlong encoding
-// • a sequence that decodes to an invalid code point
+uint_least32_t get_utf8_codepoint_value(char const units[]) {
+  uint_fast8_t length = get_utf8_codepoint_length(units);
+  if (length == 1u) return static_cast<unsigned char>(*units) & 0x7Fu;
 
-uint_least32_t get_utf8_codepoint_value(char const unit[]) {
-  switch (get_utf8_codepoint_length(unit)) {
-    (static_cast<unsigned char>(unit.next) & 0xC0u) == 0x80u
+  /* ... */
+  uint_fast32_t value;
 
-    case 1u: return static_cast<unsigned char>(*unit) & 0x7Fu;
-    case 2u: return ((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 0u) | ((static_cast<unsigned char>(unit[0]) & 0x1Fu) << 6u);
-    case 3u: return ((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 0u) | ((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 6u) | ((static_cast<unsigned char>(unit[0]) & 0x0Fu) << 12u);
-    case 4u: return ((static_cast<unsigned char>(unit[3]) & 0x3Fu) << 0u) | ((static_cast<unsigned char>(unit[2]) & 0x3Fu) << 6u) | ((static_cast<unsigned char>(unit[1]) & 0x3Fu) << 12u) | ((static_cast<unsigned char>(unit[0]) & 0x07u) << 18u);
+  // ...
+  switch (length) {
+    case 2u: {
+      if ((static_cast<unsigned char>(*units) & 0xE0u) != 0xC0u) return -1;
+      value = static_cast<unsigned char>(*units) & 0x1Fu;
+    } break;
+
+    case 3u: {
+      if ((static_cast<unsigned char>(*units) & 0xF0u) != 0xE0u) return -1;
+      value = static_cast<unsigned char>(*units) & 0x0Fu;
+    } break;
+
+    case 4u: {
+      if ((static_cast<unsigned char>(*units) & 0xF8u) != 0xF0u) return -1;
+      value = static_cast<unsigned char>(*units) & 0x07u;
+    } break;
+
+    default: return -1;
   }
 
-  return -1;
+  for (++units; --length; ++units) {
+    if ((static_cast<unsigned char>(*units) & 0xC0u) != 0x80u) return -1;
+
+    value <<= 6u;
+    value |= static_cast<unsigned char>(*units) & 0x3Fu;
+  }
+
+  // ... ->> overlong?
+  return value > 0x10FFFFuL ? -1 : value;
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  // char const unit[] = "$"; // --> U+0024
-  // char const unit[] = "£"; // --> U+00A3
-  // char const unit[] = "€"; // --> U+20AC
-  // char const unit[] = "𐍈"; // --> U+10348
-  char const unit[] = "💙";
+  // char const units[] = "$"; // --> U+0024
+  // char const units[] = "£"; // --> U+00A3
+  // char const units[] = "€"; // --> U+20AC
+  // char const units[] = "𐍈"; // --> U+10348
+  // char const units[] = "💙";
+  // char const units[] = {static_cast<char>(0b11110000u), static_cast<char>(0b10000010u), static_cast<char>(0b10000010u), static_cast<char>(0b10101100u)};
 
   // ...
-  for (char const *byte = unit; byte != unit + (sizeof(unit) / sizeof(char)); ++byte)
-  std::printf("0x%.2X" " ", static_cast<unsigned char>(*byte));
+  for (char const *byte = units; byte != units + (sizeof(units) / sizeof(char)); ++byte)
+  std::printf("0x%.2hX" " ", static_cast<unsigned char>(*byte));
 
-  std::printf("(%hu)" "\r\n", get_utf8_codepoint_length(unit));
-  std::printf("0x%lX" "\r\n", static_cast<unsigned long>(get_utf8_codepoint_value(unit)));
+  std::printf("(%hu)" "\r\n", get_utf8_codepoint_length(units));
+  std::printf("0x%lX" "\r\n", static_cast<unsigned long>(get_utf8_codepoint_value(units)));
 }

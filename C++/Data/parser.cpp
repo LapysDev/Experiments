@@ -1,3 +1,13 @@
+// • UTF-32 little-endian with Byte Order Mark (U+FEFF) {0xFF, 0xFE, 0x00, 0x00} -> zero-width no-break space
+// • UTF-32 big-endian    with Byte Order Mark (U+FEFF) {0x00, 0x00, 0xFE, 0xFF} -> zero-width no-break space
+// • UTF-16 big-endian    with Byte Order Mark (U+FEFF) {0xFE, 0xFF}             -> zero-width no-break space
+// • UTF-16 little-endian with Byte Order Mark (U+FEFF) {0xFF, 0xFE}             -> zero-width no-break space
+// • UTF-8                with Byte Order Mark (U+FEFF) {0xEF, 0xBB, 0xBF}       -> U+2060
+// • Western (Windows 1252)
+// • UTF-8
+// • UTF-16 system endian
+// • UTF-32
+// • ASCII
 #include <climits>
 #include <cstddef>
 #include <cstdio>
