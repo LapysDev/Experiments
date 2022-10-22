@@ -20,40 +20,60 @@ uint_least8_t get_utf8_codepoint_length(char const units[]) {
 
 uint_least32_t get_utf8_codepoint_value(char const units[]) {
   uint_fast8_t length = get_utf8_codepoint_length(units);
-  if (length == 1u) return static_cast<unsigned char>(*units) & 0x7Fu;
-
-  /* ... */
-  uint_fast32_t value;
 
   // ...
-  switch (length) {
-    case 2u: {
-      if ((static_cast<unsigned char>(*units) & 0xE0u) != 0xC0u) return -1;
-      value = static_cast<unsigned char>(*units) & 0x1Fu;
-    } break;
+  if (length != 1u) {
+    uint_fast32_t value;
 
-    case 3u: {
-      if ((static_cast<unsigned char>(*units) & 0xF0u) != 0xE0u) return -1;
-      value = static_cast<unsigned char>(*units) & 0x0Fu;
-    } break;
+    // ...
+    switch (length) {
+      case 2u: {
+        if ((static_cast<unsigned char>(*units) & 0xE0u) != 0xC0u) return -1;
+        value = static_cast<unsigned char>(*units) & 0x1Fu;
+      } break;
 
-    case 4u: {
-      if ((static_cast<unsigned char>(*units) & 0xF8u) != 0xF0u) return -1;
-      value = static_cast<unsigned char>(*units) & 0x07u;
-    } break;
+      case 3u: {
+        if ((static_cast<unsigned char>(*units) & 0xF0u) != 0xE0u) return -1;
+        value = static_cast<unsigned char>(*units) & 0x0Fu;
+      } break;
 
-    default: return -1;
+      case 4u: {
+        if ((static_cast<unsigned char>(*units) & 0xF8u) != 0xF0u) return -1;
+        value = static_cast<unsigned char>(*units) & 0x07u;
+      } break;
+
+      default:
+        return -1;
+    }
+
+    for (++units; --length; ++units) { // ->> parse continuation bytes
+      if ((static_cast<unsigned char>(*units) & 0xC0u) != 0x80u) return -1;
+
+      value <<= 6u;
+      value |= static_cast<unsigned char>(*units) & 0x3Fu;
+    }
+
+    if ( // ->> overlong-encoding protection
+      value < 0x0800uL ?
+        static_cast<unsigned char>(units[-2]) != (0xC0u | ((value & 0x7C0uL) >> 6u * 1u)) ||
+        static_cast<unsigned char>(units[-1]) != (0x80u | ((value & 0x03FuL) >> 6u * 0u)) :
+      value < 0x10000uL ?
+        static_cast<unsigned char>(units[-3]) != (0xE0u | ((value & 0xF000uL) >> 6u * 2u)) ||
+        static_cast<unsigned char>(units[-2]) != (0x80u | ((value & 0x0FC0uL) >> 6u * 1u)) ||
+        static_cast<unsigned char>(units[-1]) != (0x80u | ((value & 0x003FuL) >> 6u * 0u)) :
+      value < 0x110000uL ?
+        static_cast<unsigned char>(units[-4]) != (0xF0u | ((value & 0x1C0000uL) >> 6u * 3u)) ||
+        static_cast<unsigned char>(units[-3]) != (0x80u | ((value & 0x03F000uL) >> 6u * 2u)) ||
+        static_cast<unsigned char>(units[-2]) != (0x80u | ((value & 0x000FC0uL) >> 6u * 1u)) ||
+        static_cast<unsigned char>(units[-1]) != (0x80u | ((value & 0x00003FuL) >> 6u * 0u)) :
+      true
+    ) return -1;
+
+    // ...
+    return value;
   }
 
-  for (++units; --length; ++units) {
-    if ((static_cast<unsigned char>(*units) & 0xC0u) != 0x80u) return -1;
-
-    value <<= 6u;
-    value |= static_cast<unsigned char>(*units) & 0x3Fu;
-  }
-
-  // ... ->> overlong?
-  return value > 0x10FFFFuL ? -1 : value;
+  return static_cast<unsigned char>(*units) & 0x7Fu;
 }
 
 /* Main */
@@ -62,8 +82,7 @@ int main(int, char*[]) /* noexcept */ {
   // char const units[] = "£"; // --> U+00A3
   // char const units[] = "€"; // --> U+20AC
   // char const units[] = "𐍈"; // --> U+10348
-  // char const units[] = "💙";
-  // char const units[] = {static_cast<char>(0b11110000u), static_cast<char>(0b10000010u), static_cast<char>(0b10000010u), static_cast<char>(0b10101100u)};
+  char const units[] = "💙";
 
   // ...
   for (char const *byte = units; byte != units + (sizeof(units) / sizeof(char)); ++byte)
