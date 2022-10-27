@@ -7,7 +7,7 @@
 #endif
 
 /* ... */
-uint_least8_t get_utf8_codepoint_length(char units[]) {
+unsigned char get_utf8_codepoint_length(char units[]) {
   unsigned char const value = static_cast<unsigned char>(*units - '\0');
 
   // ...
@@ -16,11 +16,11 @@ uint_least8_t get_utf8_codepoint_length(char units[]) {
   else if  (value >= 0xE0u && value <= 0xEFu) return 3u;
   else if  (value >= 0xF0u && value <= 0xF7u) return 4u;
 
-  return static_cast<uint_least8_t>(-1);
+  return static_cast<unsigned char>(-1);
 }
 
 uint_least32_t get_utf8_codepoint_value(char* units) {
-  uint_fast8_t length = get_utf8_codepoint_length(units);
+  unsigned char length = get_utf8_codepoint_length(units);
 
   // ...
   if (length != 1u) {
@@ -51,7 +51,7 @@ uint_least32_t get_utf8_codepoint_value(char* units) {
       if ((static_cast<unsigned char>(*units - '\0') & 0xC0u) != 0x80u) return static_cast<uint_least32_t>(-1);
 
       value <<= 6u;
-      value |= static_cast<unsigned char>(*units - '\0') & 0x3Fu;
+      value  |= static_cast<unsigned char>(*units - '\0') & 0x3Fu;
     }
 
     if ( // ->> overlong-encoding protection (converts Unicode ID to bytes)

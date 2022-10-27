@@ -7,12 +7,12 @@
 #endif
 
 // ...
-uint_least8_t get_utf16_codepoint_length(char32_t[]) {
-  return static_cast<uint_least8_t>(-1);
+unsigned char get_utf32_codepoint_length(char32_t[]) {
+  return 1u;
 }
 
-uint_least32_t get_utf16_codepoint_value(char32_t[]) {
-  return static_cast<uint_least32_t>(-1);
+uint_least32_t get_utf32_codepoint_value(char32_t units[]) {
+  return static_cast<uint_least32_t>(*units);
 }
 
 /* Main */
@@ -25,8 +25,8 @@ int main(int, char*[]) /* noexcept */ {
 
   // ...
   for (char32_t const *unit = units; unit != units + (sizeof(units) / sizeof(char32_t)); ++unit)
-  std::printf("0x%.8hX" " ", static_cast<unsigned short>(*unit));
+  std::printf("0x%.8lX" " ", static_cast<unsigned long>(*unit));
 
-  std::printf("(%hu)" "\r\n", get_utf16_codepoint_length(units));
-  std::printf("0x%lX" "\r\n", static_cast<unsigned long>(get_utf16_codepoint_value(units)));
+  std::printf("(%hhu)" "\r\n", get_utf32_codepoint_length(units));
+  std::printf("0x%llX" "\r\n", static_cast<unsigned long long>(get_utf32_codepoint_value(units)));
 }

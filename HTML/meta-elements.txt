@@ -1,58 +1,59 @@
 Basic HTML Meta Tags
 • <meta charset="UTF-8"/>
 
-• <meta content="max-age=1800, max-stale, public, stale-if-error=259200, stale-while-revalidate=86400" http-equiv=Cache-Control rem="max-age=30minutes"/>
-• <meta content=0 http-equiv="Expires"/>
 • <meta content="accelerometer 'none'; ambient-light-sensor 'none'; autoplay 'none'; battery 'none'; camera 'none'; display-capture 'none'; document-domain 'none'; encrypted-media 'none'; fullscreen 'none'; gamepad 'none'; geolocation 'none'; gyroscope 'none'; layout-animations 'none'; legacy-image-formats 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; oversized-images 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; speaker-selection 'none'; sync-xhr 'none'; usb 'none'; screen-wake-lock 'none'; web-share 'none'; xr-spatial-tracking 'none'" http-equiv="Feature-Policy"/>
 • <meta content="accelerometer 'none'; ambient-light-sensor 'none'; autoplay 'none'; battery 'none'; camera 'none'; display-capture 'none'; document-domain 'none'; encrypted-media 'none'; fullscreen 'none'; gamepad 'none'; geolocation 'none'; gyroscope 'none'; layout-animations 'none'; legacy-image-formats 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; oversized-images 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; speaker-selection 'none'; sync-xhr 'none'; usb 'none'; screen-wake-lock 'none'; web-share 'none'; xr-spatial-tracking 'none'" http-equiv="Permissions-Policy"/>
-• <meta content=no http-equiv="imagetoolbar"/>
-• <meta content=no-cache http-equiv="Pragma"/>
+• <meta content="max-age=1800, max-stale, public, stale-if-error=259200, stale-while-revalidate=86400"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               http-equiv=Cache-Control rem="max-age=30minutes"/>
+• <meta content=0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    http-equiv="Expires"/>
+• <meta content=no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   http-equiv="imagetoolbar"/>
+• <meta content=no-cache                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             http-equiv="Pragma"/>
 
-• <meta content="" name="abstract"/>
-• <meta content=all name="audience"/>
-• <meta content="LapysDev, lapysdev@gmail.com" name="author"/>
-• <meta content="" name="category"/>
-• <meta content=Copyright name="copyright"/>
-• <meta content=Worldwide name="coverage"/>
-• <meta content=Business name="Classification"/>
-• <meta content="Description of the web page" name="description"/>
-• <meta content="" name="designer"/>
-• <meta content=submission name="directory"/>
-• <meta content=Global name="distribution"/>
-• <meta content=! name="fragment"/>
-• <meta content=True name="HandheldFriendly"/>
-• <meta content="https://www.lapys.dev" name="identifier-URL"/>
-• <meta content="Comma, Separated, Description" name="keywords"/>
-• <meta content=ES name="language"/>
-• <meta content="" name="owner"/>
-• <meta content=General name="rating"/>
-• <meta content=oluwafunmitoo@gmail.com name="reply-to"/>
-• <meta content="Sunday, July 18th, 2010, 5:15pm" name="revised"/>
-• <meta content="7 days" name="revisit-after"/>
+• <meta content=!                                                                      name="fragment"/>
+• <meta content=""                                                                     name="abstract"/>
+• <meta content=""                                                                     name="category"/>
+• <meta content=""                                                                     name="designer"/>
+• <meta content=""                                                                     name="owner"/>
+• <meta content=""                                                                     name="summary"/>
+• <meta content=""                                                                     name="topic"/>
+• <meta content="7 days"                                                               name="revisit-after"/>
 • <meta content="archive, follow, imageindex, index, noindex, odp, snippet, translate" name="robots"/>
-• <meta content="Subject of the web page" name="subject"/>
-• <meta content="" name="summary"/>
-• <meta content=all name="target"/>
-• <meta content=#0000FF name="theme-color"/>
-• <meta content="" name="topic"/>
-• <meta content=https://www.lapys.dev name="url"/>
+• <meta content="Comma, separated, description"                                        name="keywords"/>
+• <meta content="Description of the webpage"                                           name="description"/>
+• <meta content="Expected evaluation"                                                  name="assert"/>
+• <meta content="https://www.lapys.dev"                                                name="identifier-URL"/>
+• <meta content="LapysDev, lapysdev@gmail.com"                                         name="author"/>
+• <meta content="Subject of the webpage"                                               name="subject"/>
+• <meta content="Sunday, July 18th, 2010, 5:15pm"                                      name="revised"/>
+• <meta content=#0000FF                                                                name="theme-color"/>
+• <meta content=all                                                                    name="audience"/>
+• <meta content=all                                                                    name="target"/>
+• <meta content=Business                                                               name="Classification"/>
+• <meta content=Copyright                                                              name="copyright"/>
+• <meta content=ES                                                                     name="language"/>
+• <meta content=General                                                                name="rating"/>
+• <meta content=Global                                                                 name="distribution"/>
+• <meta content=https://www.lapys.dev                                                  name="url"/>
+• <meta content=oluwafunmitoo@gmail.com                                                name="reply-to"/>
+• <meta content=submission                                                             name="directory"/>
+• <meta content=True                                                                   name="HandheldFriendly"/>
+• <meta content=Worldwide                                                              name="coverage"/>
 
 Company/ Service Meta Tags
   ClaimID
     • <meta content=… name="microid"/>
 
   Apple Meta Tags
-    • <meta content=yes name="apple-mobile-web-app-capable"/>
-    • <meta content=#0000FF name="apple-mobile-web-app-status-bar-style"/>
-    • <meta content=yes name="apple-touch-fullscreen"/>
-    • <meta content="address=no, date=no, email=no, telephone=no, url=no" name="format-detection"/>
+    • <meta content="address=no, date=no, email=no, telephone=no, url=no"                                                                             name="format-detection"/>
     • <meta content="height=device-height, initial-scale=1.0, maximum-scale=1.0, minimal-ui, minimum-scale=1.0, user-scalable=no, width=device-width" name="viewport"/>
+    • <meta content=#0000FF                                                                                                                           name="apple-mobile-web-app-status-bar-style"/>
+    • <meta content=yes                                                                                                                               name="apple-mobile-web-app-capable"/>
+    • <meta content=yes                                                                                                                               name="apple-touch-fullscreen"/>
 
   Apple Tags
-    • <link href=icon.ico rel="apple-touch-icon"/>
-    • <link href=icon.72x72.ico rel=apple-touch-icon sizes="72x72"/>
-    • <link href=icon.114x114.ico rel=apple-touch-icon sizes="114x114"/>
-    • <link href=icon.png rel=apple-touch-icon type="image/png"/>
+    • <link href=icon.114x114.ico rel="apple-touch-icon" sizes="114x114"/>
+    • <link href=icon.72x72.ico   rel="apple-touch-icon" sizes="72x72"/>
+    • <link href=icon.ico         rel="apple-touch-icon"/>
+    • <link href=icon.png         rel="apple-touch-icon" type="image/png"/>
     • <link href=startup-icon.ico rel="apple-touch-startup-image"/>
 
   Blog Catalog Meta Tags
@@ -61,8 +62,7 @@ Company/ Service Meta Tags
   Internet Explorer Meta Tags
     • <link href=icon.ico rel="shortcut icon"/>
 
-    • <meta content=RevealTrans(Duration=2.0,Transition=2) http-equiv="Page-Enter"/>
-    • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
+    • <meta content="action-uri=index.html;icon-uri=icon.ico;name=Task Name" name="msapplication-task"/>
     • <meta content="chrome=1" http-equiv="X-UA-Compatible"/>
       ▴ [chrome=1]       Google Chrome Frame is an open source browser plug-in. Users who have the plug-in installed have access to Google Chrome's open web technologies and speedy JavaScript engine when they open pages in the browser
       ▴ [IE=10]          IE10 mode provides the highest support available for established and emerging industry standards, including the HTML5, CSS3 and others
@@ -72,25 +72,26 @@ Company/ Service Meta Tags
       ▴ [IE=8]           IE8 mode supports many established standards, including the W3C Cascading Style Sheets Level 2.1 Specification and the W3C Selectors API; it also provides limited support for the W3C Cascading Style Sheets Level 3 Specification (Working Draft) and other emerging standards
       ▴ [IE=9]           IE9 mode provides the highest support available for established and emerging industry standards, including the HTML5 (Working Draft), W3C Cascading Style Sheets Level 3 Specification (Working Draft), Scalable Vector Graphics (SVG) 1.0 Specification, and others
       ▴ [IE=edge]        Edge mode tells Internet Explorer to display content in the highest mode available
-      ▴ [IE=EmulateIE10] ...
-      ▴ [IE=EmulateIE11] ...
+      ▴ [IE=EmulateIE10] …
+      ▴ [IE=EmulateIE11] …
       ▴ [IE=EmulateIE7]  Emulate IE7 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 7 standards mode and quirks mode directives are displayed in IE5 mode
       ▴ [IE=EmulateIE8]  Emulate IE8 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 8 standards mode and quirks mode directives are displayed in IE5 mode
       ▴ [IE=EmulateIE9]  Emulate IE9 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 9 standards mode and quirks mode directives are displayed in IE5 mode
 
-    • <meta content="LapysDev Application" name="application-name"/>
-    • <meta content=#0000FF name="msapplication-navbutton-color"/>
-    • <meta content=# name="msapplication-starturl"/>
-    • <meta content="action-uri=index.html;icon-uri=icon.ico;name=Task Name" name="msapplication-task"/>
     • <meta content="LapysDev Application Tooltip" name="msapplication-tooltip"/>
-    • <meta content=height=600;width=800 name="msapplication-window"/>
-    • <meta content=true name="mssmarttagspreventparsing"/>
-    • <meta content=no name="MSThemeCompatible"/>
+    • <meta content="LapysDev Application"         name="application-name"/>
+    • <meta content=#                              name="msapplication-starturl"/>
+    • <meta content=#0000FF                        name="msapplication-navbutton-color"/>
+    • <meta content=height=600;width=800           name="msapplication-window"/>
+    • <meta content=no                             name="MSThemeCompatible"/>
+    • <meta content=RevealTrans(Duration=2.0,Transition=2)  http-equiv="Page-Enter"/>
+    • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
     • <meta content=SKYPE_TOOLBAR_PARSER_COMPATIBLE name="SKYPE_TOOLBAR"/>
+    • <meta content=true                            name="mssmarttagspreventparsing"/>
 
   Rails Meta Tags
     • <meta content="authenticity_token" name="csrf-param"/>
-    • <meta content=… name="csrf-token"/>
+    • <meta content=…                   name="csrf-token"/>
 
   TweetMeme Meta Tags
     • <meta name="tweetmeme-title" content="Retweet Button Explained"/>
@@ -99,132 +100,132 @@ Create Custom Meta Tags
   • <meta content=… name="…"/>
 
 HTML Link Tags
-  • <link href=http://feeds.lapys.com/ rel=alternate title=RSS type="application/rss+xml"/>
-  • <link href=https://www.lapys/archives/ rel=archives title="May 2003"/>
-  • <link href=https://www.lapys/canonical rel="canonical"/>
-  • <link href=# rel=EditURI title=… type="application/rsd+xml"/>
-  • <link href=# rel="first"/>
-  • <link href=fluid-icon.png rel=fluid-icon type="image/png"/>
-  • <link href=icon.ico rel="icon"/>
-  • <link href=https://www.lapys/index/? rel=index title="…"/>
-  • <link href=# rel="last"/>
-  • <link href=icon.ico rel="mask-icon"/>
-  • <link href=https://www.lapys/ rel=me type="text/html"/>
-  • <link href=javascript:history.go(1) rel=next title="…"/>
-  • <link href=# rel="pingback"/>
-  • <link href=javascript:history.go(-1) rel=prev title="OpenSearch and OpenID"/>
-  • <link href=https://www.lapys/search.xml rel=search title=… type="application/opensearchdescription+xml"/>
-  • <link href=https://www.lapys/*.php? rel=self type="application/atom+xml"/>
-  • <link href=icon.ico rel="shortcut icon"/>
-  • <link href=https://www.lapys/shortlink/ rel="shortlink"/>
-  • <link href=https://www.lapys/start/? rel=start title="…"/>
-  • <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet type="text/css"/>
+  • <link href=#                                                          rel="first"/>
+  • <link href=#                                                          rel="last"/>
+  • <link href=#                                                          rel="pingback"/>
+  • <link href=#                                                          rel=EditURI title=…    type="application/rsd+xml"/>
+  • <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet          type="text/css"/>
+  • <link href=fluid-icon.png                                             rel=fluid-icon          type="image/png"/>
+  • <link href=http://feeds.lapys.com/                                    rel=alternate title=RSS type="application/rss+xml"/>
+  • <link href=https://www.lapys/                                         rel=me                  type="text/html"/>
+  • <link href=https://www.lapys/*.php?                                   rel=self                type="application/atom+xml"/>
+  • <link href=https://www.lapys/archives/                                rel=archives title="May 2003"/>
+  • <link href=https://www.lapys/canonical                                rel="canonical"/>
+  • <link href=https://www.lapys/index/?                                  rel=index  title="…"/>
+  • <link href=https://www.lapys/search.xml                               rel=search title=… type="application/opensearchdescription+xml"/>
+  • <link href=https://www.lapys/shortlink/                               rel="shortlink"/>
+  • <link href=https://www.lapys/start/?                                  rel=start title="…"/>
+  • <link href=icon.ico                                                   rel="icon"/>
+  • <link href=icon.ico                                                   rel="mask-icon"/>
+  • <link href=icon.ico                                                   rel="shortcut icon"/>
+  • <link href=javascript:history.go(-1)                                  rel=prev title="OpenSearch and OpenID"/>
+  • <link href=javascript:history.go(1)                                   rel=next title="…"/>
 
 Open Graph Meta Tags
-  The Open Graph protocol enables any web page to become a rich object in a social graph.
-  For instance, this is used on Facebook to allow any web page to have the same functionality as any other object on Facebook.
+  The Open Graph protocol enables any web page to become a rich object in a social graph
+  For instance, this is used on Facebook to allow any web page to have the same functionality as any other object on Facebook
 
   Open Graph Type Values
     Article [http://ogp.me/ns/article]
-      • article:author          [profile array] → Writers of the article.
-      • article:expiration_time [datetime]      → When the article is out of date after.
-      • article:modified_time   [datetime]      → When the article was last changed.
-      • article:published_time  [datetime]      → When the article was first published.
-      • article:section         [string]        → A high-level section name e.g.: Technology e.t.c..
-      • article:tag             [string array]  → Tag words associated with this article.
+      • article:author          [profile array] → Writers of the article
+      • article:expiration_time [datetime]      → When the article is out of date after
+      • article:modified_time   [datetime]      → When the article was last changed
+      • article:published_time  [datetime]      → When the article was first published
+      • article:section         [string]        → A high-level section name e.g.: Technology e.t.c.
+      • article:tag             [string array]  → Tag words associated with this article
 
     Book [http://ogp.me/ns/book]
-      • book:author       [profile array] → Who wrote this book.
-      • book:isbn         [string]        → The ISBN.
-      • book:release_date [datetime]      → The date the book was released.
-      • book:tag          [string array]  → Tag words associated with this book.
+      • book:author       [profile array] → Who wrote this book
+      • book:isbn         [string]        → The ISBN
+      • book:release_date [datetime]      → The date the book was released
+      • book:tag          [string array]  → Tag words associated with this book
 
     Game
     Music
       music.album
-        • music:musician     [profile]      → The musician that made this song.
-        • music:release_date [datetime]     → The date the album was released.
-        • music:song         [music.song]   → The song on this album.
-        • music:song:disc    [integer >= 1] → The same as `music:album:disc` but in reverse.
-        • music:song:track   [integer >= 1] → The same as `music:album:track` but in reverse.
+        • music:musician     [profile]      → The musician that made this song
+        • music:release_date [datetime]     → The date the album was released
+        • music:song         [music.song]   → The song on this album
+        • music:song:disc    [integer >= 1] → The same as `music:album:disc` but in reverse
+        • music:song:track   [integer >= 1] → The same as `music:album:track` but in reverse
 
       music.playlist
-        • music:creator [profile] → The creator of this playlist.
+        • music:creator [profile] → The creator of this playlist
         • music:song              → Identical to the ones on `music.album`
           ▴ music:song:disc
           ▴ music:song:track
 
       music.radio_station
-        • music:creator [profile] → The creator of this station.
+        • music:creator [profile] → The creator of this station
 
       music.song
-        • music:duration    [integer >= 1]      → The song`s length in seconds.
-        • music:album       [music.album array] → The album this song is from.
-        • music:album:disc  [integer >= 1]      → Which disc of the album this song is on.
-        • music:album:track [integer >= 1]      → Which track this song is.
-        • music:musician    [profile array]     → The musician that made this song.
+        • music:album       [music.album array] → The album this song is from
+        • music:album:disc  [integer >= 1]      → Which disc of the album this song is on
+        • music:album:track [integer >= 1]      → Which track this song is
+        • music:duration    [integer >= 1]      → The song`s length in seconds
+        • music:musician    [profile array]     → The musician that made this song
 
     Profile [http://ogp.me/ns/profile]
-      • profile:first_name [string]             → A name normally given to an individual by a parent or self-chosen.
-      • profile:gender     [enum(male, female)] → Their gender.
-      • profile:last_name  [string]             → A name inherited from a family or marriage and by which the individual is commonly known.
-      • profile:username   [string]             → A short unique string to identify them.
+      • profile:first_name [string]             → A name normally given to an individual by a parent or self-chosen
+      • profile:gender     [enum(male, female)] → Their gender
+      • profile:last_name  [string]             → A name inherited from a family or marriage and by which the individual is commonly known
+      • profile:username   [string]             → A short unique string to identify them
 
     Video [http://ogp.me/ns/video]
       • video.episode
-        ▴ video:actor → Identical to `video.movie`.
+        ▴ video:actor → Identical to `video.movie`
         ▴ video:actor:role
         ▴ video:director
         ▴ video:duration
         ▴ video:release_date
-        ▴ video:series [video.tv_show] → Which series this episode belongs to.
+        ▴ video:series [video.tv_show] → Which series this episode belongs to
         ▴ video:tag
         ▴ video:writer
 
       • video.movie
-        ▴ video:actor        [profile array] → Actors in the movie.
-        ▴ video:actor:role   [string]        → The role they played.
-        ▴ video:director     [profile array] → Directors of the movie.
-        ▴ video:duration     [integer >= 1]  → The movie's length in seconds.
-        ▴ video:release_date [datetime]      → The date the movie was released.
-        ▴ video:tag          [string array]  → Tag words associated with this movie.
-        ▴ video:writer       [profile array] → Writers of the movie.
+        ▴ video:actor        [profile array] → Actors in the movie
+        ▴ video:actor:role   [string]        → The role they played
+        ▴ video:director     [profile array] → Directors of the movie
+        ▴ video:duration     [integer >= 1]  → The movie's length in seconds
+        ▴ video:release_date [datetime]      → The date the movie was released
+        ▴ video:tag          [string array]  → Tag words associated with this movie
+        ▴ video:writer       [profile array] → Writers of the movie
 
       • video.other
-        ▴ A video that doesn't belong in any other category. The metadata is identical to `video.movie`.
+        ▴ A video that doesn't belong in any other category. The metadata is identical to `video.movie`
 
       • video.tv_show
-        ▴ A multi-episode TV show. The metadata is identical to `video.movie`.
+        ▴ A multi-episode TV show. The metadata is identical to `video.movie`
 
     Website [http://ogp.me/ns/website]
 
   …
     • <meta content="…" name="fb:page_id"/>
 
-    • <meta content="Lapys Arts is a platform for creative expression through the web" name="og:description"/>
-    • <meta content="Lapys Arts" name="og:site_name"/>
-    • <meta content="Movie Title" name="og:title"/>
-    • <meta content=+234-816-092-384-9 name="og:fax_number"/>
-    • <meta content=+234-816-092-384-9 name="og:phone_number"/>
-    • <meta content=-122.153013 name="og:longitude"/>
-    • <meta content=37.416343 name="og:latitude"/>
-    • <meta content=https://www.lapys.arts name="og:url"/>
-    • <meta content=https://www.lapys.arts/icon.ico name="og:image"/>
-    • <meta content=lapysdev@gmail.com name="og:email"/>
-    • <meta content=Nigeria name="og:country-name"/>
-    • <meta content=website name="og:type"/>
-    • <meta content=… name="og:locality"/>
-    • <meta content=… name="og:postal-code"/>
-    • <meta content=… name="og:region"/>
-    • <meta content=… name="og:street-address"/>
+    • <meta content="Lapys Arts is a platform for creative expression through the Web" name="og:description"/>
+    • <meta content="Lapys Arts"                                                       name="og:site_name"/>
+    • <meta content="Movie Title"                                                      name="og:title"/>
+    • <meta content=+234-816-092-384-9                                                 name="og:fax_number"/>
+    • <meta content=+234-816-092-384-9                                                 name="og:phone_number"/>
+    • <meta content=-122.153013                                                        name="og:longitude"/>
+    • <meta content=37.416343                                                          name="og:latitude"/>
+    • <meta content=https://www.lapys.arts                                             name="og:url"/>
+    • <meta content=https://www.lapys.arts/icon.ico                                    name="og:image"/>
+    • <meta content=lapysdev@gmail.com                                                 name="og:email"/>
+    • <meta content=Britain                                                            name="og:country-name"/>
+    • <meta content=website                                                            name="og:type"/>
+    • <meta content=…                                                                 name="og:locality"/>
+    • <meta content=…                                                                 name="og:postal-code"/>
+    • <meta content=…                                                                 name="og:region"/>
+    • <meta content=…                                                                 name="og:street-address"/>
 
     • <meta content="A shiny red apple with a bite taken out" property="og:image:alt"/>
-    • <meta content=300 property="og:image:height"/>
-    • <meta content=400 property="og:image:width"/>
-    • <meta content=en_GB property="og:locale"/>
-    • <meta content=es_ES property="og:locale:alternate"/>
-    • <meta content=fr_FR property="og:locale:alternate"/>
-    • <meta content=http://example.com/ogp.jpg property="og:image"/>
-    • <meta content=https://secure.example.com/ogp.jpg property="og:image:secure_url"/>
-    • <meta content=image/jpeg property="og:image:type"/>
-    • <meta content=enum(a, an, the, "", auto) property="og:determiner"/>
+    • <meta content=300                                       property="og:image:height"/>
+    • <meta content=400                                       property="og:image:width"/>
+    • <meta content=en_GB                                     property="og:locale"/>
+    • <meta content=enum(a, an, the, "", auto)                property="og:determiner"/>
+    • <meta content=es_ES                                     property="og:locale:alternate"/>
+    • <meta content=fr_FR                                     property="og:locale:alternate"/>
+    • <meta content=http://example.com/ogp.jpg                property="og:image"/>
+    • <meta content=https://secure.example.com/ogp.jpg        property="og:image:secure_url"/>
+    • <meta content=image/jpeg                                property="og:image:type"/>
