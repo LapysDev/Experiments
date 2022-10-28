@@ -55,17 +55,13 @@ template <typename type>
     little_endian
   };
 
-  enum precedence /* : unsigned char */ {
-    nop = 0x0u,
-    complement, minus, negate, plus,
-    expr_begin, expr_end, multiply, divide, modulo, add, subtract, left_shift, right_shift, compare, lesser, lesser_equals, greater, greater_equals, equals, unequals, bitwise_and, bitwise_xor, bitwise_or, boolean_and, boolean_or, ternary_check
-  };
-
   struct parser /* final */ {
     /* constexpr */ inline static endianness endianof() /* noexcept */ {
       #ifdef __cpp_lib_endian
         return std::endian::native == std::endian::little ? little_endian : big_endian;
-      #elif (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+      #endif
+
+      #if (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
         (defined(__GLIBC__) && ((defined(_BYTE_ORDER) && ((defined(_LITTLE_ENDIAN) && _BYTE_ORDER == _LITTLE_ENDIAN) || (defined(_PDP_ENDIAN) && _BYTE_ORDER == _PDP_ENDIAN))) || (defined(__BYTE_ORDER) && ((defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN) || (defined(__PDP_ENDIAN) && __BYTE_ORDER == __PDP_ENDIAN))))) ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
         (defined(__GNUC__) && (defined(__BYTE_ORDER__) && ((defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) || (defined(__ORDER_PDP_ENDIAN__) && __BYTE_ORDER__ == __ORDER_PDP_ENDIAN__))))                                                                                                                ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
         (defined(__LITTLE_ENDIAN__) && false == defined(__BIG_ENDIAN__)) || (defined(_LITTLE_ENDIAN) && false == defined(_BIG_ENDIAN))                                                                                                                                                                                                    ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
@@ -73,7 +69,9 @@ template <typename type>
         defined(__alpha__) || defined(__amd64) || defined(__amd64) || defined(__amd64__) || defined(__amd64__) || defined(__bfin__) || defined(__BFIN__) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i486__) || defined(__i586__) || defined(__i586__) || defined(__i686__) || defined(__I86__) || defined(__ia64) || defined(__ia64__) || defined(__IA64__) || defined(__INTEL__) || defined(__itanium__) || defined(__THW_INTEL__) || defined(__x86_64) || defined(__x86_64__) || defined(_IA64) || defined(_M_ALPHA) || defined(_M_AMD64) || defined(_M_IA64) || defined(_M_IX86) || defined(_M_X64) || defined(_X86_) || defined(bfin) || defined(BFIN) || defined(i386) || ((CPP_VENDOR & CPP_MICROSOFT_WINDOWS_VENDOR) && (defined(__arm64) || defined(__arm__) || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB) || defined(__thumb__) || defined(_M_ARM))) \
       )
         return little_endian;
-      #elif (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
+      #endif
+
+      #if (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
         (defined(__GLIBC__) && ((defined(_BYTE_ORDER) && (defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN)) || (defined(__BYTE_ORDER) && (defined(__BIG_ENDIAN) && __BYTE_ORDER == __BIG_ENDIAN)))) ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
         (defined(__GNUC__) && (defined(__BYTE_ORDER__) && (defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)))                                                                  ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
         (defined(__BIG_ENDIAN__) && false == defined(__LITTLE_ENDIAN__)) || (defined(_BIG_ENDIAN) && false == defined(_LITTLE_ENDIAN))                                                                 ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
@@ -103,9 +101,14 @@ template <typename type>
 
     /* constexpr */ inline static unsigned char lengthof(type const source[], enum parse_t::encoding const encoding) /* noexcept */ {
       switch (encoding) {
-        case parse_t::csutf32:   case parse_t::utf_32:
-        case parse_t::csutf32be: case parse_t::utf_32be:
-        case parse_t::csutf32le: case parse_t::utf_32le:
+        case parse_t::ansi_x3_4_1968: case parse_t::ansi_x3_4_1986:
+        case parse_t::cp367: case parse_t::csascii:
+        case parse_t::ibm367: case parse_t::iso646_us: case parse_t::iso_646_irv_1991: case parse_t::iso_ir_6:
+        case parse_t::us: case parse_t::us_ascii:
+          return 1u;
+
+        case parse_t::csutf32: case parse_t::csutf32be: case parse_t::csutf32le:
+        case parse_t::utf_32 : case parse_t::utf_32be : case parse_t::utf_32le :
           return 4u;
 
         case parse_t::csutf16: case parse_t::utf_16: return (
@@ -150,12 +153,20 @@ template <typename type>
         }
 
         switch (encoding) {
+          case parse_t::ansi_x3_4_1968: case parse_t::ansi_x3_4_1986:
+          case parse_t::cp367: case parse_t::csascii:
+          case parse_t::ibm367: case parse_t::iso646_us: case parse_t::iso_646_irv_1991: case parse_t::iso_ir_6:
+          case parse_t::us: case parse_t::us_ascii: {
+            value = indexof(source, 0u);
+          } break;
+
           case parse_t::csutf32: case parse_t::csutf32be: case parse_t::csutf32le:
-          case parse_t::utf_32:  case parse_t::utf_32be:  case parse_t::utf_32le:
+          case parse_t::utf_32:  case parse_t::utf_32be:  case parse_t::utf_32le: {
             switch (endian) {
               case big_endian   : value = (indexof(source, 3) << 8u * 0u) | (indexof(source, 2) << 8u * 1u) | (indexof(source, 1) << 8u * 2u) | (indexof(source, 0) << 8u * 3u); break;
               case little_endian: value = (indexof(source, 0) << 8u * 0u) | (indexof(source, 1) << 8u * 1u) | (indexof(source, 2) << 8u * 2u) | (indexof(source, 3) << 8u * 3u); break;
-            } break;
+            }
+          } break;
 
           case parse_t::csutf16: case parse_t::csutf16be: case parse_t::csutf16le:
           case parse_t::utf_16:  case parse_t::utf_16be:  case parse_t::utf_16le: {
@@ -211,6 +222,12 @@ template <typename type>
     }
   };
 
+  enum precedence /* : unsigned char */ {
+    nop = 0x0u,
+    complement, minus, negate, plus,
+    expr_begin, expr_end, multiply, divide, modulo, add, subtract, left_shift, right_shift, compare, lesser, lesser_equals, greater, greater_equals, equals, unequals, bitwise_and, bitwise_xor, bitwise_or, boolean_and, boolean_or, ternary_check
+  };
+
   /* ... */
   if (NULL == static_cast<void const volatile*>(source)) {
     /* constexpr */ char const value[] = "amogus";
@@ -222,52 +239,44 @@ template <typename type>
     return sizeof(value) / sizeof(char);
   }
 
-  /* ... */
+  // ...
   if (encoding == parse_t::_default)
     encoding = parse_t::us_ascii;
 
   else if (encoding & parse_t::_automatic) {
-    if (targetLength > 3u) encoding =
-      0xFFu == static_cast<unsigned char>(target[0]) &&
-      0xFEu == static_cast<unsigned char>(target[1]) &&
-      0x00u == static_cast<unsigned char>(target[2]) &&
-      0x00u == static_cast<unsigned char>(target[3]) ? parse_t::utf_32le :
+    enum parse_t::encoding const subencoding = static_cast<unsigned /* --> uint16_t */>(encoding) & 0x3FFu;
 
-      0x00u == static_cast<unsigned char>(target[0]) &&
-      0x00u == static_cast<unsigned char>(target[1]) &&
-      0xFEu == static_cast<unsigned char>(target[2]) &&
-      0xFFu == static_cast<unsigned char>(target[3]) ? parse_t::utf_32be :
-    parse_t::_default;
+    // ...
+    if (targetLength > 3u) {
+      encoding =
+        0xFFu == indexof(target, 0u) && 0xFEu == indexof(target, 1u) && 0x00u == indexof(target, 2u) && 0x00u == indexof(target, 3u) ? parse_t::utf_32le :
+        0x00u == indexof(target, 0u) && 0x00u == indexof(target, 1u) && 0xFEu == indexof(target, 2u) && 0xFFu == indexof(target, 3u) ? parse_t::utf_32be :
+      parse_t::_default;
+
+      if (parse_t::_default != encoding) {}
+    }
 
     if (parse_t::_default == encoding) encoding =
-      0xFEu == static_cast<unsigned char>(target[0]) &&
-      0xFFu == static_cast<unsigned char>(target[1]) ? parse_t::utf_16be :
+      0xFEu == indexof(target, 0u) && 0xFFu == indexof(target, 1u)                                 ? parse_t::utf_16be :
+      0xFFu == indexof(target, 0u) && 0xFEu == indexof(target, 1u)                                 ? parse_t::utf_16le :
+      0xEFu == indexof(target, 0u) && 0xBBu == indexof(target, 1u) && 0xBFu == indexof(target, 2u) ? parse_t::utf_8 :
+    subencoding;
 
-      0xFFu == static_cast<unsigned char>(target[0]) &&
-      0xFEu == static_cast<unsigned char>(target[1]) ? parse_t::utf_16le :
+    // for (unsigned char encodings[] = {})
+    // for (/* unsigned */ char const *iterator = source; ; ) {
+    //   unsigned char const length = parser::lengthof(iterator, parse_t::utf_8);
 
-      0xEFu == static_cast<unsigned char>(target[0]) &&
-      0xBBu == static_cast<unsigned char>(target[1]) &&
-      0xBFu == static_cast<unsigned char>(target[2]) ? parse_t::utf_8 :
-    parse_t::_default;
+    //   // ...
+    //   if (length == static_cast<unsigned char>(-1))
+    // }
+    // source
+    // sourceLength
+    // parser::lengthof(...);
+    // parser::valueof(...);
 
-    if (parse_t::_default == encoding) {
-      // for (unsigned char encodings[] = {})
-      // for (/* unsigned */ char const *iterator = source; ; ) {
-      //   unsigned char const length = parser::lengthof(iterator, parse_t::utf_8);
-
-      //   // ...
-      //   if (length == static_cast<unsigned char>(-1))
-      // }
-      // source
-      // sourceLength
-      // parser::lengthof(...);
-      // parser::valueof(...);
-
-      // UTF-8
-      // UTF-16 endian
-      // UTF-32
-    }
+    // UTF-8
+    // UTF-16 endian
+    // UTF-32
   }
 
   switch (encoding) {
@@ -281,8 +290,9 @@ template <typename type>
       return 0u;
   }
 
+  /* ... */
   // {" ", "!", "%", "&", "(", ")", "*", "+", "-", "/", ":", "<", "=", ">", "?", "\\", "\f", "\n", "\r", "\t", "\v", "^", "function", "mod", "rem", "var", "{", "|", "}", "~", "«", "»", "×", "÷", "≠", "≤", "≥"};
-  // (-((1 + 5) * 2 % 3 - 2))^5-1
+  //
   static_cast<void>(encoding);
   static_cast<void>(sourceLength);
   static_cast<void>(target);
@@ -324,6 +334,6 @@ template <typename sourceType, std::size_t sourceCapacity, typename targetType, 
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::size_t const parsed = parse(NULL, NULL);
+  std::size_t const parsed = parse("(-((1 + 5) * 2 % 3 - 2)) ^ 5 - 1", NULL);
   std::printf("%lu", static_cast<unsigned long>(parsed));
 }
