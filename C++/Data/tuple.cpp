@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <utility>
 
-#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+#if defined(_ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
 # pragma warning(disable: 177)
 # pragma warning(disable: 383)
 # pragma warning(disable: 3280)

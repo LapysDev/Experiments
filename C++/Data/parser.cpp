@@ -16,7 +16,7 @@
 #endif
 
 /* ... */
-union parse_t /* final */ {
+struct parse_t /* final */ {
   enum encoding /* : uint16_t */ {
     _default = 0x000u,
 
@@ -46,10 +46,13 @@ union parse_t /* final */ {
 
     _automatic = 0x400u
   };
+
+  std::size_t begin;
+  std::size_t end;
 };
 
-template <typename type>
-/* constexpr */ std::size_t parse(type const source[], std::size_t const sourceLength, /* unsigned */ char* target, std::size_t const targetLength, enum parse_t::encoding encoding = parse_t::_default) /* noexcept */ {
+template <typename sourceType, typename targetType>
+/* constexpr */ std::size_t parse(sourceType const source[], std::size_t const sourceLength, targetType* target, std::size_t const targetLength, parse_t::encoding encoding = parse_t::_default) /* noexcept */ {
   enum endianness /* : unsigned char */ {
     big_endian,
     little_endian
@@ -84,12 +87,12 @@ template <typename type>
       return sizeof(unsigned char) == sizeof(uintmax_t) || 1u == reinterpret_cast<unsigned char const&>(static_cast<uintmax_t const&>(1u)) ? little_endian : big_endian;
     }
 
-    /* constexpr */ inline static unsigned char indexof(char const                   source[], std::size_t const index) /* noexcept */ { return static_cast<unsigned char>(source[index] - '\0'); }
-    /* constexpr */ inline static unsigned char indexof(char const volatile          source[], std::size_t const index) /* noexcept */ { return static_cast<unsigned char>(source[index] - '\0'); }
+    /* constexpr */ inline static unsigned char indexof(char          const          source[], std::size_t const index) /* noexcept */ { return static_cast<unsigned char>(source[index] - '\0'); }
+    /* constexpr */ inline static unsigned char indexof(char          const volatile source[], std::size_t const index) /* noexcept */ { return static_cast<unsigned char>(source[index] - '\0'); }
     /* constexpr */ inline static unsigned char indexof(unsigned char const          source[], std::size_t const index) /* noexcept */ { return source[index]; }
     /* constexpr */ inline static unsigned char indexof(unsigned char const volatile source[], std::size_t const index) /* noexcept */ { return source[index]; }
-    /* constexpr */ inline static unsigned char indexof(wchar_t const                source[], std::size_t const index) /* noexcept */ { return 0u == MB_LEN_MAX % 16u ? (static_cast<unsigned char>(source[index / (MB_LEN_MAX / 8u)]) >> 8u * (index % (MB_LEN_MAX / 8u))) & 0xFFu : indexof(reinterpret_cast<unsigned char const*>         (source), index); }
-    /* constexpr */ inline static unsigned char indexof(wchar_t const volatile       source[], std::size_t const index) /* noexcept */ { return 0u == MB_LEN_MAX % 16u ? (static_cast<unsigned char>(source[index / (MB_LEN_MAX / 8u)]) >> 8u * (index % (MB_LEN_MAX / 8u))) & 0xFFu : indexof(reinterpret_cast<unsigned char const volatile*>(source), index); }
+    /* constexpr */ inline static unsigned char indexof(wchar_t       const          source[], std::size_t const index) /* noexcept */ { return 0u == MB_LEN_MAX % 16u ? (static_cast<unsigned char>(source[index / (MB_LEN_MAX / 8u)]) >> 8u * (index % (MB_LEN_MAX / 8u))) & 0xFFu : indexof(reinterpret_cast<unsigned char const*>         (source), index); }
+    /* constexpr */ inline static unsigned char indexof(wchar_t       const volatile source[], std::size_t const index) /* noexcept */ { return 0u == MB_LEN_MAX % 16u ? (static_cast<unsigned char>(source[index / (MB_LEN_MAX / 8u)]) >> 8u * (index % (MB_LEN_MAX / 8u))) & 0xFFu : indexof(reinterpret_cast<unsigned char const volatile*>(source), index); }
     /* constexpr */ inline static unsigned char indexof(void const*          const   source,   std::size_t const index) /* noexcept */ { return indexof(static_cast<unsigned char const*>         (source), index); }
     /* constexpr */ inline static unsigned char indexof(void const volatile* const   source,   std::size_t const index) /* noexcept */ { return indexof(static_cast<unsigned char const volatile*>(source), index); }
     #ifdef __cpp_unicode_characters
@@ -99,7 +102,7 @@ template <typename type>
       /* constexpr */ inline static unsigned char indexof(char32_t const volatile source[], std::size_t const index) /* noexcept */ { return CHAR_BIT * sizeof(char32_t) == 32u ? (static_cast<unsigned char>(source[index / 4u]) >> 8u * (index % 4u)) & 0xFFu : indexof(reinterpret_cast<unsigned char const volatile*>(source), index); }
     #endif
 
-    /* constexpr */ inline static unsigned char lengthof(type const source[], enum parse_t::encoding const encoding) /* noexcept */ {
+    /* constexpr */ inline static unsigned char lengthof(sourceType const source[], parse_t::encoding const encoding) /* noexcept */ {
       switch (encoding) {
         case parse_t::ansi_x3_4_1968: case parse_t::ansi_x3_4_1986:
         case parse_t::cp367: case parse_t::csascii:
@@ -136,7 +139,16 @@ template <typename type>
       return static_cast<unsigned char>(-1);
     }
 
-    /* constexpr */ static uint_least32_t valueof(type const source[], enum parse_t::encoding const encoding, unsigned char length = 0u) /* noexcept */ {
+    /* constexpr */ inline static char const*          nextof(char          const volatile source[], std::size_t const count) /* noexcept */ { return const_cast<char const*>         (source + count / sizeof(char)); }
+    /* constexpr */ inline static unsigned char const* nextof(unsigned char const volatile source[], std::size_t const count) /* noexcept */ { return const_cast<unsigned char const*>(source + count / sizeof(unsigned char)); }
+    /* constexpr */ inline static wchar_t const*       nextof(wchar_t       const volatile source[], std::size_t const count) /* noexcept */ { return const_cast<wchar_t const*>      (source + count / sizeof(wchar_t)); }
+    /* constexpr */ inline static void const*          nextof(void const volatile* const   source,   std::size_t const count) /* noexcept */ { return nextof(static_cast<unsigned char const volatile*>(source), count); }
+    #ifdef __cpp_unicode_characters
+      /* constexpr */ inline static char16_t const* nextof(char16_t const volatile source[], std::size_t const count) /* noexcept */ { return const_cast<char16_t const*>(source + count / sizeof(char16_t)); }
+      /* constexpr */ inline static char32_t const* nextof(char32_t const volatile source[], std::size_t const count) /* noexcept */ { return const_cast<char32_t const*>(source + count / sizeof(char32_t)); }
+    #endif
+
+    /* constexpr */ static uint_least32_t valueof(sourceType const source[], parse_t::encoding const encoding, unsigned char length = 0u) /* noexcept */ {
       uint_fast32_t value = static_cast<uint_fast32_t>(-1);
 
       // ...
@@ -183,7 +195,7 @@ template <typename type>
           case parse_t::csutf8:
           case parse_t::utf_8: {
             switch (length) {
-              case 1u: value = indexof(source, 0u) & 0x7Fu;
+              case 1u: value = indexof(source, 0u) & 0x7Fu; break;
               case 2u: if ((indexof(source, 0u) & 0xE0u) != 0xC0u) return static_cast<uint_least32_t>(-1); else value = indexof(source, 0u) & 0x1Fu; break;
               case 3u: if ((indexof(source, 0u) & 0xF0u) != 0xE0u) return static_cast<uint_least32_t>(-1); else value = indexof(source, 0u) & 0x0Fu; break;
               case 4u: if ((indexof(source, 0u) & 0xF8u) != 0xF0u) return static_cast<uint_least32_t>(-1); else value = indexof(source, 0u) & 0x07u; break;
@@ -233,8 +245,13 @@ template <typename type>
     /* constexpr */ char const value[] = "amogus";
 
     // ...
-    if (0u != targetLength && targetLength < sizeof(value) / sizeof(char)) return 0u;
-    if (NULL != target) { for (char const *iterator = value; '\0' != *iterator; ++iterator) *(target++) = *iterator; }
+    if (0u != targetLength && targetLength < sizeof(value) / sizeof(char))
+    return 0u;
+
+    if (NULL != (char*) target) {
+      for (char const *iterator = value; '\0' != *iterator; ++iterator, target = 1 + (char*) target)
+      *(char*) target = *iterator;
+    }
 
     return sizeof(value) / sizeof(char);
   }
@@ -244,74 +261,60 @@ template <typename type>
     encoding = parse_t::us_ascii;
 
   else if (encoding & parse_t::_automatic) {
-    enum parse_t::encoding const subencoding = static_cast<unsigned /* --> uint16_t */>(encoding) & 0x3FFu;
+    parse_t::encoding const subencoding = static_cast<parse_t::encoding>(static_cast<unsigned /* --> uint16_t */>(encoding) & 0x3FFu);
+    parse_t::encoding       encodings[] = {parse_t::_default, parse_t::utf_8, parser::endianof() == little_endian ? parse_t::utf_16le : parse_t::utf_16be, subencoding == parse_t::_default ? parse_t::us_ascii : subencoding};
 
     // ...
-    if (targetLength > 3u) {
-      encoding =
-        0xFFu == indexof(target, 0u) && 0xFEu == indexof(target, 1u) && 0x00u == indexof(target, 2u) && 0x00u == indexof(target, 3u) ? parse_t::utf_32le :
-        0x00u == indexof(target, 0u) && 0x00u == indexof(target, 1u) && 0xFEu == indexof(target, 2u) && 0xFFu == indexof(target, 3u) ? parse_t::utf_32be :
-      parse_t::_default;
+    if (targetLength > 3u) *encodings =
+      0xFFu == parser::indexof(source, 0u) && 0xFEu == parser::indexof(source, 1u) && 0x00u == parser::indexof(source, 2u) && 0x00u == parser::indexof(source, 3u) ? parse_t::utf_32le :
+      0x00u == parser::indexof(source, 0u) && 0x00u == parser::indexof(source, 1u) && 0xFEu == parser::indexof(source, 2u) && 0xFFu == parser::indexof(source, 3u) ? parse_t::utf_32be :
+    parse_t::_default;
 
-      if (parse_t::_default != encoding) {}
+    if (parse_t::_default == *encodings) *encodings =
+      0xFEu == parser::indexof(source, 0u) && 0xFFu == parser::indexof(source, 1u)                                         ? parse_t::utf_16be :
+      0xFFu == parser::indexof(source, 0u) && 0xFEu == parser::indexof(source, 1u)                                         ? parse_t::utf_16le :
+      0xEFu == parser::indexof(source, 0u) && 0xBBu == parser::indexof(source, 1u) && 0xBFu == parser::indexof(source, 2u) ? parse_t::utf_8 :
+    parse_t::_default;
+
+    // ...
+    for (std::size_t index = 0u; ; ++index) {
+      sourceType const *iterator  = source;
+      std::size_t       length    = sourceLength;
+      bool              validated = false;
+
+      // ...
+      while (true) {
+        std::size_t const sublength = parser::lengthof(iterator, encodings[index]);
+        if (0u != sourceLength && sublength > length) break;
+
+        uint_fast32_t const value = parser::valueof(iterator, encodings[index], sublength);
+        if (value == static_cast<uint_least32_t>(-1)) break;
+        if (value == 0x00000000uL) { validated = true; break; }
+
+        // ...
+        iterator = static_cast<sourceType const*>(parser::nextof(iterator, sublength));
+        length  -= sublength;
+        if (0u == length) { validated = true; break; }
+      }
+
+      if (validated) { encoding = encodings[index]; break; }
+      if (index == (sizeof(encodings) / sizeof(parse_t::encoding)) - 1u) return 0u;
     }
-
-    if (parse_t::_default == encoding) encoding =
-      0xFEu == indexof(target, 0u) && 0xFFu == indexof(target, 1u)                                 ? parse_t::utf_16be :
-      0xFFu == indexof(target, 0u) && 0xFEu == indexof(target, 1u)                                 ? parse_t::utf_16le :
-      0xEFu == indexof(target, 0u) && 0xBBu == indexof(target, 1u) && 0xBFu == indexof(target, 2u) ? parse_t::utf_8 :
-    subencoding;
-
-    // for (unsigned char encodings[] = {})
-    // for (/* unsigned */ char const *iterator = source; ; ) {
-    //   unsigned char const length = parser::lengthof(iterator, parse_t::utf_8);
-
-    //   // ...
-    //   if (length == static_cast<unsigned char>(-1))
-    // }
-    // source
-    // sourceLength
-    // parser::lengthof(...);
-    // parser::valueof(...);
-
-    // UTF-8
-    // UTF-16 endian
-    // UTF-32
-  }
-
-  switch (encoding) {
-    case parse_t::ansi_x3_4_1968: case parse_t::ansi_x3_4_1986:
-    case parse_t::cp367: case parse_t::csascii: case parse_t::csutf16: case parse_t::csutf16be: case parse_t::csutf16le: case parse_t::csutf32: case parse_t::csutf32be: case parse_t::csutf32le: case parse_t::csutf8:
-    case parse_t::ibm367: case parse_t::iso646_us: case parse_t::iso_646_irv_1991: case parse_t::iso_ir_6:
-    case parse_t::us: case parse_t::us_ascii: case parse_t::utf_16: case parse_t::utf_16be: case parse_t::utf_16le: case parse_t::utf_32: case parse_t::utf_32be: case parse_t::utf_32le: case parse_t::utf_8:
-      break;
-
-    default:
-      return 0u;
   }
 
   /* ... */
   // {" ", "!", "%", "&", "(", ")", "*", "+", "-", "/", ":", "<", "=", ">", "?", "\\", "\f", "\n", "\r", "\t", "\v", "^", "function", "mod", "rem", "var", "{", "|", "}", "~", "«", "»", "×", "÷", "≠", "≤", "≥"};
-  //
+
   static_cast<void>(encoding);
   static_cast<void>(sourceLength);
   static_cast<void>(target);
   static_cast<void>(targetLength);
-  // for (char const *iterator = source; ; ++iterator) {
-  //   if ()
-  //   ENCODING
-  // }
 
   // ...
   return 0u;
 }
 
 // ... ->> basic extensions to allow for all object pointer types (missing optimized support however for specific cases)
-template <typename sourceType, typename targetType>
-/* constexpr */ std::size_t parse(sourceType source, std::size_t const sourceLength, targetType target, std::size_t const targetLength) /* noexcept */ {
-  return parse((/* unsigned */ char const*) (void const*) (void const volatile*) source, sourceLength, (/* unsigned */ char*) (void*) (void volatile*) target, targetLength);
-}
-
 template <typename sourceType, typename targetType>
 /* constexpr */ std::size_t parse(sourceType source, targetType target) /* noexcept */ {
   return parse((void const volatile*) source, 0u, (void volatile*) target, 0u);
