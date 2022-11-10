@@ -7,7 +7,7 @@ var encoding = [0n];
   var index = BigInt(character.charCodeAt(0));
   var fallback = encoding[count];
 
-  position -= count * (BIT_WIDTH / 2);
+  position        -= count * (BIT_WIDTH / 2);
   encoding[count] |= index << BigInt(BIT_WIDTH * position);
 
   if (encoding[count] >= (1n << BigInt(MAX_BYTE_SIZE))) {

@@ -1,6 +1,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <stdint.h>
 #if defined(_MSVC_LANG) ? _MSVC_LANG >= 202002L : __cplusplus >= 202002L
 # include <version>
@@ -15,8 +16,7 @@
 # include <sys/endian.h>
 #endif
 
-/* ... */
-struct parse_t /* final */ {
+namespace parser {
   enum encoding /* : uint16_t */ {
     _default = 0x000u,
 
@@ -47,9 +47,73 @@ struct parse_t /* final */ {
     _automatic = 0x400u
   };
 
-  std::size_t begin;
-  std::size_t end;
-};
+  template <typename type>
+  struct token /* final */ {
+    friend compile;
+    friend interpret;
+
+    private:
+      std::size_t length;
+      type       *value;
+  };
+
+  template <typename type>
+  struct token_arena /* final */ {
+    friend compile;
+    friend interpret;
+
+    private:
+      std::size_t        count;
+      token_arena const *previous;
+      token<type>        tokens[1024];
+
+      /* constexpr */ static void pop(std::size_t const) /* noexcept */;
+      /* constexpr */ static token<type>* push(std::size_t const) /* noexcept */;
+  };
+
+  /* ... */
+  template <typename type> /* constexpr */ type* allocator  (std::size_t const) /* noexcept */;
+  template <typename type> /* constexpr */ void  deallocator(type* const)       /* noexcept */;
+
+  template <typename sourceType, typename targetType>
+  /* constexpr */ std::size_t compile(sourceType const source[], std::size_t const sourceLength, targetType const target[], std::size_t const targetLength, encoding const encoding = parser::_default, targetType* (*const allocator)(std::size_t) = &parser::allocator, void (*const deallocator)(targetType*) = &parser::deallocator, token_arena const *arena = NULL) /* noexcept */ {
+    if (allocator == &std::malloc) {}
+    if (allocator == &parser::allocator) {}
+
+    if (deallocator == &std::free) {}
+    if (deallocator == &parser::deallocator) {}
+
+    static_cast<void>(arena);
+    static_cast<void>(encoding);
+    static_cast<void>(source);
+    static_cast<void>(sourceLength);
+    static_cast<void>(target);
+    static_cast<void>(targetLength);
+  }
+
+  template <typename sourceType, typename targetType>
+  /* constexpr */ uintmax_t interpret(sourceType const source[], std::size_t const sourceLength, targetType const target[], std::size_t const targetLength, encoding const encoding = parser::_default, targetType* (*const allocator)(std::size_t) = &parser::allocator, void (*const deallocator)(targetType*) = &parser::deallocator) /* noexcept */ {
+    if (allocator == &std::malloc) {}
+    if (allocator == &parser::allocator) {}
+
+    if (deallocator == &std::free) {}
+    if (deallocator == &parser::deallocator) {}
+
+    static_cast<void>(arena);
+    static_cast<void>(encoding);
+    static_cast<void>(source);
+    static_cast<void>(sourceLength);
+    static_cast<void>(target);
+    static_cast<void>(targetLength);
+  }
+}
+
+/* ... */
+accessof()
+endianof()
+indexof()
+lengthof()
+valueof()
 
 template <typename sourceType, typename targetType>
 /* constexpr */ std::size_t parse(sourceType const source[], std::size_t const sourceLength, targetType* target, std::size_t const targetLength, parse_t::encoding encoding = parse_t::_default) /* noexcept */ {
@@ -58,7 +122,7 @@ template <typename sourceType, typename targetType>
     little_endian
   };
 
-  struct parser /* final */ {
+  union parser {
     /* constexpr */ inline static endianness endianof() /* noexcept */ {
       #ifdef __cpp_lib_endian
         return std::endian::native == std::endian::little ? little_endian : big_endian;
@@ -317,7 +381,13 @@ template <typename sourceType, typename targetType>
 // ... ->> basic extensions to allow for all object pointer types (missing optimized support however for specific cases)
 template <typename sourceType, typename targetType>
 /* constexpr */ std::size_t parse(sourceType source, targetType target) /* noexcept */ {
-  return parse((void const volatile*) source, 0u, (void volatile*) target, 0u);
+  union parser {
+    /* constexpr */ static char const*          valueof(char                source[]) /* noexcept */ { return source; }
+    /* constexpr */ static char const*          valueof(char const          source[]) /* noexcept */ { return source; }
+    /* constexpr */ static char const volatile* valueof(char const volatile source[]) /* noexcept */ { return source; }
+    /* constexpr */ static char volatile*       valueof(char volatile       source[]) /* noexcept */ { return source; }
+  };
+  return parse((void const volatile*) source, 0u, (char volatile*) target, 0u);
 }
 
 template <typename sourceType, std::size_t sourceCapacity, typename targetType>

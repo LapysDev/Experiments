@@ -1,4 +1,4 @@
-/* NOTE (Lapys) -> Constrained to the CORS policy */
+/* NOTE (Lapys) -> Try `HTMLIFrameElement`s, as well? */
 var asynchronous = false;
 var body         = null; // --> Blob | BufferSource | FormData | Int8Array | Document | String | URLSearchParams
 var method       = "GET";
@@ -142,6 +142,7 @@ void function(request, requestType) {
       request.onreadystatechange = onreadystatechange :
       request.attachEvent("onreadystatechange", onreadystatechange);
 
+    request.setRequestHeader("Content-Type", "text/plain");
     request.open(method, url, true, username, password);
     request.send(body)
   }
