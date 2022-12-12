@@ -2,7 +2,7 @@ Basic HTML Meta Tags
 • <meta charset="UTF-8"/>
 
 • <meta content="accelerometer 'none'; ambient-light-sensor 'none'; autoplay 'none'; battery 'none'; camera 'none'; display-capture 'none'; document-domain 'none'; encrypted-media 'none'; fullscreen 'none'; gamepad 'none'; geolocation 'none'; gyroscope 'none'; layout-animations 'none'; legacy-image-formats 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; oversized-images 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; speaker-selection 'none'; sync-xhr 'none'; usb 'none'; screen-wake-lock 'none'; web-share 'none'; xr-spatial-tracking 'none'" http-equiv="Feature-Policy"/>
-• <meta content="accelerometer 'none'; ambient-light-sensor 'none'; autoplay 'none'; battery 'none'; camera 'none'; display-capture 'none'; document-domain 'none'; encrypted-media 'none'; fullscreen 'none'; gamepad 'none'; geolocation 'none'; gyroscope 'none'; layout-animations 'none'; legacy-image-formats 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; oversized-images 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; speaker-selection 'none'; sync-xhr 'none'; usb 'none'; screen-wake-lock 'none'; web-share 'none'; xr-spatial-tracking 'none'" http-equiv="Permissions-Policy"/>
+• <meta content="accelerometer=(none), ambient-light-sensor=(none), autoplay=(none), battery=(none), camera=(none), display-capture=(none), document-domain=(none), encrypted-media=(none), fullscreen=(none), gamepad=(none), geolocation=(none), gyroscope=(none), layout-animations=(none), legacy-image-formats=(none), magnetometer=(none), microphone=(none), midi=(none), oversized-images=(none), payment=(none), picture-in-picture=(none), publickey-credentials-get=(none), speaker-selection=(none), sync-xhr=(none), usb=(none), screen-wake-lock=(none), web-share=(none), xr-spatial-tracking=(none)" http-equiv="Permissions-Policy"/>
 • <meta content="max-age=1800, max-stale, public, stale-if-error=259200, stale-while-revalidate=86400"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               http-equiv=Cache-Control rem="max-age=30minutes"/>
 • <meta content=0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    http-equiv="Expires"/>
 • <meta content=no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   http-equiv="imagetoolbar"/>
@@ -103,23 +103,23 @@ HTML Link Tags
   • <link href=#                                                          rel="first"/>
   • <link href=#                                                          rel="last"/>
   • <link href=#                                                          rel="pingback"/>
-  • <link href=#                                                          rel=EditURI title=…    type="application/rsd+xml"/>
+  • <link href=#                                                          rel=EditURI   title=…  type="application/rsd+xml"/>
   • <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet          type="text/css"/>
   • <link href=fluid-icon.png                                             rel=fluid-icon          type="image/png"/>
   • <link href=http://feeds.lapys.com/                                    rel=alternate title=RSS type="application/rss+xml"/>
   • <link href=https://www.lapys/                                         rel=me                  type="text/html"/>
   • <link href=https://www.lapys/*.php?                                   rel=self                type="application/atom+xml"/>
-  • <link href=https://www.lapys/archives/                                rel=archives title="May 2003"/>
+  • <link href=https://www.lapys/archives/                                rel=archives  title="May 2003"/>
   • <link href=https://www.lapys/canonical                                rel="canonical"/>
-  • <link href=https://www.lapys/index/?                                  rel=index  title="…"/>
-  • <link href=https://www.lapys/search.xml                               rel=search title=… type="application/opensearchdescription+xml"/>
+  • <link href=https://www.lapys/index/?                                  rel=index     title="…"/>
+  • <link href=https://www.lapys/search.xml                               rel=search    title=…  type="application/opensearchdescription+xml"/>
   • <link href=https://www.lapys/shortlink/                               rel="shortlink"/>
-  • <link href=https://www.lapys/start/?                                  rel=start title="…"/>
+  • <link href=https://www.lapys/start/?                                  rel=start     title="…"/>
   • <link href=icon.ico                                                   rel="icon"/>
   • <link href=icon.ico                                                   rel="mask-icon"/>
   • <link href=icon.ico                                                   rel="shortcut icon"/>
-  • <link href=javascript:history.go(-1)                                  rel=prev title="OpenSearch and OpenID"/>
-  • <link href=javascript:history.go(1)                                   rel=next title="…"/>
+  • <link href=javascript:history.go(-1)                                  rel=prev      title="OpenSearch and OpenID"/>
+  • <link href=javascript:history.go(1)                                   rel=next      title="…"/>
 
 Open Graph Meta Tags
   The Open Graph protocol enables any web page to become a rich object in a social graph

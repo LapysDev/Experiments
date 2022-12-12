@@ -101,8 +101,8 @@ void function(request, requestType) {
     request.addEventListener("progress", onprogress);
     request.addEventListener("timeout", ontimeout);
 
-    request.setRequestHeader("Content-Type", "text/plain");
     request.open(method, url, asynchronous, username, password);
+    request.setRequestHeader("Content-Type", "text/plain");
     request.send(body)
   }
 
@@ -116,15 +116,9 @@ void function(request, requestType) {
 
       switch (request.readyState) {
         case DONE: {
-          if (0x0 === request.status || (request.status >= 200 && request.status < 400))
-            onload(event);
-
-          else {
-            if (408 === request.status || 504 === request.status)
-              ontimeout(event);
-
-            onerror(event)
-          }
+          if (0x0 === request.status || (request.status >= 200 && request.status < 400)) onload(event);
+          else if (408 === request.status || 504 === request.status) { ontimeout(event); onerror(event) }
+          else onerror(event);
 
           onloadend(event)
         } break;
@@ -142,8 +136,8 @@ void function(request, requestType) {
       request.onreadystatechange = onreadystatechange :
       request.attachEvent("onreadystatechange", onreadystatechange);
 
-    request.setRequestHeader("Content-Type", "text/plain");
     request.open(method, url, true, username, password);
+    request.setRequestHeader("Content-Type", "text/plain");
     request.send(body)
   }
 }(requests[iterator].interface, requests[iterator].type);

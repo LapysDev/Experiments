@@ -14,13 +14,10 @@ function charCodeAt(character) {
     );
 
     // ...
-    while (integer) {
+    while (integer || source.length < 4) {
       source     = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'][integer % 16] + source;
       integer >>>= 4
     }
-
-    while (source.length < 4)
-    source = '0' + source;
 
     return "\\u" + source
   }

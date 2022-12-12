@@ -9,7 +9,7 @@
 
   /* <abbr> */
   abbr[title] {
-    border-bottom: none;
+    border-bottom  : none;
     text-decoration: underline;
     text-decoration: underline dotted
   }
@@ -70,8 +70,10 @@
 
   /* <button>, <input>, <optgroup>, <select>, <textarea> */
   button, input, optgroup, select, textarea {
-    font-family: inherit;
-    line-height: 1.5
+    border       : 1px solid;
+    border-radius: 0;
+    font-family  : inherit;
+    line-height  : 1.5
   }
 
   /* <button>, <select> */
