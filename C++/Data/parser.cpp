@@ -287,8 +287,112 @@ namespace parser {
     big_endian,
     little_endian
   };
+}
 
-  /* ... */
+namespace parser {
+  namespace {
+    // ... ->> (Mostly) Compile-time indexing for byte sizes
+    constexpr unsigned char byteat(bool           const source[], std::size_t const index) noexcept { return (source[index / sizeof(bool)]           >> (CHAR_BIT * (index % sizeof(bool))))           & UCHAR_MAX; }
+    constexpr unsigned char byteat(char           const source[], std::size_t const index) noexcept { return (source[index / sizeof(char)]           >> (CHAR_BIT * (index % sizeof(char))))           & UCHAR_MAX; }
+    constexpr unsigned char byteat(signed   char  const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed char)]    >> (CHAR_BIT * (index % sizeof(signed char))))    & UCHAR_MAX; }
+    constexpr unsigned char byteat(signed   int   const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed int)]     >> (CHAR_BIT * (index % sizeof(signed int))))     & UCHAR_MAX; }
+    constexpr unsigned char byteat(signed   long  const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed long)]    >> (CHAR_BIT * (index % sizeof(signed long))))    & UCHAR_MAX; }
+    constexpr unsigned char byteat(signed   short const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed short)]   >> (CHAR_BIT * (index % sizeof(signed short))))   & UCHAR_MAX; }
+    constexpr unsigned char byteat(unsigned char  const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned char)]  >> (CHAR_BIT * (index % sizeof(unsigned char))))  & UCHAR_MAX; }
+    constexpr unsigned char byteat(unsigned int   const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned int)]   >> (CHAR_BIT * (index % sizeof(unsigned int))))   & UCHAR_MAX; }
+    constexpr unsigned char byteat(unsigned long  const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned long)]  >> (CHAR_BIT * (index % sizeof(unsigned long))))  & UCHAR_MAX; }
+    constexpr unsigned char byteat(unsigned short const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned short)] >> (CHAR_BIT * (index % sizeof(unsigned short)))) & UCHAR_MAX; }
+    constexpr unsigned char byteat(wchar_t        const source[], std::size_t const index) noexcept { return (source[index / sizeof(wchar_t)]        >> (CHAR_BIT * (index % sizeof(wchar_t))))        & UCHAR_MAX; }
+    #ifdef __cpp_unicode_characters
+      constexpr unsigned char byteat(char16_t const source[], std::size_t const index) noexcept { return (source[index / sizeof(char16_t)] >> (CHAR_BIT * (index % sizeof(char16_t)))) & UCHAR_MAX; }
+      constexpr unsigned char byteat(char32_t const source[], std::size_t const index) noexcept { return (source[index / sizeof(char32_t)] >> (CHAR_BIT * (index % sizeof(char32_t)))) & UCHAR_MAX; }
+    #endif
+    #ifdef __cpp_char8_t
+      constexpr unsigned char byteat(char8_t const source[], std::size_t const index) noexcept { return (source[index / sizeof(char8_t)] >> (CHAR_BIT * (index % sizeof(char8_t)))) & UCHAR_MAX; }
+    #endif
+    #if defined(_MSVC_LANG) || __cplusplus >= 201103L
+      constexpr unsigned char byteat(signed   long long const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed   long long)] >> (CHAR_BIT * (index % sizeof(signed   long long)))) & UCHAR_MAX; }
+      constexpr unsigned char byteat(unsigned long long const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned long long)] >> (CHAR_BIT * (index % sizeof(unsigned long long)))) & UCHAR_MAX; }
+    #endif
+    #ifdef __cpp_lib_byte
+      constexpr unsigned char byteat(std::byte const source[], std::size_t const index) noexcept { return source[index]; }
+    #endif
+    inline unsigned char byteat(void const volatile* const source, std::size_t const index) noexcept { return byteat((unsigned char const*) source, index); }
+
+    // ... ->> (Mostly) Compile-time indexing for specific bit widths
+    template <unsigned char width, typename type>
+    /* constexpr */ inline typename std::enable_if<(CHAR_BIT < width),
+      typename std::conditional<width <= CHAR_BIT * sizeof(unsigned char),      unsigned char,
+      typename std::conditional<width <= CHAR_BIT * sizeof(unsigned short),     unsigned short,
+      typename std::conditional<width <= CHAR_BIT * sizeof(unsigned int),       unsigned int,
+      typename std::conditional<width <= CHAR_BIT * sizeof(unsigned long),      unsigned long,
+      #if defined(_MSVC_LANG) || __cplusplus >= 201103L
+        typename std::conditional<width <= CHAR_BIT * sizeof(unsigned long long), unsigned long long,
+      #endif
+        uintmax_t
+      #if defined(_MSVC_LANG) || __cplusplus >= 201103L
+        >::type
+      #endif
+      >::type>::type>::type>::type>::type
+    >::type bitsat(type bytes[], std::size_t const length, std::size_t index) noexcept {
+      unsigned char subwidth = width;
+      uintmax_t     byte     = byteat(bytes, (index * width) / CHAR_BIT) & (
+        ((1u << ((CHAR_BIT - ((index * width) % CHAR_BIT)) - 1u)) - 0u) +
+        ((1u << ((CHAR_BIT - ((index * width) % CHAR_BIT)) - 1u)) - 1u)
+      );
+
+      // ...
+      subwidth -= CHAR_BIT - ((index * width) % CHAR_BIT);
+      index     = (index * width) / CHAR_BIT;
+
+      while (true) {
+        if (CHAR_BIT > subwidth)
+        return (byte << subwidth) | (index + 1u >= length ? byteat(bytes, ++index) >> (CHAR_BIT - subwidth) : 0x00u);
+
+        byte      = (byte << CHAR_BIT) | byteat(bytes, ++index);
+        subwidth -= CHAR_BIT;
+      }
+    }
+
+    template <unsigned char width, typename type>
+    constexpr typename std::enable_if<(CHAR_BIT >= width),
+      unsigned char
+    >::type bitsat(type bytes[], std::size_t const length, std::size_t const index) noexcept {
+      return width == CHAR_BIT ? byteat(bytes, index) : width <= CHAR_BIT - ((width * index) % CHAR_BIT) ? (
+        (byteat(bytes, (width * index) / CHAR_BIT) >> (CHAR_BIT - width - ((width * index) % CHAR_BIT))) &
+        (static_cast<unsigned char>(1u << width) - 1u)
+      ) : (
+        ((byteat(bytes, (width * (index + 0u)) / CHAR_BIT) & ((1u << (CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT))) - 1u)) << ((width * (index + 1u)) % CHAR_BIT)) |
+        (index + 1u != length ? byteat(bytes, (width * (index + 1u)) / CHAR_BIT) >> (CHAR_BIT - ((width * (index + 1u)) % CHAR_BIT)) : 0x00u)
+      );
+    }
+
+    // ... ->> (Mostly) Compile-time endianness detection; used for endian-arbitrary encodings only such as `UTF_16` or `UTF_32`
+    constexpr static endianness endianof() noexcept {
+      #ifdef __cpp_lib_endian
+        return std::endian::native == std::endian::little ? little_endian : big_endian;
+      #elif (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+        (defined(__GLIBC__) && ((defined(_BYTE_ORDER) && ((defined(_LITTLE_ENDIAN) && _BYTE_ORDER == _LITTLE_ENDIAN) || (defined(_PDP_ENDIAN) && _BYTE_ORDER == _PDP_ENDIAN))) || (defined(__BYTE_ORDER) && ((defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN) || (defined(__PDP_ENDIAN) && __BYTE_ORDER == __PDP_ENDIAN))))) ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+        (defined(__GNUC__) && (defined(__BYTE_ORDER__) && ((defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) || (defined(__ORDER_PDP_ENDIAN__) && __BYTE_ORDER__ == __ORDER_PDP_ENDIAN__))))                                                                                                                ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+        (defined(__LITTLE_ENDIAN__) && false == defined(__BIG_ENDIAN__)) || (defined(_LITTLE_ENDIAN) && false == defined(_BIG_ENDIAN))                                                                                                                                                                                                    ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+        defined(__AARCH64EL__) || defined(__ARMEL__) || defined(__MIPSEL) || defined(__MIPSEL__) || defined(__THUMBEL__) || defined(_MIPSEL)                                                                                                                                                                                              ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+        defined(__alpha__) || defined(__amd64) || defined(__amd64) || defined(__amd64__) || defined(__amd64__) || defined(__bfin__) || defined(__BFIN__) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i486__) || defined(__i586__) || defined(__i586__) || defined(__i686__) || defined(__I86__) || defined(__ia64) || defined(__ia64__) || defined(__IA64__) || defined(__INTEL__) || defined(__itanium__) || defined(__THW_INTEL__) || defined(__x86_64) || defined(__x86_64__) || defined(_IA64) || defined(_M_ALPHA) || defined(_M_AMD64) || defined(_M_IA64) || defined(_M_IX86) || defined(_M_X64) || defined(_X86_) || defined(bfin) || defined(BFIN) || defined(i386) || ((CPP_VENDOR & CPP_MICROSOFT_WINDOWS_VENDOR) && (defined(__arm64) || defined(__arm__) || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB) || defined(__thumb__) || defined(_M_ARM))) \
+      )
+        return little_endian;
+      #elif (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
+        (defined(__GLIBC__) && ((defined(_BYTE_ORDER) && (defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN)) || (defined(__BYTE_ORDER) && (defined(__BIG_ENDIAN) && __BYTE_ORDER == __BIG_ENDIAN)))) ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+        (defined(__GNUC__) && (defined(__BYTE_ORDER__) && (defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)))                                                                  ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+        (defined(__BIG_ENDIAN__) && false == defined(__LITTLE_ENDIAN__)) || (defined(_BIG_ENDIAN) && false == defined(_LITTLE_ENDIAN))                                                                 ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+        defined(__AARCH64EB__) || defined(__ARMEB__) || defined(__MIPSEB) || defined(__MIPSEB__) || defined(__THUMBEB__) || defined(_MIPSEB)                                                           ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+        defined(__370__) || defined(__hppa) || defined(__hpux) || defined(__m68k__) || defined(__mc68000) || defined(__mc68000__) || defined(__mc68010) || defined(__mc68010__) || defined(__mc68020) || defined(__mc68020__) || defined(__mc68030) || defined(__mc68030__) || defined(__mc68040) || defined(__mc68040__) || defined(__mc68060) || defined(__mc68060__) || defined(__powerpc__) || defined(__ppc__) || defined(__s390__) || defined(__s390__) || defined(__s390x__) || defined(__sparc) || defined(__sparc__) || defined(__sparcv8) || defined(__sparcv9) || defined(__SYSC_ZARCH__) || defined(__THW_370__) || defined(_POWER) || defined(M68000) || defined(mc68000) || defined(mc68010) || defined(mc68020) || defined(mc68030) || defined(mc68040) || defined(mc68060) \
+      )
+        return big_endian;
+      #else
+        return sizeof(unsigned char) == sizeof(uintmax_t) || 1u == reinterpret_cast<unsigned char const&>(static_cast<uintmax_t const&>(1u)) ? little_endian : big_endian;
+      #endif
+    }
+  }
+
   template <typename sourceType, typename destinationType, typename std::enable_if<std::is_pointer<sourceType>::value && false != (
     std::is_integral<typename std::remove_all_extents<typename std::remove_pointer<sourceType>::type>::type>::value ||
     #ifdef __cpp_lib_byte
@@ -302,80 +406,13 @@ namespace parser {
   ), int>::type = 0>
   constexpr static std::size_t parse(sourceType const source, std::size_t const sourceLength, destinationType destination, std::size_t const destinationLength = 0u, parser::encoding const encoding = parser::UTF_8) noexcept {
     struct parse final {
-      // TODO (Lapys) -> Bit-walking, not byte traversal
-      constexpr static unsigned char byteat(bool           const source[], std::size_t const index) noexcept { return source[index];                                                                           }
-      constexpr static unsigned char byteat(char           const source[], std::size_t const index) noexcept { return source[index];                                                                           }
-      constexpr static unsigned char byteat(signed   char  const source[], std::size_t const index) noexcept { return source[index];                                                                           }
-      constexpr static unsigned char byteat(signed   int   const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed int)]     >> (CHAR_BIT * (index % sizeof(signed int))))   & UCHAR_MAX;   }
-      constexpr static unsigned char byteat(signed   long  const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed long)]    >> (CHAR_BIT * (index % sizeof(signed long))))  & UCHAR_MAX;   }
-      constexpr static unsigned char byteat(signed   short const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed short)]   >> (CHAR_BIT * (index % sizeof(signed short)))) & UCHAR_MAX;   }
-      constexpr static unsigned char byteat(unsigned char  const source[], std::size_t const index) noexcept { return source[index];                                                                           }
-      constexpr static unsigned char byteat(unsigned int   const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned int)]   >> (CHAR_BIT * (index % sizeof(unsigned int))))   & UCHAR_MAX; }
-      constexpr static unsigned char byteat(unsigned long  const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned long)]  >> (CHAR_BIT * (index % sizeof(unsigned long))))  & UCHAR_MAX; }
-      constexpr static unsigned char byteat(unsigned short const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned short)] >> (CHAR_BIT * (index % sizeof(unsigned short)))) & UCHAR_MAX; }
-      constexpr static unsigned char byteat(wchar_t        const source[], std::size_t const index) noexcept { return (source[index / sizeof(wchar_t)]        >> (CHAR_BIT * (index % sizeof(wchar_t)))) & UCHAR_MAX;        }
-      #ifdef __cpp_unicode_characters
-        constexpr static unsigned char byteat(char16_t const source[], std::size_t const index) noexcept { return (source[index / sizeof(char16_t)] >> (CHAR_BIT * (index % sizeof(char16_t)))) & UCHAR_MAX; }
-        constexpr static unsigned char byteat(char32_t const source[], std::size_t const index) noexcept { return (source[index / sizeof(char32_t)] >> (CHAR_BIT * (index % sizeof(char32_t)))) & UCHAR_MAX; }
-      #endif
-      #ifdef __cpp_char8_t
-        constexpr static unsigned char byteat(char8_t const source[], std::size_t const index) noexcept { return (source[index / sizeof(char8_t)] >> (CHAR_BIT * (index % sizeof(char8_t)))) & UCHAR_MAX; }
-      #endif
-      #if defined(_MSVC_LANG) || __cplusplus >= 201103L
-        constexpr static unsigned char byteat(signed   long long const source[], std::size_t const index) noexcept { return (source[index / sizeof(signed   long long)] >> (CHAR_BIT * (index % sizeof(signed   long long)))) & UCHAR_MAX; }
-        constexpr static unsigned char byteat(unsigned long long const source[], std::size_t const index) noexcept { return (source[index / sizeof(unsigned long long)] >> (CHAR_BIT * (index % sizeof(unsigned long long)))) & UCHAR_MAX; }
-      #endif
-      #ifdef __cpp_lib_byte
-        constexpr static unsigned char byteat(std::byte const source[], std::size_t const index) noexcept { return source[index]; }
-      #endif
-
-      // ...
-      constexpr static endianness endianof() noexcept {
-        #ifdef __cpp_lib_endian
-          return std::endian::native == std::endian::little ? little_endian : big_endian;
-        #endif
-
-        #if (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-          (defined(__GLIBC__) && ((defined(_BYTE_ORDER) && ((defined(_LITTLE_ENDIAN) && _BYTE_ORDER == _LITTLE_ENDIAN) || (defined(_PDP_ENDIAN) && _BYTE_ORDER == _PDP_ENDIAN))) || (defined(__BYTE_ORDER) && ((defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN) || (defined(__PDP_ENDIAN) && __BYTE_ORDER == __PDP_ENDIAN))))) ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-          (defined(__GNUC__) && (defined(__BYTE_ORDER__) && ((defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) || (defined(__ORDER_PDP_ENDIAN__) && __BYTE_ORDER__ == __ORDER_PDP_ENDIAN__))))                                                                                                                ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-          (defined(__LITTLE_ENDIAN__) && false == defined(__BIG_ENDIAN__)) || (defined(_LITTLE_ENDIAN) && false == defined(_BIG_ENDIAN))                                                                                                                                                                                                    ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-          defined(__AARCH64EL__) || defined(__ARMEL__) || defined(__MIPSEL) || defined(__MIPSEL__) || defined(__THUMBEL__) || defined(_MIPSEL)                                                                                                                                                                                              ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-          defined(__alpha__) || defined(__amd64) || defined(__amd64) || defined(__amd64__) || defined(__amd64__) || defined(__bfin__) || defined(__BFIN__) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i486__) || defined(__i586__) || defined(__i586__) || defined(__i686__) || defined(__I86__) || defined(__ia64) || defined(__ia64__) || defined(__IA64__) || defined(__INTEL__) || defined(__itanium__) || defined(__THW_INTEL__) || defined(__x86_64) || defined(__x86_64__) || defined(_IA64) || defined(_M_ALPHA) || defined(_M_AMD64) || defined(_M_IA64) || defined(_M_IX86) || defined(_M_X64) || defined(_X86_) || defined(bfin) || defined(BFIN) || defined(i386) || ((CPP_VENDOR & CPP_MICROSOFT_WINDOWS_VENDOR) && (defined(__arm64) || defined(__arm__) || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB) || defined(__thumb__) || defined(_M_ARM))) \
-        )
-          return little_endian;
-        #endif
-
-        #if (                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-          (defined(__GLIBC__) && ((defined(_BYTE_ORDER) && (defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN)) || (defined(__BYTE_ORDER) && (defined(__BIG_ENDIAN) && __BYTE_ORDER == __BIG_ENDIAN)))) ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-          (defined(__GNUC__) && (defined(__BYTE_ORDER__) && (defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)))                                                                  ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-          (defined(__BIG_ENDIAN__) && false == defined(__LITTLE_ENDIAN__)) || (defined(_BIG_ENDIAN) && false == defined(_LITTLE_ENDIAN))                                                                 ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-          defined(__AARCH64EB__) || defined(__ARMEB__) || defined(__MIPSEB) || defined(__MIPSEB__) || defined(__THUMBEB__) || defined(_MIPSEB)                                                           ||                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-          defined(__370__) || defined(__hppa) || defined(__hpux) || defined(__m68k__) || defined(__mc68000) || defined(__mc68000__) || defined(__mc68010) || defined(__mc68010__) || defined(__mc68020) || defined(__mc68020__) || defined(__mc68030) || defined(__mc68030__) || defined(__mc68040) || defined(__mc68040__) || defined(__mc68060) || defined(__mc68060__) || defined(__powerpc__) || defined(__ppc__) || defined(__s390__) || defined(__s390__) || defined(__s390x__) || defined(__sparc) || defined(__sparc__) || defined(__sparcv8) || defined(__sparcv9) || defined(__SYSC_ZARCH__) || defined(__THW_370__) || defined(_POWER) || defined(M68000) || defined(mc68000) || defined(mc68010) || defined(mc68020) || defined(mc68030) || defined(mc68040) || defined(mc68060) \
-        )
-          return big_endian;
-        #endif
-
-        return sizeof(unsigned char) == sizeof(uintmax_t) || 1u == reinterpret_cast<unsigned char const&>(static_cast<uintmax_t const&>(1u)) ? little_endian : big_endian;
-      }
-
       // ... ->> In code units
       constexpr static uint_fast8_t lengthof(sourceType const source, parser::encoding const encoding) noexcept {
         switch (encoding) {
           case parser::UTF_16:
           case parser::UTF_16BE:
           case parser::UTF_16LE: {
-            uint_fast16_t point = 0x00u;
-
-            // ...
-            for (unsigned char width = 0u; width < 16u; ) {
-              unsigned char byte = byteat(source, width / CHAR_BIT);
-
-              width += CHAR_BIT;
-              byte  &= width >= 16u ? ~(1u << (width - 16u)) : UCHAR_MAX;
-              point |= byte << (width - CHAR_BIT);
-            }
-
-            return 1u + (point > 0xD7FFu && point < 0xE000u);
+            return 1u + (bitsat<16u>(source, 0u) > 0xD7FFu && bitsat<16u>(source, 0u) < 0xE000u);
           }
 
           case parser::UTF_32:
