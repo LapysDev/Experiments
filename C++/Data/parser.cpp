@@ -189,25 +189,82 @@ namespace parser {
     }
 
     // ... ->> (Possibly) Compile-time bitwise assignment
-    template <unsigned char width, typename type>
-    inline static uintmax_t set_bits(type* const bytes, std::size_t const length, std::size_t const index, typename endianness::type const endian, unsigned char const value) noexcept {
+    template <unsigned char sourceWidth, unsigned char destinationWidth, typename type>
+    inline static uintmax_t set_bits(type* const bytes, std::size_t const length, std::size_t const index, typename endianness::type const endian, uintmax_t const value) noexcept {
       static_cast<void>(bytes);
       static_cast<void>(endian);
       static_cast<void>(index);
       static_cast<void>(length);
       static_cast<void>(value);
 
+      if (CHAR_BIT == width)
+      return bytes[index];
+
+      if (CHAR_BIT > width)
+      switch (endian) {
+        case big_endian:
+          return width <= CHAR_BIT - ((width * index) % CHAR_BIT) ? (
+            // ->> single byte partition
+            bytes[(width * index) / CHAR_BIT] >>
+            (CHAR_BIT - width - ((width * index) % CHAR_BIT))
+          ) & (static_cast<unsigned char>(1u << width) - 1u) : (
+            // ->> low bits (multi-byte partition)
+            (index + 1u != capacity ? bytes[(width * (index + 1u)) / CHAR_BIT] >> (CHAR_BIT - ((width * (index + 1u)) % CHAR_BIT)) : 0x00u) |
+
+            // ->> high bits (multi-byte partition)
+            ((bytes[(width * (index + 0u)) / CHAR_BIT] & ((1u << (CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT))) - 1u)) << ((width * (index + 1u)) % CHAR_BIT))
+          );
+
+        case little_endian:
+          return (
+            // ->> low bits
+            (bytes[(width * index) / CHAR_BIT] >> ((width * index) % CHAR_BIT)) & ((1u << width) - 1u)
+          ) | (width > CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT) && CHAR_BIT * capacity > width * (index + 1u)
+            // ->> high bits (multi-byte partition)
+            ? (bytes[(width * (index + 1u)) / CHAR_BIT] & ((1u << ((width * (index + 1u)) % CHAR_BIT)) - 1u)) << (CHAR_BIT - ((width * index) % CHAR_BIT))
+            : 0x00u
+          );
+      }
+
+      if (CHAR_BIT < width) {
+        unsigned char offset   = CHAR_BIT - ((width * index) % CHAR_BIT);
+        unsigned char subwidth = width - offset;
+        uintmax_t     byte     = bytes[(width * index) / CHAR_BIT] & (
+          // --> (1u << (CHAR_BIT - ((width * index) % CHAR_BIT))) - 1u
+          ((1u << ((CHAR_BIT - ((width * index) % CHAR_BIT)) - 1u)) - 0u) +
+          ((1u << ((CHAR_BIT - ((width * index) % CHAR_BIT)) - 1u)) - 1u)
+        );
+
+        // ...
+        for (index = ((width * index) / CHAR_BIT) + 1u; ; ++index, subwidth -= CHAR_BIT)
+        switch (endian) {
+          case big_endian:
+            if (CHAR_BIT >= subwidth)
+            return (byte << subwidth) | (capacity != index ? bytes[index] >> (CHAR_BIT - subwidth) : 0x00u);
+
+            byte = (byte << CHAR_BIT) | bytes[index];
+            break;
+
+          case little_endian:
+            if (CHAR_BIT >= subwidth)
+            return byte | (capacity != index ? (bytes[index] >> (CHAR_BIT - subwidth)) << offset : 0x00u);
+
+            byte    |= bytes[index] << offset;
+            offset  += CHAR_BIT;
+        }
+      }
+
       return 0x00u;
     }
 
-    template <unsigned char width, typename type>
-    constexpr static uintmax_t set_bits(type* const bytes, std::size_t const length, std::size_t const index, unsigned char const value) noexcept {
-      return bytes::set_bits<width>(bytes, length, index, endianness::get(), value);
+    template <unsigned char sourceWidth, unsigned char destinationWidth, typename type>
+    constexpr static uintmax_t set_bits(type* const bytes, std::size_t const length, std::size_t const index, uintmax_t const value) noexcept {
+      return bytes::set_bits<sourceWidth, destinationWidth>(bytes, length, index, endianness::get(), value);
     }
 
-    template <unsigned char width, typename type>
-    constexpr static uintmax_t set_bits(type* const bytes, std::size_t const length, unsigned char const value) noexcept {
-      return bytes::set_bits<width>(bytes, length, 0u, endianness::get(), value);
+    template <unsigned char sourceWidth, unsigned char destinationWidth, typename type>
+    constexpr static uintmax_t set_bits(type* const bytes, std::size_t const length, uintmax_t const value) noexcept {
+      return bytes::set_bits<sourceWidth, destinationWidth>(bytes, length, 0u, endianness::get(), value);
     }
   }
 
