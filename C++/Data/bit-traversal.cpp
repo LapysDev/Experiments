@@ -165,7 +165,7 @@ namespace byte {
       switch (destinationEndian) {
         case byte::big_endian: {
           destinationBytes[0] &= (((1u << destinationBytesOffset) - 1u) << (CHAR_BIT - destinationBytesOffset)) | (((1u << (CHAR_BIT - destinationBytesOffset)) - 1u) >> destinationWidth);
-          destinationBytes[0] |= sourceValue << (CHAR_BIT - destinationWidth - destinationBytesOffset); // --> (sourceValue << ...) & UCHAR_MAX
+          destinationBytes[0] |= sourceValue << (static_cast<uintmax_t>(CHAR_BIT - destinationWidth) - destinationBytesOffset); // --> (sourceValue << ...) & UCHAR_MAX ->> expected unsigned overflow on dual-byte indexing
 
           if (0u != CHAR_BIT % destinationWidth && CHAR_BIT - destinationBytesOffset < destinationWidth) {
             destinationBytes[0] |= sourceValue >> (destinationBytesOffset - CHAR_BIT - destinationWidth);
@@ -226,18 +226,4 @@ namespace byte {
 }
 
 /* Main */
-int main(int, char*[]) /* noexcept */ {
-  for (std::size_t index = 0u; index != 7u; ++index) {
-    unsigned char destination[8] = {0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u};
-    // unsigned char destination[8] = {0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u};
-
-    // ...
-    // byte::set_bits<3u, byte::little_endian, 8u, byte::little_endian>(destination, sizeof(destination) / sizeof(unsigned char), index, &static_cast<unsigned char const&>(0b1111111111111111111111111111111111111111111111111111111111111111uLL), sizeof(unsigned char));
-    byte::set_bits<3u, byte::big_endian, 8u, byte::little_endian>(destination, sizeof(destination) / sizeof(unsigned char), index, &static_cast<unsigned char const&>(0b0000000000000000000000000000000000000000000000000000000000000000uLL), sizeof(unsigned char));
-
-    std::printf("\r\n" "%lu" "\r\n", static_cast<unsigned long>(index));
-
-    for (unsigned char *byte = destination; byte != destination + (sizeof(destination) / sizeof(unsigned char)); ++byte)
-    std::printf("  [%lu]: %s" "\r\n", static_cast<unsigned long>(byte - destination), integer::to_radix<2u>(*byte));
-  }
-}
+int main(int, char*[]) /* noexcept */ {}
