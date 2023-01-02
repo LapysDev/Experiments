@@ -137,50 +137,89 @@ namespace byte {
         }
 
         bits |= (length != ++bytesIndex ? *++bytes & ((1u << count) - 1u) : 0x00u) << offset; // ->> end byte
-      }
+      } break;
     }
 
     // ...
     return bits;
   }
 
-  template <unsigned char destinationWidth, unsigned char sourceWidth, enum endianness endian>
+  template <unsigned char destinationWidth, enum endianness destinationEndian, unsigned char sourceWidth, enum endianness sourceEndian>
   inline static void set_bits(unsigned char* destinationBytes, std::size_t const destinationLength, std::size_t const index, unsigned char const sourceBytes[], std::size_t const sourceLength) /* noexcept(noexcept(get_bits(...))) */ {
     // int (&assertion())[destinationWidth < CHAR_BIT * sizeof(uintmax_t) && sourceWidth < CHAR_BIT * sizeof(uintmax_t)];
     if (CHAR_BIT * destinationLength <= index * destinationWidth) return; // ->> out of bounds
-    uintmax_t sourceValue = byte::get_bits<sourceWidth, endian>(sourceBytes, sourceLength, 0u) & (((1u << (destinationWidth - 1u)) - 0u) + ((1u << (destinationWidth - 1u)) - 1u));
+    uintmax_t sourceValue = byte::get_bits<sourceWidth, sourceEndian>(sourceBytes, sourceLength, 0u) & (((1u << (destinationWidth - 1u)) - 0u) + ((1u << (destinationWidth - 1u)) - 1u));
 
     // ...
     if (CHAR_BIT == destinationWidth)
-      destinationBytes[index] = sourceValue /* --> sourceValue & UCHAR_MAX */;
+      destinationBytes[index] = sourceValue; // --> sourceValue & UCHAR_MAX
 
     else {
-      std::size_t const destinationBytesIndex  = (destinationWidth * index) / CHAR_BIT;
+      std::size_t       destinationBytesIndex  = (destinationWidth * index) / CHAR_BIT;
       std::size_t const destinationBytesOffset = (destinationWidth * index) % CHAR_BIT;
 
       // ...
       destinationBytes += destinationBytesIndex;
 
       if (CHAR_BIT > destinationWidth)
-      switch (endian) {
-        case byte::big_endian: break;
-        case byte::little_endian: break;
+      switch (destinationEndian) {
+        case byte::big_endian: {
+          destinationBytes[0] &= (((1u << destinationBytesOffset) - 1u) << (CHAR_BIT - destinationBytesOffset)) | (((1u << (CHAR_BIT - destinationBytesOffset)) - 1u) >> destinationWidth);
+          destinationBytes[0] |= sourceValue << (CHAR_BIT - destinationWidth - destinationBytesOffset); // --> (sourceValue << ...) & UCHAR_MAX
+
+          if (0u != CHAR_BIT % destinationWidth && CHAR_BIT - destinationBytesOffset < destinationWidth) {
+            destinationBytes[0] |= sourceValue >> (destinationBytesOffset - CHAR_BIT - destinationWidth);
+
+            destinationBytes[1] &= (1u << (CHAR_BIT - (destinationWidth - (CHAR_BIT - destinationBytesOffset)))) - 1u;
+            destinationBytes[1] |= sourceValue << (CHAR_BIT - (destinationWidth - (CHAR_BIT - destinationBytesOffset)));
+          }
+        } break;
+
+        case byte::little_endian: {
+          destinationBytes[0] &= ((1u << destinationBytesOffset) - 1u) | (((1u << (CHAR_BIT - destinationWidth)) - 1u) << (destinationBytesOffset + destinationWidth));
+          destinationBytes[0] |= sourceValue << destinationBytesOffset; // --> (sourceValue << ...) & UCHAR_MAX
+
+          if (0u != CHAR_BIT % destinationWidth && CHAR_BIT - destinationBytesOffset < destinationWidth && destinationLength - 1u > destinationBytesIndex) {
+            destinationBytes[1] &= ((1u << (CHAR_BIT - (destinationWidth - (CHAR_BIT - destinationBytesOffset)))) - 1u) << (destinationWidth - (CHAR_BIT - destinationBytesOffset));
+            destinationBytes[1] |= sourceValue >> (CHAR_BIT - destinationBytesOffset);
+          }
+        } break;
       }
 
       else /* if (CHAR_BIT < destinationWidth) */ {
         unsigned char count = destinationWidth - (CHAR_BIT - destinationBytesOffset);
 
         // ...
-        *destinationBytes &= (1u << destinationBytesOffset) - 1u;
-        *destinationBytes |= (sourceValue & ((1u << (CHAR_BIT - destinationBytesOffset)) - 1u)) << destinationBytesOffset;
+        switch (destinationEndian) {
+          case byte::big_endian: {
+            *destinationBytes &= ((1u << destinationBytesOffset) - 1u) << (CHAR_BIT - destinationBytesOffset);
+            *destinationBytes |= sourceValue & ((1u << (CHAR_BIT - destinationBytesOffset)) - 1u);
+          } break;
 
-        for (; CHAR_BIT < count; count -= CHAR_BIT) {
-          *(destinationBytes++) = sourceValue;
-          sourceValue         >>= CHAR_BIT;
+          case byte::little_endian: {
+            *destinationBytes &= (1u << destinationBytesOffset) - 1u;
+            *destinationBytes |= (sourceValue & ((1u << (CHAR_BIT - destinationBytesOffset)) - 1u)) << destinationBytesOffset;
+          } break;
         }
 
-        *destinationBytes &= (1u << (CHAR_BIT - count)) - 1u;
-        *destinationBytes |= sourceValue << (CHAR_BIT - count);
+        for (++destinationBytes, sourceValue >>= CHAR_BIT - destinationBytesOffset; CHAR_BIT < count; ++destinationBytes, count -= CHAR_BIT) {
+          if (destinationLength == ++destinationBytesIndex) return; // ->> out-of-bounds
+          *destinationBytes = sourceValue;                          // --> sourceValue & UCHAR_MAX
+          sourceValue     >>= CHAR_BIT;
+        }
+
+        if (destinationLength == ++destinationBytesIndex) return; // ->> out-of-bounds
+        switch (destinationEndian) {
+          case byte::big_endian: {
+            *destinationBytes &= (1u << (CHAR_BIT - count)) - 1u;
+            *destinationBytes |= sourceValue /* --> sourceValue & count */ << (CHAR_BIT - count);
+          } break;
+
+          case byte::little_endian: {
+            *destinationBytes &= ((1u << (CHAR_BIT - count)) - 1u) << count;
+            *destinationBytes |= sourceValue; // --> sourceValue & count
+          } break;
+        }
       }
     }
   }
@@ -188,10 +227,17 @@ namespace byte {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  unsigned char destination[8] = {0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u};
+  for (std::size_t index = 0u; index != 7u; ++index) {
+    unsigned char destination[8] = {0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u, 0b11111111u};
+    // unsigned char destination[8] = {0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u, 0b00000000u};
 
-  // byte::set_bits<CHAR_BIT, 17u, byte::little_endian>(reinterpret_cast<unsigned char*>(destination), sizeof(destination), 0u, reinterpret_cast<unsigned char const*>("Hello, World!"), 14u);
+    // ...
+    // byte::set_bits<3u, byte::little_endian, 8u, byte::little_endian>(destination, sizeof(destination) / sizeof(unsigned char), index, &static_cast<unsigned char const&>(0b1111111111111111111111111111111111111111111111111111111111111111uLL), sizeof(unsigned char));
+    byte::set_bits<3u, byte::big_endian, 8u, byte::little_endian>(destination, sizeof(destination) / sizeof(unsigned char), index, &static_cast<unsigned char const&>(0b0000000000000000000000000000000000000000000000000000000000000000uLL), sizeof(unsigned char));
 
-  for (unsigned char *byte = destination; byte != destination + (sizeof(destination) / sizeof(unsigned char)); ++byte)
-  std::printf("[%lu]: %s" "\r\n", static_cast<unsigned long>(byte - destination), integer::to_radix<2u>(*byte));
+    std::printf("\r\n" "%lu" "\r\n", static_cast<unsigned long>(index));
+
+    for (unsigned char *byte = destination; byte != destination + (sizeof(destination) / sizeof(unsigned char)); ++byte)
+    std::printf("  [%lu]: %s" "\r\n", static_cast<unsigned long>(byte - destination), integer::to_radix<2u>(*byte));
+  }
 }
