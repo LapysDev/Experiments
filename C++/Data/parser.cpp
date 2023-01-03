@@ -76,195 +76,239 @@ namespace parser {
 
     template <typename type>
     constexpr static typename std::enable_if<std::is_enum<typename std::remove_cv<type>::type>::value, unsigned char>::type get(type source[], std::size_t const index = 0u) noexcept {
-      return bytes::get(+source, index);
+      return (+source[index / sizeof(type)] >> (CHAR_BIT * (index % sizeof(type)))) & UCHAR_MAX;
     }
 
     #ifdef __cpp_lib_byte
       template <typename type>
       constexpr static typename std::enable_if<std::is_same<std::byte, typename std::remove_cv<type>::type>::value, unsigned char>::type get(type source[], std::size_t const index = 0u) noexcept {
-        return bytes::get(static_cast<unsigned char>(source), index);
+        return static_cast<unsigned char>(source[index]);
       }
     #endif
 
-    // ... ->> (Mostly) Compile-time bit-indexing
+    // ... ->> Compile-time bit-indexing
+    namespace {
+      template <unsigned char width, typename endianness::type endian, typename type>
+      constexpr static typename std::enable_if<(endianness::big_endian == endian), uintmax_t>::type get_wide_continuation_bits(type source[], std::size_t const length, std::size_t const index, uintmax_t const value, unsigned char const count) noexcept {
+        return CHAR_BIT < count
+          ? (length == index + 1u ? value << count : bytes::get_wide_continuation_bits<width, endian>(source, length, index + 1u, (value << CHAR_BIT) | bytes::get(source, index + 1u), count - CHAR_BIT))
+          : ((value << count) | (length != index + 1u ? bytes::get(source, index + 1u) >> (CHAR_BIT - count) : 0x00u));
+      }
+
+      template <unsigned char width, typename endianness::type endian, typename type>
+      constexpr static typename std::enable_if<(endianness::little_endian == endian), uintmax_t>::type get_wide_continuation_bits(type source[], std::size_t const length, std::size_t const index, uintmax_t const value, unsigned char const count, unsigned char const offset) noexcept {
+        return CHAR_BIT < count ? (length == index + 1u ? value : bytes::get_wide_continuation_bits<width, endian>(source, length, index + 1u, value | (bytes::get(source, index + 1u) << offset), count - CHAR_BIT, offset + CHAR_BIT)) : (value | (length != index + 1u ? bytes::get(source, index + 1u) & ((1u << count) - 1u) : 0x00u));
+      }
+
+      // ...
+      template <unsigned char width, typename endianness::type endian, typename type>
+      constexpr static typename std::enable_if<(endianness::big_endian == endian), uintmax_t>::type get_wide_bits(type source[], std::size_t const length, std::size_t const index, std::size_t const offset) noexcept {
+        return bytes::get_wide_continuation_bits<width, endian>(source, length, index, bytes::get(source, index) & ((1u << (CHAR_BIT - offset)) - 1u), width - (CHAR_BIT - offset));
+      }
+
+      template <unsigned char width, typename endianness::type endian, typename type>
+      constexpr static typename std::enable_if<(endianness::little_endian == endian), uintmax_t>::type get_wide_bits(type source[], std::size_t const length, std::size_t const index, std::size_t const offset) noexcept {
+        return bytes::get_wide_continuation_bits<width, endian>(source, length, index, bytes::get(source, index) >> offset, width - (CHAR_BIT - offset), CHAR_BIT - offset);
+      }
+
+      // ...
+      template <unsigned char width, typename endianness::type endian, typename type>
+      constexpr static typename std::enable_if<(endianness::big_endian == endian), unsigned char>::type get_narrow_bits(type source[], std::size_t const length, std::size_t const index, std::size_t const offset) noexcept {
+        return 0u != CHAR_BIT % width && CHAR_BIT - offset < width ? (length - 1u > index ? bytes::get(source, index + 1u) >> (CHAR_BIT - (width - (CHAR_BIT - offset))) : 0x00u) | (bytes::get(source, index) & ((1u << (CHAR_BIT - offset)) - 1u)) << (width - (CHAR_BIT - offset)) : ((bytes::get(source, index) >> (CHAR_BIT - width - offset)) & ((1u << width) - 1u));
+      }
+
+      template <unsigned char width, typename endianness::type endian, typename type>
+      constexpr static typename std::enable_if<(endianness::little_endian == endian), unsigned char>::type get_narrow_bits(type source[], std::size_t const length, std::size_t const index, std::size_t const offset) noexcept {
+        return ((bytes::get(source, index) >> offset) & ((1u << width) - 1u)) | (0u != CHAR_BIT % width && CHAR_BIT - offset < width && length - 1u > index ? (bytes::get(source, index + 1u) & ((1u << (width - (CHAR_BIT - offset))) - 1u)) << (CHAR_BIT - offset) : 0x00u);
+      }
+    }
+
     template <unsigned char width, typename type>
-    /* constexpr */ inline static typename std::enable_if<(CHAR_BIT < width),
+    constexpr static typename std::enable_if<CHAR_BIT == width, unsigned char>::type get_bits(type source[], std::size_t const, std::size_t const index = 0u, typename endianness::type const = endianness::get()) noexcept {
+      return bytes::get(source, index);
+    }
+
+    template <unsigned char width, typename type>
+    constexpr static typename std::enable_if<(CHAR_BIT > width), unsigned char>::type get_bits(type source[], std::size_t const length, std::size_t const index = 0u, typename endianness::type const endian = endianness::get()) noexcept {
+      return (
+        endianness::little_endian == endian
+        ? bytes::get_narrow_bits<width, endianness::little_endian>
+        : bytes::get_narrow_bits<width, endianness::big_endian>
+      )(source, length, (index * width) / CHAR_BIT, (index * width) % CHAR_BIT);
+    }
+
+    template <unsigned char width, typename type>
+    constexpr static typename std::enable_if<(CHAR_BIT < width),
       typename std::conditional<width <= CHAR_BIT * sizeof(uint_least8_t),  uint_least8_t,
       typename std::conditional<width <= CHAR_BIT * sizeof(uint_least16_t), uint_least16_t,
       typename std::conditional<width <= CHAR_BIT * sizeof(uint_least32_t), uint_least32_t,
       typename std::conditional<width <= CHAR_BIT * sizeof(uint_least64_t), uint_least64_t,
         uintmax_t
       >::type>::type>::type>::type
-    >::type get_bits(type* const bytes, std::size_t const length, std::size_t index = 0u, typename endianness::type const endian = endianness::get()) noexcept {
-      unsigned char offset   = CHAR_BIT - ((width * index) % CHAR_BIT);
-      unsigned char subwidth = width - offset;
-      uintmax_t     byte     = parser::bytes::get(bytes, (width * index) / CHAR_BIT) & (((1u << ((CHAR_BIT - ((width * index) % CHAR_BIT)) - 1u)) - 0u) + ((1u << ((CHAR_BIT - ((width * index) % CHAR_BIT)) - 1u)) - 1u));
-
-      // ...
-      for (index = ((width * index) / CHAR_BIT) + 1u; ; ++index, subwidth -= CHAR_BIT)
-      switch (endian) {
-        case endianness::big_endian:
-          if (CHAR_BIT >= subwidth)
-          return (byte << subwidth) | (index != length ? parser::bytes::get(bytes, index) >> (CHAR_BIT - subwidth) : 0x00u);
-
-          byte = parser::bytes::get(bytes, index) | (byte << CHAR_BIT);
-          break;
-
-        case endianness::little_endian:
-          if (CHAR_BIT >= subwidth)
-          return byte | (index != length ? (parser::bytes::get(bytes, index) >> (CHAR_BIT - subwidth)) << offset : 0x00u);
-
-          byte    |= parser::bytes::get(bytes, index) << offset;
-          offset  += CHAR_BIT;
-      }
+    >::type get_bits(type source[], std::size_t const length, std::size_t index = 0u, typename endianness::type const endian = endianness::get()) noexcept {
+      return (
+        endianness::little_endian == endian
+        ? bytes::get_wide_bits<width, endianness::little_endian>
+        : bytes::get_wide_bits<width, endianness::big_endian>
+      )(source, length, (index * width) / CHAR_BIT, (index * width) % CHAR_BIT);
     }
 
-    template <unsigned char width, typename type>
-    constexpr static typename std::enable_if<(CHAR_BIT >= width), uint_least8_t>::type get_bits(type* const bytes, std::size_t const length, std::size_t const index = 0u, typename endianness::type const endian = endianness::get()) noexcept {
-      return
-        endian == endianness::big_endian    ? width <= CHAR_BIT - ((width * index) % CHAR_BIT) ? (bytes::get(bytes, (width * index) / CHAR_BIT) >> (CHAR_BIT - width - ((width * index) % CHAR_BIT))) & (static_cast<unsigned char>(1u << width) - 1u) : ((index + 1u != length ? bytes::get(bytes, (width * (index + 1u)) / CHAR_BIT) >> (CHAR_BIT - ((width * (index + 1u)) % CHAR_BIT)) : 0x00u) | ((bytes::get(bytes, (width * (index + 0u)) / CHAR_BIT) & ((1u << (CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT))) - 1u)) << ((width * (index + 1u)) % CHAR_BIT))) :
-        endian == endianness::little_endian ? ((bytes::get(bytes, (width * index) / CHAR_BIT) >> ((width * index) % CHAR_BIT)) & ((1u << width) - 1u)) | (width > CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT) && CHAR_BIT * length > width * (index + 1u) ? (bytes::get(bytes, (width * (index + 1u)) / CHAR_BIT) & ((1u << ((width * (index + 1u)) % CHAR_BIT)) - 1u)) << (CHAR_BIT - ((width * index) % CHAR_BIT)) : 0x00u) :
-        0x00u;
-    }
-
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(bool                /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(bool          const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(char                /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(char          const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(signed   char       /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(signed   char const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(unsigned char       /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    template <> constexpr unsigned char get_bits<CHAR_BIT>(unsigned char const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
     #ifdef __cpp_char8_t
-      template <> constexpr uint_least8_t get_bits<8u>(char8_t       /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-      template <> constexpr uint_least8_t get_bits<8u>(char8_t const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
+      template <> constexpr uint_least8_t get_bits<8u>(char8_t const /* volatile */ source[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept {
+        return source[index];
+      }
     #endif
+
     #ifdef __cpp_unicode_characters
-      template <> constexpr uint_least16_t get_bits<16u>(char16_t       /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-      template <> constexpr uint_least16_t get_bits<16u>(char16_t const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-      template <> constexpr uint_least32_t get_bits<32u>(char32_t       /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-      template <> constexpr uint_least32_t get_bits<32u>(char32_t const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-    #endif
-    #ifdef __cpp_lib_byte
-      template <> constexpr unsigned char get_bits<CHAR_BIT>(std::byte       /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
-      template <> constexpr unsigned char get_bits<CHAR_BIT>(std::byte const /* volatile */ bytes[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return bytes[index]; }
+      template <> constexpr uint_least16_t get_bits<16u>(char16_t const /* volatile */ source[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return source[index]; }
+      template <> constexpr uint_least32_t get_bits<32u>(char32_t const /* volatile */ source[], std::size_t const, std::size_t const index, typename endianness::type const) noexcept { return source[index]; }
     #endif
 
     // ... ->> (Possibly) Compile-time byte-wise assignment
-    /* constexpr */ inline static unsigned char set(char                   bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
-    /* constexpr */ inline static unsigned char set(char          volatile bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
-    /* constexpr */ inline static unsigned char set(signed   char          bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
-    /* constexpr */ inline static unsigned char set(signed   char volatile bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
-    /* constexpr */ inline static unsigned char set(unsigned char          bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
-    /* constexpr */ inline static unsigned char set(unsigned char volatile bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
+    /* constexpr */ inline static unsigned char set(char                   destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+    /* constexpr */ inline static unsigned char set(char          volatile destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+    /* constexpr */ inline static unsigned char set(signed   char          destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+    /* constexpr */ inline static unsigned char set(signed   char volatile destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+    /* constexpr */ inline static unsigned char set(unsigned char          destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+    /* constexpr */ inline static unsigned char set(unsigned char volatile destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+
     #ifdef __cpp_lib_byte
-      /* constexpr */ inline static unsigned char set(std::byte          bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
-      /* constexpr */ inline static unsigned char set(std::byte volatile bytes[], std::size_t const index, unsigned char const value) noexcept { return (bytes[index] = value); }
+      /* constexpr */ inline static unsigned char set(std::byte          destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
+      /* constexpr */ inline static unsigned char set(std::byte volatile destination[], std::size_t const index, unsigned char const source) noexcept { return (destination[index] = source); }
     #endif
 
     template <typename type>
-    /* constexpr */ inline static typename std::enable_if<sizeof(type) == 1u && std::is_enum<typename std::remove_all_extents<typename std::remove_pointer<type>::type>::type>::value, unsigned char>::type set(type* const bytes, std::size_t const index, unsigned char const value) noexcept {
-      return (bytes[index] = static_cast<type>(value));
+    /* constexpr */ inline static typename std::enable_if<sizeof(type) == 1u && std::is_enum<typename std::remove_all_extents<typename std::remove_pointer<type>::type>::type>::value, unsigned char>::type set(type destination[], std::size_t const index, unsigned char const source) noexcept {
+      return (destination[index] = static_cast<type>(source));
     }
 
     template <typename type>
     /* constexpr */ inline static typename std::enable_if<sizeof(type) != 1u && (
       std::is_enum    <typename std::remove_all_extents<typename std::remove_pointer<type>::type>::type>::value ||
       std::is_integral<typename std::remove_all_extents<typename std::remove_pointer<type>::type>::type>::value
-    ), unsigned char>::type set(type* const bytes, std::size_t const index, unsigned char const value) noexcept {
-      return (bytes[index / sizeof(type)] = (value << (CHAR_BIT * (index % sizeof(type)))) | (bytes[index / sizeof(type)] & (((1u << ((index % sizeof(type)) - 1u)) - 0u) + ((1u << ((index % sizeof(type)) - 1u)) - 1u))) | ((bytes[index / sizeof(type)] >> (CHAR_BIT + (CHAR_BIT * (index % sizeof(type))))) << (CHAR_BIT + (CHAR_BIT * (index % sizeof(type))))));
+    ), unsigned char>::type set(type destination[], std::size_t const index, unsigned char const source) noexcept {
+      return (destination[index / sizeof(type)] = (source << (CHAR_BIT * (index % sizeof(type)))) | (destination[index / sizeof(type)] & (((1u << ((index % sizeof(type)) - 1u)) - 0u) + ((1u << ((index % sizeof(type)) - 1u)) - 1u))) | ((destination[index / sizeof(type)] >> (CHAR_BIT + (CHAR_BIT * (index % sizeof(type))))) << (CHAR_BIT + (CHAR_BIT * (index % sizeof(type))))));
     }
 
     template <typename type>
     inline static typename std::enable_if<false == (
       std::is_enum    <typename std::remove_all_extents<typename std::remove_pointer<type>::type>::type>::value ||
       std::is_integral<typename std::remove_all_extents<typename std::remove_pointer<type>::type>::type>::value
-    ), unsigned char>::type set(type* const bytes, std::size_t const index, unsigned char const value) noexcept {
-      return bytes::set(static_cast<typename std::conditional<std::is_volatile<type>::value, unsigned char volatile*, unsigned char*>::type>((typename std::conditional<std::is_volatile<type>::value, void volatile*, void*>::type) bytes), index, value);
+    ), unsigned char>::type set(type destination[], std::size_t const index, unsigned char const source) noexcept {
+      return bytes::set(static_cast<typename std::conditional<std::is_volatile<type>::value, unsigned char volatile*, unsigned char*>::type>(
+        (typename std::conditional<std::is_volatile<type>::value, void volatile*, void*>::type) destination
+      ), index, source);
     }
 
     template <typename type>
-    constexpr static unsigned char set(type* const bytes, unsigned char const value) noexcept {
-      return bytes::set(bytes, 0u, value);
+    constexpr static unsigned char set(type destination[], unsigned char const source) noexcept {
+      return bytes::set(destination, 0u, source);
     }
 
     // ... ->> (Possibly) Compile-time bitwise assignment
-    template <unsigned char bytesWidth, unsigned char valueWidth, typename type>
-    inline static uintmax_t set_bits(type* const bytes, std::size_t const length, std::size_t const index, typename endianness::type const endian, uintmax_t const value) noexcept {
-      static_cast<void>(bytes);
-      static_cast<void>(endian);
-      static_cast<void>(index);
-      static_cast<void>(length);
-      static_cast<void>(value);
+    namespace {
+      template <unsigned char width, typename endianness::type endian, typename type>
+      /* constexpr */ inline static typename std::enable_if<endianness::big_endian == endian, uintmax_t>::type set_wide_continuation_bits(type destination[], uintmax_t const source, std::size_t const index, unsigned char const count) noexcept {
+        // unsigned char count = width - (CHAR_BIT - offset);
 
-      // if (CHAR_BIT == width)
-      // return bytes[index];
+        // // ...
+        // *destination &= (1u << offset) - 1u;
+        // *destination |= (source & ((1u << (CHAR_BIT - offset)) - 1u)) << offset;
 
-      // if (CHAR_BIT > width)
-      // switch (endian) {
-      //   case big_endian:
-      //     return width <= CHAR_BIT - ((width * index) % CHAR_BIT) ? (
-      //       // ->> single byte partition
-      //       bytes[(width * index) / CHAR_BIT] >>
-      //       (CHAR_BIT - width - ((width * index) % CHAR_BIT))
-      //     ) & (static_cast<unsigned char>(1u << width) - 1u) : (
-      //       // ->> low bits (multi-byte partition)
-      //       (index + 1u != capacity ? bytes[(width * (index + 1u)) / CHAR_BIT] >> (CHAR_BIT - ((width * (index + 1u)) % CHAR_BIT)) : 0x00u) |
+        // for (++destination, source >>= CHAR_BIT - offset; CHAR_BIT < count; ++destination, count -= CHAR_BIT) {
+        //   *destination = source;                          // --> source & UCHAR_MAX
+        //   source     >>= CHAR_BIT;
+        // }
 
-      //       // ->> high bits (multi-byte partition)
-      //       ((bytes[(width * (index + 0u)) / CHAR_BIT] & ((1u << (CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT))) - 1u)) << ((width * (index + 1u)) % CHAR_BIT))
-      //     );
+        // *destination &= (1u << (CHAR_BIT - count)) - 1u;
+        // *destination |= source /* --> source & count */ << (CHAR_BIT - count);
+      }
 
-      //   case little_endian:
-      //     return (
-      //       // ->> low bits
-      //       (bytes[(width * index) / CHAR_BIT] >> ((width * index) % CHAR_BIT)) & ((1u << width) - 1u)
-      //     ) | (width > CHAR_BIT - ((width * (index + 0u)) % CHAR_BIT) && CHAR_BIT * capacity > width * (index + 1u)
-      //       // ->> high bits (multi-byte partition)
-      //       ? (bytes[(width * (index + 1u)) / CHAR_BIT] & ((1u << ((width * (index + 1u)) % CHAR_BIT)) - 1u)) << (CHAR_BIT - ((width * index) % CHAR_BIT))
-      //       : 0x00u
-      //     );
-      // }
+      template <unsigned char width, typename endianness::type endian, typename type>
+      /* constexpr */ inline static typename std::enable_if<endianness::little_endian == endian, uintmax_t>::type set_wide_continuation_bits(type destination[], uintmax_t const source, std::size_t const index, unsigned char const count) noexcept {
+        return CHAR_BIT < count ?
+          bytes::set(destination, index, source),
+          bytes::set_wide_continuation_bits<width, endian>(destination, source >> CHAR_BIT, index + 1u, count - CHAR_BIT)
+        : bytes::set(destination, index, source | (bytes::get(destination, index) & (((1u << (CHAR_BIT - count)) - 1u) << count)));
+      }
 
-      // if (CHAR_BIT < width) {
-      //   unsigned char offset   = CHAR_BIT - ((width * index) % CHAR_BIT);
-      //   unsigned char subwidth = width - offset;
-      //   uintmax_t     byte     = bytes[(width * index) / CHAR_BIT] & (
-      //     // --> (1u << (CHAR_BIT - ((width * index) % CHAR_BIT))) - 1u
-      //     ((1u << ((CHAR_BIT - ((width * index) % CHAR_BIT)) - 1u)) - 0u) +
-      //     ((1u << ((CHAR_BIT - ((width * index) % CHAR_BIT)) - 1u)) - 1u)
-      //   );
+      template <unsigned char width, typename endianness::type endian, typename type>
+      /* constexpr */ inline static typename std::enable_if<endianness::big_endian == endian, uintmax_t>::type set_wide_bits(type destination[], std::size_t const length, uintmax_t const source, std::size_t const index, std::size_t const offset) noexcept {
+        // unsigned char count = width - (CHAR_BIT - offset);
 
-      //   // ...
-      //   for (index = ((width * index) / CHAR_BIT) + 1u; ; ++index, subwidth -= CHAR_BIT)
-      //   switch (endian) {
-      //     case big_endian:
-      //       if (CHAR_BIT >= subwidth)
-      //       return (byte << subwidth) | (capacity != index ? bytes[index] >> (CHAR_BIT - subwidth) : 0x00u);
+        // // ...
+        // *destination &= (1u << offset) - 1u;
+        // *destination |= (source & ((1u << (CHAR_BIT - offset)) - 1u)) << offset;
 
-      //       byte = (byte << CHAR_BIT) | bytes[index];
-      //       break;
+        // for (++destination, source >>= CHAR_BIT - offset; CHAR_BIT < count; ++destination, count -= CHAR_BIT) {
+        //   *destination = source;                          // --> source & UCHAR_MAX
+        //   source     >>= CHAR_BIT;
+        // }
 
-      //     case little_endian:
-      //       if (CHAR_BIT >= subwidth)
-      //       return byte | (capacity != index ? (bytes[index] >> (CHAR_BIT - subwidth)) << offset : 0x00u);
+        // *destination &= (1u << (CHAR_BIT - count)) - 1u;
+        // *destination |= source /* --> source & count */ << (CHAR_BIT - count);
+      }
 
-      //       byte    |= bytes[index] << offset;
-      //       offset  += CHAR_BIT;
-      //   }
-      // }
+      template <unsigned char width, typename endianness::type endian, typename type>
+      /* constexpr */ inline static typename std::enable_if<endianness::little_endian == endian, uintmax_t>::type set_wide_bits(type destination[], std::size_t const length, uintmax_t const source, std::size_t const index, std::size_t const offset) noexcept {
+        return
+          bytes::set(destination, index, ((source & ((1u << (CHAR_BIT - offset)) - 1u)) << offset) | (bytes::get(destination, index) & ((1u << offset) - 1u))),
+          bytes::set_wide_continuation_bits<width, endian>(destination, source >> (CHAR_BIT - offset), index + 1u, width - (CHAR_BIT - offset));
+      }
 
-      return 0x00u;
+      // ...
+      template <unsigned char width, typename endianness::type endian, typename type>
+      /* constexpr */ inline static typename std::enable_if<endianness::big_endian == endian, uintmax_t>::type set_narrow_bits(type destination[], std::size_t const length, uintmax_t const source, std::size_t const index, std::size_t const offset) noexcept {
+        return bytes::set(destination, index, (source << (static_cast<uintmax_t>(CHAR_BIT - width) - offset)) | (bytes::get(destination, index) & ((((1u << offset) - 1u) << (CHAR_BIT - offset)) | (((1u << (CHAR_BIT - offset)) - 1u) >> width)))), (
+          0u != CHAR_BIT % width && CHAR_BIT - offset < width
+          ?
+            bytes::set(destination, index + 0u, (source >> (offset - CHAR_BIT - width))                | (bytes::get(destination, index + 0u))),
+            bytes::set(destination, index + 1u, (source << (CHAR_BIT - (width - (CHAR_BIT - offset)))) | (bytes::get(destination, index + 1u) & ((1u << (CHAR_BIT - (width - (CHAR_BIT - offset)))) - 1u))),
+          : 0x00u
+        );
+      }
+
+      template <unsigned char width, typename endianness::type endian, typename type>
+      /* constexpr */ inline static typename std::enable_if<endianness::little_endian == endian, uintmax_t>::type set_narrow_bits(type destination[], std::size_t const length, uintmax_t const source, std::size_t const index, std::size_t const offset) noexcept {
+        return bytes::set(destination, index, (source << offset) | (bytes::get(destination, index) & (((1u << offset) - 1u) | (((1u << (CHAR_BIT - width)) - 1u) << (offset + width))))), (
+          0u != CHAR_BIT % width && CHAR_BIT - offset < width && length - 1u > index
+          ? bytes::set(destination, index + 1u, (source >> (CHAR_BIT - offset)) | (bytes::get(destination, index + 1u) & (((1u << (CHAR_BIT - (width - (CHAR_BIT - offset)))) - 1u) << (width - (CHAR_BIT - offset)))))
+          : 0x00u
+        );
+      }
     }
 
-    template <unsigned char bytesWidth, unsigned char valueWidth, typename type>
-    constexpr static uintmax_t set_bits(type* const bytes, std::size_t const length, std::size_t const index, uintmax_t const value) noexcept {
-      return bytes::set_bits<bytesWidth, valueWidth>(bytes, length, index, endianness::get(), value);
+    template <unsigned char width, typename type>
+    /* constexpr */ inline static typename std::enable_if<CHAR_BIT == width, uintmax_t>::type set_bits(type destination[], std::size_t const, std::size_t const index, typename endianness::type const, uintmax_t const source) noexcept {
+      return bytes::set(destination, index, source & UCHAR_MAX);
     }
 
-    template <unsigned char bytesWidth, unsigned char valueWidth, typename type>
-    constexpr static uintmax_t set_bits(type* const bytes, std::size_t const length, uintmax_t const value) noexcept {
-      return bytes::set_bits<bytesWidth, valueWidth>(bytes, length, 0u, endianness::get(), value);
+    template <unsigned char width, typename type>
+    /* constexpr */ inline static typename std::enable_if<(CHAR_BIT > width), uintmax_t>::type set_bits(type destination[], std::size_t const length, std::size_t const index, typename endianness::type const endian, uintmax_t const source) noexcept {
+      return (
+        endianness::little_endian == endian
+        ? bytes::set_narrow_bits<width, endianness::little_endian>
+        : bytes::set_narrow_bits<width, endianness::big_endian>
+      )(destination, length, source & ((1u << width) - 1u), (width * index) / CHAR_BIT, (width * index) % CHAR_BIT), source;
+    }
+
+    template <unsigned char width, typename type>
+    /* constexpr */ inline static typename std::enable_if<(CHAR_BIT < width), uintmax_t>::type set_bits(type destination[], std::size_t const length, std::size_t const index, typename endianness::type const endian, uintmax_t const source) noexcept {
+      return (
+        endianness::little_endian == endian
+        ? bytes::set_wide_bits<width, endianness::little_endian>
+        : bytes::set_wide_bits<width, endianness::big_endian>
+      )(destination, length, source & (((1u << (width - 1u)) - 0u) + ((1u << (width - 1u)) - 1u)), (width * index) / CHAR_BIT, (width * index) % CHAR_BIT), source;
+    }
+
+    template <unsigned char width, typename type>
+    constexpr static uintmax_t set_bits(type destination[], std::size_t const length, std::size_t const index, uintmax_t const source) noexcept {
+      return bytes::set_bits<width>(destination, length, index, endianness::get(), source);
+    }
+
+    template <unsigned char width, typename type>
+    constexpr static uintmax_t set_bits(type destination[], std::size_t const length, uintmax_t const source) noexcept {
+      return bytes::set_bits<width>(destination, length, 0u, endianness::get(), source);
     }
   }
 
@@ -405,7 +449,7 @@ namespace parser {
       T_61_7bit,                      csISO102T617bit = 0x85u, iso_ir_102 = 0x85u,                                                                                                                               // --> [0x00, U+0000], [0x01, U+0001], [0x02, U+0002], [0x03, U+0003], [0x04, U+0004], [0x05, U+0005], [0x06, U+0006], [0x07, U+0007], [0x08, U+0008], [0x09, U+0009], [0x0A, U+000A], [0x0B, U+000B], [0x0C, U+000C], [0x0D, U+000D], [0x0E, U+000E], [0x0F, U+000F], [0x10, U+0010], [0x11, U+0011], [0x12, U+0012], [0x13, U+0013], [0x14, U+0014], [0x15, U+0015], [0x16, U+0016], [0x17, U+0017], [0x18, U+0018], [0x19, U+0019], [0x1A, U+001A], [0x1B, U+001B], [0x1C, U+001C], [0x1D, U+001D], [0x1E, U+001E], [0x1F, U+001F], [0x20, U+0020], [0x21, U+0021], [0x22, U+0022], [0x23, U+0023], [0x24, U+00A4], [0x25, U+0025], [0x26, U+0026], [0x27, U+0027], [0x28, U+0028], [0x29, U+0029], [0x2A, U+002A], [0x2B, U+002B], [0x2C, U+002C], [0x2D, U+002D], [0x2E, U+002E], [0x2F, U+002F], [0x30, U+0030], [0x31, U+0031], [0x32, U+0032], [0x33, U+0033], [0x34, U+0034], [0x35, U+0035], [0x36, U+0036], [0x37, U+0037], [0x38, U+0038], [0x39, U+0039], [0x3A, U+003A], [0x3B, U+003B], [0x3C, U+003C], [0x3D, U+003D], [0x3E, U+003E], [0x3F, U+003F], [0x40, U+0040], [0x41, U+0041], [0x42, U+0042], [0x43, U+0043], [0x44, U+0044], [0x45, U+0045], [0x46, U+0046], [0x47, U+0047], [0x48, U+0048], [0x49, U+0049], [0x4A, U+004A], [0x4B, U+004B], [0x4C, U+004C], [0x4D, U+004D], [0x4E, U+004E], [0x4F, U+004F], [0x50, U+0050], [0x51, U+0051], [0x52, U+0052], [0x53, U+0053], [0x54, U+0054], [0x55, U+0055], [0x56, U+0056], [0x57, U+0057], [0x58, U+0058], [0x59, U+0059], [0x5A, U+005A], [0x5B, U+005B], [0x5D, U+005D], [0x5F, U+005F], [0x61, U+0061], [0x62, U+0062], [0x63, U+0063], [0x64, U+0064], [0x65, U+0065], [0x66, U+0066], [0x67, U+0067], [0x68, U+0068], [0x69, U+0069], [0x6A, U+006A], [0x6B, U+006B], [0x6C, U+006C], [0x6D, U+006D], [0x6E, U+006E], [0x6F, U+006F], [0x70, U+0070], [0x71, U+0071], [0x72, U+0072], [0x73, U+0073], [0x74, U+0074], [0x75, U+0075], [0x76, U+0076], [0x77, U+0077], [0x78, U+0078], [0x79, U+0079], [0x7A, U+007A], [0x7C, U+007C], [0x7F, U+007F]
       T_61_8bit,                      csISO103T618bit = 0x86u, iso_ir_103 = 0x86u, T_61 = 0x86u,                                                                                                                 // --> [0x00, U+0000], [0x01, U+0001], [0x02, U+0002], [0x03, U+0003], [0x04, U+0004], [0x05, U+0005], [0x06, U+0006], [0x07, U+0007], [0x08, U+0008], [0x09, U+0009], [0x0A, U+000A], [0x0B, U+000B], [0x0C, U+000C], [0x0D, U+000D], [0x0E, U+000E], [0x0F, U+000F], [0x10, U+0010], [0x11, U+0011], [0x12, U+0012], [0x13, U+0013], [0x14, U+0014], [0x15, U+0015], [0x16, U+0016], [0x17, U+0017], [0x18, U+0018], [0x19, U+0019], [0x1A, U+001A], [0x1B, U+001B], [0x1C, U+001C], [0x1D, U+001D], [0x1E, U+001E], [0x1F, U+001F], [0x20, U+0020], [0x21, U+0021], [0x22, U+0022], [0x25, U+0025], [0x26, U+0026], [0x27, U+0027], [0x28, U+0028], [0x29, U+0029], [0x2A, U+002A], [0x2B, U+002B], [0x2C, U+002C], [0x2D, U+002D], [0x2E, U+002E], [0x2F, U+002F], [0x30, U+0030], [0x31, U+0031], [0x32, U+0032], [0x33, U+0033], [0x34, U+0034], [0x35, U+0035], [0x36, U+0036], [0x37, U+0037], [0x38, U+0038], [0x39, U+0039], [0x3A, U+003A], [0x3B, U+003B], [0x3C, U+003C], [0x3D, U+003D], [0x3E, U+003E], [0x3F, U+003F], [0x40, U+0040], [0x41, U+0041], [0x42, U+0042], [0x43, U+0043], [0x44, U+0044], [0x45, U+0045], [0x46, U+0046], [0x47, U+0047], [0x48, U+0048], [0x49, U+0049], [0x4A, U+004A], [0x4B, U+004B], [0x4C, U+004C], [0x4D, U+004D], [0x4E, U+004E], [0x4F, U+004F], [0x50, U+0050], [0x51, U+0051], [0x52, U+0052], [0x53, U+0053], [0x54, U+0054], [0x55, U+0055], [0x56, U+0056], [0x57, U+0057], [0x58, U+0058], [0x59, U+0059], [0x5A, U+005A], [0x5B, U+005B], [0x5D, U+005D], [0x5F, U+005F], [0x61, U+0061], [0x62, U+0062], [0x63, U+0063], [0x64, U+0064], [0x65, U+0065], [0x66, U+0066], [0x67, U+0067], [0x68, U+0068], [0x69, U+0069], [0x6A, U+006A], [0x6B, U+006B], [0x6C, U+006C], [0x6D, U+006D], [0x6E, U+006E], [0x6F, U+006F], [0x70, U+0070], [0x71, U+0071], [0x72, U+0072], [0x73, U+0073], [0x74, U+0074], [0x75, U+0075], [0x76, U+0076], [0x77, U+0077], [0x78, U+0078], [0x79, U+0079], [0x7A, U+007A], [0x7C, U+007C], [0x7F, U+007F], [0x80, U+0080], [0x81, U+0081], [0x82, U+0082], [0x83, U+0083], [0x84, U+0084], [0x85, U+0085], [0x86, U+0086], [0x87, U+0087], [0x88, U+0088], [0x89, U+0089], [0x8A, U+008A], [0x8B, U+008B], [0x8C, U+008C], [0x8D, U+008D], [0x8E, U+008E], [0x8F, U+008F], [0x90, U+0090], [0x91, U+0091], [0x92, U+0092], [0x93, U+0093], [0x94, U+0094], [0x95, U+0095], [0x96, U+0096], [0x97, U+0097], [0x98, U+0098], [0x99, U+0099], [0x9A, U+009A], [0x9B, U+009B], [0x9C, U+009C], [0x9D, U+009D], [0x9E, U+009E], [0x9F, U+009F], [0xA0, U+00A0], [0xA1, U+00A1], [0xA2, U+00A2], [0xA3, U+00A3], [0xA4, U+0024], [0xA5, U+00A5], [0xA6, U+0023], [0xA7, U+00A7], [0xA8, U+00A4], [0xAB, U+00AB], [0xB0, U+00B0], [0xB1, U+00B1], [0xB2, U+00B2], [0xB3, U+00B3], [0xB4, U+00D7], [0xB5, U+00B5], [0xB6, U+00B6], [0xB7, U+00B7], [0xB8, U+00F7], [0xBB, U+00BB], [0xBC, U+00BC], [0xBD, U+00BD], [0xBE, U+00BE], [0xBF, U+00BF], [0xE0, U+2126], [0xE1, U+00C6], [0xE2, U+00D0], [0xE3, U+00AA], [0xE4, U+0126], [0xE6, U+0132], [0xE7, U+013F], [0xE8, U+0141], [0xE9, U+00D8], [0xEA, U+0152], [0xEB, U+00BA], [0xEC, U+00DE], [0xED, U+0166], [0xEE, U+014A], [0xEF, U+0149], [0xF0, U+0138], [0xF1, U+00E6], [0xF2, U+0111], [0xF3, U+00F0], [0xF4, U+0127], [0xF5, U+0131], [0xF6, U+0133], [0xF7, U+0140], [0xF8, U+0142], [0xF9, U+00F8], [0xFA, U+0153], [0xFB, U+00DF], [0xFC, U+00FE], [0xFD, U+0167], [0xFE, U+014B]
       TIS_620,                        csTIS620 = 0x87u, ISO_8859_11 = 0x87u,                                                                                                                                     // --> [0x00, U+0000], [0x01, U+0001], [0x02, U+0002], [0x03, U+0003], [0x04, U+0004], [0x05, U+0005], [0x06, U+0006], [0x07, U+0007], [0x08, U+0008], [0x09, U+0009], [0x0A, U+000A], [0x0B, U+000B], [0x0C, U+000C], [0x0D, U+000D], [0x0E, U+000E], [0x0F, U+000F], [0x10, U+0010], [0x11, U+0011], [0x12, U+0012], [0x13, U+0013], [0x14, U+0014], [0x15, U+0015], [0x16, U+0016], [0x17, U+0017], [0x18, U+0018], [0x19, U+0019], [0x1A, U+001A], [0x1B, U+001B], [0x1C, U+001C], [0x1D, U+001D], [0x1E, U+001E], [0x1F, U+001F], [0x20, U+0020], [0x21, U+0021], [0x22, U+0022], [0x23, U+0023], [0x24, U+0024], [0x25, U+0025], [0x26, U+0026], [0x27, U+0027], [0x28, U+0028], [0x29, U+0029], [0x2A, U+002A], [0x2B, U+002B], [0x2C, U+002C], [0x2D, U+002D], [0x2E, U+002E], [0x2F, U+002F], [0x30, U+0030], [0x31, U+0031], [0x32, U+0032], [0x33, U+0033], [0x34, U+0034], [0x35, U+0035], [0x36, U+0036], [0x37, U+0037], [0x38, U+0038], [0x39, U+0039], [0x3A, U+003A], [0x3B, U+003B], [0x3C, U+003C], [0x3D, U+003D], [0x3E, U+003E], [0x3F, U+003F], [0x40, U+0040], [0x41, U+0041], [0x42, U+0042], [0x43, U+0043], [0x44, U+0044], [0x45, U+0045], [0x46, U+0046], [0x47, U+0047], [0x48, U+0048], [0x49, U+0049], [0x4A, U+004A], [0x4B, U+004B], [0x4C, U+004C], [0x4D, U+004D], [0x4E, U+004E], [0x4F, U+004F], [0x50, U+0050], [0x51, U+0051], [0x52, U+0052], [0x53, U+0053], [0x54, U+0054], [0x55, U+0055], [0x56, U+0056], [0x57, U+0057], [0x58, U+0058], [0x59, U+0059], [0x5A, U+005A], [0x5B, U+005B], [0x5C, U+005C], [0x5D, U+005D], [0x5E, U+005E], [0x5F, U+005F], [0x60, U+0060], [0x61, U+0061], [0x62, U+0062], [0x63, U+0063], [0x64, U+0064], [0x65, U+0065], [0x66, U+0066], [0x67, U+0067], [0x68, U+0068], [0x69, U+0069], [0x6A, U+006A], [0x6B, U+006B], [0x6C, U+006C], [0x6D, U+006D], [0x6E, U+006E], [0x6F, U+006F], [0x70, U+0070], [0x71, U+0071], [0x72, U+0072], [0x73, U+0073], [0x74, U+0074], [0x75, U+0075], [0x76, U+0076], [0x77, U+0077], [0x78, U+0078], [0x79, U+0079], [0x7A, U+007A], [0x7B, U+007B], [0x7C, U+007C], [0x7D, U+007D], [0x7E, U+007E], [0x7F, U+007F], [0x80, U+0080], [0x81, U+0081], [0x82, U+0082], [0x83, U+0083], [0x84, U+0084], [0x85, U+0085], [0x86, U+0086], [0x87, U+0087], [0x88, U+0088], [0x89, U+0089], [0x8A, U+008A], [0x8B, U+008B], [0x8C, U+008C], [0x8D, U+008D], [0x8E, U+008E], [0x8F, U+008F], [0x90, U+0090], [0x91, U+0091], [0x92, U+0092], [0x93, U+0093], [0x94, U+0094], [0x95, U+0095], [0x96, U+0096], [0x97, U+0097], [0x98, U+0098], [0x99, U+0099], [0x9A, U+009A], [0x9B, U+009B], [0x9C, U+009C], [0x9D, U+009D], [0x9E, U+009E], [0x9F, U+009F], [0xA0, U+00A0], [0xA1, U+0E01], [0xA2, U+0E02], [0xA3, U+0E03], [0xA4, U+0E04], [0xA5, U+0E05], [0xA6, U+0E06], [0xA7, U+0E07], [0xA8, U+0E08], [0xA9, U+0E09], [0xAA, U+0E0A], [0xAB, U+0E0B], [0xAC, U+0E0C], [0xAD, U+0E0D], [0xAE, U+0E0E], [0xAF, U+0E0F], [0xB0, U+0E10], [0xB1, U+0E11], [0xB2, U+0E12], [0xB3, U+0E13], [0xB4, U+0E14], [0xB5, U+0E15], [0xB6, U+0E16], [0xB7, U+0E17], [0xB8, U+0E18], [0xB9, U+0E19], [0xBA, U+0E1A], [0xBB, U+0E1B], [0xBC, U+0E1C], [0xBD, U+0E1D], [0xBE, U+0E1E], [0xBF, U+0E1F], [0xC0, U+0E20], [0xC1, U+0E21], [0xC2, U+0E22], [0xC3, U+0E23], [0xC4, U+0E24], [0xC5, U+0E25], [0xC6, U+0E26], [0xC7, U+0E27], [0xC8, U+0E28], [0xC9, U+0E29], [0xCA, U+0E2A], [0xCB, U+0E2B], [0xCC, U+0E2C], [0xCD, U+0E2D], [0xCE, U+0E2E], [0xCF, U+0E2F], [0xD0, U+0E30], [0xD1, U+0E31], [0xD2, U+0E32], [0xD3, U+0E33], [0xD4, U+0E34], [0xD5, U+0E35], [0xD6, U+0E36], [0xD7, U+0E37], [0xD8, U+0E38], [0xD9, U+0E39], [0xDA, U+0E3A], [0xDF, U+0E3F], [0xE0, U+0E40], [0xE1, U+0E41], [0xE2, U+0E42], [0xE3, U+0E43], [0xE4, U+0E44], [0xE5, U+0E45], [0xE6, U+0E46], [0xE7, U+0E47], [0xE8, U+0E48], [0xE9, U+0E49], [0xEA, U+0E4A], [0xEB, U+0E4B], [0xEC, U+0E4C], [0xED, U+0E4D], [0xEE, U+0E4E], [0xEF, U+0E4F], [0xF0, U+0E50], [0xF1, U+0E51], [0xF2, U+0E52], [0xF3, U+0E53], [0xF4, U+0E54], [0xF5, U+0E55], [0xF6, U+0E56], [0xF7, U+0E57], [0xF8, U+0E58], [0xF9, U+0E59], [0xFA, U+0E5A], [0xFB, U+0E5B]
-      US_ASCII ,                      ANSI_X3_4_1968 = 0x88u, ANSI_X3_4_1986 = 0x88u, cp367 = 0x88u, csASCII = 0x88u, IBM367 = 0x88u, iso_ir_6 = 0x88u, ISO646_US = 0x88u, ISO_646_irv_1991 = 0x88u, us = 0x88u, // --> [0x00, U+0000], [0x01, U+0001], [0x02, U+0002], [0x03, U+0003], [0x04, U+0004], [0x05, U+0005], [0x06, U+0006], [0x07, U+0007], [0x08, U+0008], [0x09, U+0009], [0x0A, U+000A], [0x0B, U+000B], [0x0C, U+000C], [0x0D, U+000D], [0x0E, U+000E], [0x0F, U+000F], [0x10, U+0010], [0x11, U+0011], [0x12, U+0012], [0x13, U+0013], [0x14, U+0014], [0x15, U+0015], [0x16, U+0016], [0x17, U+0017], [0x18, U+0018], [0x19, U+0019], [0x1A, U+001A], [0x1B, U+001B], [0x1C, U+001C], [0x1D, U+001D], [0x1E, U+001E], [0x1F, U+001F], [0x20, U+0020], [0x21, U+0021], [0x22, U+0022], [0x23, U+0023], [0x24, U+0024], [0x25, U+0025], [0x26, U+0026], [0x27, U+0027], [0x28, U+0028], [0x29, U+0029], [0x2A, U+002A], [0x2B, U+002B], [0x2C, U+002C], [0x2D, U+002D], [0x2E, U+002E], [0x2F, U+002F], [0x30, U+0030], [0x31, U+0031], [0x32, U+0032], [0x33, U+0033], [0x34, U+0034], [0x35, U+0035], [0x36, U+0036], [0x37, U+0037], [0x38, U+0038], [0x39, U+0039], [0x3A, U+003A], [0x3B, U+003B], [0x3C, U+003C], [0x3D, U+003D], [0x3E, U+003E], [0x3F, U+003F], [0x40, U+0040], [0x41, U+0041], [0x42, U+0042], [0x43, U+0043], [0x44, U+0044], [0x45, U+0045], [0x46, U+0046], [0x47, U+0047], [0x48, U+0048], [0x49, U+0049], [0x4A, U+004A], [0x4B, U+004B], [0x4C, U+004C], [0x4D, U+004D], [0x4E, U+004E], [0x4F, U+004F], [0x50, U+0050], [0x51, U+0051], [0x52, U+0052], [0x53, U+0053], [0x54, U+0054], [0x55, U+0055], [0x56, U+0056], [0x57, U+0057], [0x58, U+0058], [0x59, U+0059], [0x5A, U+005A], [0x5B, U+005B], [0x5C, U+005C], [0x5D, U+005D], [0x5E, U+005E], [0x5F, U+005F], [0x60, U+0060], [0x61, U+0061], [0x62, U+0062], [0x63, U+0063], [0x64, U+0064], [0x65, U+0065], [0x66, U+0066], [0x67, U+0067], [0x68, U+0068], [0x69, U+0069], [0x6A, U+006A], [0x6B, U+006B], [0x6C, U+006C], [0x6D, U+006D], [0x6E, U+006E], [0x6F, U+006F], [0x70, U+0070], [0x71, U+0071], [0x72, U+0072], [0x73, U+0073], [0x74, U+0074], [0x75, U+0075], [0x76, U+0076], [0x77, U+0077], [0x78, U+0078], [0x79, U+0079], [0x7A, U+007A], [0x7B, U+007B], [0x7C, U+007C], [0x7D, U+007D], [0x7E, U+007E], [0x7F, U+007F]
+      US_ASCII,                       ANSI_X3_4_1968 = 0x88u, ANSI_X3_4_1986 = 0x88u, cp367 = 0x88u, csASCII = 0x88u, IBM367 = 0x88u, iso_ir_6 = 0x88u, ISO646_US = 0x88u, ISO_646_irv_1991 = 0x88u, us = 0x88u, // --> [0x00, U+0000], [0x01, U+0001], [0x02, U+0002], [0x03, U+0003], [0x04, U+0004], [0x05, U+0005], [0x06, U+0006], [0x07, U+0007], [0x08, U+0008], [0x09, U+0009], [0x0A, U+000A], [0x0B, U+000B], [0x0C, U+000C], [0x0D, U+000D], [0x0E, U+000E], [0x0F, U+000F], [0x10, U+0010], [0x11, U+0011], [0x12, U+0012], [0x13, U+0013], [0x14, U+0014], [0x15, U+0015], [0x16, U+0016], [0x17, U+0017], [0x18, U+0018], [0x19, U+0019], [0x1A, U+001A], [0x1B, U+001B], [0x1C, U+001C], [0x1D, U+001D], [0x1E, U+001E], [0x1F, U+001F], [0x20, U+0020], [0x21, U+0021], [0x22, U+0022], [0x23, U+0023], [0x24, U+0024], [0x25, U+0025], [0x26, U+0026], [0x27, U+0027], [0x28, U+0028], [0x29, U+0029], [0x2A, U+002A], [0x2B, U+002B], [0x2C, U+002C], [0x2D, U+002D], [0x2E, U+002E], [0x2F, U+002F], [0x30, U+0030], [0x31, U+0031], [0x32, U+0032], [0x33, U+0033], [0x34, U+0034], [0x35, U+0035], [0x36, U+0036], [0x37, U+0037], [0x38, U+0038], [0x39, U+0039], [0x3A, U+003A], [0x3B, U+003B], [0x3C, U+003C], [0x3D, U+003D], [0x3E, U+003E], [0x3F, U+003F], [0x40, U+0040], [0x41, U+0041], [0x42, U+0042], [0x43, U+0043], [0x44, U+0044], [0x45, U+0045], [0x46, U+0046], [0x47, U+0047], [0x48, U+0048], [0x49, U+0049], [0x4A, U+004A], [0x4B, U+004B], [0x4C, U+004C], [0x4D, U+004D], [0x4E, U+004E], [0x4F, U+004F], [0x50, U+0050], [0x51, U+0051], [0x52, U+0052], [0x53, U+0053], [0x54, U+0054], [0x55, U+0055], [0x56, U+0056], [0x57, U+0057], [0x58, U+0058], [0x59, U+0059], [0x5A, U+005A], [0x5B, U+005B], [0x5C, U+005C], [0x5D, U+005D], [0x5E, U+005E], [0x5F, U+005F], [0x60, U+0060], [0x61, U+0061], [0x62, U+0062], [0x63, U+0063], [0x64, U+0064], [0x65, U+0065], [0x66, U+0066], [0x67, U+0067], [0x68, U+0068], [0x69, U+0069], [0x6A, U+006A], [0x6B, U+006B], [0x6C, U+006C], [0x6D, U+006D], [0x6E, U+006E], [0x6F, U+006F], [0x70, U+0070], [0x71, U+0071], [0x72, U+0072], [0x73, U+0073], [0x74, U+0074], [0x75, U+0075], [0x76, U+0076], [0x77, U+0077], [0x78, U+0078], [0x79, U+0079], [0x7A, U+007A], [0x7B, U+007B], [0x7C, U+007C], [0x7D, U+007D], [0x7E, U+007E], [0x7F, U+007F]
       us_dk,                          csUSDK = 0x89u,                                                                                                                                                            // --> [0x00, U+0000], [0x01, U+0001], [0x02, U+0002], [0x03, U+0003], [0x04, U+0004], [0x05, U+0005], [0x06, U+0006], [0x07, U+0007], [0x08, U+0008], [0x09, U+0009], [0x0A, U+000A], [0x0B, U+000B], [0x0C, U+000C], [0x0D, U+000D], [0x0E, U+000E], [0x0F, U+000F], [0x10, U+0010], [0x11, U+0011], [0x12, U+0012], [0x13, U+0013], [0x14, U+0014], [0x15, U+0015], [0x16, U+0016], [0x17, U+0017], [0x18, U+0018], [0x19, U+0019], [0x1A, U+001A], [0x1B, U+001B], [0x1C, U+001C], [0x1D, U+001D], [0x1E, U+001E], [0x1F, U+001F], [0x20, U+0020], [0x21, U+0021], [0x22, U+0022], [0x23, U+0023], [0x24, U+0024], [0x25, U+0025], [0x26, U+0026], [0x27, U+0027], [0x28, U+0028], [0x29, U+0029], [0x2A, U+002A], [0x2B, U+002B], [0x2C, U+002C], [0x2D, U+002D], [0x2E, U+002E], [0x2F, U+002F], [0x30, U+0030], [0x31, U+0031], [0x32, U+0032], [0x33, U+0033], [0x34, U+0034], [0x35, U+0035], [0x36, U+0036], [0x37, U+0037], [0x38, U+0038], [0x39, U+0039], [0x3A, U+003A], [0x3B, U+003B], [0x3C, U+003C], [0x3D, U+003D], [0x3E, U+003E], [0x3F, U+003F], [0x40, U+0040], [0x41, U+0041], [0x42, U+0042], [0x43, U+0043], [0x44, U+0044], [0x45, U+0045], [0x46, U+0046], [0x47, U+0047], [0x48, U+0048], [0x49, U+0049], [0x4A, U+004A], [0x4B, U+004B], [0x4C, U+004C], [0x4D, U+004D], [0x4E, U+004E], [0x4F, U+004F], [0x50, U+0050], [0x51, U+0051], [0x52, U+0052], [0x53, U+0053], [0x54, U+0054], [0x55, U+0055], [0x56, U+0056], [0x57, U+0057], [0x58, U+0058], [0x59, U+0059], [0x5A, U+005A], [0x5B, U+00C6], [0x5C, U+00D8], [0x5D, U+00C5], [0x5E, U+005E], [0x5F, U+005F], [0x60, U+0060], [0x61, U+0061], [0x62, U+0062], [0x63, U+0063], [0x64, U+0064], [0x65, U+0065], [0x66, U+0066], [0x67, U+0067], [0x68, U+0068], [0x69, U+0069], [0x6A, U+006A], [0x6B, U+006B], [0x6C, U+006C], [0x6D, U+006D], [0x6E, U+006E], [0x6F, U+006F], [0x70, U+0070], [0x71, U+0071], [0x72, U+0072], [0x73, U+0073], [0x74, U+0074], [0x75, U+0075], [0x76, U+0076], [0x77, U+0077], [0x78, U+0078], [0x79, U+0079], [0x7A, U+007A], [0x7B, U+00E6], [0x7C, U+00F8], [0x7D, U+00E5], [0x7E, U+007E], [0x7F, U+007F]
       UTF_16,                         csUTF16 = 0x8Au,                                                                                                                                                           //
       UTF_16BE,                       csUTF16BE = 0x8Bu,                                                                                                                                                         //

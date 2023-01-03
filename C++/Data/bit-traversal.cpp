@@ -95,8 +95,8 @@ namespace byte {
         return 0u != CHAR_BIT % width && CHAR_BIT - bytesOffset < width ?
           // ->> dual-byte indexing
           (length - 1u > bytesIndex
-            ? bytes[(bytesIndex) + 1u] >> (CHAR_BIT - (width - (CHAR_BIT - bytesOffset))) // ->> succeeding byte
-            : 0x00u                                                                       // ->> out of bounds
+            ? bytes[bytesIndex + 1u] >> (CHAR_BIT - (width - (CHAR_BIT - bytesOffset))) // ->> succeeding byte
+            : 0x00u                                                                     // ->> out of bounds
           ) | (bytes[bytesIndex] & ((1u << (CHAR_BIT - bytesOffset)) - 1u)) << (width - (CHAR_BIT - bytesOffset)) :
 
           // ->> single-byte indexing
@@ -118,7 +118,7 @@ namespace byte {
     // if (CHAR_BIT < width)
     switch (endian) {
       case byte::big_endian: {
-        for (bits &= ((1u << (CHAR_BIT - bytesOffset)) - 1u); CHAR_BIT < count; count -= CHAR_BIT) {
+        for (bits &= (1u << (CHAR_BIT - bytesOffset)) - 1u; CHAR_BIT < count; count -= CHAR_BIT) {
           if (length == ++bytesIndex) return bits << count; // ->> out of bounds
           bits = (bits << CHAR_BIT) | *++bytes;             // ->> continuation byte
         }
