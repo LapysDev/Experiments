@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <stdint.h>
 #include <type_traits>
 #if defined(_MSVC_LANG) ? _MSVC_LANG >= 202002L : __cplusplus >= 202002L
@@ -302,6 +301,10 @@ namespace parser {
       constexpr character_set(types const... characters) noexcept :
         characters{static_cast<unsigned char>(characters)...}
       {}
+
+      constexpr unsigned char operator [](unsigned char const index) const noexcept {
+        return this -> characters[index];
+      }
     };
 
     typedef enum : uint_least8_t {
@@ -567,27 +570,8 @@ namespace parser {
       x_Adobe_Zapf_Dingbats_Encoding                = 0x00u
     } type;
 
-    // ... ->> Measured in code units
-    template <typename type>
-    constexpr static uint_fast8_t lengthof(type const source, std::size_t const sourceLength, typename encoding::type const encoding) noexcept {
-      return
-        encoding::UTF_32 == encoding ? lengthof(source, sourceLength, endianness::little_endian == endianness::get() ? encoding::UTF_32LE : encoding::UTF_32BE) :
-        encoding::UTF_16 == encoding ? lengthof(source, sourceLength, endianness::little_endian == endianness::get() ? encoding::UTF_16LE : encoding::UTF_16BE) :
-        encoding::UTF_8  == encoding ?
-          bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) <= 0x7Fu                                                                                      ? 1u :
-          bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) >= 0xC0u && bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) <= 0xDFu ? 2u :
-          bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) >= 0xE0u && bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) <= 0xEFu ? 3u :
-          bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) >= 0xF0u && bytes::get_bits<8u>(source, sourceLength, 0u, endianness::little_endian) <= 0xF7u ? 4u :
-          0u :
-        encoding::UTF_32LE == encoding ? 1u :
-        encoding::UTF_32BE == encoding ? 1u :
-        encoding::UTF_16LE == encoding ? 1u + (bytes::get_bits<16u>(source, sourceLength, 0u, endianness::little_endian) > 0xD7FFu && bytes::get_bits<16u>(source, sourceLength, 0u, endianness::little_endian) < 0xE000u) :
-        encoding::UTF_16BE == encoding ? 1u + (bytes::get_bits<16u>(source, sourceLength, 0u, endianness::big_endian)    > 0xD7FFu && bytes::get_bits<16u>(source, sourceLength, 0u, endianness::big_endian)    < 0xE000u) :
-      0x00u != static_cast<uint_least8_t>(encoding);
-    }
-
     // ... ->> For single-byte character sets
-    constexpr static character_set mapof(typename encoding::type const encoding) noexcept {
+    constexpr static character_set charsetof(typename encoding::type const encoding) noexcept {
       return
         encoding == encoding::Adobe_Standard_Encoding        ? encoding::character_set(0x0000u, 0x0000u, 0x0002u, 0x0003u, 0x0004u, 0x0005u, 0x0006u, 0x0007u, 0x0008u, 0x0009u, 0x000Au, 0x000Bu, 0x000Cu, 0x000Du, 0x000Eu, 0x000Fu, 0x0010u, 0x0000u, 0x0012u, 0x0013u, 0x0014u, 0x0015u, 0x0016u, 0x0017u, 0x0018u, 0x0019u, 0x001Au, 0x001Bu, 0x001Cu, 0x001Du, 0x001Eu, 0x001Fu, 0x0020u, 0x0000u, 0x0022u, 0x0023u, 0x0024u, 0x0025u, 0x0026u, 0x0027u, 0x0028u, 0x0029u, 0x002Au, 0x002Bu, 0x002Cu, 0x002Du, 0x002Eu, 0x002Fu, 0x0030u, 0x0000u, 0x0032u, 0x0033u, 0x0034u, 0x0035u, 0x0036u, 0x0037u, 0x0038u, 0x0039u, 0x003Au, 0x003Bu, 0x003Cu, 0x003Du, 0x003Eu, 0x003Fu, 0x0040u, 0x0000u, 0x0042u, 0x0043u, 0x0044u, 0x0045u, 0x0046u, 0x0047u, 0x0048u, 0x0049u, 0x004Au, 0x004Bu, 0x004Cu, 0x004Du, 0x004Eu, 0x004Fu, 0x0050u, 0x0000u, 0x0052u, 0x0053u, 0x0054u, 0x0055u, 0x0056u, 0x0057u, 0x0058u, 0x0059u, 0x005Au, 0x005Bu, 0x005Cu, 0x005Du, 0x005Eu, 0x005Fu, 0x0060u, 0x0000u, 0x0062u, 0x0063u, 0x0064u, 0x0065u, 0x0066u, 0x0067u, 0x0068u, 0x0069u, 0x006Au, 0x006Bu, 0x006Cu, 0x006Du, 0x006Eu, 0x006Fu, 0x0070u, 0x0000u, 0x0072u, 0x0073u, 0x0074u, 0x0075u, 0x0076u, 0x0077u, 0x0078u, 0x0079u, 0x007Au, 0x007Bu, 0x007Cu, 0x007Du, 0x007Eu, 0x007Fu, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x00A1u, 0x00A2u, 0x00A3u, 0x2215u, 0x00A5u, 0x0192u, 0x00A7u, 0x00A4u, 0x0027u, 0x201Cu, 0x00ABu, 0x2039u, 0x203Au, 0xFB01u, 0xFB02u, 0x0000u, 0x2013u, 0x2020u, 0x2021u, 0x00B7u, 0x0000u, 0x00B6u, 0x2022u, 0x201Au, 0x201Eu, 0x201Du, 0x00BBu, 0x2026u, 0x2030u, 0x0000u, 0x00BFu, 0x0000u, 0x02CBu, 0x00B4u, 0x02C6u, 0x02DCu, 0x02C9u, 0x02D8u, 0x02D9u, 0x00A8u, 0x0000u, 0x02DAu, 0x00B8u, 0x0000u, 0x02DDu, 0x02D8u, 0x02C7u, 0x2014u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x00C6u, 0x0000u, 0x00AAu, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0141u, 0x00D8u, 0x0152u, 0x00BAu, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x00E6u, 0x0000u, 0x0000u, 0x0000u, 0x0131u, 0x0000u, 0x0000u, 0x0142u, 0x0000u, 0x0153u, 0x00DFu, 0x0000u, 0x0000u, 0x0000u, 0x0000u) :
         encoding == encoding::BS_4730                        ? encoding::character_set(0x0000u, 0x0001u, 0x0002u, 0x0003u, 0x0004u, 0x0005u, 0x0006u, 0x0007u, 0x0008u, 0x0009u, 0x000Au, 0x000Bu, 0x000Cu, 0x000Du, 0x000Eu, 0x000Fu, 0x0010u, 0x0011u, 0x0012u, 0x0013u, 0x0014u, 0x0015u, 0x0016u, 0x0017u, 0x0018u, 0x0019u, 0x001Au, 0x001Bu, 0x001Cu, 0x001Du, 0x001Eu, 0x001Fu, 0x0020u, 0x0021u, 0x0022u, 0x00A3u, 0x0024u, 0x0025u, 0x0026u, 0x0027u, 0x0028u, 0x0029u, 0x002Au, 0x002Bu, 0x002Cu, 0x002Du, 0x002Eu, 0x002Fu, 0x0030u, 0x0031u, 0x0032u, 0x0033u, 0x0034u, 0x0035u, 0x0036u, 0x0037u, 0x0038u, 0x0039u, 0x003Au, 0x003Bu, 0x003Cu, 0x003Du, 0x003Eu, 0x003Fu, 0x0040u, 0x0041u, 0x0042u, 0x0043u, 0x0044u, 0x0045u, 0x0046u, 0x0047u, 0x0048u, 0x0049u, 0x004Au, 0x004Bu, 0x004Cu, 0x004Du, 0x004Eu, 0x004Fu, 0x0050u, 0x0051u, 0x0052u, 0x0053u, 0x0054u, 0x0055u, 0x0056u, 0x0057u, 0x0058u, 0x0059u, 0x005Au, 0x005Bu, 0x005Cu, 0x005Du, 0x005Eu, 0x005Fu, 0x0060u, 0x0061u, 0x0062u, 0x0063u, 0x0064u, 0x0065u, 0x0066u, 0x0067u, 0x0068u, 0x0069u, 0x006Au, 0x006Bu, 0x006Cu, 0x006Du, 0x006Eu, 0x006Fu, 0x0070u, 0x0071u, 0x0072u, 0x0073u, 0x0074u, 0x0075u, 0x0076u, 0x0077u, 0x0078u, 0x0079u, 0x007Au, 0x007Bu, 0x007Cu, 0x007Du, 0x00AFu, 0x007Fu, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u) :
@@ -733,57 +717,235 @@ namespace parser {
         encoding == encoding::windows_1257                   ? encoding::character_set(0x0000u, 0x0001u, 0x0002u, 0x0003u, 0x0004u, 0x0005u, 0x0006u, 0x0007u, 0x0008u, 0x0009u, 0x000Au, 0x000Bu, 0x000Cu, 0x000Du, 0x000Eu, 0x000Fu, 0x0010u, 0x0011u, 0x0012u, 0x0013u, 0x0014u, 0x0015u, 0x0016u, 0x0017u, 0x0018u, 0x0019u, 0x001Au, 0x001Bu, 0x001Cu, 0x001Du, 0x001Eu, 0x001Fu, 0x0020u, 0x0021u, 0x0022u, 0x0023u, 0x0024u, 0x0025u, 0x0026u, 0x0027u, 0x0028u, 0x0029u, 0x002Au, 0x002Bu, 0x002Cu, 0x002Du, 0x002Eu, 0x002Fu, 0x0030u, 0x0031u, 0x0032u, 0x0033u, 0x0034u, 0x0035u, 0x0036u, 0x0037u, 0x0038u, 0x0039u, 0x003Au, 0x003Bu, 0x003Cu, 0x003Du, 0x003Eu, 0x003Fu, 0x0040u, 0x0041u, 0x0042u, 0x0043u, 0x0044u, 0x0045u, 0x0046u, 0x0047u, 0x0048u, 0x0049u, 0x004Au, 0x004Bu, 0x004Cu, 0x004Du, 0x004Eu, 0x004Fu, 0x0050u, 0x0051u, 0x0052u, 0x0053u, 0x0054u, 0x0055u, 0x0056u, 0x0057u, 0x0058u, 0x0059u, 0x005Au, 0x005Bu, 0x005Cu, 0x005Du, 0x005Eu, 0x005Fu, 0x0060u, 0x0061u, 0x0062u, 0x0063u, 0x0064u, 0x0065u, 0x0066u, 0x0067u, 0x0068u, 0x0069u, 0x006Au, 0x006Bu, 0x006Cu, 0x006Du, 0x006Eu, 0x006Fu, 0x0070u, 0x0071u, 0x0072u, 0x0073u, 0x0074u, 0x0075u, 0x0076u, 0x0077u, 0x0078u, 0x0079u, 0x007Au, 0x007Bu, 0x007Cu, 0x007Du, 0x007Eu, 0x007Fu, 0x20ACu, 0x0000u, 0x201Au, 0x0000u, 0x201Eu, 0x2026u, 0x2020u, 0x2021u, 0x0000u, 0x2030u, 0x0000u, 0x2039u, 0x0000u, 0x00A8u, 0x02C7u, 0x00B8u, 0x0000u, 0x2018u, 0x2019u, 0x201Cu, 0x201Du, 0x2022u, 0x2013u, 0x2014u, 0x0000u, 0x2122u, 0x0000u, 0x203Au, 0x0000u, 0x00AFu, 0x02DBu, 0x0000u, 0x00A0u, 0x0000u, 0x00A2u, 0x00A3u, 0x00A4u, 0x0000u, 0x00A6u, 0x00A7u, 0x00D8u, 0x00A9u, 0x0156u, 0x00ABu, 0x00ACu, 0x00ADu, 0x00AEu, 0x00C6u, 0x00B0u, 0x00B1u, 0x00B2u, 0x00B3u, 0x00B4u, 0x00B5u, 0x00B6u, 0x00B7u, 0x00F8u, 0x00B9u, 0x0157u, 0x00BBu, 0x00BCu, 0x00BDu, 0x00BEu, 0x00E6u, 0x0104u, 0x012Eu, 0x0100u, 0x0106u, 0x00C4u, 0x00C5u, 0x0118u, 0x0112u, 0x010Cu, 0x00C9u, 0x0179u, 0x0116u, 0x0122u, 0x0136u, 0x012Au, 0x013Bu, 0x0160u, 0x0143u, 0x0145u, 0x00D3u, 0x014Cu, 0x00D5u, 0x00D6u, 0x00D7u, 0x0172u, 0x0141u, 0x015Au, 0x016Au, 0x00DCu, 0x017Bu, 0x017Du, 0x00DFu, 0x0105u, 0x012Fu, 0x0101u, 0x0107u, 0x00E4u, 0x00E5u, 0x0119u, 0x0113u, 0x010Du, 0x00E9u, 0x017Au, 0x0117u, 0x0123u, 0x0137u, 0x012Bu, 0x013Cu, 0x0161u, 0x0144u, 0x0146u, 0x00F3u, 0x014Du, 0x00F5u, 0x00F6u, 0x00F7u, 0x0173u, 0x0142u, 0x015Bu, 0x016Bu, 0x00FCu, 0x017Cu, 0x017Eu, 0x02D9u) :
         encoding == encoding::windows_1258                   ? encoding::character_set(0x0000u, 0x0001u, 0x0002u, 0x0003u, 0x0004u, 0x0005u, 0x0006u, 0x0007u, 0x0008u, 0x0009u, 0x000Au, 0x000Bu, 0x000Cu, 0x000Du, 0x000Eu, 0x000Fu, 0x0010u, 0x0011u, 0x0012u, 0x0013u, 0x0014u, 0x0015u, 0x0016u, 0x0017u, 0x0018u, 0x0019u, 0x001Au, 0x001Bu, 0x001Cu, 0x001Du, 0x001Eu, 0x001Fu, 0x0020u, 0x0021u, 0x0022u, 0x0023u, 0x0024u, 0x0025u, 0x0026u, 0x0027u, 0x0028u, 0x0029u, 0x002Au, 0x002Bu, 0x002Cu, 0x002Du, 0x002Eu, 0x002Fu, 0x0030u, 0x0031u, 0x0032u, 0x0033u, 0x0034u, 0x0035u, 0x0036u, 0x0037u, 0x0038u, 0x0039u, 0x003Au, 0x003Bu, 0x003Cu, 0x003Du, 0x003Eu, 0x003Fu, 0x0040u, 0x0041u, 0x0042u, 0x0043u, 0x0044u, 0x0045u, 0x0046u, 0x0047u, 0x0048u, 0x0049u, 0x004Au, 0x004Bu, 0x004Cu, 0x004Du, 0x004Eu, 0x004Fu, 0x0050u, 0x0051u, 0x0052u, 0x0053u, 0x0054u, 0x0055u, 0x0056u, 0x0057u, 0x0058u, 0x0059u, 0x005Au, 0x005Bu, 0x005Cu, 0x005Du, 0x005Eu, 0x005Fu, 0x0060u, 0x0061u, 0x0062u, 0x0063u, 0x0064u, 0x0065u, 0x0066u, 0x0067u, 0x0068u, 0x0069u, 0x006Au, 0x006Bu, 0x006Cu, 0x006Du, 0x006Eu, 0x006Fu, 0x0070u, 0x0071u, 0x0072u, 0x0073u, 0x0074u, 0x0075u, 0x0076u, 0x0077u, 0x0078u, 0x0079u, 0x007Au, 0x007Bu, 0x007Cu, 0x007Du, 0x007Eu, 0x007Fu, 0x20ACu, 0x0000u, 0x201Au, 0x0192u, 0x201Eu, 0x2026u, 0x2020u, 0x2021u, 0x02C6u, 0x2030u, 0x0000u, 0x2039u, 0x0152u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x2018u, 0x2019u, 0x201Cu, 0x201Du, 0x2022u, 0x2013u, 0x2014u, 0x02DCu, 0x2122u, 0x0000u, 0x203Au, 0x0153u, 0x0000u, 0x0000u, 0x0178u, 0x00A0u, 0x00A1u, 0x00A2u, 0x00A3u, 0x00A4u, 0x00A5u, 0x00A6u, 0x00A7u, 0x00A8u, 0x00A9u, 0x00AAu, 0x00ABu, 0x00ACu, 0x00ADu, 0x00AEu, 0x00AFu, 0x00B0u, 0x00B1u, 0x00B2u, 0x00B3u, 0x00B4u, 0x00B5u, 0x00B6u, 0x00B7u, 0x00B8u, 0x00B9u, 0x00BAu, 0x00BBu, 0x00BCu, 0x00BDu, 0x00BEu, 0x00BFu, 0x00C0u, 0x00C1u, 0x00C2u, 0x0102u, 0x00C4u, 0x00C5u, 0x00C6u, 0x00C7u, 0x00C8u, 0x00C9u, 0x00CAu, 0x00CBu, 0x0300u, 0x00CDu, 0x00CEu, 0x00CFu, 0x0110u, 0x00D1u, 0x0309u, 0x00D3u, 0x00D4u, 0x01A0u, 0x00D6u, 0x00D7u, 0x00D8u, 0x00D9u, 0x00DAu, 0x00DBu, 0x00DCu, 0x01AFu, 0x0303u, 0x00DFu, 0x00E0u, 0x00E1u, 0x00E2u, 0x0103u, 0x00E4u, 0x00E5u, 0x00E6u, 0x00E7u, 0x00E8u, 0x00E9u, 0x00EAu, 0x00EBu, 0x0301u, 0x00EDu, 0x00EEu, 0x00EFu, 0x0111u, 0x00F1u, 0x0323u, 0x00F3u, 0x00F4u, 0x01A1u, 0x00F6u, 0x00F7u, 0x00F8u, 0x00F9u, 0x00FAu, 0x00FBu, 0x00FCu, 0x01B0u, 0x20ABu, 0x00FFu) :
         encoding == encoding::x_DIN_66303                    ? encoding::character_set(0x0000u, 0x0001u, 0x0002u, 0x0003u, 0x0004u, 0x0005u, 0x0006u, 0x0007u, 0x0008u, 0x0009u, 0x000Au, 0x000Bu, 0x000Cu, 0x000Du, 0x000Eu, 0x000Fu, 0x0010u, 0x0011u, 0x0012u, 0x0013u, 0x0014u, 0x0015u, 0x0016u, 0x0017u, 0x0018u, 0x0019u, 0x001Au, 0x001Bu, 0x001Cu, 0x001Du, 0x001Eu, 0x001Fu, 0x0020u, 0x0021u, 0x0022u, 0x0023u, 0x0024u, 0x0025u, 0x0026u, 0x0027u, 0x0028u, 0x0029u, 0x002Au, 0x002Bu, 0x002Cu, 0x002Du, 0x002Eu, 0x002Fu, 0x0030u, 0x0031u, 0x0032u, 0x0033u, 0x0034u, 0x0035u, 0x0036u, 0x0037u, 0x0038u, 0x0039u, 0x003Au, 0x003Bu, 0x003Cu, 0x003Du, 0x003Eu, 0x003Fu, 0x00A7u, 0x0041u, 0x0042u, 0x0043u, 0x0044u, 0x0045u, 0x0046u, 0x0047u, 0x0048u, 0x0049u, 0x004Au, 0x004Bu, 0x004Cu, 0x004Du, 0x004Eu, 0x004Fu, 0x0050u, 0x0051u, 0x0052u, 0x0053u, 0x0054u, 0x0055u, 0x0056u, 0x0057u, 0x0058u, 0x0059u, 0x005Au, 0x00C4u, 0x00D6u, 0x00DCu, 0x005Eu, 0x005Fu, 0x0060u, 0x0061u, 0x0062u, 0x0063u, 0x0064u, 0x0065u, 0x0066u, 0x0067u, 0x0068u, 0x0069u, 0x006Au, 0x006Bu, 0x006Cu, 0x006Du, 0x006Eu, 0x006Fu, 0x0070u, 0x0071u, 0x0072u, 0x0073u, 0x0074u, 0x0075u, 0x0076u, 0x0077u, 0x0078u, 0x0079u, 0x007Au, 0x00E4u, 0x00F6u, 0x00FCu, 0x00DFu, 0x007Fu, 0x0080u, 0x0081u, 0x0082u, 0x0083u, 0x0084u, 0x0085u, 0x0086u, 0x0087u, 0x0088u, 0x0089u, 0x008Au, 0x008Bu, 0x008Cu, 0x008Du, 0x008Eu, 0x008Fu, 0x0090u, 0x0091u, 0x0092u, 0x0093u, 0x0094u, 0x0095u, 0x0096u, 0x0097u, 0x0098u, 0x0099u, 0x009Au, 0x009Bu, 0x009Cu, 0x009Du, 0x009Eu, 0x009Fu, 0x00A0u, 0x00A1u, 0x00A2u, 0x00A3u, 0x00A4u, 0x00A5u, 0x00A6u, 0x0040u, 0x00A8u, 0x00A9u, 0x00AAu, 0x00ABu, 0x00ACu, 0x00ADu, 0x00AEu, 0x00AFu, 0x00B0u, 0x00B1u, 0x00B2u, 0x00B3u, 0x00B4u, 0x00B5u, 0x00B6u, 0x00B7u, 0x00B8u, 0x00B9u, 0x00BAu, 0x00BBu, 0x00BCu, 0x00BDu, 0x00BEu, 0x00BFu, 0x00C0u, 0x00C1u, 0x00C2u, 0x00C3u, 0x005Bu, 0x00C5u, 0x00C6u, 0x00C7u, 0x00C8u, 0x00C9u, 0x00CAu, 0x00CBu, 0x00CCu, 0x00CDu, 0x00CEu, 0x00CFu, 0x00D0u, 0x00D1u, 0x00D2u, 0x00D3u, 0x00D4u, 0x00D5u, 0x005Cu, 0x00D7u, 0x00D8u, 0x00D9u, 0x00DAu, 0x00DBu, 0x005Du, 0x00DDu, 0x00DEu, 0x007Eu, 0x00E0u, 0x00E1u, 0x00E2u, 0x00E3u, 0x007Bu, 0x00E5u, 0x00E6u, 0x00E7u, 0x00E8u, 0x00E9u, 0x00EAu, 0x00EBu, 0x00ECu, 0x00EDu, 0x00EEu, 0x00EFu, 0x00F0u, 0x00F1u, 0x00F2u, 0x00F3u, 0x00F4u, 0x00F5u, 0x007Cu, 0x00F7u, 0x00F8u, 0x00F9u, 0x00FAu, 0x00FBu, 0x007Du, 0x00FDu, 0x00FEu, 0x00FFu) :
-      encoding::character_set();
+      encoding::character_set(0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u);
+    }
+
+    // ... ->> Measured in code units
+    template <typename type>
+    constexpr static uint_fast8_t lengthof(type const source, std::size_t const sourceLength, std::size_t const index, typename encoding::type const encoding) noexcept {
+      return
+        encoding::UTF_32 == encoding ? lengthof(source, sourceLength, index, endianness::little_endian == endianness::get() ? encoding::UTF_32LE : encoding::UTF_32BE) :
+        encoding::UTF_16 == encoding ? lengthof(source, sourceLength, index, endianness::little_endian == endianness::get() ? encoding::UTF_16LE : encoding::UTF_16BE) :
+        encoding::UTF_8  == encoding ?
+          bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) <= 0x7Fu                                                                                         ? 1u :
+          bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) >= 0xC0u && bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) <= 0xDFu ? 2u :
+          bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) >= 0xE0u && bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) <= 0xEFu ? 3u :
+          bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) >= 0xF0u && bytes::get_bits<8u>(source, sourceLength, index, endianness::little_endian) <= 0xF7u ? 4u :
+          0u :
+        encoding::UTF_32LE == encoding ? 1u :
+        encoding::UTF_32BE == encoding ? 1u :
+        encoding::UTF_16LE == encoding ? 1u + (bytes::get_bits<16u>(source, sourceLength, index, endianness::little_endian) > 0xD7FFu && bytes::get_bits<16u>(source, sourceLength, index, endianness::little_endian) < 0xE000u) :
+        encoding::UTF_16BE == encoding ? 1u + (bytes::get_bits<16u>(source, sourceLength, index, endianness::big_endian)    > 0xD7FFu && bytes::get_bits<16u>(source, sourceLength, index, endianness::big_endian)    < 0xE000u) :
+      0x00u != static_cast<uint_least8_t>(encoding);
     }
 
     // ... ->> Measured in Unicode code points
     template <typename type>
-    constexpr static uint_fast32_t valueof(type const source, std::size_t const sourceLength, typename encoding::type const encoding, uint_fast8_t const length) noexcept {
+    constexpr static uint_fast32_t valueof(type const source, std::size_t const sourceLength, std::size_t const index, typename encoding::type const encoding, uint_fast8_t const length) noexcept {
       return
-        encoding::UTF_32 == encoding ? encoding::valueof(source, length, endianness::get() == endianness::little_endian ? encoding::UTF_32LE : encoding::UTF_32BE) :
-        encoding::UTF_16 == encoding ? encoding::valueof(source, length, endianness::get() == endianness::little_endian ? encoding::UTF_16LE : encoding::UTF_16BE) :
+        encoding::UTF_32 == encoding ? encoding::valueof(source, sourceLength, index, endianness::get() == endianness::little_endian ? encoding::UTF_32LE : encoding::UTF_32BE, length) :
+        encoding::UTF_16 == encoding ? encoding::valueof(source, sourceLength, index, endianness::get() == endianness::little_endian ? encoding::UTF_16LE : encoding::UTF_16BE, length) :
         encoding::UTF_8  == encoding ?
           length == 1u ?
-            bytes::get_bits<8u>(source, sourceLength) & 0x7Fu :
+            bytes::get_bits<8u>(source, sourceLength, index) & 0x7Fu :
           length == 2u ?
-            0x80u != (bytes::get_bits<8u>(source, sourceLength, 1u) & 0xC0u) ||
-            0xC0u == (bytes::get_bits<8u>(source, sourceLength, 0u) & 0xE0u) ?
+            0x80u != (bytes::get_bits<8u>(source, sourceLength, index + 1u) & 0xC0u) ||
+            0xC0u == (bytes::get_bits<8u>(source, sourceLength, index + 0u) & 0xE0u) ?
             0x000000u :
-            ((bytes::get_bits<8u>(source, sourceLength, 1u) & 0x3Fu) << 0u) |
-            ((bytes::get_bits<8u>(source, sourceLength, 0u) & 0x1Fu) << 6u) :
+            ((bytes::get_bits<8u>(source, sourceLength, index + 1u) & 0x3Fu) << 0u) |
+            ((bytes::get_bits<8u>(source, sourceLength, index + 0u) & 0x1Fu) << 6u) :
           length == 3u ?
-            0x80u != (bytes::get_bits<8u>(source, sourceLength, 2u) & 0xC0u) ||
-            0x80u != (bytes::get_bits<8u>(source, sourceLength, 1u) & 0xC0u) ||
-            0xE0u == (bytes::get_bits<8u>(source, sourceLength, 0u) & 0xF0u) ?
+            0x80u != (bytes::get_bits<8u>(source, sourceLength, index + 2u) & 0xC0u) ||
+            0x80u != (bytes::get_bits<8u>(source, sourceLength, index + 1u) & 0xC0u) ||
+            0xE0u == (bytes::get_bits<8u>(source, sourceLength, index + 0u) & 0xF0u) ?
             0x000000u :
-            ((bytes::get_bits<8u>(source, sourceLength, 2u) & 0x3Fu) << 6u * 0u) |
-            ((bytes::get_bits<8u>(source, sourceLength, 1u) & 0x3Fu) << 6u * 1u) |
-            ((bytes::get_bits<8u>(source, sourceLength, 0u) & 0x0Fu) << 6u * 2u) :
+            ((bytes::get_bits<8u>(source, sourceLength, index + 2u) & 0x3Fu) << 6u * 0u) |
+            ((bytes::get_bits<8u>(source, sourceLength, index + 1u) & 0x3Fu) << 6u * 1u) |
+            ((bytes::get_bits<8u>(source, sourceLength, index + 0u) & 0x0Fu) << 6u * 2u) :
           length == 4u ?
-            0x80u != (bytes::get_bits<8u>(source, sourceLength, 3u) & 0xC0u) ||
-            0x80u != (bytes::get_bits<8u>(source, sourceLength, 2u) & 0xC0u) ||
-            0x80u != (bytes::get_bits<8u>(source, sourceLength, 1u) & 0xC0u) ||
-            0xF0u == (bytes::get_bits<8u>(source, sourceLength, 0u) & 0xF8u) ?
+            0x80u != (bytes::get_bits<8u>(source, sourceLength, index + 3u) & 0xC0u) ||
+            0x80u != (bytes::get_bits<8u>(source, sourceLength, index + 2u) & 0xC0u) ||
+            0x80u != (bytes::get_bits<8u>(source, sourceLength, index + 1u) & 0xC0u) ||
+            0xF0u == (bytes::get_bits<8u>(source, sourceLength, index + 0u) & 0xF8u) ?
             0x000000u :
-            ((bytes::get_bits<8u>(source, sourceLength, 3u) & 0x3Fu) << 6u * 0u) |
-            ((bytes::get_bits<8u>(source, sourceLength, 2u) & 0x3Fu) << 6u * 1u) |
-            ((bytes::get_bits<8u>(source, sourceLength, 1u) & 0x3Fu) << 6u * 2u) |
-            ((bytes::get_bits<8u>(source, sourceLength, 0u) & 0x07u) << 6u * 3u) :
+            ((bytes::get_bits<8u>(source, sourceLength, index + 3u) & 0x3Fu) << 6u * 0u) |
+            ((bytes::get_bits<8u>(source, sourceLength, index + 2u) & 0x3Fu) << 6u * 1u) |
+            ((bytes::get_bits<8u>(source, sourceLength, index + 1u) & 0x3Fu) << 6u * 2u) |
+            ((bytes::get_bits<8u>(source, sourceLength, index + 0u) & 0x07u) << 6u * 3u) :
           0x000000u :
-        encoding::UTF_32LE == encoding ? bytes::get_bits<32u>(source, sourceLength, 0u, endianness::little_endian) :
-        encoding::UTF_32BE == encoding ? bytes::get_bits<32u>(source, sourceLength, 0u, endianness::big_endian)    :
-        encoding::UTF_16LE == encoding ? length == 1u ? bytes::get_bits<16u>(source, sourceLength, 0u, endianness::little_endian) : 0x110000u > (bytes::get_bits<16u>(source, sourceLength, 1u, endianness::little_endian) - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, 0u, endianness::little_endian) - 0xD800u) * 0x400u) ? (bytes::get_bits<16u>(source, sourceLength, 1u, endianness::little_endian) - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, 0u, endianness::little_endian) - 0xD800u) * 0x400u) : 0x000000u :
-        encoding::UTF_16BE == encoding ? length == 1u ? bytes::get_bits<16u>(source, sourceLength, 0u, endianness::big_endian)    : 0x110000u > (bytes::get_bits<16u>(source, sourceLength, 1u, endianness::big_endian)    - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, 0u, endianness::big_endian)    - 0xD800u) * 0x400u) ? (bytes::get_bits<16u>(source, sourceLength, 1u, endianness::big_endian)    - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, 0u, endianness::big_endian)    - 0xD800u) * 0x400u) : 0x000000u :
-      encoding::mapof(encoding)[bytes::get(source)];
+        encoding::UTF_32LE == encoding ? bytes::get_bits<32u>(source, sourceLength, index, endianness::little_endian) :
+        encoding::UTF_32BE == encoding ? bytes::get_bits<32u>(source, sourceLength, index, endianness::big_endian)    :
+        encoding::UTF_16LE == encoding ? length == 1u ? bytes::get_bits<16u>(source, sourceLength, index + 0u, endianness::little_endian) : 0x110000u > (bytes::get_bits<16u>(source, sourceLength, index + 1u, endianness::little_endian) - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, index + 0u, endianness::little_endian) - 0xD800u) * 0x400u) ? (bytes::get_bits<16u>(source, sourceLength, index + 1u, endianness::little_endian) - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, index + 0u, endianness::little_endian) - 0xD800u) * 0x400u) : 0x000000u :
+        encoding::UTF_16BE == encoding ? length == 1u ? bytes::get_bits<16u>(source, sourceLength, index + 0u, endianness::big_endian)    : 0x110000u > (bytes::get_bits<16u>(source, sourceLength, index + 1u, endianness::big_endian)    - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, index + 0u, endianness::big_endian)    - 0xD800u) * 0x400u) ? (bytes::get_bits<16u>(source, sourceLength, index + 1u, endianness::big_endian)    - 0xDC00u) + ((bytes::get_bits<16u>(source, sourceLength, index + 0u, endianness::big_endian)    - 0xD800u) * 0x400u) : 0x000000u :
+      encoding::charsetof(encoding)[bytes::get(source, index)];
     }
 
     template <typename type>
-    constexpr static uint_fast32_t valueof(type const source, std::size_t const sourceLength, typename encoding::type const encoding) noexcept {
-      return encoding::valueof(source, sourceLength, encoding, encoding::lengthof(source, sourceLength, encoding));
+    constexpr static uint_fast32_t valueof(type const source, std::size_t const sourceLength, std::size_t const index, typename encoding::type const encoding) noexcept {
+      return encoding::valueof(source, sourceLength, index, encoding, encoding::lengthof(source, sourceLength, index, encoding));
+    }
+
+    // ... ->> Expected bit width used
+    constexpr static unsigned char widthof(typename encoding::type const encoding) noexcept {
+      return
+        encoding == encoding::UTF_32LE || encoding == encoding::UTF_32BE || encoding == encoding::UTF_32
+          ? 32u :
+        encoding == encoding::UTF_16LE || encoding == encoding::UTF_16BE || encoding == encoding::UTF_16
+          ? 16u :
+        encoding == encoding::Adobe_Standard_Encoding ||
+        encoding == encoding::BS_4730 || encoding == encoding::BS_viewdata ||
+        encoding == encoding::CSA_Z243_4_1985_1 || encoding == encoding::CSA_Z243_4_1985_2 || encoding == encoding::CSA_Z243_4_1985_gr || encoding == encoding::CSN_369103 ||
+        encoding == encoding::DEC_MCS || encoding == encoding::DIN_66003 || encoding == encoding::dk_us || encoding == encoding::DS_2089 ||
+        encoding == encoding::EBCDIC_AT_DE || encoding == encoding::EBCDIC_AT_DE_A || encoding == encoding::EBCDIC_CA_FR || encoding == encoding::EBCDIC_DK_NO || encoding == encoding::EBCDIC_DK_NO_A || encoding == encoding::EBCDIC_ES || encoding == encoding::EBCDIC_ES_A || encoding == encoding::EBCDIC_ES_S || encoding == encoding::EBCDIC_FI_SE || encoding == encoding::EBCDIC_FI_SE_A || encoding == encoding::EBCDIC_FR || encoding == encoding::EBCDIC_IT || encoding == encoding::EBCDIC_PT || encoding == encoding::EBCDIC_UK || encoding == encoding::EBCDIC_US || encoding == encoding::ES || encoding == encoding::ES2 ||
+        encoding == encoding::GB_1988_80 ||
+        encoding == encoding::hp_roman8 ||
+        encoding == encoding::IBM00858 || encoding == encoding::IBM00924 || encoding == encoding::IBM01140 || encoding == encoding::IBM01141 || encoding == encoding::IBM01142 || encoding == encoding::IBM01143 || encoding == encoding::IBM01144 || encoding == encoding::IBM01145 || encoding == encoding::IBM01146 || encoding == encoding::IBM01147 || encoding == encoding::IBM01148 || encoding == encoding::IBM01149 || encoding == encoding::IBM037 || encoding == encoding::IBM038 || encoding == encoding::IBM1026 || encoding == encoding::IBM1047 || encoding == encoding::IBM273 || encoding == encoding::IBM274 || encoding == encoding::IBM275 || encoding == encoding::IBM277 || encoding == encoding::IBM278 || encoding == encoding::IBM280 || encoding == encoding::IBM281 || encoding == encoding::IBM284 || encoding == encoding::IBM285 || encoding == encoding::IBM290 || encoding == encoding::IBM297 || encoding == encoding::IBM437 || encoding == encoding::IBM500 || encoding == encoding::IBM775 || encoding == encoding::IBM850 || encoding == encoding::IBM851 || encoding == encoding::IBM852 || encoding == encoding::IBM857 || encoding == encoding::IBM860 || encoding == encoding::IBM861 || encoding == encoding::IBM862 || encoding == encoding::IBM863 || encoding == encoding::IBM865 || encoding == encoding::IBM870 || encoding == encoding::IBM871 || encoding == encoding::IBM891 || encoding == encoding::IBM903 || encoding == encoding::IBM904 || encoding == encoding::IBM905 || encoding == encoding::IEC_P27_1 || encoding == encoding::INIS || encoding == encoding::INVARIANT || encoding == encoding::ISO_10367_box || encoding == encoding::ISO_2033_1983 || encoding == encoding::ISO_646_basic_1983 || encoding == encoding::ISO_646_irv_1983 || encoding == encoding::ISO_6937_2_25 || encoding == encoding::ISO_8859_10 || encoding == encoding::ISO_8859_13 || encoding == encoding::ISO_8859_14 || encoding == encoding::ISO_8859_15 || encoding == encoding::ISO_8859_16 || encoding == encoding::ISO_8859_1_1987 || encoding == encoding::ISO_8859_1_Windows_3_1_Latin_1 || encoding == encoding::ISO_8859_2_1987 || encoding == encoding::ISO_8859_3_1988 || encoding == encoding::ISO_8859_4_1988 || encoding == encoding::ISO_8859_5_1988 || encoding == encoding::ISO_8859_6_1987 || encoding == encoding::ISO_8859_6_E || encoding == encoding::ISO_8859_6_I || encoding == encoding::ISO_8859_7_1987 || encoding == encoding::ISO_8859_9_1989 || encoding == encoding::ISO_8859_supp || encoding == encoding::IT ||
+        encoding == encoding::JIS_C6220_1969_ro || encoding == encoding::JIS_C6229_1984_a || encoding == encoding::JIS_C6229_1984_b || encoding == encoding::JIS_C6229_1984_b_add || encoding == encoding::JIS_C6229_1984_hand || encoding == encoding::JIS_C6229_1984_hand_add || encoding == encoding::JIS_X0201 || encoding == encoding::JUS_I_B1_002 ||
+        encoding == encoding::KOI7_switched || encoding == encoding::KOI8_R || encoding == encoding::KOI8_U || encoding == encoding::KSC5636 || encoding == encoding::KZ_1048 ||
+        encoding == encoding::latin_greek || encoding == encoding::Latin_greek_1 || encoding == encoding::latin_lap ||
+        encoding == encoding::macintosh || encoding == encoding::MSZ_7795_3 ||
+        encoding == encoding::NATS_DANO || encoding == encoding::NATS_DANO_ADD || encoding == encoding::NATS_SEFI || encoding == encoding::NATS_SEFI_ADD || encoding == encoding::NC_NC00_10_81 || encoding == encoding::NF_Z_62_010 || encoding == encoding::NF_Z_62_010_1973 || encoding == encoding::NS_4551_1 || encoding == encoding::NS_4551_2 ||
+        encoding == encoding::PT || encoding == encoding::PT2 ||
+        encoding == encoding::SEN_850200_B || encoding == encoding::SEN_850200_C ||
+        encoding == encoding::T_61_7bit || encoding == encoding::T_61_8bit || encoding == encoding::TIS_620 ||
+        encoding == encoding::US_ASCII || encoding == encoding::us_dk || encoding == encoding::UTF_8 ||
+        encoding == encoding::VISCII ||
+        encoding == encoding::windows_1250 || encoding == encoding::windows_1252 || encoding == encoding::windows_1254 || encoding == encoding::windows_1257 || encoding == encoding::windows_1258 ||
+        encoding == encoding::x_DIN_66303
+          ? 8u :
+      CHAR_BIT; // ->> safe assumption?
     }
   }
 
+  namespace {
+    template <typename type>
+    struct expression final {
+      enum type {
+        arithmetic    = 0x01u,
+        comment       = 0x02u,
+        function_body = 0x04u,
+        function_head = 0x08u
+      };
+
+      /* ... */
+      type start;
+      type end;
+
+      enum : unsigned char {
+        add,
+        declare,
+        divide,
+        exit,
+        exponentiate,
+        invoke,
+        plus,
+        minus,
+        modulus,
+        multiply,
+        subtract
+      } operation;
+    };
+  }
+
   /* ... */
+  template <typename type>
+  /* constexpr */ inline static std::size_t parse(type source[], std::size_t const sourceLength, typename encoding::type const encoding = encoding::UTF_8, expression previousExpressions[]) noexcept {
+    if (
+      0x00u == static_cast<uint_least8_t>(encoding) || // ->> Non-supported encoding
+      NULL == source                                   // ->> Invalid `source`
+    ) return static_cast<std::size_t>(-1);
+
+    /* ... */
+    uint_fast32_t    character;
+    expression       expressions[64];
+    std::size_t      length = sourceLength * (CHAR_BIT * sizeof(type));
+    expression::type mode   = expression::arithmetic;
+
+    for (; length; length = (length - encoding::widthof(encoding)) * (length > encoding::widthof(encoding))) {
+      character = encoding::valueof(source, length, encoding);
+      if (character == 0x000000u) break; // ->> NUL terminator
+
+      // ...
+      if (mode & expression::comment) {
+        if (character == 0x00000Au) // ->> Line Feed
+        mode &= ~expression::comment;
+      }
+
+      else switch (character) {
+        // ->> Comment
+        case 0x000023u: // ->> Hash
+          mode |= expression::comment;
+          break;
+
+        // ->> Whitespace
+        case 0x000009u: case 0x00000Au: case 0x00000Bu: case 0x00000Cu: case 0x00000Du: case 0x000020u: // ->> Character Tabulation, Line Feed, Line Tabulation, Form Feed, Carriage Return, Space
+        case 0x0000A0u:                                                                                 // ->> No-Break Space
+        case 0x001680u:                                                                                 // ->> Ogham Space Mark
+        case 0x002000u: case 0x002001u: case 0x002002u:                                                 // ->> En Quad Space, Em Quad Space, En Space
+        case 0x002003u: case 0x002004u: case 0x002005u: case 0x002006u:                                 // ->> Em Space, Three-Per-Em Space, Four-Per-Em Space, Six-Per-Em Space
+        case 0x002007u: case 0x002008u: case 0x002009u: case 0x00200Au: case 0x00200Bu:                 // ->> Figure Space, Punctuation Space, Thin Space, Hair Space, Zero Width Space
+        case 0x002028u: case 0x002029u:                                                                 // ->> Line Separator, Paragraph Separator
+        case 0x00202Fu: case 0x00205Fu:                                                                 // ->> Narrow No-Break Space, Medium Mathematical Space
+        case 0x003000u: case 0x003164u:                                                                 // ->> Ideographic Space, Hangul Filler
+        case 0x00FEFFu: case 0x00FFA0u:                                                                 // ->> Zero Width No-Break Space, Half-Width Hangul Filler
+        case 0x01DA7Fu: case 0x01DA80u:                                                                 // ->> Signwriting Location-Wallplane Space, Signwriting Location-Floorplane Space
+        case 0x0E0020u:                                                                                 // ->> Tag Space
+          break;
+
+        // ->> Function Declaration
+      }
+
+      // • Vertical Bar                            → U+00007C
+      // • Hash                                    → U+000023
+      // • Caret                                   → U+00005E
+      // • Percentage                              → U+000025
+      // • Divide                                  → U+0000F7
+      // • Slash                                   → U+00002F
+      // • Times                                   → U+0000D7
+      // • Asterisk                                → U+00002A
+      // • Plus                                    → U+00002B
+      // • Subtract                                → U+00002D
+      // • Left Parenthesis                        → U+000028
+      // • Right Parenthesis                       → U+000029
+
+      // • Carriage Return           (CR)          → U+00000D
+      // • Character Tabulation      (HT, TAB)     → U+000009
+      // • Form Feed                 (FF)          → U+00000C
+      // • Line Feed                 (LF)          → U+00000A
+      // • Line Tabulation           (VT)          → U+00000B
+      // • Em Quad Space                           → U+002001
+      // • Em Space                                → U+002003
+      // • En Quad Space                           → U+002000
+      // • En Space                                → U+002002
+      // • Figure Space                            → U+002007
+      // • Four-Per-Em Space                       → U+002005
+      // • Hair Space                              → U+00200A
+      // • Half-Width Hangul Filler                → U+00FFA0
+      // • Hangul Filler                           → U+003164
+      // • Ideographic Space                       → U+003000
+      // • Line Separator                          → U+002028
+      // • Medium Mathematical Space (MMSP)        → U+00205F
+      // • Narrow No-Break Space     (NNBSP)       → U+00202F
+      // • No-Break Space            (NBSP)        → U+0000A0
+      // • Ogham Space Mark                        → U+001680
+      // • Paragraph Separator                     → U+002029
+      // • Punctuation Space                       → U+002008
+      // • Signwriting Location-Floorplane Space   → U+01DA80
+      // • Signwriting Location-Wallplane Space    → U+01DA7F
+      // • Six-Per-Em Space                        → U+002006
+      // • Space                     (SP)          → U+000020
+      // • Tag Space                               → U+0E0020
+      // • Thin Space                              → U+002009
+      // • Three-Per-Em Space                      → U+002004
+      // • Zero Width No-Break Space (BOM, ZWNBSP) → U+00FEFF
+      // • Zero Width Space          (ZWSP)        → U+00200B
+    }
+
+    // lengthof(source, sourceLength, encoding);
+    // valueof(source, sourceLength, encoding, lengthof(...));
+  }
+
+  // ...
   template <typename sourceType, typename destinationType, typename std::enable_if<std::is_pointer<sourceType>::value && false != (
     std::is_enum    <typename std::remove_all_extents<typename std::remove_pointer<sourceType>::type>::type>::value ||
     std::is_integral<typename std::remove_all_extents<typename std::remove_pointer<sourceType>::type>::type>::value ||
@@ -796,12 +958,30 @@ namespace parser {
     std::is_same<destinationType, decltype(NULL)>::value ||
     (std::is_pointer<destinationType>::value && std::is_same<char, typename std::remove_volatile<typename std::remove_pointer<destinationType>::type>::type>::value)
   ), int>::type = 0>
-  /* constexpr */ inline static std::size_t parse(sourceType const source, std::size_t const sourceLength, destinationType destination, std::size_t const destinationLength = 0u, typename encoding::type const encoding = encoding::UTF_8) noexcept {
-    if (NULL != (void volatile*) destination && false == std::is_pointer<destinationType>::value) return static_cast<std::size_t>(-1); // ->> Invalid `destination` argument
-    if (0x00u == static_cast<uint_least8_t>(encoding))                                            return static_cast<std::size_t>(-1); // ->> Non-supported encoding
+  /* constexpr */ inline static std::size_t assemble(sourceType const source, std::size_t sourceLength, destinationType destination, std::size_t destinationLength = 0u, typename encoding::type const encoding = encoding::UTF_8) noexcept {
+    if (
+      0x00u == static_cast<uint_least8_t>(encoding) || // ->> Non-supported encoding
+      NULL == source                                   // ->> Invalid `source`
+    ) return static_cast<std::size_t>(-1);
 
-    // lengthof(source, sourceLength, encoding);
-    // valueof(source, sourceLength, ..., encoding);
+    /* ... */
+    enum : unsigned char { comment, expression } mode;
+    expression expressions[64];
+
+    // function abs() { return ; }
+
+    destinationLength *= CHAR_BIT * sizeof(destinationType);
+    sourceLength      *= CHAR_BIT * sizeof(sourceType);
+
+    if (NULL != (void volatile*) destination && false == std::is_pointer<destinationType>::value)
+    return static_cast<std::size_t>(-1); // length of program
+
+    for (sourceType iterator = source; iterator - source != sourceLength; ++iterator)
+
+    for (uint_fast32_t character; sourceLength; sourceLength = (sourceLength - encoding::widthof(encoding)) * (sourceLength > encoding::widthof(encoding))) {
+      character = encoding::valueof(source, sourceLength, encoding);
+      if (character == 0x000000u) break; // ->> NUL terminator
+    }
 
     // ...
     static_cast<void>(destination);
@@ -821,8 +1001,8 @@ namespace parser {
     #endif
     false
   ), int>::type = 0>
-  constexpr static std::size_t parse(sourceType const source, std::size_t const sourceLength, void const volatile* const destination, std::size_t const destinationLength = 0u, typename encoding::type const encoding = encoding::UTF_8) noexcept {
-    return parser::parse((unsigned char const*) (void const volatile*) source, sourceLength, (char volatile*) destination, destinationLength, encoding);
+  constexpr static std::size_t assemble(sourceType const source, std::size_t const sourceLength, void const volatile* const destination, std::size_t const destinationLength = 0u, typename encoding::type const encoding = encoding::UTF_8) noexcept {
+    return assemble((unsigned char const*) (void const volatile*) source, sourceLength, (char volatile*) destination, destinationLength, encoding);
   }
 
   template <typename sourceType, std::size_t sourceCapacity, typename destinationType, typename std::enable_if<(
@@ -830,19 +1010,19 @@ namespace parser {
     std::is_same<destinationType, decltype(NULL)>::value ||
     (std::is_pointer<destinationType>::value && std::is_same<char, typename std::remove_volatile<typename std::remove_pointer<destinationType>::type>::type>::value)
   ), int>::type = 0>
-  constexpr static std::size_t parse(sourceType (&source)[sourceCapacity], destinationType const destination, std::size_t const destinationLength = 0u, typename encoding::type const encoding = encoding::UTF_8) noexcept {
-    return parser::parse(source, sourceCapacity, destination, destinationLength, encoding);
+  constexpr static std::size_t assemble(sourceType (&source)[sourceCapacity], destinationType const destination, std::size_t const destinationLength = 0u, typename encoding::type const encoding = encoding::UTF_8) noexcept {
+    return assemble(source, sourceCapacity, destination, destinationLength, encoding);
   }
 
   template <typename sourceType, std::size_t sourceCapacity, typename destinationType, std::size_t destinationCapacity, typename std::enable_if<std::is_same<char, typename std::remove_volatile<destinationType>::type>::value, int>::type = 0>
-  constexpr static std::size_t parse(sourceType (&source)[sourceCapacity], destinationType (&destination)[destinationCapacity], typename encoding::type const encoding = encoding::UTF_8) noexcept {
-    return parser::parse(source, sourceCapacity, destination, destinationCapacity, encoding);
+  constexpr static std::size_t assemble(sourceType (&source)[sourceCapacity], destinationType (&destination)[destinationCapacity], typename encoding::type const encoding = encoding::UTF_8) noexcept {
+    return assemble(source, sourceCapacity, destination, destinationCapacity, encoding);
   }
 }
 
-using parser::parse;
+using parser::assemble;
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("%zu", parse("(-((1 + 5) * 2 % 3 - 2)) ^ 5 - 1", NULL));
+  std::printf("%zu", assemble("(-((1 + 5) * 2 % 3 - 2)) ^ 5 - 1", NULL));
 }
