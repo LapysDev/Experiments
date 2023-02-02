@@ -41,6 +41,7 @@
   overflow-inline        [Chrome ×,  Edge ×,  FF 66,  IE ×,  Op ×,    Safari ×]    → Can content that overflows the viewport along the inline axis be scrolled
   pointer                [Chrome 41, Edge 12, FF 64,  IE ×,  Op 28,   Safari 9]    → Is the primary input mechanism a pointing device, and if so, how accurate is it
   prefers-color-scheme   [Chrome 76, Edge 79, FF 67,  IE ×,  Op 62,   Safari 12.1] → Detect if the user prefers a light or dark color scheme
+  prefers-reduced-motion [Chrome 74, Edge 79, FF 63,  IE ×,  Op 62,   Safari 10.1] → Detect if the user has requested that the system minimize the amount of non-essential motion it uses
   resolution             [Chrome 29, Edge 12, FF 8,   IE 9,  Op 16,   Safari ×]    → Pixel density of the output device
   width                  [Chrome 1,  Edge 12, FF 2,   IE 9,  Op 10,   Safari 3]    → Width of the viewport including width of scrollbar
 

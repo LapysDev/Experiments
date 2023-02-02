@@ -824,7 +824,9 @@ namespace parser {
         arithmetic    = 0x01u,
         comment       = 0x02u,
         function_body = 0x04u,
-        function_head = 0x08u
+        function_head = 0x08u,
+        identifier    = 0x10u,
+        keyword       = 0x20u
       };
 
       /* ... */
@@ -849,35 +851,24 @@ namespace parser {
 
   /* ... */
   template <typename type>
-  /* constexpr */ inline static std::size_t parse(type source[], std::size_t const sourceLength, typename encoding::type const encoding = encoding::UTF_8, expression previousExpressions[]) noexcept {
+  inline static std::size_t parse(type source[], std::size_t const sourceLength, expression[], typename encoding::type const encoding = encoding::UTF_8) noexcept {
     if (
       0x00u == static_cast<uint_least8_t>(encoding) || // ->> Non-supported encoding
       NULL == source                                   // ->> Invalid `source`
     ) return static_cast<std::size_t>(-1);
 
     /* ... */
-    uint_fast32_t    character;
-    expression       expressions[64];
-    std::size_t      length = sourceLength * (CHAR_BIT * sizeof(type));
-    expression::type mode   = expression::arithmetic;
+    expression::type mode = expression::arithmetic;
 
-    for (; length; length = (length - encoding::widthof(encoding)) * (length > encoding::widthof(encoding))) {
-      character = encoding::valueof(source, length, encoding);
-      if (character == 0x000000u) break; // ->> NUL terminator
+    for (std::size_t index = 0u, length = sourceLength * (CHAR_BIT * sizeof(type)); length; ++index, length = (length - encoding::widthof(encoding)) * (length > encoding::widthof(encoding))) {
+      uint_fast32_t character       = encoding::valueof(source, index, length, encoding);
+      bool          isNULTerminator = false;
+      bool          isWhitespace    = false;
 
-      // ...
-      if (mode & expression::comment) {
-        if (character == 0x00000Au) // ->> Line Feed
-        mode &= ~expression::comment;
-      }
+      /* ... */
+      isNULTerminator = 0x000000u; // ->> NUL terminator
 
-      else switch (character) {
-        // ->> Comment
-        case 0x000023u: // ->> Hash
-          mode |= expression::comment;
-          break;
-
-        // ->> Whitespace
+      switch (character) {
         case 0x000009u: case 0x00000Au: case 0x00000Bu: case 0x00000Cu: case 0x00000Du: case 0x000020u: // ->> Character Tabulation, Line Feed, Line Tabulation, Form Feed, Carriage Return, Space
         case 0x0000A0u:                                                                                 // ->> No-Break Space
         case 0x001680u:                                                                                 // ->> Ogham Space Mark
@@ -890,55 +881,126 @@ namespace parser {
         case 0x00FEFFu: case 0x00FFA0u:                                                                 // ->> Zero Width No-Break Space, Half-Width Hangul Filler
         case 0x01DA7Fu: case 0x01DA80u:                                                                 // ->> Signwriting Location-Wallplane Space, Signwriting Location-Floorplane Space
         case 0x0E0020u:                                                                                 // ->> Tag Space
+          isWhitespace = true;
+          break;
+      }
+
+      /* ... */
+      if (isNULTerminator) // ->> NUL terminator
+        break;
+
+      if (mode & expression::identifier) {}
+
+      /* ... ->> Comment */
+      if (mode & expression::comment) {
+        if (character == 0x00000Au) // ->> Line Feed
+        mode &= ~expression::comment;
+
+        continue;
+      }
+
+      // ... ->> Function Head
+      if (mode & (expression::function_head | expression::identifier)) {
+        continue;
+      }
+
+      // ...
+      switch (character) {
+        // ->> Comment
+        case 0x000023u: // ->> Hash
+          mode |= expression::comment;
           break;
 
         // ->> Function Declaration
+        case 0x000192u: // ->> Latin lowercase 'F' with hook
+          mode = expression::function_head | expression::identifier | expression::keyword;
+          break;
+
+        case 0x000066u: { // ->> Latin lowercase 'F'
+          if (length >= 3u * encoding::widthof(encoding) && (
+            0x000075u == encoding::valueof(source, index + 1u, length - (1u * encoding::widthof(encoding)), encoding) &&
+            0x00006Eu == encoding::valueof(source, index + 2u, length - (2u * encoding::widthof(encoding)), encoding) &&
+            0x000063u == encoding::valueof(source, index + 3u, length - (3u * encoding::widthof(encoding)), encoding)
+          )) {
+            index  += 3u;
+            length -= 3u * encoding::widthof(encoding);
+            mode    = expression::function_head | expression::identifier | expression::keyword;
+          }
+        } break;
       }
 
-      // • Vertical Bar                            → U+00007C
-      // • Hash                                    → U+000023
-      // • Caret                                   → U+00005E
-      // • Percentage                              → U+000025
-      // • Divide                                  → U+0000F7
-      // • Slash                                   → U+00002F
-      // • Times                                   → U+0000D7
+      // • 0                                       → U+000030
+      // • 1                                       → U+000031
+      // • 2                                       → U+000032
+      // • 3                                       → U+000033
+      // • 4                                       → U+000034
+      // • 5                                       → U+000035
+      // • 6                                       → U+000036
+      // • 7                                       → U+000037
+      // • 8                                       → U+000038
+      // • 9                                       → U+000039
+      // • A                                       → U+000041
+      // • a                                       → U+000061
       // • Asterisk                                → U+00002A
-      // • Plus                                    → U+00002B
-      // • Subtract                                → U+00002D
+      // • B                                       → U+000042
+      // • b                                       → U+000062
+      // • C                                       → U+000043
+      // • c                                       → U+000063
+      // • Caret                                   → U+00005E
+      // • Cube Root                               → U+00221B
+      // • D                                       → U+000044
+      // • d                                       → U+000064
+      // • Divide                                  → U+0000F7
+      // • E                                       → U+000045
+      // • e                                       → U+000065
+      // • Epsilon                                 → U+002211
+      // • Euler's Constant                        → U+002107
+      // • Exclusive OR                            → U+002295
+      // • F                                       → U+000046
+      // • f                                       → U+000066
+      // • Fourth Root                             → U+00221C
+      // • Full stop                               → U+00002E
+      // • Greater than                            → U+00003E
+      // • Hash                                    → U+000023
+      // • Infinity                                → U+00221E
       // • Left Parenthesis                        → U+000028
+      // • Lesser than                             → U+00003C
+      // • Minus                                   → U+00002D
+      // • Modulo-Two Sum                          → U+002A0A
+      // • Much Less Than                          → U+00226A
+      // • Much Greater Than                       → U+00226B
+      // • N                                       → U+00004E
+      // • n                                       → U+00006E
+      // • o                                       → U+00006F
+      // • Percentage                              → U+000025
+      // • PI                                      → U+00220F
+      // • Pi                                      → U+0003C0
+      // • Plus                                    → U+00002B
       // • Right Parenthesis                       → U+000029
-
-      // • Carriage Return           (CR)          → U+00000D
-      // • Character Tabulation      (HT, TAB)     → U+000009
-      // • Form Feed                 (FF)          → U+00000C
-      // • Line Feed                 (LF)          → U+00000A
-      // • Line Tabulation           (VT)          → U+00000B
-      // • Em Quad Space                           → U+002001
-      // • Em Space                                → U+002003
-      // • En Quad Space                           → U+002000
-      // • En Space                                → U+002002
-      // • Figure Space                            → U+002007
-      // • Four-Per-Em Space                       → U+002005
-      // • Hair Space                              → U+00200A
-      // • Half-Width Hangul Filler                → U+00FFA0
-      // • Hangul Filler                           → U+003164
-      // • Ideographic Space                       → U+003000
-      // • Line Separator                          → U+002028
-      // • Medium Mathematical Space (MMSP)        → U+00205F
-      // • Narrow No-Break Space     (NNBSP)       → U+00202F
-      // • No-Break Space            (NBSP)        → U+0000A0
-      // • Ogham Space Mark                        → U+001680
-      // • Paragraph Separator                     → U+002029
-      // • Punctuation Space                       → U+002008
-      // • Signwriting Location-Floorplane Space   → U+01DA80
-      // • Signwriting Location-Wallplane Space    → U+01DA7F
-      // • Six-Per-Em Space                        → U+002006
-      // • Space                     (SP)          → U+000020
-      // • Tag Space                               → U+0E0020
-      // • Thin Space                              → U+002009
-      // • Three-Per-Em Space                      → U+002004
-      // • Zero Width No-Break Space (BOM, ZWNBSP) → U+00FEFF
-      // • Zero Width Space          (ZWSP)        → U+00200B
+      // • Root                                    → U+00221A
+      // • Slash                                   → U+00002F
+      // • Subtract                                → U+00002D
+      // • Sum                                     → U+00002B
+      // • Superscript 0                           → U+002070
+      // • Superscript 1                           → U+0000B9
+      // • Superscript 2                           → U+0000B2
+      // • Superscript 3                           → U+0000B3
+      // • Superscript 4                           → U+002074
+      // • Superscript 5                           → U+002075
+      // • Superscript 6                           → U+002076
+      // • Superscript 7                           → U+002077
+      // • Superscript 8                           → U+002078
+      // • Superscript 9                           → U+002079
+      // • Superscript Left Parenthesis            → U+00207D
+      // • Superscript Minus                       → U+00207B
+      // • Superscript Plus                        → U+00207A
+      // • Superscript Right Parenthesis           → U+00207E
+      // • Tau                                     → U+0003C4
+      // • Tilde                                   → U+00007E
+      // • Times                                   → U+0000D7
+      // • u                                       → U+000075
+      // • Vertical Bar                            → U+00007C
+      // • x                                       → U+000078
     }
 
     // lengthof(source, sourceLength, encoding);
