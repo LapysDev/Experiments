@@ -1,10 +1,14 @@
-/* Import --> del space-shooter.exe & cls && csc /out:space-shooter.exe /t:exe space-shooter.cs && space-shooter.exe & del space-shooter.exe */
+/* Import --> del space-shooter.exe & cls && csc /out:space-shooter.exe /r:System.Collections.dll /r:System.Drawing.Common.dll /r:System.Drawing.Primitives.dll /r:System.Runtime.dll /r:System.Threading.Thread.dll /r:System.Windows.Forms.dll /t:exe space-shooter.cs && space-shooter.exe & del space-shooter.exe */
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Input;
+
+using Timer = System.Windows.Forms.Timer;
 
 /* ... */
 namespace Game {
@@ -55,37 +59,27 @@ namespace Game {
         public uint   dmPanningHeight;
       }
 
-      [StructLayout(LayoutKind.Sequential)]
-      private struct MSG {
-        public IntPtr Handle;
-        public uint   Message;
-        public IntPtr WParameter;
-        public IntPtr LParameter;
-        public uint   Time;
-        public Point  Location;
-      }
-
       /* Entity */
       private class Entity {
-        private float _rotation;
-        private float _size;
+        private float rotation;
+        private float size;
 
-        public Point coordinates;
-        public uint  health;
-        public float rotation { get { return _rotation; } set { _rotation = (value < 0.0f ? (float) (Math.PI * 2.0f) + value : value) % (float) (Math.PI * 2.0f); } }
-        public float size     { get { return _size; }     set { _size     = value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value; } }
+        public Point Coordinates;
+        public uint  Health;
+        public float Rotation { get { return rotation; } set { rotation = (value < 0.0f ? (float) (Math.PI * 2.0f) + value : value) % (float) (Math.PI * 2.0f); } }
+        public float Size     { get { return size;     } set { size     = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
 
         // ...
         public Entity(Point coordinates, float size) {
-          this.coordinates = coordinates;
-          this.health      = 0u;
-          this.rotation    = 0.0f;
-          this.size        = size;
+          this.Coordinates = coordinates;
+          this.Health      = 0u;
+          this.Rotation    = 0.0f;
+          this.Size        = size;
         }
 
         // ...
-        public Size getComputedSize(Size size) {
-          return new Size((int) (this.size * size.Width), (int) (this.size * size.Height));
+        public Size GetComputedSize(Size size) {
+          return new Size((int) (this.Size * size.Width), (int) (this.Size * size.Height));
         }
       };
         /* Item */
@@ -134,112 +128,127 @@ namespace Game {
 
       /* Star */
       private sealed class Star {
-        public static ushort maximumSize = (ushort) 5u;
-        public static ushort minimumSize = (ushort) 1u;
-        public static Random randomizer  = new Random();
+        public sealed class StarCoordinates {
+          private PointF coordinates;
+          public float   X { get { return coordinates.X; } set { coordinates.X = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
+          public float   Y { get { return coordinates.Y; } set { coordinates.Y = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
+
+          // ...
+          public StarCoordinates(float x, float y) {
+            this.coordinates = new PointF(0.0f, 0.0f);
+            this.X           = x;
+            this.Y           = y;
+          }
+        };
 
         // ...
-        private float  _delta;
-        private ushort _opacity;
-        private float  _speed;
+        public static ushort MaximumSize = (ushort) 5u;
+        public static ushort MinimumSize = (ushort) 1u;
+        public static Random Randomizer  = new Random();
 
-        public float  delta { get { return _delta; } set { _delta = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
-        public Point  destinationCoordinates;
-        public ushort opacity { get { return _opacity; } set { _opacity = (ushort) (value % 256u); } }
-        public ushort size;
-        public Point  sourceCoordinates;
-        public float  speed { get { return _speed; } set { _speed = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
+        // ...
+        private float delta;
+        private byte  opacity;
+        private float speed;
+
+        public StarCoordinates DestinationCoordinates;
+        public ushort          Size;
+        public StarCoordinates SourceCoordinates;
+        public float           Delta   { get { return delta;   } set { delta   = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
+        public byte            Opacity { get { return opacity; } set { opacity = (byte) (value % 256u);                             } }
+        public float           Speed   { get { return speed;   } set { speed   = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
 
         // ...
         public Star() {
-          ushort size = (ushort) randomizer.Next(Star.minimumSize, Star.maximumSize);
+          ushort size = (ushort) Randomizer.Next(Star.MinimumSize, Star.MaximumSize);
 
-          this.delta                  = 0.0f;
-          this.destinationCoordinates = new Point(0, 0);
-          this.opacity                = (ushort) 255u;
-          this.size                   = size;
-          this.sourceCoordinates      = new Point(0, 0);
-          this.speed                  = 0.0f;
+          // ...
+          this.Delta                  = 0.0f;
+          this.DestinationCoordinates = new StarCoordinates(0.0f, 0.0f);
+          this.Opacity                = (byte) 255u;
+          this.Size                   = size;
+          this.SourceCoordinates      = new StarCoordinates(0.0f, 0.0f);
+          this.Speed                  = 0.0f;
         }
 
         // ...
-        public Size getComputedSize() {
-          return new Size(this.size, this.size);
+        public Point GetComputedDestinationCoordinates(Size size) {
+          return new Point((int) (this.DestinationCoordinates.X * size.Width), (int) (this.DestinationCoordinates.Y * size.Height));
+        }
+
+        public Point GetComputedSourceCoordinates(Size size) {
+          return new Point((int) (this.SourceCoordinates.X * size.Width), (int) (this.SourceCoordinates.Y * size.Height));
+        }
+
+        public Size GetComputedSize() {
+          return new Size(this.Size, this.Size);
         }
       };
 
       /* State */
       [Flags]
-      private enum State : ushort {
-        GAMEPLAY = (ushort) 0x1u,
-        MENU     = (ushort) 0x3u,
+      private enum State : byte {
+        GAMEPLAY = (byte) 0x1u,
+        MENU     = (byte) 0x3u,
 
-        PAUSED = (ushort) 0x4u
+        PAUSED = (byte) 0x4u
       };
 
       /* Window */
       public sealed class Window : Form {
-        private FormBorderStyle _borderStyle;
-        private FormWindowState _windowState;
-
-        // ...
         public Window() : base() {
           this.DoubleBuffered = true;
           this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.DoubleBuffer | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
         }
 
-        // ... ->> Prevent implicitly re-painting the background
-        protected override void OnPaintBackground(PaintEventArgs arguments) {}
-
-        public void exitFullscreen() {
-          this.FormBorderStyle = this._borderStyle;
-          this.WindowState     = this._windowState;
-        }
-
-        public Size getComputedSize() {
-          if (this.isFullscreen()) {
+        // ...
+        public Size GetComputedSize() {
+          if (IsFullscreen()) {
             Rectangle windowScreenBounds = Screen.FromControl(window).Bounds;
             Int32     windowSize         = Math.Min(windowScreenBounds.Height, windowScreenBounds.Width);
 
+            // ...
             return new Size(windowSize, windowSize);
           }
 
           return this.Size;
         }
 
-        public bool isFullscreen() {
-          return FormBorderStyle.None == this.FormBorderStyle && FormWindowState.Maximized == this.WindowState;
-        }
-
-        public void requestFullscreen() {
-          this._borderStyle = this.FormBorderStyle;
-          this._windowState = this.WindowState;
-
-          this.FormBorderStyle = FormBorderStyle.None;
-          this.WindowState     = FormWindowState.Maximized;
+        protected override void OnPaintBackground(PaintEventArgs arguments) {
+          /* Do nothing... ->> Prevent implicitly re-painting the background */
         }
       };
 
     /* Global > ... */
-    private static List<Keys> keys                 = null;
-    private static TimeSpan?  renderDelta          = null;
-    private static ushort     renderIndex          = (ushort) 0u;
-    private static Bitmap[]   renders              = {null, null, null};
-    private static TimeSpan?  renderTimestamp      = null;
-    private static List<Star> stars                = null;
-    private static ushort     starsMaximumLength   = (ushort) 0u;
-    private static ushort[]   starsSpawnCountDelta = {(ushort) 0u, (ushort) 1u};
-    private static TimeSpan?  starsSpawnDelta      = null;
-    private static TimeSpan?  starsSpawnTimestamp  = null;
-    private static State?     state                = null;
-    private static TimeSpan?  updateDelta          = null;
-    private static TimeSpan?  updateTimestamp      = null;
-    private static Window     window               = null;
+    private static List<Keys>      keys                                          = null;                       // ->> Keys ⌨️ currently activated
+    private static TimeSpan?       renderDelta                                   = null;                       // ->> Time between each `Render(…)`
+    private static byte            renderIndex                                   = (byte) 0u;                  // ->> Buffer currently used in multiple-buffering
+    private static Thread          renderPostProcessor                           = null;                       // ->> Background processor to handle strenuous synchronous image effects processing & filtering
+    private static Bitmap          renderPostProcessorFullscreenRender           = null;                       // ->> Fullscreen graphic
+    private static GCHandle        renderPostProcessorFullscreenRenderAllocation = GCHandle.Alloc(0x00u);      // ->> Fullscreen graphic allocated render data
+    private static Pen             renderPostProcessorFullscreenRenderBorderPen  = null;                       // ->> Fullscreen graphic border
+    private static byte[]          renderPostProcessorFullscreenRenderData       = null;                       // ->> Fullscreen graphic render data
+    private static Bitmap[]        renders                                       = {null, null, null};         // ->> Multiple Buffering rendering for gameplay graphics
+    private static TimeSpan?       renderTimestamp                               = null;                       // ->> Time till next `Render(…)`
+    private static List<Star>      stars                                         = null;                       // ->> Stars trailing in the background
+    private static ushort          starsMaximumLength                            = (ushort) 0u;                // ->> Stars total
+    private static ushort[]        starsSpawnCountDelta                          = {(ushort) 0u, (ushort) 1u}; // ->> Stars spawned at a time
+    private static TimeSpan?       starsSpawnDelta                               = null;                       // ->> Time between each star spawn
+    private static TimeSpan?       starsSpawnTimestamp                           = null;                       // ->> Time till next star spawn
+    private static State   ?       state                                         = null;                       // ->> Game state for menus, options, etc…
+    private static bool            terminated                                    = false;                      // ->> Game state for `Terminate(…)`
+    private static TimeSpan?       updateDelta                                   = null;                       // ->> Time between each `Update(…)`
+    private static TimeSpan?       updateTimestamp                               = null;                       // ->> Time till next `Update(…)`
+    private static Window          window                                        = null;                       // ->> Game window
+    private static FormBorderStyle windowBorderStyle                             = FormBorderStyle.None;       // ->> Game window vendor UI decorations and overlay
+    private static FormWindowState windowState                                   = FormWindowState.Normal;     // ->> Game window state ie: fullscreen, …
 
     private static Unit[] players = {
       null, // ->> Keyboard   ⌨️
       null, // ->> Mouse      🖱️
-      null  // ->> Controller 🎮
+      null, // ->> Controller 🎮
+      null, // ->> Touch 1    👉
+      null  // ->> Touch 2    👈
     };
 
     private static Unit player {
@@ -248,52 +257,93 @@ namespace Game {
     }
 
     /* Function > ... */
-    [DllImport("user32.dll")] private static extern bool EnumDisplaySettings(string deviceName, ulong modeIndex, ref DEVMODE deviceMode);
-    [DllImport("user32.dll")] private static extern int  PeekMessage        (out MSG message, IntPtr window, uint filterMinimum, uint filterMaximum, uint removedMessages);
+    [DllImport("user32.dll",
+      CallingConvention     = CallingConvention.Cdecl,
+      CharSet               = CharSet.Unicode,
+      EntryPoint            = "EnumDisplaySettingsA",
+      ExactSpelling         = true,
+      PreserveSig           = false,
+      SetLastError          = true,
+      ThrowOnUnmappableChar = true
+    )] private static extern bool EnumerateDisplaySettings(string deviceName, ulong modeIndex, ref DEVMODE deviceMode);
+
+    public static void ExitFullscreen() {
+      window.FormBorderStyle = windowBorderStyle;
+      window.WindowState     = windowState;
+    }
+
+    public static bool IsFullscreen() {
+      return FormBorderStyle.None == window.FormBorderStyle && FormWindowState.Maximized == window.WindowState;
+    }
+
+    public static Point coordinates = new Point(0, 0);
+    public static int   sussy       = 0;
+    private static void PostProcessRender() {
+      while (false == terminated) {
+        /* ... ->> Post-process fullscreen background */
+        if (IsFullscreen()) {
+          Size  windowMaximizedSize    = window.GetComputedSize();
+          Int32 windowMaximizedBreadth = Math.Max(windowMaximizedSize.Height, windowMaximizedSize.Width);
+
+          // ...
+          // sussy = coordinates.Y;
+          for (uint y = (uint) sussy * 4u; y != windowMaximizedBreadth * 4u; ++sussy, y += 4u)
+          for (uint x = 0 * 4u; x != windowMaximizedBreadth * 4u; x += 4u) {
+            uint index = (uint) (x + (y * windowMaximizedBreadth));
+
+            // ...
+            renderPostProcessorFullscreenRenderData[index + 1] = (byte) Math.Max(0xFFu, renderPostProcessorFullscreenRenderData[index + 1] + 0x7Fu);
+            // renderPostProcessorFullscreenRenderData[index + 1] = (byte) 0x00u;
+            // renderPostProcessorFullscreenRenderData[index + 2] = (byte) 0x00u;
+            // renderPostProcessorFullscreenRenderData[index + 3] = (byte) 255u;
+          }
+        }
+      }
+    }
+
+    private static void RequestFullscreen() {
+      windowState            = window.WindowState;
+      windowBorderStyle      = window.FormBorderStyle;
+      window.FormBorderStyle = FormBorderStyle.None;
+      window.WindowState     = FormWindowState.Maximized;
+    }
 
     /* ... */
     public static void Input(Keys? releasedKey) {
       switch (releasedKey) {
-        case Keys.Escape: Terminate(); break;
-        case Keys.F11   : if (window.isFullscreen()) window.exitFullscreen(); else window.requestFullscreen(); break;
+        case Keys.Escape: Terminate();                                                    break;
+        case Keys.F11   : if (IsFullscreen()) ExitFullscreen(); else RequestFullscreen(); break;
       }
 
       foreach (Keys key in keys)
       switch (key) {
-        case Keys.Down : case Keys.S: break;
-        case Keys.Left : case Keys.A: player.rotation -= (float) Math.PI / 180.0f; Console.WriteLine("[^]: " + (player.rotation * (180.0f / Math.PI))); break;
-        case Keys.Right: case Keys.D: player.rotation += (float) Math.PI / 180.0f; Console.WriteLine("[^]: " + (player.rotation * (180.0f / Math.PI))); break;
-        case Keys.Up   : case Keys.W: break;
+        case Keys.Down : case Keys.S: coordinates.Y = (int) (coordinates.Y + (window.Height * 0.05f)); break;
+        case Keys.Left : case Keys.A: coordinates.X = (int) (coordinates.X - (window.Width  * 0.05f)); /*player.Rotation -= (float) Math.PI / 180.0f; Console.WriteLine("[^]: " + (player.Rotation * (180.0f / Math.PI)));*/ break;
+        case Keys.Right: case Keys.D: coordinates.X = (int) (coordinates.X + (window.Width  * 0.05f)); /*player.Rotation += (float) Math.PI / 180.0f; Console.WriteLine("[^]: " + (player.Rotation * (180.0f / Math.PI)));*/ break;
+        case Keys.Up   : case Keys.W: coordinates.Y = (int) (coordinates.Y - (window.Height * 0.05f)); break;
       }
     }
 
-    public static void Terminate() {
-      window.Close();
-
-      // ...
-      if (Application.MessageLoop) Application.Exit();
-      else Environment.Exit(0x00);
-    }
-
     public static void Render(object target, PaintEventArgs arguments) {
-      Bitmap   render         = renders[renderIndex];
-      TimeSpan timestamp      = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      Window   window         = (Window) target; // ->> Same as `Game::window`… ideally
-      Graphics windowGraphics = arguments.Graphics;
-      Size     windowSize     = window.getComputedSize();
-      PointF   windowOrigin   = new PointF(windowSize.Width * 0.5f, windowSize.Height * 0.5f);
+      Bitmap   render              = renders[renderIndex];
+      TimeSpan timestamp           = TimeSpan.FromTicks(DateTime.Now.Ticks);
+      Window   window              = (Window) target; // ->> Same as `Game::window`… ideally
+      Graphics windowGraphics      = arguments.Graphics;
+      Size     windowMaximizedSize = window.Size;
+      Size     windowSize          = window.GetComputedSize();
+      PointF   windowOrigin        = new PointF(windowSize.Width * 0.5f, windowSize.Height * 0.5f);
 
       // ...
-      windowGraphics.Clear(window.BackColor);
+      windowGraphics.Clear(Color.DarkBlue/*window.BackColor*/);
 
       if (renderDelta > timestamp - renderTimestamp)
-        // ->> Preserve prior render
-        windowGraphics.DrawImage(renders[(renderIndex == 0 ? renders.Length : renderIndex) - 1], (window.Size.Width - windowSize.Width) / 2, (window.Size.Height - windowSize.Height) / 2);
+        // ->> Preserve prior `Render(…)` (`Window::Invalidate(…)` apparently cleans up the current paint)
+        windowGraphics.DrawImage(renders[(renderIndex == 0u ? renders.Length : renderIndex) - 1u], (windowMaximizedSize.Width - windowSize.Width) / 2, (windowMaximizedSize.Height - windowSize.Height) / 2);
 
       else {
         Graphics graphics    = Graphics.FromImage(render);
-        ushort   playerCount = ((Func<uint, ushort>) (value => { foreach (Unit player in players) value += null != player ? 1u : 0u; return (ushort) (0u == value ? 1u : value); }))(0u);
-        float    rotation    = ((Func<float, float>) (value => { foreach (Unit player in players) value += null != player ? player.rotation : 0.0f; return value; }))(0.0f) / playerCount;
+        byte     playerCount = ((Func<uint, byte>)   (value => { foreach (Unit player in players) value += null != player ? 1u              : 0u;   return (byte) value;                                   }))(0u);
+        float    rotation    = ((Func<float, float>) (value => { foreach (Unit player in players) value += null != player ? player.Rotation : 0.0f; return value / (0u == playerCount ? 1u : playerCount); }))(0.0f);
 
         // ...
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
@@ -303,11 +353,13 @@ namespace Game {
 
         // ... ->> Draw stars
         foreach (Star star in stars) {
-          PointF destinationCoordinates = new PointF(star.destinationCoordinates.X, star.destinationCoordinates.Y);
-          float  rotationCosine         = (float) Math.Cos(rotation);
-          float  rotationCull           = 0.0f;
-          float  rotationSine           = (float) Math.Sin(rotation);
-          PointF sourceCoordinates      = new PointF(star.sourceCoordinates.X, star.sourceCoordinates.Y);
+          Point  computedDestinationCoordinates = star.GetComputedDestinationCoordinates(windowSize);
+          Point  computedSourceCoordinates      = star.GetComputedSourceCoordinates(windowSize);
+          PointF destinationCoordinates         = new PointF(computedDestinationCoordinates.X, computedDestinationCoordinates.Y);
+          float  rotationCosine                 = (float) Math.Cos(rotation);
+          float  rotationCull                   = 0.0f;
+          float  rotationSine                   = (float) Math.Sin(rotation);
+          PointF sourceCoordinates              = new PointF(computedSourceCoordinates.X, computedSourceCoordinates.Y);
 
           // ... --- TODO (Lapys) -> Improve rotation culling
           do {
@@ -333,126 +385,115 @@ namespace Game {
           );
 
           // ...
-          graphics.FillEllipse(new SolidBrush(Color.White), new RectangleF(
-            sourceCoordinates.X + (star.delta * (destinationCoordinates.X - sourceCoordinates.X)),
-            sourceCoordinates.Y + (star.delta * (destinationCoordinates.Y - sourceCoordinates.Y)),
-            star.size,
-            star.size
-          ));
+          graphics.FillEllipse(
+            new SolidBrush(Color.FromArgb((int) (star.Opacity * (star.Delta > 0.5f ? 2.0f - (star.Delta * 2.0f) : (star.Delta * 2.0f))), Color.White)),
+            new RectangleF(
+              sourceCoordinates.X + (star.Delta * (destinationCoordinates.X - sourceCoordinates.X)),
+              sourceCoordinates.Y + (star.Delta * (destinationCoordinates.Y - sourceCoordinates.Y)),
+              star.Size,
+              star.Size
+            )
+          );
         }
 
         // ...
-        graphics.FillRectangle(new SolidBrush(Color.Red), (windowSize.Width / 2) - 50, (windowSize.Height / 2) - 25, 50, 50);
+        graphics.FillRectangle(new SolidBrush(Color.Indigo), 0, coordinates.Y, windowSize.Width, 50);
+
+        graphics.FillRectangle(new SolidBrush(Color.Blue), 100, 100, 50, 50);
         graphics.FillRectangle(new SolidBrush(Color.Green), windowSize.Width / 2, (windowSize.Height / 2) - 25, 50, 50);
+        graphics.FillRectangle(new SolidBrush(Color.Red), (windowSize.Width / 2) - 50, (windowSize.Height / 2) - 25, 50, 50);
+        graphics.FillRectangle(new SolidBrush(Color.Yellow), (windowSize.Width - 100) - 50, 100, 50, 50);
+
+        graphics.FillRectangle(new SolidBrush(Color.White), coordinates.X, coordinates.Y, 30, 30);
 
         // ...
-        renderIndex = (ushort) ((renderIndex + 1u) % renders.Length);
+        renderIndex = (byte) ((renderIndex + 1u) % renders.Length);
 
         graphics.Dispose();
-        windowGraphics.DrawImage(render, (window.Size.Width - windowSize.Width) / 2, (window.Size.Height - windowSize.Height) / 2);
+        windowGraphics.DrawImage(render, (windowMaximizedSize.Width - windowSize.Width) / 2, (windowMaximizedSize.Height - windowSize.Height) / 2);
       }
 
-      // ... ->> Draw background
-      if (window.isFullscreen()) {
-        // Bitmap renderCopy = new Bitmap(render);
-        Int32 windowScreenSize = Math.Max(window.Size.Height, window.Size.Width);
+      // ... ->> Draw fullscreen background
+      if (IsFullscreen()) {
+        int sus = Math.Min(sussy, render.Height - 1);
+        BitmapData renderData             = render.LockBits(new Rectangle(0, sus, render.Width, render.Height - sus), ImageLockMode.ReadOnly, render.PixelFormat);
+        Int32      windowMaximizedBreadth = Math.Max(windowMaximizedSize.Height, windowMaximizedSize.Width);
 
         // ...
-        // windowGraphics.FillRectangle(new SolidBrush(Color.Blue), 0, 0, 50, 50);
-        // Console.WriteLine(window.Size.Width + ", " + windowSize.Width + " ; " + window.Size.Height + ", " + windowSize.Height);
-        windowGraphics.Clear(window.BackColor);
-        windowGraphics.DrawImage(render,
-          (windowScreenSize - window.Size.Width) / -2,
-          (windowScreenSize - window.Size.Height) / -2,
-          windowScreenSize,
-          windowScreenSize
-        );
-        // windowGraphics.DrawRectangle(Pens.White, (window.Size.Width - windowSize.Width - 1) / 2, (window.Size.Height - windowSize.Height - 1) / 2, windowSize.Width - 1, windowSize.Height - 1);
+        Marshal.Copy(renderData.Scan0, renderPostProcessorFullscreenRenderData, sus * render.Width * 4, (render.Height - sus) * render.Width * 4);
+        render.UnlockBits(renderData);
 
-        // private unsafe static Bitmap Blur(Bitmap image, Rectangle rectangle, Int32 blurSize)
-        // {
-        //     Bitmap blurred = new Bitmap(image.Width, image.Height);
+        // for (uint column = 0; column != renderPostProcessorFullscreenRenderData.Width;  ++column)
+        // for (uint row    = 0; row    != renderPostProcessorFullscreenRenderData.Height; ++row) {
+        //   ushort averageCount = (ushort) 0u;
+        //   byte   averageBlue  = (byte)   0u;
+        //   byte   averageGreen = (byte)   0u;
+        //   byte   averageRed   = (byte)   0u;
 
-        //     // make an exact copy of the bitmap provided
-        //     using (Graphics graphics = Graphics.FromImage(blurred))
-        //         graphics.DrawImage(image, new Rectangle(0, 0, image.Width, image.Height),
-        //             new Rectangle(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
+        //   // ...
+        //   for (uint subcolumn = column; subcolumn < column + 10u && subcolumn != renderPostProcessorFullscreenRender.Width;  ++subcolumn)
+        //   for (uint subrow    = row;    subrow    < row    + 10u && subrow    != renderPostProcessorFullscreenRender.Height; ++subrow) {
+        //     // Color pixel = renderPostProcessorFullscreenRenderData[subcolumn + (subrow * renderPostProcessorFullscreenRender.Width)];
 
-        //     // Lock the bitmap's bits
-        //     BitmapData blurredData = blurred.LockBits(new Rectangle(0, 0, image.Width, image.Height), ImageLockMode.ReadWrite, blurred.PixelFormat);
+        //     // // ...
+        //     // ++averageCount;
 
-        //     // Get bits per pixel for current PixelFormat
-        //     int bitsPerPixel = Image.GetPixelFormatSize(blurred.PixelFormat);
+        //     // averageBlue  += pixel.B;
+        //     // averageGreen += pixel.G;
+        //     // averageRed   += pixel.R;
 
-        //     // Get pointer to first line
-        //     byte* scan0 = (byte*)blurredData.Scan0.ToPointer();
+        //     continue;
+        //   }
 
-        //     // look at every pixel in the blur rectangle
-        //     for (int xx = rectangle.X; xx < rectangle.X + rectangle.Width; xx++)
-        //     {
-        //         for (int yy = rectangle.Y; yy < rectangle.Y + rectangle.Height; yy++)
-        //         {
-        //             int avgR = 0, avgG = 0, avgB = 0;
-        //             int blurPixelCount = 0;
+        //   // averageBlue  /= (byte) averageCount;
+        //   // averageGreen /= (byte) averageCount;
+        //   // averageRed   /= (byte) averageCount;
 
-        //             // average the color of the red, green and blue for each pixel in the
-        //             // blur size while making sure you don't go outside the image bounds
-        //             for (int x = xx; (x < xx + blurSize && x < image.Width); x++)
-        //             {
-        //                 for (int y = yy; (y < yy + blurSize && y < image.Height); y++)
-        //                 {
-        //                     // Get pointer to RGB
-        //                     byte* data = scan0 + y * blurredData.Stride + x * bitsPerPixel / 8;
+        //   // ...
+        //   Color averagePixel = Color.FromArgb(averageRed, averageGreen, averageBlue);
 
-        //                     avgB += data[0]; // Blue
-        //                     avgG += data[1]; // Green
-        //                     avgR += data[2]; // Red
-
-        //                     blurPixelCount++;
-        //                 }
-        //             }
-
-        //             avgR = avgR / blurPixelCount;
-        //             avgG = avgG / blurPixelCount;
-        //             avgB = avgB / blurPixelCount;
-
-        //             // now that we know the average for the blur size, set each pixel to that color
-        //             for (int x = xx; x < xx + blurSize && x < image.Width && x < rectangle.Width; x++)
-        //             {
-        //                 for (int y = yy; y < yy + blurSize && y < image.Height && y < rectangle.Height; y++)
-        //                 {
-        //                     // Get pointer to RGB
-        //                     byte* data = scan0 + y * blurredData.Stride + x * bitsPerPixel / 8;
-
-        //                     // Change values
-        //                     data[0] = (byte)avgB;
-        //                     data[1] = (byte)avgG;
-        //                     data[2] = (byte)avgR;
-        //                 }
-        //             }
-        //         }
-        //     }
-
-        //     // Unlock the bits
-        //     blurred.UnlockBits(blurredData);
-
-        //     return blurred;
+        //   for (uint subcolumn = column; subcolumn < column + 10u && subcolumn != renderPostProcessorFullscreenRender.Width;  ++subcolumn)
+        //   for (uint subrow    = row;    subrow    < row    + 10u && subrow    != renderPostProcessorFullscreenRender.Height; ++subrow)
+        //     continue;
+        //     // renderPostProcessorFullscreenRenderData[subcolumn + (subrow * renderPostProcessorFullscreenRender.Width)] = averagePixel;
         // }
+
+        windowGraphics.DrawImage(renderPostProcessorFullscreenRender, (windowMaximizedSize.Width - windowMaximizedBreadth) / 2, (windowMaximizedSize.Height - windowMaximizedBreadth) / 2, windowMaximizedBreadth, windowMaximizedBreadth);
+        windowGraphics.DrawImage(render,                              (windowMaximizedSize.Width - windowSize.Width)       / 2, (windowMaximizedSize.Height - windowSize.Height)      / 2, windowSize.Width - 1,   windowSize.Height - 1);
+        windowGraphics.DrawRectangle(renderPostProcessorFullscreenRenderBorderPen, (windowMaximizedSize.Width - windowSize.Width + 1) / 2, (windowMaximizedSize.Height - windowSize.Height + 1) / 2, windowSize.Width - 1, windowSize.Height - 1);
       }
     }
 
-    public static void Update(object target, bool idle) {
-      MSG      message;
-      ushort   playerCount = ((Func<uint, ushort>) (value => { foreach (Unit player in players) value += null != player ? 1u : 0u; return (ushort) (0u == value ? 1u : value); }))(0u);
-      float    rotation    = ((Func<float, float>) (value => { foreach (Unit player in players) value += null != player ? player.rotation : 0.0f; return value; }))(0.0f) / playerCount;
+    public static void Terminate() {
+      if (terminated) return;
+      terminated = true;
+
+      renderPostProcessorFullscreenRender.Dispose();
+      renderPostProcessorFullscreenRenderAllocation.Free();
+      renderPostProcessorFullscreenRenderBorderPen.Dispose();
+      window.Close();
+
+      // ...
+      if (Application.MessageLoop) Application.Exit();
+      else Environment.Exit(0x00);
+    }
+
+    public static void Update(object target, EventArgs arguments) {
+      byte     playerCount = ((Func<uint, byte>)   (value => { foreach (Unit player in players) value += null != player ? 1u              : 0u;   return (byte) value;                                   }))(0u);
+      float    rotation    = ((Func<float, float>) (value => { foreach (Unit player in players) value += null != player ? player.Rotation : 0.0f; return value / (0u == playerCount ? 1u : playerCount); }))(0.0f);
       int      starsLength = stars.Count;
       TimeSpan timestamp   = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      Size     windowSize  = window.getComputedSize();
+      Size     windowSize  = window.GetComputedSize();
 
       /* ... ->> Game logic unbounded by framerate ie: calculations, flags, … */ {
-        // [Stars] ... ->> Remove fallen stars
+        starsMaximumLength = (ushort) ((windowSize.Height + windowSize.Width) / 20u);
+
+        // [Stars] ... ->> Remove fallen (excess) stars
+        while (starsLength > starsMaximumLength)
+        stars.Remove(stars[--starsLength]);
+
         for (int index = starsLength; 0 != index--; )
-        if (stars[index].delta >= 1.0f) {
+        if (stars[index].Delta >= 1.0f) {
           stars.Remove(stars[index]);
           --starsLength;
 
@@ -464,21 +505,22 @@ namespace Game {
         // [Stars] ... ->> Spawn falling stars
         if (starsSpawnDelta < timestamp - starsSpawnTimestamp)
         if (starsLength != starsMaximumLength) {
-          ushort starsSpawnCount = (ushort) Star.randomizer.Next(starsSpawnCountDelta[0], starsSpawnCountDelta[1]);
+          ushort starsSpawnCount = (ushort) Star.Randomizer.Next(starsSpawnCountDelta[0], starsSpawnCountDelta[1]);
 
           // ...
           starsSpawnCount     = (ushort) (starsLength + starsSpawnCount > starsMaximumLength ? starsMaximumLength - starsLength : starsSpawnCount);
           starsSpawnTimestamp = timestamp;
 
-          while (0 != starsSpawnCount--) {
+          while (0u != starsSpawnCount--) {
             Star star = new Star();
 
             // ...
-            star.destinationCoordinates.X = Star.randomizer.Next(0, windowSize.Width);
-            star.opacity                  = (ushort) Star.randomizer.Next(127, 255);
-            star.sourceCoordinates.X      = star.destinationCoordinates.X;
-            star.speed                    = (float) Star.randomizer.NextDouble() * 0.00025f;
-            star.speed                    = star.speed > 0.000025f ? star.speed < 0.00020f ? star.speed : 0.00020f : 0.000025f;
+            star.DestinationCoordinates.X = (float) Star.Randomizer.NextDouble();
+            star.DestinationCoordinates.Y = 1.0f;
+            star.Opacity                  = (byte) Star.Randomizer.Next(127, 255);
+            star.SourceCoordinates.X      = star.DestinationCoordinates.X;
+            star.SourceCoordinates.Y      = (float) Star.Randomizer.NextDouble() * 0.65f;
+            star.Speed                    = (float) Star.Randomizer.NextDouble() * 0.0025f;
 
             stars.Add(star);
           }
@@ -487,60 +529,70 @@ namespace Game {
 
       /* Update ->> Game logic bounded by `Update(…)` framerate ie: animations, transitions, … */
       if (updateDelta < timestamp - updateTimestamp) {
+        updateTimestamp = timestamp;
+
         // [Stars] ... ->> Fell stars
-        foreach (Star star in stars) {
-          star.delta                   += star.speed;
-          star.destinationCoordinates.Y = windowSize.Height;
-          star.sourceCoordinates     .Y = 0;
-        }
+        foreach (Star star in stars)
+        star.Delta += star.Speed;
       }
 
       /* Render ->> Game render bounded by `Render(…)` */
-      if (PeekMessage(out message, IntPtr.Zero, 0u, 0u, 0u) == 0)
-      window.Invalidate(false);
+      window.Invalidate();
     }
 
     /* Main */
     static void Main(String[] commandLineArguments) {
-      DEVMODE deviceMode       = new DEVMODE();
-      uint    deviceFramerate  = 60u;
-      Timer   updateTimer      = null;
-      Screen  windowScreen     = null;
-      Int32   windowScreenSize = 0;
-      Int32   windowSize       = 0;
+      TimeSpan delta            = TimeSpan.FromTicks((long) (TimeSpan.TicksPerSecond / 60uL));
+      DEVMODE  deviceMode       = new DEVMODE();
+      uint     deviceFramerate  = 60u;
+      TimeSpan timestamp        = TimeSpan.FromTicks(DateTime.Now.Ticks);
+      Timer    updateTimer      = null;
+      Screen   windowScreen     = null;
+      Int32    windowScreenSize = 0;
+      Int32    windowSize       = 0;
 
       /* Update > ... */
-      if (EnumDisplaySettings(null, DEVMODE.ENUM_CURRENT_SETTINGS, ref deviceMode))
-      deviceFramerate = (uint) deviceMode.dmDisplayFrequency;
+      if (EnumerateDisplaySettings(null, DEVMODE.ENUM_CURRENT_SETTINGS, ref deviceMode)) {
+        deviceFramerate = (uint) deviceMode.dmDisplayFrequency;
+        delta           = TimeSpan.FromTicks((long) (TimeSpan.TicksPerSecond / deviceFramerate));
+      }
 
-      keys                    = new List<Keys>();
-      player                  = new Infantry(new Point(0, 0));
-      renderDelta             = TimeSpan.FromTicks((long) (TimeSpan.TicksPerSecond / deviceFramerate));
-      renderTimestamp         = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      stars                   = new List<Star>();
-      starsMaximumLength      = (ushort) 25u;
-      starsSpawnCountDelta[0] = (ushort) 1u;
-      starsSpawnCountDelta[1] = (ushort) 5u;
-      starsSpawnDelta         = TimeSpan.FromTicks((long) (TimeSpan.TicksPerMillisecond * 600uL));
-      starsSpawnTimestamp     = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      state                   = State.MENU;
-      updateDelta             = TimeSpan.FromTicks((long) (TimeSpan.TicksPerSecond / deviceFramerate));
-      updateTimer             = new Timer();
-      updateTimestamp         = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      window                  = new Window();
-      windowScreen            = Screen.FromControl(window);
-      windowScreenSize        = Math.Min(windowScreen.Bounds.Height, windowScreen.Bounds.Width);
-      windowSize              = (Int32) (Math.Min(windowScreen.WorkingArea.Height, windowScreen.WorkingArea.Width) * 0.8f);
+      keys                                         = new List<Keys>();
+      player                                       = new Infantry(new Point(0, 0));
+      renderDelta                                  = delta;
+      renderPostProcessor                          = new Thread(new ThreadStart(PostProcessRender));
+      renderPostProcessorFullscreenRenderBorderPen = new Pen(Color.FromArgb(166, 0xFF, 0xFF, 0xFF));
+      renderTimestamp                              = timestamp;
+      stars                                        = new List<Star>();
+      starsMaximumLength                           = (ushort) 69u;
+      starsSpawnCountDelta[0]                      = (ushort) 1u;
+      starsSpawnCountDelta[1]                      = (ushort) 5u;
+      starsSpawnDelta                              = TimeSpan.FromTicks((long) (TimeSpan.TicksPerMillisecond * 600uL));
+      starsSpawnTimestamp                          = timestamp;
+      state                                        = State.MENU;
+      updateDelta                                  = delta;
+      updateTimer                                  = new Timer();
+      updateTimestamp                              = timestamp;
+      window                                       = new Window();
+      windowBorderStyle                            = window.FormBorderStyle;
+      windowScreen                                 = Screen.FromControl(window);
+      windowScreenSize                             = Math.Min(windowScreen.Bounds.Height, windowScreen.Bounds.Width);
+      windowSize                                   = (Int32) (Math.Min(windowScreen.WorkingArea.Height, windowScreen.WorkingArea.Width) * 0.8f);
+      windowState                                  = window.WindowState;
 
       for (int index = renders.Length; 0 != index; )
-      renders[--index] = new Bitmap(windowScreenSize, windowScreenSize);
+      renders[--index] = new Bitmap(windowScreenSize, windowScreenSize, PixelFormat.Format32bppPArgb);
+
+      renderPostProcessorFullscreenRenderData       = new byte[windowScreenSize * windowScreenSize * 4];
+      renderPostProcessorFullscreenRenderAllocation = GCHandle.Alloc(renderPostProcessorFullscreenRenderData, GCHandleType.Pinned);
+      renderPostProcessorFullscreenRender           = new Bitmap(windowScreenSize, windowScreenSize, windowScreenSize * 4, PixelFormat.Format32bppPArgb, renderPostProcessorFullscreenRenderAllocation.AddrOfPinnedObject());
 
       /* Modification > ... */
-      Application.Idle += new EventHandler(delegate(object target, EventArgs arguments) { Update(target, true); });
+      Application.Idle += new EventHandler(Update);
 
       updateTimer.Enabled  = true;
       updateTimer.Interval = (int) updateDelta.Value.TotalMilliseconds;
-      updateTimer.Tick    += new EventHandler(delegate(object target, EventArgs arguments) { Update(target, false); });
+      updateTimer.Tick    += new EventHandler(Update);
 
       window.BackColor       = Color.Black;
       window.FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -555,8 +607,8 @@ namespace Game {
       window.Text            = "Space Shooter";
 
       /* ... */
-      if (DialogResult.OK != window.ShowDialog())
-      Terminate();
+      renderPostProcessor.Start();
+      if (DialogResult.OK != window.ShowDialog()) Terminate();
     }
   }
 }
