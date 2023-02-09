@@ -21,7 +21,7 @@
 
 • media [Chrome 1, Edge 12, FF 1, IE 6, Op 9.2, Safari 3] → A conditional group rule that will apply its content if the device meets the criteria of the condition defined using a media query
   all, print, screen
-  and, not, only, ,
+  and, not, only
 
   any-hover              [Chrome 41, Edge 16, FF 64,  IE ×,  Op 28,   Safari 9]    → Does any available input mechanism allow the user to hover over elements
   any-pointer            [Chrome 41, Edge 12, FF 64,  IE ×,  Op 28,   Safari 9]    → Is any available input mechanism a pointing device, and if so, how accurate is it
