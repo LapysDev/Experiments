@@ -84,7 +84,7 @@ namespace Game {
         // ...
         public Entity(Point coordinates, float size) {
           this.Acceleration = 0.0f;
-          this.Coordinates  = coordinates;
+          this.Coordinates  = Point.Empty == coordinates ? new Point(0, 0) : coordinates;
           this.Health       = 0u;
           this.MaximumSpeed = 0.0f;
           this.Rotation     = (float) (Math.PI * Entity.Randomizer.NextDouble() * 2.0f);
@@ -230,8 +230,9 @@ namespace Game {
             private class Kamikaze : Alien {
               new public const uint BaseHealth = 1u;
 
-              new public readonly float Defense = 0.0f;
-              new public readonly uint  Shield  = 0u;
+              new public readonly float Defense     = 0.0f;
+              public readonly     float BurstRadius = 0.0675f;
+              new public readonly uint  Shield      = 0u;
 
               // ...
               public Kamikaze(Point coordinates) : base(coordinates, 0.0400f) {
@@ -353,9 +354,9 @@ namespace Game {
                 this.Render         = Image.FromFile("assets/entities/ships/swarm.png");
                 this.SpawnTimestamp = new TimeSpan(0L);
 
-                this.Carriers.Add(new Drone(new Point(0, 0)));
-                this.Carriers.Add(new Drone(new Point(0, 0)));
-                this.Carriers.Add(new Drone(new Point(0, 0)));
+                this.Carriers.Add(new Drone(Point.Empty));
+                this.Carriers.Add(new Drone(Point.Empty));
+                this.Carriers.Add(new Drone(Point.Empty));
               }
             };
 
@@ -375,8 +376,8 @@ namespace Game {
         };
 
         // ...
-        public static ushort MaximumSize = (ushort) 5u;
-        public static ushort MinimumSize = (ushort) 1u;
+        public static byte   MaximumSize = (byte) 5u;
+        public static byte   MinimumSize = (byte) 1u;
         public static Random Randomizer  = new Random();
 
         // ...
@@ -386,7 +387,7 @@ namespace Game {
 
         public Color           Color;
         public StarCoordinates DestinationCoordinates;
-        public ushort          Size;
+        public byte            Size;
         public StarCoordinates SourceCoordinates;
         public float           Delta   { get { return delta;   } set { delta   = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
         public byte            Opacity { get { return opacity; } set { opacity = (byte) (value % 256u);                             } }
@@ -394,10 +395,10 @@ namespace Game {
 
         // ...
         public Star() {
-          ushort size = (ushort) Randomizer.Next(Star.MinimumSize, Star.MaximumSize);
+          byte size = (byte) Randomizer.Next(Star.MinimumSize, Star.MaximumSize);
 
           // ...
-          this.Color                  = Star.Randomizer.NextDouble() > 0.1675f ? Color.White : Star.Randomizer.NextDouble() > 0.500f ? Color.Cyan : Color.Pink;
+          this.Color                  = Star.Randomizer.NextDouble() > 0.1675f ? Color.White : new Color[] {Color.Cyan, Color.LightYellow, Color.Pink}[Star.Randomizer.Next(3)];
           this.Delta                  = 0.0f;
           this.DestinationCoordinates = new StarCoordinates(0.0f, 0.0f);
           this.Opacity                = (byte) 255u;
@@ -413,10 +414,6 @@ namespace Game {
 
         public Point GetComputedSourceCoordinates(Size size) {
           return new Point((int) (this.SourceCoordinates.X * size.Width), (int) (this.SourceCoordinates.Y * size.Height));
-        }
-
-        public Size GetComputedSize() {
-          return new Size(this.Size, this.Size);
         }
       };
 
@@ -437,16 +434,11 @@ namespace Game {
         }
 
         // ...
-        public Size GetComputedSize() {
-          if (IsFullscreen()) {
-            Rectangle windowScreenBounds = Screen.FromControl(window).Bounds;
-            Int32     windowSize         = Math.Min(windowScreenBounds.Height, windowScreenBounds.Width);
+        public Size GetViewportSize() {
+          Size  size   = false == IsFullscreen() ? this.ClientSize : Screen.FromControl(window).Bounds.Size;
+          Int32 length = size.Height < size.Width ? size.Height : size.Width;
 
-            // ...
-            return new Size(windowSize, windowSize);
-          }
-
-          return this.ClientSize;
+          return new Size(length, length);
         }
 
         protected override void OnPaintBackground(PaintEventArgs arguments) {
@@ -712,9 +704,9 @@ namespace Game {
     }
 
     public static void Render(object target, PaintEventArgs arguments) {
-      Window   window         = (Window) target; // ->> Same as `Game::window`… ideally
+      Window   window         = target as Window; // ->> Same as `Game::window`… ideally
       Graphics windowGraphics = arguments.Graphics;
-      Size     windowSize     = window.GetComputedSize();
+      Size     viewportSize   = window.GetViewportSize();
       TimeSpan timestamp      = TimeSpan.FromTicks(DateTime.Now.Ticks);
       bool     rerender       = renderDelta <= timestamp - renderTimestamp;
       Bitmap   render         = renders[rerender ? (renderIndex == 0u ? renders.Length : renderIndex) - 1u : renderIndex];
@@ -736,8 +728,8 @@ namespace Game {
       windowGraphics.TextRenderingHint  = TextRenderingHint .ClearTypeGridFit;
 
       if (rerender || renderResized) {
-        float  rotation     = GetPlayersOverallRotation();
-        PointF windowOrigin = new PointF(windowSize.Width / 2.0f, windowSize.Height / 2.0f);
+        float  rotation       = GetPlayersOverallRotation();
+        PointF viewportOrigin = new PointF(viewportSize.Width / 2.0f, viewportSize.Height / 2.0f);
 
         // ... ->> Clear previously drawn frame
         renderGraphics.Clear(window.BackColor);
@@ -748,9 +740,9 @@ namespace Game {
 
         // ... ->> Draw stars
         foreach (Star star in stars) {
-          Brush  brush                          = new SolidBrush(Color.FromArgb((int) (star.Opacity * (star.Delta > 0.5f ? 2.0f - (star.Delta * 2.0f) : (star.Delta * 2.0f))), star.Color));
-          Point  computedDestinationCoordinates = star.GetComputedDestinationCoordinates(windowSize);
-          Point  computedSourceCoordinates      = star.GetComputedSourceCoordinates(windowSize);
+          Brush  brush                          = new SolidBrush(Color.FromArgb((int) (star.Opacity * (star.Delta > 0.5f ? 2.0f - (star.Delta * 2.0f) : (star.Delta * 2.0f))), star.Color)) as Brush;
+          Point  computedDestinationCoordinates = star.GetComputedDestinationCoordinates(viewportSize);
+          Point  computedSourceCoordinates      = star.GetComputedSourceCoordinates     (viewportSize);
           PointF destinationCoordinates         = new PointF(computedDestinationCoordinates.X, computedDestinationCoordinates.Y);
           float  rotationCosine                 = (float) Math.Cos(rotation);
           float  rotationCull                   = 0.0f;
@@ -765,38 +757,53 @@ namespace Game {
             if (rotation >= Math.PI * 1.5f && rotation <= Math.PI * 2.0f) { rotationCull = (float) ((Math.PI * 1.5f) + (Math.PI / 4.0f)) - rotation; break; }
           } while (false);
 
-          rotationCull  = 1.0f - (float) (Math.Abs(rotationCull) / (Math.PI / 4.0f));                                                                                                                                                                            // ->> Scale based on rotation (45° angles are the most scaled)
-          rotationCull *= 1.0f - (float) (Math.Sqrt(((windowSize.Width * windowSize.Width) / 4.0f) - Math.Pow(sourceCoordinates.X > windowSize.Width / 2.0f ? windowSize.Width - sourceCoordinates.X : sourceCoordinates.X, 2.0f)) / (windowSize.Width / 2.0f)); // ->> Scale based on center of rotation --- WARN (Lapys) -> Still not perfect
-          rotationCull *= (float) Math.Sqrt((windowSize.Height * windowSize.Height) + (windowSize.Width * windowSize.Width));                                                                                                                                    // ->> Convert to in-world coordinates
+          rotationCull  = 1.0f - (float) (Math.Abs(rotationCull) / Math.PI / 4.0f);                                                                                                                                                           // ->> Scale based on rotation (45° angles are the most scaled)
+          rotationCull *= 1.0f - (float) (Math.Sqrt(Math.Pow(viewportSize.Width / 2.0f, 2.0f) - Math.Pow(sourceCoordinates.X > viewportOrigin.X ? viewportSize.Width - sourceCoordinates.X : sourceCoordinates.X, 2.0f)) / viewportOrigin.X); // ->> Scale based on center of rotation --- WARN (Lapys) -> Still not perfect
+          rotationCull *= 0.0f + (float) (Math.Sqrt(Math.Pow(viewportSize.Height, 2) + Math.Pow(viewportSize.Width, 2)));                                                                                                                     // ->> Convert to in-world coordinates
 
           destinationCoordinates.Y += rotationCull;
           destinationCoordinates    = new PointF(
-            windowOrigin.X + (rotationCosine * (destinationCoordinates.X - windowOrigin.X)) - (rotationSine   * (destinationCoordinates.Y - windowOrigin.Y)),
-            windowOrigin.Y + (rotationSine   * (destinationCoordinates.X - windowOrigin.X)) + (rotationCosine * (destinationCoordinates.Y - windowOrigin.Y))
+            viewportOrigin.X + (rotationCosine * (destinationCoordinates.X - viewportOrigin.X)) - (rotationSine   * (destinationCoordinates.Y - viewportOrigin.Y)),
+            viewportOrigin.Y + (rotationSine   * (destinationCoordinates.X - viewportOrigin.X)) + (rotationCosine * (destinationCoordinates.Y - viewportOrigin.Y))
           );
 
           sourceCoordinates.Y -= rotationCull;
           sourceCoordinates    = new PointF(
-            windowOrigin.X + (rotationCosine * (sourceCoordinates.X - windowOrigin.X)) - (rotationSine   * (sourceCoordinates.Y - windowOrigin.Y)),
-            windowOrigin.Y + (rotationSine   * (sourceCoordinates.X - windowOrigin.X)) + (rotationCosine * (sourceCoordinates.Y - windowOrigin.Y))
+            viewportOrigin.X + (rotationCosine * (sourceCoordinates.X - viewportOrigin.X)) - (rotationSine   * (sourceCoordinates.Y - viewportOrigin.Y)),
+            viewportOrigin.Y + (rotationSine   * (sourceCoordinates.X - viewportOrigin.X)) + (rotationCosine * (sourceCoordinates.Y - viewportOrigin.Y))
           );
 
           // ...
-          renderGraphics.FillEllipse(brush, sourceCoordinates.X + (star.Delta * (destinationCoordinates.X - sourceCoordinates.X)), sourceCoordinates.Y + (star.Delta * (destinationCoordinates.Y - sourceCoordinates.Y)), star.Size, star.Size);
+          renderGraphics.FillEllipse(
+            brush,
+            sourceCoordinates.X + (star.Delta * (destinationCoordinates.X - sourceCoordinates.X)),
+            sourceCoordinates.Y + (star.Delta * (destinationCoordinates.Y - sourceCoordinates.Y)),
+            star.Size,
+            star.Size
+          );
+
           brush.Dispose();
         }
 
         // ... --- TODO (Lapys)
+        switch (state) {
+          case State.MENU: {
+            renderGraphics.FillRectangle(Brushes.Blue, COORDINATES.X, COORDINATES.Y, 50, 50);
+
+            Font       controllerNameFont           = null == headingFontFamily ? new Font(headingFont.Name, 18.0f) : new Font(headingFontFamily, 18.0f);
+            FontFamily controllerNameFontFamily     = null == headingFontFamily ? FontFamily.GenericSansSerif       : headingFontFamily;
+          } break;
+        }
 
         // ... ->> Draw fullscreen background
-        do if (IsFullscreen()) {
-          Bitmap          renderCopy                                   = null;
-          Graphics        renderCopyGraphics                           = null;
-          Bitmap          renderFullscreen                             = renders[renderIndex];
-          Graphics        renderFullscreenGraphics                     = Graphics.FromImage(renderFullscreen);
-          ImageAttributes renderPostProcessorFullscreenImageAttributes = new ImageAttributes();
-          Size            windowMaximizedSize                          = window.ClientSize;
-          Int32           windowMaximizedBreadth                       = Math.Max(windowMaximizedSize.Height, windowMaximizedSize.Width);
+        if (IsFullscreen()) {
+          Bitmap          renderCopy                      = null;
+          Graphics        renderCopyGraphics              = null;
+          Bitmap          renderFullscreen                = renders[renderIndex];
+          Graphics        renderFullscreenGraphics        = Graphics.FromImage(renderFullscreen);
+          ImageAttributes renderFullscreenImageAttributes = new ImageAttributes();
+          Rectangle       windowScreenBounds              = Screen.FromControl(window).Bounds;
+          Int32           windowScreenSize                = Math.Max(windowScreenBounds.Height, windowScreenBounds.Width);
 
           // ...
           renderFullscreenGraphics.CompositingMode   = renderGraphics.CompositingMode;
@@ -807,14 +814,14 @@ namespace Game {
           renderFullscreenGraphics.SmoothingMode      = SmoothingMode     .HighQuality;
           renderFullscreenGraphics.TextRenderingHint  = TextRenderingHint .ClearTypeGridFit;
 
-          // ... ->> Render asynchronously filtered gameplay graphics; see `PostProcessRender()`
-          renderPostProcessorFullscreenRenderBitmapData = render.LockBits(new Rectangle(new Point(0, 0), render.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
+          // ... ->> Render asynchronously filtered gameplay graphics; see `PostProcessRender()` (a fast blur function would be useful here)
+          renderPostProcessorFullscreenRenderBitmapData = render.LockBits(new Rectangle(Point.Empty, render.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
           Marshal.Copy(renderPostProcessorFullscreenRenderBitmapData.Scan0, renderPostProcessorFullscreenRenderSubdata[0], 0, render.Height * render.Width * sizeof(byte) * 4);
           render.UnlockBits(renderPostProcessorFullscreenRenderBitmapData);
           renderPostProcessorFullscreenRenderBitmapData = null;
 
           // ... ->> Apply transparency matrix to fullscreen background image
-          renderPostProcessorFullscreenImageAttributes.SetColorMatrix(new ColorMatrix(new Single[][] {
+          renderFullscreenImageAttributes.SetColorMatrix(new ColorMatrix(new Single[][] {
             new Single[] {1.00f, 0.00f, 0.00f, 0.00f, 0.00f},
             new Single[] {0.00f, 1.00f, 0.00f, 0.00f, 0.00f},
             new Single[] {0.00f, 0.00f, 1.00f, 0.00f, 0.00f},
@@ -822,54 +829,37 @@ namespace Game {
             new Single[] {0.00f, 0.00f, 0.00f, 0.00f, 1.00f},
           }), ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
 
-          // ... ->> Draw asynchronously filtered & translated gameplay graphics, gameplay graphics border, and semi-transparent fullscreen background image
+          // ... ->> Draw asynchronously filtered & translated gameplay graphics and semi-transparent fullscreen background image
           if (render == renderFullscreen) {
-            renderCopy         = render.Clone(new Rectangle(new Point(0, 0), render.Size), render.PixelFormat);
+            renderCopy         = render.Clone(new Rectangle(Point.Empty, render.Size), render.PixelFormat);
             renderCopyGraphics = Graphics.FromImage(renderCopy);
 
-            renderCopyGraphics.CompositingMode    = CompositingMode.SourceCopy;
+            renderCopyGraphics.CompositingMode    = CompositingMode   .SourceCopy;
             renderCopyGraphics.CompositingQuality = CompositingQuality.HighSpeed;
-            renderCopyGraphics.InterpolationMode  = InterpolationMode.NearestNeighbor;
-            renderCopyGraphics.PixelOffsetMode    = PixelOffsetMode.None;
-            renderCopyGraphics.SmoothingMode      = SmoothingMode.None;
-            renderCopyGraphics.TextRenderingHint  = TextRenderingHint.SingleBitPerPixel;
+            renderCopyGraphics.InterpolationMode  = InterpolationMode .NearestNeighbor;
+            renderCopyGraphics.PixelOffsetMode    = PixelOffsetMode   .None;
+            renderCopyGraphics.SmoothingMode      = SmoothingMode     .None;
+            renderCopyGraphics.TextRenderingHint  = TextRenderingHint .SingleBitPerPixel;
 
             renderCopyGraphics.DrawImageUnscaled(renderFullscreen, 0, 0);
           }
 
           renderFullscreenGraphics.Clear(window.BackColor);
+
           renderFullscreenGraphics.DrawImage(
             renderPostProcessorFullscreenRender,
-            (windowMaximizedBreadth - windowMaximizedSize.Width)  / -2.0f,
-            (windowMaximizedBreadth - windowMaximizedSize.Height) / -2.0f,
-            windowMaximizedBreadth * (renderPostProcessorFullscreenRender.Height < renderPostProcessorFullscreenRender.Width  ? renderPostProcessorFullscreenRender.Width  / (float) renderPostProcessorFullscreenRender.Height : 1.0f),
-            windowMaximizedBreadth * (renderPostProcessorFullscreenRender.Width  < renderPostProcessorFullscreenRender.Height ? renderPostProcessorFullscreenRender.Height / (float) renderPostProcessorFullscreenRender.Width  : 1.0f)
+            (windowScreenSize - windowScreenBounds.Width)  / -2.0f,
+            (windowScreenSize - windowScreenBounds.Height) / -2.0f,
+            windowScreenSize * (renderPostProcessorFullscreenRender.Height < renderPostProcessorFullscreenRender.Width  ? renderPostProcessorFullscreenRender.Width  / (float) renderPostProcessorFullscreenRender.Height : 1.0f),
+            windowScreenSize * (renderPostProcessorFullscreenRender.Width  < renderPostProcessorFullscreenRender.Height ? renderPostProcessorFullscreenRender.Height / (float) renderPostProcessorFullscreenRender.Width  : 1.0f)
           );
 
           renderFullscreenGraphics.DrawImage(renderFullscreenImage,  new Rectangle(
-            (int) ((windowMaximizedBreadth - windowMaximizedSize.Width)  / -2.0f),
-            (int) ((windowMaximizedBreadth - windowMaximizedSize.Height) / -2.0f),
-            (int) (windowMaximizedBreadth * (renderFullscreenImage.Height < renderFullscreenImage.Width  ? renderFullscreenImage.Width  / (float) renderFullscreenImage.Height : 1.0f)),
-            (int) (windowMaximizedBreadth * (renderFullscreenImage.Width  < renderFullscreenImage.Height ? renderFullscreenImage.Height / (float) renderFullscreenImage.Width  : 1.0f))
-          ), 0, 0, renderFullscreenImage.Width, renderFullscreenImage.Height, GraphicsUnit.Pixel, renderPostProcessorFullscreenImageAttributes);
-
-          renderFullscreenGraphics.DrawImageUnscaledAndClipped(
-            render != renderFullscreen ? render : renderCopy,
-            new Rectangle(
-              (windowMaximizedSize.Width  - windowSize.Width)  / 2,
-              (windowMaximizedSize.Height - windowSize.Height) / 2,
-              windowSize.Width,
-              windowSize.Height
-            )
-          );
-
-          renderFullscreenGraphics.DrawRectangle(
-            renderFullscreenBorderPen,
-            ((windowMaximizedSize.Width  - windowSize.Width)  / 2) + 1,
-            ((windowMaximizedSize.Height - windowSize.Height) / 2) + 1,
-            windowSize.Width  - 1,
-            windowSize.Height - 1
-          );
+            (int) ((windowScreenSize - windowScreenBounds.Width)  / -2.0f),
+            (int) ((windowScreenSize - windowScreenBounds.Height) / -2.0f),
+            (int) (windowScreenSize * (renderFullscreenImage.Height < renderFullscreenImage.Width  ? renderFullscreenImage.Width  / (float) renderFullscreenImage.Height : 1.0f)),
+            (int) (windowScreenSize * (renderFullscreenImage.Width  < renderFullscreenImage.Height ? renderFullscreenImage.Height / (float) renderFullscreenImage.Width  : 1.0f))
+          ), 0, 0, renderFullscreenImage.Width, renderFullscreenImage.Height, GraphicsUnit.Pixel, renderFullscreenImageAttributes);
 
           // ... ->> Draw controller prompts
           RequestPostProcessorFullscreenControllerImages();
@@ -878,139 +868,165 @@ namespace Game {
             Image controllerImage = renderControllerImages[index];
             Unit  player          = players[index];
 
-            if (null == controllerImage) continue;
-
             // ...
-            Brush        controllerBrush              = new SolidBrush(Color.FromArgb(225, 0x00, 0x00, 0x00));                                                                                                                 //
-            string       controllerName               = (new string[] {"KEYBOARD", "MOUSE", "GAMEPAD", "TOUCH"})[index];                                                                                                       //
-            Brush        controllerNameBrush          = new SolidBrush(Color.White) as Brush;                                                                                                                                  // --> Brushes.White
-            Font         controllerNameFont           = null == headingFontFamily ? new Font(headingFont.Name, 18.0f) : new Font(headingFontFamily, 18.0f);                                                                    //
-            FontFamily   controllerNameFontFamily     = null == headingFontFamily ? FontFamily.GenericSansSerif : headingFontFamily;                                                                                           //
-            GraphicsPath controllerNameGraphicsPath   = new GraphicsPath();                                                                                                                                                    //
-            Pen          controllerNamePen            = new Pen(Color.DarkGray);                                                                                                                                               // --> Pens.DarkGray
-            const uint   controllerNameTopMargin      = 15u;                                                                                                                                                                   //
-            Size         controllerNameSize           = TextRenderer.MeasureText(controllerName, controllerNameFont, renderFullscreen.Size, TextFormatFlags.NoClipping | TextFormatFlags.NoPadding | TextFormatFlags.Top);     //
-            Pen          controllerPen                = new Pen(Color.DarkGray);                                                                                                                                               // --> Pens.DarkGray
-            string       controllerPrompt             = "Awaiting input…";                                                                                                                                                    //
-            Brush        controllerPromptBrush        = new SolidBrush(Color.FromArgb(225, 0xFF, 0xFF, 0xFF)) as Brush;                                                                                                        //
-            Font         controllerPromptFont         = null == textFontFamily ? new Font(textFont.Name, 10.0f) : new Font(textFontFamily, 10.0f);                                                                             //
-            FontFamily   controllerPromptFontFamily   = null == textFontFamily ? FontFamily.GenericMonospace : textFontFamily;                                                                                                 //
-            GraphicsPath controllerPromptGraphicsPath = new GraphicsPath();                                                                                                                                                    //
-            Pen          controllerPromptPen          = new Pen(Color.Transparent);                                                                                                                                            // --> Pens.Transparent
-            const uint   controllerPromptTopMargin    = 10u;                                                                                                                                                                   //
-            Size         controllerPromptSize         = TextRenderer.MeasureText(controllerPrompt, controllerPromptFont, renderFullscreen.Size, TextFormatFlags.NoClipping | TextFormatFlags.NoPadding | TextFormatFlags.Top); //
-            Bitmap       controllerRender             = null;                                                                                                                                                                  //
-            BitmapData   controllerRenderBitmapData   = null;                                                                                                                                                                  //
-            byte[]       controllerRenderData         = null;                                                                                                                                                                  //
-            Size         controllerRenderSize         = controllerImage.Size;                                                                                                                                                  //
-            Int32        controllerSize               = (Int32) Math.Max(50.0f, Math.Min(windowMaximizedSize.Height, windowMaximizedSize.Width) * 0.1f);                                                                       //
-            uint         controllerTopMargin          = (uint) (windowMaximizedSize.Height * 0.050f);                                                                                                                          //
-            int          controllerX                  = (int) (windowMaximizedSize.Height * 0.050f);                                                                                                                           //
-            int          controllerY                  = (int) (windowMaximizedSize.Height * 0.100f);                                                                                                                           //
+            if (null != controllerImage) {
+              Brush      controllerBrush            = new SolidBrush(Color.FromArgb(225, 0x00, 0x00, 0x00)) as Brush;                                //
+              Size       controllerImageSize        = controllerImage.Size;                                                                          //
+              Pen        controllerPen              = new Pen(Color.DarkGray);                                                                       // --> Pens.DarkGray
+              Bitmap     controllerRender           = null;                                                                                          //
+              BitmapData controllerRenderBitmapData = null;                                                                                          //
+              byte[]     controllerRenderData       = null;                                                                                          //
+              Int32      controllerSize             = (Int32) Math.Max(50.0f, Math.Min(windowScreenBounds.Height, windowScreenBounds.Width) * 0.1f); //
+              uint       controllerTopMargin        = (uint) (windowScreenBounds.Height * 0.050f);                                                   //
+              int        controllerX                = (int)  (windowScreenBounds.Width  * 0.033f);                                                   //
+              int        controllerY                = (int)  (windowScreenBounds.Height * 0.100f);                                                   //
 
-            // ... ->> Scale the controller render
-            if (controllerRenderSize.Height < controllerRenderSize.Width) { controllerRenderSize.Width  = (int) (controllerRenderSize.Width  * (controllerSize / (float) controllerRenderSize.Height)); controllerRenderSize.Height = controllerSize; }
-            else                                                          { controllerRenderSize.Height = (int) (controllerRenderSize.Height * (controllerSize / (float) controllerRenderSize.Width));  controllerRenderSize.Width  = controllerSize; }
+              string       controllerName               = (new string[] {"KEYBOARD", "MOUSE", "GAMEPAD", "TOUCH"})[index];                                                                                                       //
+              Brush        controllerNameBrush          = new SolidBrush(Color.White) as Brush;                                                                                                                                  // --> Brushes.White
+              Font         controllerNameFont           = null == headingFontFamily ? new Font(headingFont.Name, 18.0f) : new Font(headingFontFamily, 18.0f);                                                                    //
+              FontFamily   controllerNameFontFamily     = null == headingFontFamily ? FontFamily.GenericSansSerif       : headingFontFamily;                                                                                     //
+              GraphicsPath controllerNameGraphicsPath   = new GraphicsPath();                                                                                                                                                    //
+              Pen          controllerNamePen            = new Pen(Color.DarkGray);                                                                                                                                               // --> Pens.DarkGray
+              const uint   controllerNameTopMargin      = 15u;                                                                                                                                                                   //
+              Size         controllerNameSize           = TextRenderer.MeasureText(controllerName, controllerNameFont, renderFullscreen.Size, TextFormatFlags.NoClipping | TextFormatFlags.NoPadding | TextFormatFlags.Top);     //
+              const string controllerPrompt             = "Awaiting input…";                                                                                                                                                    //
+              Brush        controllerPromptBrush        = new SolidBrush(Color.FromArgb(225, 0xFF, 0xFF, 0xFF)) as Brush;                                                                                                        //
+              Font         controllerPromptFont         = null == textFontFamily ? new Font(textFont.Name, 10.0f) : new Font(textFontFamily, 10.0f);                                                                             //
+              FontFamily   controllerPromptFontFamily   = null == textFontFamily ? FontFamily.GenericMonospace    : textFontFamily;                                                                                              //
+              GraphicsPath controllerPromptGraphicsPath = new GraphicsPath();                                                                                                                                                    //
+              Pen          controllerPromptPen          = new Pen(Color.Transparent);                                                                                                                                            // --> Pens.Transparent
+              Size         controllerPromptSize         = TextRenderer.MeasureText(controllerPrompt, controllerPromptFont, renderFullscreen.Size, TextFormatFlags.NoClipping | TextFormatFlags.NoPadding | TextFormatFlags.Top); //
+              const uint   controllerPromptTopMargin    = 10u;                                                                                                                                                                   //
 
-            controllerRenderSize.Height = (int) (controllerRenderSize.Height * (float) 0.575f);
-            controllerRenderSize.Width  = (int) (controllerRenderSize.Width  * (float) 0.575f);
+              // ... ->> Scale and translate the controller render
+              if (controllerImageSize.Height < controllerImageSize.Width) { controllerImageSize.Width  = (int) (controllerImageSize.Width  * (controllerSize / (float) controllerImageSize.Height)); controllerImageSize.Height = controllerSize; }
+              else                                                        { controllerImageSize.Height = (int) (controllerImageSize.Height * (controllerSize / (float) controllerImageSize.Width));  controllerImageSize.Width  = controllerSize; }
 
-            if (index % 2u != 0u) controllerX  = windowMaximizedSize.Width - (controllerX + controllerSize);
-            if (index > 1u)       controllerY += (int) (controllerTopMargin + controllerNameTopMargin + controllerPromptTopMargin + controllerNameSize.Height + controllerPromptSize.Height + controllerSize);
+              controllerImageSize.Height = (int) (controllerImageSize.Height * 0.575f);
+              controllerImageSize.Width  = (int) (controllerImageSize.Width  * 0.575f);
 
-            controllerRender = new Bitmap(controllerImage, controllerRenderSize);
+              if (index % 2u != 0u) controllerX  = windowScreenBounds.Width - (controllerX + controllerSize);
+              if (index > 1u)       controllerY += (int) (controllerNameSize.Height + controllerNameTopMargin + controllerPromptSize.Height + controllerSize + controllerPromptTopMargin + controllerTopMargin);
 
-            // ... ->> Re-color the controller render
-            controllerRenderBitmapData = controllerRender.LockBits(new Rectangle(new Point(0, 0), controllerRenderSize), ImageLockMode.ReadWrite, controllerRender.PixelFormat);
-            controllerRenderData       = new byte[controllerRenderBitmapData.Height * Math.Abs(controllerRenderBitmapData.Stride)];
+              // ... ->> Re-color the controller render
+              controllerRender           = new Bitmap(controllerImage, controllerImageSize);
+              controllerRenderBitmapData = controllerRender.LockBits(new Rectangle(Point.Empty, controllerImageSize), ImageLockMode.ReadWrite, controllerRender.PixelFormat);
+              controllerRenderData       = new byte[controllerRenderBitmapData.Height * Math.Abs(controllerRenderBitmapData.Stride)];
 
-            Marshal.Copy(controllerRenderBitmapData.Scan0, controllerRenderData, 0, controllerRenderData.Length);
+              Marshal.Copy(controllerRenderBitmapData.Scan0, controllerRenderData, 0, controllerRenderData.Length);
 
-            for (uint subindex = 0u; subindex != controllerRenderData.Length; )
-            switch (controllerRender.PixelFormat) {
-              case PixelFormat.Alpha: case PixelFormat.Canonical: case PixelFormat.Format32bppArgb: case PixelFormat.Format32bppPArgb: if ((controllerRenderData[subindex + 3])                                      != 0u) controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] =                                                                                                                (byte) 0xFFu;                   subindex += 4u * sizeof(byte); break;
-              case PixelFormat.Format64bppPArgb:                                                                                       if ((controllerRenderData[subindex + 6] | controllerRenderData[subindex + 7]) != 0u) controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] = controllerRenderData[subindex + 3] = controllerRenderData[subindex + 4] = controllerRenderData[subindex + 5] = (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 8u * sizeof(byte); break;
+              for (uint subindex = 0u; subindex != controllerRenderData.Length; )
+              switch (controllerRender.PixelFormat) {
+                case PixelFormat.Alpha: case PixelFormat.Canonical: case PixelFormat.Format32bppArgb: case PixelFormat.Format32bppPArgb: if ((controllerRenderData[subindex + 3])                                      != 0u) controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] =                                                                                                                (byte) 0xFFu;                   subindex += 4u * sizeof(byte); break;
+                case PixelFormat.Format64bppPArgb:                                                                                       if ((controllerRenderData[subindex + 6] | controllerRenderData[subindex + 7]) != 0u) controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] = controllerRenderData[subindex + 3] = controllerRenderData[subindex + 4] = controllerRenderData[subindex + 5] = (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 8u * sizeof(byte); break;
 
-              case PixelFormat.Format16bppArgb1555:                                      if (0x0001u         == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1]) || 0x8000u == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1]))                                                             controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] =                                                                                                                                                     (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 2u * sizeof(byte); break;
-              case PixelFormat.Format16bppGrayScale: case PixelFormat.Format16bppRgb565: if (0x0000u         == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1]))                                                                                                                                                     controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] =                                                                                                                                                     (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 2u * sizeof(byte); break;
-              case PixelFormat.Format24bppRgb:                                           if (0x000000u       == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1] | controllerRenderData[subindex + 2]))                                                                                                                controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] =                                                                                                                (byte) 0xFFu;                   subindex += 3u * sizeof(byte); break;
-              case PixelFormat.Format32bppRgb:                                           if (0x000000u       == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1] | controllerRenderData[subindex + 2]))                                                                                                                controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] =                                                                                                                (byte) 0xFFu;                   subindex += 4u * sizeof(byte); break;
-              case PixelFormat.Format48bppRgb:                                           if (0x000000000000u == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1] | controllerRenderData[subindex + 2] | controllerRenderData[subindex + 3] | controllerRenderData[subindex + 4] | controllerRenderData[subindex + 5])) controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] = controllerRenderData[subindex + 3] = controllerRenderData[subindex + 4] = controllerRenderData[subindex + 5] = (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 6u * sizeof(byte); break;
-              case PixelFormat.Format8bppIndexed:                                        if (0x00u           == (controllerRenderData[subindex + 0]))                                                                                                                                                                                          controllerRenderData[subindex + 0] =                                                                                                                                                                                          (byte) 0xFFu;                   subindex += 1u * sizeof(byte); break;
+                case PixelFormat.Format16bppArgb1555:                                      if (0x0001u         == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1]) || 0x8000u == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1]))                                                             controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] =                                                                                                                                                     (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 2u * sizeof(byte); break;
+                case PixelFormat.Format16bppGrayScale: case PixelFormat.Format16bppRgb565: if (0x0000u         == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1]))                                                                                                                                                     controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] =                                                                                                                                                     (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 2u * sizeof(byte); break;
+                case PixelFormat.Format24bppRgb:                                           if (0x000000u       == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1] | controllerRenderData[subindex + 2]))                                                                                                                controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] =                                                                                                                (byte) 0xFFu;                   subindex += 3u * sizeof(byte); break;
+                case PixelFormat.Format32bppRgb:                                           if (0x000000u       == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1] | controllerRenderData[subindex + 2]))                                                                                                                controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] =                                                                                                                (byte) 0xFFu;                   subindex += 4u * sizeof(byte); break;
+                case PixelFormat.Format48bppRgb:                                           if (0x000000000000u == (controllerRenderData[subindex + 0] | controllerRenderData[subindex + 1] | controllerRenderData[subindex + 2] | controllerRenderData[subindex + 3] | controllerRenderData[subindex + 4] | controllerRenderData[subindex + 5])) controllerRenderData[subindex + 0] = controllerRenderData[subindex + 1] = controllerRenderData[subindex + 2] = controllerRenderData[subindex + 3] = controllerRenderData[subindex + 4] = controllerRenderData[subindex + 5] = (byte) 0xFFu; /* --> 0xFFFFu */ subindex += 6u * sizeof(byte); break;
+                case PixelFormat.Format8bppIndexed:                                        if (0x00u           == (controllerRenderData[subindex + 0]))                                                                                                                                                                                          controllerRenderData[subindex + 0] =                                                                                                                                                                                          (byte) 0xFFu;                   subindex += 1u * sizeof(byte); break;
+              }
+
+              Marshal.Copy(controllerRenderData, 0, controllerRenderBitmapData.Scan0, controllerRenderData.Length);
+              controllerRender.UnlockBits(controllerRenderBitmapData);
+
+              // ... ->> Draw controller name
+              controllerNameGraphicsPath.AddString(controllerName, controllerNameFontFamily, (Int32) FontStyle.Regular, controllerNameSize.Height, new Point(
+                controllerX + (int) ((controllerSize - controllerNameSize.Width) / (0u == index % 2u ? 2 : -2)),
+                controllerY + (int) (controllerNameTopMargin + controllerSize)
+              ), new StringFormat(StringFormatFlags.NoClip | StringFormatFlags.NoWrap));
+
+              renderFullscreenGraphics.FillPath(controllerNameBrush, controllerNameGraphicsPath);
+              renderFullscreenGraphics.DrawPath(controllerNamePen, controllerNameGraphicsPath);
+
+              // ... ->> Draw either controller or player status
+              if (null == player) {
+                controllerPromptGraphicsPath.AddString(controllerPrompt, controllerPromptFontFamily, (Int32) FontStyle.Regular, controllerPromptSize.Height, new Point(
+                  controllerX + (int) ((controllerSize - controllerPromptSize.Width) / (0u == index % 2u ? 2 : -2)),
+                  controllerY + (int) (controllerNameSize.Height + controllerNameTopMargin + controllerPromptTopMargin + controllerSize)
+                ), new StringFormat(StringFormatFlags.NoClip | StringFormatFlags.NoWrap));
+
+                renderFullscreenGraphics.FillPath(controllerPromptBrush, controllerPromptGraphicsPath);
+              }
+
+              else {
+                uint playerBaseHealth = (uint) player.GetType().GetField("BaseHealth").GetValue(player);
+                int  playerX          = controllerX + (int) ((controllerSize - controllerPromptSize.Width) / (0u == index % 2u ? 2 : -2));
+                int  playerY          = controllerY + (int) (controllerNameSize.Height + controllerNameTopMargin + controllerPromptTopMargin + controllerSize);
+
+                const float  playerHealthFrameBorderSize   = 1.675f;                                                                                                                                                                                            //
+                SizeF        playerHealthFrameSize         = new SizeF(controllerSize, Math.Max(10.0f, controllerPromptSize.Height / 2.0f));                                                                                                                    //
+                Pen          playerHealthFramePen          = new Pen(Color.DarkGray, playerHealthFrameBorderSize);                                                                                                                                              // --> Pens.DarkGray
+                GraphicsPath playerHealthFrameGraphicsPath = new GraphicsPath();                                                                                                                                                                                //
+                Brush        playerHealthFrameBrush        = new SolidBrush(Color.Black) as Brush;                                                                                                                                                              // --> Brushes.Black
+                float        playerHealthFrameBorderRadius = Math.Min(playerHealthFrameSize.Height, playerHealthFrameSize.Width) / 2.0f;                                                                                                                        //
+                                                                                                                                                                                                                                                                //
+                SizeF        playerHealthSize              = new SizeF((playerHealthFrameSize.Width - (playerHealthFrameBorderSize / 2.0f)) * (player.Health / (float) playerBaseHealth), playerHealthFrameSize.Height - (playerHealthFrameBorderSize / 2.0f)); //
+                GraphicsPath playerHealthGraphicsPath      = new GraphicsPath();                                                                                                                                                                                //
+                Brush        playerHealthBrush             = new SolidBrush(Color.Lime) as Brush;                                                                                                                                                               // --> Brushes.Lime
+                float        playerHealthBorderRadius      = playerHealthFrameBorderRadius;                                                                                                                                                                     //
+
+                // ... ->> Draw health bar and its frame
+                playerHealthGraphicsPath.AddArc(playerX + (playerHealthFrameBorderSize / 2.0f),                          playerY + (playerHealthFrameBorderSize / 2.0f),                           playerHealthBorderRadius, playerHealthBorderRadius, 180.0f, 90.0f);
+                playerHealthGraphicsPath.AddArc(playerX + (playerHealthFrameBorderSize / 2.0f) + playerHealthSize.Width, playerY + (playerHealthFrameBorderSize / 2.0f),                           playerHealthBorderRadius, playerHealthBorderRadius, 270.0f, 90.0f);
+                playerHealthGraphicsPath.AddArc(playerX + (playerHealthFrameBorderSize / 2.0f) + playerHealthSize.Width, playerY + (playerHealthFrameBorderSize / 2.0f) + playerHealthSize.Height, playerHealthBorderRadius, playerHealthBorderRadius, 0.0f,   90.0f);
+                playerHealthGraphicsPath.AddArc(playerX + (playerHealthFrameBorderSize / 2.0f),                          playerY + (playerHealthFrameBorderSize / 2.0f) + playerHealthSize.Height, playerHealthBorderRadius, playerHealthBorderRadius, 90.0f,  90.0f);
+                playerHealthGraphicsPath.CloseFigure();
+
+                playerHealthFrameGraphicsPath.AddArc(playerX,                               playerY,                                playerHealthFrameBorderRadius, playerHealthFrameBorderRadius, 180.0f, 90.0f);
+                playerHealthFrameGraphicsPath.AddArc(playerX + playerHealthFrameSize.Width, playerY,                                playerHealthFrameBorderRadius, playerHealthFrameBorderRadius, 270.0f, 90.0f);
+                playerHealthFrameGraphicsPath.AddArc(playerX + playerHealthFrameSize.Width, playerY + playerHealthFrameSize.Height, playerHealthFrameBorderRadius, playerHealthFrameBorderRadius, 0.0f,   90.0f);
+                playerHealthFrameGraphicsPath.AddArc(playerX,                               playerY + playerHealthFrameSize.Height, playerHealthFrameBorderRadius, playerHealthFrameBorderRadius, 90.0f,  90.0f);
+                playerHealthFrameGraphicsPath.CloseFigure();
+
+                // ...
+                renderFullscreenGraphics.FillPath(playerHealthFrameBrush, playerHealthFrameGraphicsPath);
+                renderFullscreenGraphics.FillPath(playerHealthBrush,      playerHealthGraphicsPath);
+                renderFullscreenGraphics.DrawPath(playerHealthFramePen,   playerHealthFrameGraphicsPath);
+
+                playerHealthBrush     .Dispose();
+                playerHealthFrameBrush.Dispose();
+                playerHealthFramePen  .Dispose();
+              }
+
+              // ...
+              renderFullscreenGraphics.FillEllipse(controllerBrush, controllerX, controllerY, controllerSize, controllerSize);
+              renderFullscreenGraphics.DrawArc    (controllerPen,   controllerX, controllerY, controllerSize, controllerSize, 0, 360);
+              renderFullscreenGraphics.DrawImageUnscaled(controllerRender, controllerX + ((controllerSize - controllerImageSize.Width) / 2), controllerY + ((controllerSize - controllerImageSize.Height) / 2));
+
+              controllerBrush      .Dispose();
+              controllerNameBrush  .Dispose();
+              controllerNamePen    .Dispose();
+              controllerPen        .Dispose();
+              controllerPromptBrush.Dispose();
+              controllerPromptPen  .Dispose();
             }
-
-            Marshal.Copy(controllerRenderData, 0, controllerRenderBitmapData.Scan0, controllerRenderData.Length);
-            controllerRender.UnlockBits(controllerRenderBitmapData);
-
-            // ... ->> Render controller name
-            controllerNameGraphicsPath.AddString(controllerName, controllerNameFontFamily, (int) FontStyle.Regular, controllerNameSize.Height, new Point((int) (controllerX + ((controllerSize - controllerNameSize.Width) / (0u == index % 2u ? 2 : -2))), (int) (controllerY + controllerNameTopMargin + controllerSize)), new StringFormat(StringFormatFlags.NoClip | StringFormatFlags.NoWrap));
-            renderFullscreenGraphics.FillPath(controllerNameBrush, controllerNameGraphicsPath);
-            renderFullscreenGraphics.DrawPath(controllerNamePen, controllerNameGraphicsPath);
-
-            // ... ->> Render either controller or player status
-            if (null == player) {
-              controllerPromptGraphicsPath.AddString(controllerPrompt, controllerPromptFontFamily, (int) FontStyle.Regular, controllerPromptSize.Height, new Point((int) (controllerX + ((controllerSize - controllerPromptSize.Width) / (0u == index % 2u ? 2 : -2))), (int) (controllerY + controllerNameSize.Height + controllerNameTopMargin + controllerPromptTopMargin + controllerSize)), new StringFormat(StringFormatFlags.NoClip | StringFormatFlags.NoWrap));
-              renderFullscreenGraphics.FillPath(controllerPromptBrush, controllerPromptGraphicsPath);
-            }
-
-            else {
-              const float controllerPlayerHealthBarBorderSize = 1.675f;
-              int         controllerSubX                      = (int) (controllerX + ((controllerSize - controllerPromptSize.Width) / (0u == index % 2u ? 2 : -2)));
-              int         controllerSubY                      = (int) (controllerY + controllerNameSize.Height + controllerNameTopMargin + controllerPromptTopMargin + controllerSize);
-
-              SizeF        controllerPlayerHealthBarFrameSize         = new SizeF(controllerSize, Math.Max(10.0f, controllerPromptSize.Height / 2.0f));                       //
-              Pen          controllerPlayerHealthBarFramePen          = new Pen(Color.DarkGray, controllerPlayerHealthBarBorderSize);                                         // --> Pens.DarkGray
-              GraphicsPath controllerPlayerHealthBarFrameGraphicsPath = new GraphicsPath();                                                                                   //
-              Brush        controllerPlayerHealthBarFrameBrush        = new SolidBrush(Color.Black) as Brush;                                                                 // --> Brushes.Black
-              float        controllerPlayerHealthBarFrameBorderRadius = Math.Min(controllerPlayerHealthBarFrameSize.Height, controllerPlayerHealthBarFrameSize.Width) / 2.0f; //
-
-              SizeF        controllerPlayerHealthBarSize         = new SizeF(controllerPlayerHealthBarFrameSize.Width - controllerPlayerHealthBarBorderSize, controllerPlayerHealthBarFrameSize.Height - controllerPlayerHealthBarBorderSize); //
-              GraphicsPath controllerPlayerHealthBarGraphicsPath = new GraphicsPath();                                                                                                                                                         //
-              Brush        controllerPlayerHealthBarBrush        = new SolidBrush(Color.Lime) as Brush;                                                                                                                                        // --> Brushes.Lime
-              float        controllerPlayerHealthBarBorderRadius = Math.Min(controllerPlayerHealthBarSize.Height, controllerPlayerHealthBarSize.Width) / 2.0f;                                                                                 //
-
-              // ... --- TODO (Lapys) -> Render more player statistics
-              controllerPlayerHealthBarGraphicsPath.AddArc(controllerSubX + controllerPlayerHealthBarBorderSize,                                                                                                                                            controllerSubY + controllerPlayerHealthBarBorderSize,                                               controllerPlayerHealthBarBorderRadius, controllerPlayerHealthBarBorderRadius, 180.0f, 90.0f);
-              controllerPlayerHealthBarGraphicsPath.AddArc(controllerSubX + ((controllerPlayerHealthBarFrameSize.Width * (player.Health / (float) (uint) player.GetType().GetField("BaseHealth").GetValue(player))) - controllerPlayerHealthBarBorderSize), controllerSubY + controllerPlayerHealthBarBorderSize,                                               controllerPlayerHealthBarBorderRadius, controllerPlayerHealthBarBorderRadius, 270.0f, 90.0f);
-              controllerPlayerHealthBarGraphicsPath.AddArc(controllerSubX + ((controllerPlayerHealthBarFrameSize.Width * (player.Health / (float) (uint) player.GetType().GetField("BaseHealth").GetValue(player))) - controllerPlayerHealthBarBorderSize), controllerSubY + (controllerPlayerHealthBarFrameSize.Height - controllerPlayerHealthBarBorderSize), controllerPlayerHealthBarBorderRadius, controllerPlayerHealthBarBorderRadius, 0.0f,   90.0f);
-              controllerPlayerHealthBarGraphicsPath.AddArc(controllerSubX + controllerPlayerHealthBarBorderSize,                                                                                                                                            controllerSubY + (controllerPlayerHealthBarFrameSize.Height - controllerPlayerHealthBarBorderSize), controllerPlayerHealthBarBorderRadius, controllerPlayerHealthBarBorderRadius, 90.0f,  90.0f);
-              controllerPlayerHealthBarGraphicsPath.CloseFigure();
-
-              controllerPlayerHealthBarFrameGraphicsPath.AddArc(controllerSubX,                                            controllerSubY,                                             controllerPlayerHealthBarFrameBorderRadius, controllerPlayerHealthBarFrameBorderRadius, 180.0f, 90.0f);
-              controllerPlayerHealthBarFrameGraphicsPath.AddArc(controllerSubX + controllerPlayerHealthBarFrameSize.Width, controllerSubY,                                             controllerPlayerHealthBarFrameBorderRadius, controllerPlayerHealthBarFrameBorderRadius, 270.0f, 90.0f);
-              controllerPlayerHealthBarFrameGraphicsPath.AddArc(controllerSubX + controllerPlayerHealthBarFrameSize.Width, controllerSubY + controllerPlayerHealthBarFrameSize.Height, controllerPlayerHealthBarFrameBorderRadius, controllerPlayerHealthBarFrameBorderRadius, 0.0f,   90.0f);
-              controllerPlayerHealthBarFrameGraphicsPath.AddArc(controllerSubX,                                            controllerSubY + controllerPlayerHealthBarFrameSize.Height, controllerPlayerHealthBarFrameBorderRadius, controllerPlayerHealthBarFrameBorderRadius, 90.0f,  90.0f);
-              controllerPlayerHealthBarFrameGraphicsPath.CloseFigure();
-
-              renderFullscreenGraphics.FillPath(controllerPlayerHealthBarFrameBrush, controllerPlayerHealthBarFrameGraphicsPath);
-              renderFullscreenGraphics.FillPath(controllerPlayerHealthBarBrush,      controllerPlayerHealthBarGraphicsPath);
-              renderFullscreenGraphics.DrawPath(controllerPlayerHealthBarFramePen,   controllerPlayerHealthBarFrameGraphicsPath);
-
-              controllerPlayerHealthBarBrush.Dispose();
-              controllerPlayerHealthBarFrameBrush.Dispose();
-              controllerPlayerHealthBarFramePen.Dispose();
-            }
-
-            // ...
-            renderFullscreenGraphics.FillEllipse(controllerBrush, controllerX, controllerY, controllerSize, controllerSize);
-            renderFullscreenGraphics.DrawArc(controllerPen, controllerX, controllerY, controllerSize, controllerSize, 0, 360);
-
-            renderFullscreenGraphics.DrawImageUnscaled(controllerRender, controllerX + ((controllerSize - controllerRenderSize.Width) / 2), controllerY + ((controllerSize - controllerRenderSize.Height) / 2));
-
-            controllerBrush.Dispose();
-            controllerNameBrush.Dispose();
-            controllerNamePen.Dispose();
-            controllerPen.Dispose();
-            controllerPromptBrush.Dispose();
-            controllerPromptPen.Dispose();
           }
+
+          // ... ->> Draw gameplay graphics and its border
+          renderFullscreenGraphics.DrawImageUnscaledAndClipped(
+            render != renderFullscreen ? render : renderCopy, new Rectangle(
+            (windowScreenBounds.Width  - viewportSize.Width)  / 2,
+            (windowScreenBounds.Height - viewportSize.Height) / 2,
+            viewportSize.Width,
+            viewportSize.Height
+          ));
+
+          renderFullscreenGraphics.DrawRectangle(
+            renderFullscreenBorderPen,
+            (windowScreenBounds.Width  - viewportSize.Width)  / 2,
+            (windowScreenBounds.Height - viewportSize.Height) / 2,
+            viewportSize.Width  - 2,
+            viewportSize.Height - 2
+          );
 
           // ...
           renderGraphics.DrawImageUnscaled(renderFullscreen, 0, 0);
 
-          if (render == renderFullscreen) renderCopyGraphics.Dispose();
+          if (render == renderFullscreen) renderCopyGraphics      .Dispose();
           if (render != renderFullscreen) renderFullscreenGraphics.Dispose();
-        } while (false);
+        }
       }
 
       // ...
@@ -1022,10 +1038,10 @@ namespace Game {
       if (terminated) return;
       terminated = true;
 
-      renderFullscreenBorderPen.Dispose();
-      renderPostProcessorFullscreenRender.Dispose();
+      renderFullscreenBorderPen                    .Dispose();
+      renderPostProcessorFullscreenRender          .Dispose();
       renderPostProcessorFullscreenRenderAllocation.Free();
-      window.Close();
+      window                                       .Close();
 
       // ...
       if (Application.MessageLoop) Application.Exit();
@@ -1036,7 +1052,7 @@ namespace Game {
       float    rotation    = GetPlayersOverallRotation();
       int      starsLength = stars.Count;
       TimeSpan timestamp   = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      Size     windowSize  = window.GetComputedSize();
+      Size     windowSize  = window.GetViewportSize();
 
       /* ... ->> Game logic unbounded by framerate ie: calculations, flags, … */ {
         starsMaximumLength = (ushort) ((windowSize.Height + windowSize.Width) / 20u);
@@ -1115,9 +1131,9 @@ namespace Game {
       fontFilePaths[0]          = "assets/fonts/riviera.otf";
       fontFilePaths[1]          = "assets/fonts/randy-gg.ttf";
       keys                      = new List<Keys>();
-      player                    = new Infantry(new Point(0, 0));
+      player                    = new Infantry(Point.Empty);
       renderDelta               = delta;
-      renderFullscreenBorderPen = new Pen(Color.FromArgb(255, 0xFF, 0xFF, 0xFF));
+      renderFullscreenBorderPen = new Pen(Color.FromArgb(255, 0xFF, 0xFF, 0xFF), 1.5f);
       renderPostProcessor       = new Thread(new ThreadStart(PostProcessRender));
       renderTimestamp           = timestamp;
       stars                     = new List<Star>();
@@ -1170,7 +1186,7 @@ namespace Game {
       renderPostProcessor.Priority = ThreadPriority.BelowNormal;
 
       updateTimer.Enabled  = true;
-      updateTimer.Interval = (int) updateDelta.Value.TotalMilliseconds;
+      updateTimer.Interval = (int) updateDelta.Value.TotalMilliseconds / 2;
       updateTimer.Tick    += new EventHandler(Update);
 
       window.BackColor       = Color.Black;
