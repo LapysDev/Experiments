@@ -1,4 +1,4 @@
-/* Import --> del space-shooter.exe & cls && csc /optimize /out:space-shooter.exe /r:System.Collections.dll /r:System.Drawing.Primitives.dll /r:System.Runtime.dll /r:System.Threading.Thread.dll /r:System.Windows.Forms.dll /t:exe space-shooter.cs && space-shooter.exe & del space-shooter.exe */
+/* Import --> del space-shooter.exe & cls && csc /NoWarn:0162,0164 /optimize /out:space-shooter.exe /r:System.Collections.dll /r:System.Drawing.Primitives.dll /r:System.Runtime.dll /r:System.Threading.Thread.dll /r:System.Windows.Forms.dll /t:exe space-shooter.cs && space-shooter.exe & del space-shooter.exe */
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -93,13 +93,15 @@ namespace Game {
         }
 
         // ...
-        public Size GetComputedSize(Size size) {
-          return new Size((int) (this.Size * size.Width), (int) (this.Size * size.Height));
+        public SizeF GetComputedSize(SizeF size) {
+          return new SizeF(this.Size * size.Width, this.Size * size.Height);
         }
       };
         /* Item */
         private class Item : Entity {
-          public Item(Point coordinates, float size) : base(coordinates, size) {}
+          public Item(Point coordinates, float size) :
+            base(coordinates, size)
+          {}
         };
           /* Asteroid */
           private sealed class Asteroid : Item {
@@ -107,13 +109,17 @@ namespace Game {
             public     const float BaseSize   = 0.0300f;
 
             // ...
-            public Asteroid(Point coordinates, float size) : base(coordinates, size) {
+            public Asteroid(Point coordinates, float size) :
+              base(coordinates, size)
+            {
               this.Acceleration = 0.001f + (Asteroid.BaseSize / size);
               this.Health       = (uint) (Asteroid.BaseHealth * (size / Asteroid.BaseSize));
               this.MaximumSpeed = 0.050f;
             }
 
-            public Asteroid(Point coordinates) : this(coordinates, Asteroid.BaseSize + (float) (Entity.Randomizer.NextDouble() * 0.1000f)) {}
+            public Asteroid(Point coordinates) :
+              this(coordinates, Asteroid.BaseSize + (float) (Entity.Randomizer.NextDouble() * 0.1000f))
+            {}
           };
 
           /* Bonus */
@@ -136,7 +142,9 @@ namespace Game {
             BonusType Type;
 
             // ...
-            public Bonus(Point coordinates, BonusType type) : base(coordinates, 0.0300f) {
+            public Bonus(Point coordinates, BonusType type) :
+              base(coordinates, 0.0300f)
+            {
               this.Acceleration = 0.01f;
               this.MaximumSpeed = 0.05f;
               this.Type         = type;
@@ -159,7 +167,9 @@ namespace Game {
           public Image      Render  { get; protected set;                                                                          } //
 
           // ...
-          public Unit(Point coordinates, float size) : base(coordinates, size) {
+          public Unit(Point coordinates, float size) :
+            base(coordinates, size)
+          {
             this.Clones           = new List<Unit>();
             this.Defense          = 0.0f;
             this.Graced           = false;
@@ -176,7 +186,9 @@ namespace Game {
             public float LineOfSight; // ->> Frustum representing fog-of-war
 
             // ...
-            public Alien(Point coordinates, float size) : base(coordinates, size) {
+            public Alien(Point coordinates, float size) :
+              base(coordinates, size)
+            {
               this.LineOfSight = (float) Math.PI / 5.0f;
             }
           };
@@ -187,7 +199,9 @@ namespace Game {
               new public readonly bool Infectious = true;
 
               // ...
-              public Carrier(Point coordinates, byte stage) : base(coordinates, 0.03500f) {
+              public Carrier(Point coordinates, byte stage) :
+                base(coordinates, 0.03500f)
+              {
                 this.Health           = Carrier.BaseHealth;
                 this.LineOfSight      = (float) Math.PI * 2.0f;
                 this.Offense          = 3u;
@@ -215,7 +229,9 @@ namespace Game {
               public float     ThrowTendency       { get { return throwTendency;                         } set { throwTendency       = value > 1.0f ? 1.0f : value;                                      } } // ->> Tendency to lunge at enemies via meiosis
 
               // ...
-              public Globule(Point coordinates, byte stage) : base(coordinates, 1.0f) {
+              public Globule(Point coordinates, byte stage) :
+                base(coordinates, 1.0f)
+              {
                 this.Defense             = 0.01f;
                 this.DetachDodgeTendency = difficulty / 6.0f;
                 this.Health              = Globule.BaseHealth;
@@ -224,7 +240,9 @@ namespace Game {
                 this.ThrowTendency       = (float) Entity.Randomizer.NextDouble() * (difficulty / 3.5f);
               }
 
-              public Globule(Point coordinates) : this(coordinates, (byte) Entity.Randomizer.Next(1, (int) difficulty)) {}
+              public Globule(Point coordinates) :
+                this(coordinates, (byte) Entity.Randomizer.Next(1, (int) difficulty))
+              {}
             };
 
             /* Kamikaze */
@@ -236,7 +254,9 @@ namespace Game {
               new public readonly uint  Shield      = 0u;
 
               // ...
-              public Kamikaze(Point coordinates) : base(coordinates, 0.0400f) {
+              public Kamikaze(Point coordinates) :
+                base(coordinates, 0.0400f)
+              {
                 this.Health  = Kamikaze.BaseHealth;
                 this.Offense = 30u;
                 this.Render  = Image.FromFile("assets/entities/aliens/kamikaze.png");
@@ -249,7 +269,9 @@ namespace Game {
               new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 1650L);
 
               // ...
-              public ManOWar(Point coordinates) : base(coordinates, 0.0600f) {
+              public ManOWar(Point coordinates) :
+                base(coordinates, 0.0600f)
+              {
                 this.Defense = 0.35f;
                 this.Health  = ManOWar.BaseHealth;
                 this.Offense = 20u;
@@ -278,7 +300,9 @@ namespace Game {
             public WeaponType Weapon;
 
             // ...
-            public Ship(Point coordinates, float size) : base(coordinates, size) {
+            public Ship(Point coordinates, float size) :
+              base(coordinates, size)
+            {
               this.DeployTimestamp = TimeSpan.Zero;
               this.Rotation        = 0.0f;
               this.Weapon          = Ship.WeaponType.STANDARD;
@@ -289,7 +313,9 @@ namespace Game {
               new public const           uint     BaseHealth  = 250u;
               new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 200L);
 
-              public Artillery(Point coordinates) : base(coordinates, 0.0675f) {
+              public Artillery(Point coordinates) :
+                base(coordinates, 0.0675f)
+              {
                 this.Health  = Artillery.BaseHealth;
                 this.Offense = 40u;
                 this.Render  = Image.FromFile("assets/entities/ships/artillery.png");
@@ -305,7 +331,9 @@ namespace Game {
               public TimeSpan DashTimestamp;
 
               // ...
-              public Infantry(Point coordinates) : base(coordinates, 0.0500f) {
+              public Infantry(Point coordinates) :
+                base(coordinates, 0.0500f)
+              {
                 this.DashTimestamp = TimeSpan.Zero;
                 this.Health        = Infantry.BaseHealth;
                 this.Offense       = 20u;
@@ -322,7 +350,9 @@ namespace Game {
               public TimeSpan StealthTimestamp;
 
               // ...
-              public Rogue(Point coordinates) : base(coordinates, 0.0400f) {
+              public Rogue(Point coordinates) :
+                base(coordinates, 0.0400f)
+              {
                 this.Health           = Rogue.BaseHealth;
                 this.Offense          = 10u;
                 this.Render           = Image.FromFile("assets/entities/ships/rogue.png");
@@ -336,7 +366,9 @@ namespace Game {
                 new public const           uint     BaseHealth  = 13u;
                 new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 900L);
 
-                public Drone(Point coordinates) : base(coordinates, 0.0300f) {
+                public Drone(Point coordinates) :
+                  base(coordinates, 0.0300f)
+                {
                   this.Health = Drone.BaseHealth;
                   this.Render = Image.FromFile("assets/entities/ships/swarm-drone.png");
                 }
@@ -351,7 +383,9 @@ namespace Game {
               public TimeSpan    SpawnTimestamp;
 
               // ...
-              public Swarm(Point coordinates) : base(coordinates, 0.0350f) {
+              public Swarm(Point coordinates) :
+                base(coordinates, 0.0350f)
+              {
                 this.Carriers       = new List<Drone>();
                 this.Health         = Swarm.BaseHealth;
                 this.Render         = Image.FromFile("assets/entities/ships/swarm.png");
@@ -423,36 +457,72 @@ namespace Game {
       /* State */
       [Flags]
       private enum State : byte {
-        GAMEPLAY = (byte) 0x01u,
-        HELP     = (byte) 0x02u,
-        MENU     = (byte) 0x04u,
-        SETTINGS = (byte) 0x08u,
+        CREDITS  = (byte) 0x01u,
+        GAMEPLAY = (byte) 0x02u,
+        HELP     = (byte) 0x04u,
+        MENU     = (byte) 0x08u,
+        SETTINGS = (byte) 0x10u,
 
-        PAUSED     = (byte) 0x10u,
-        TERMINATED = (byte) 0x20u
+        PAUSED     = (byte) 0x20u,
+        TERMINATED = (byte) 0x40u
       };
 
       /* Window */
       public sealed class Window : Form {
-        public Window() : base() {
-          this.DoubleBuffered = true;
+        private FormBorderStyle borderStyle;
+        private Screen          screen;
+        private FormWindowState windowState;
+        public  Size            ViewportSize { get; private set; }
+
+        // ...
+        public Window() :
+          base()
+        {
+          this.ClientSizeChanged += new EventHandler(delegate(object target, EventArgs arguments) { this.UpdateViewportSize(this.ClientSize); });
+          this.DoubleBuffered     = true;
+          this.ResizeEnd         += new EventHandler(delegate(object target, EventArgs arguments) { this.screen = Screen.FromControl(target as Window); });
+          this.screen             = Screen.FromControl(this);
+
           this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.DoubleBuffer | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+          this.UpdateViewportSize(this.ClientSize);
         }
 
         // ...
-        public Size GetViewportSize() {
-          Size  size   = false == IsFullscreen() ? this.ClientSize : Screen.FromControl(window).Bounds.Size;
-          Int32 length = size.Height < size.Width ? size.Height : size.Width;
+        public void ExitFullscreen() {
+          this.FormBorderStyle = this.borderStyle;
+          this.WindowState     = this.windowState;
 
-          return new Size(length, length);
+          this.UpdateViewportSize(this.ClientSize);
+        }
+
+        public bool IsFullscreen() {
+          return FormBorderStyle.None == this.FormBorderStyle && FormWindowState.Maximized == this.WindowState;
         }
 
         protected override void OnPaintBackground(PaintEventArgs arguments) {
           /* Do nothing... ->> Prevent implicitly re-painting the background */
         }
+
+        public void RequestFullscreen() {
+          this.borderStyle  = this.FormBorderStyle;
+          this.windowState  = this.WindowState;
+
+          this.FormBorderStyle = FormBorderStyle.None;
+          this.WindowState     = FormWindowState.Maximized;
+
+          this.UpdateViewportSize(this.screen.Bounds.Size);
+        }
+
+        private void UpdateViewportSize(Size size) {
+          int length = size.Height < size.Width ? size.Height : size.Width;
+          this.ViewportSize = new Size(length, length);
+        }
       };
 
     /* Global > ... */
+    private static RectangleF[]    creditsPromptBounds;                           // ->> Game credits prompts bound
+    private static State[]         creditsPromptStates;                           // ->> Game credits prompts game state
+    private static string[]        creditsPromptTexts;                            // ->> Game credits prompts text
     private static bool            cursorActivated;                               // ->> Mouse pointer activation state by user
     private static RectangleF      cursorBound;                                   // ->> Mouse pointer bounds in game window --- UPDATE (Lapys) -> Normalize for window viewport, instead
     private static Brush           cursorBrush;                                   // ->> Mouse pointer fill
@@ -492,7 +562,6 @@ namespace Game {
     private static BitmapData      renderPostProcessorFullscreenRenderBitmapData; // ->> Fullscreen graphic `BitmapData` for bit-block transferring from the main render
     private static byte[]          renderPostProcessorFullscreenRenderData;       // ->> Fullscreen graphic render data ie: pixels, …
     private static byte[][]        renderPostProcessorFullscreenRenderSubdata;    // ->> Fullscreen graphic render subdata (for post-processing)
-    private static bool            renderResized;                                 // ->> Determines if the render was resized
     private static Bitmap[]        renders;                                       // ->> Multiple-buffering rendering for gameplay graphics (at least one required)
     private static TimeSpan        renderTimestamp;                               // ->> Time till next `Render(…)`
     private static RectangleF[]    settingsPromptBounds;                          // ->> Game settings prompts bound
@@ -510,20 +579,13 @@ namespace Game {
     private static TimeSpan        updateDelta;                                   // ->> Time between each `Update(…)`
     private static TimeSpan        updateTimestamp;                               // ->> Time till next `Update(…)`
     private static Window          window;                                        // ->> Game window
-    private static FormBorderStyle windowBorderStyle;                             // ->> Game window vendor UI decorations and overlay
-    private static FormWindowState windowState;                                   // ->> Game window state ie: fullscreen, …
 
     private static Unit[] players = {
-      null, // ->> Keyboard ⌨️
+      null, // ->> Keyboard ⌨
       null, // ->> Mouse    🖱️
       null, // ->> Gamepad  🎮
       null  // ->> Touch    👆
     };
-
-    private static Unit player {
-      get { return players[0]; }
-      set { players[0] = value; }
-    }
 
     /* Function > ... */
     [DllImport("user32.dll",
@@ -535,12 +597,6 @@ namespace Game {
       SetLastError          = true,
       ThrowOnUnmappableChar = true
     )] private static extern bool EnumerateDisplaySettings(string deviceName, ulong modeIndex, ref DEVMODE deviceMode);
-
-    private static void ExitFullscreen() {
-      renderResized          = false;
-      window.FormBorderStyle = windowBorderStyle;
-      window.WindowState     = windowState;
-    }
 
     private static float GetFontSizeInPixels(Font font, Graphics graphics) {
       return font.SizeInPoints * (graphics.DpiY / 72.0f);
@@ -566,158 +622,147 @@ namespace Game {
       return rotation / GetPlayerCount();
     }
 
-    private static bool IsFullscreen() {
-      return FormBorderStyle.None == window.FormBorderStyle && FormWindowState.Maximized == window.WindowState;
-    }
-
     private static void PostProcessRender() {
-      while (0x00u == (byte) (state & State.TERMINATED)) {
-        /* ... ->> Post-process fullscreen background: Gaussian blur */
-        if (IsFullscreen() && null != renderPostProcessorFullscreenRenderBitmapData) {
-          uint       renderPostProcessorFullscreenRenderWidth  = (uint) renderPostProcessorFullscreenRender.Width;  // ->> Ideally `renderPostProcessorFullscreenRender` is still unused at this point
-          uint       renderPostProcessorFullscreenRenderHeight = (uint) renderPostProcessorFullscreenRender.Height; // ->> Ideally `renderPostProcessorFullscreenRender` is still unused at this point
-          ulong[]    colorSum                                  = {0uL, 0uL, 0uL, 0uL};
-          byte []    colorAverage                              = {(byte) 0u, (byte) 0u, (byte) 0u, (byte) 0u};
-          byte []    blurVerticalData                          = renderPostProcessorFullscreenRenderSubdata[2];
-          float      blurMedian                                = 0.0f;
-          const uint blurIntensity                             = 5u;
-          byte[]     blurHorizontalData                        = renderPostProcessorFullscreenRenderSubdata[1];
-          float      blurFilterWidth                           = 0.0f;
-          byte[]     blurData                                  = blurVerticalData;
+      /* ... ->> Post-process fullscreen background: Gaussian blur */
+      while (0x00u == (byte) (state & State.TERMINATED))
+      if (null != renderPostProcessorFullscreenRenderBitmapData) {
+        int        renderPostProcessorFullscreenRenderWidth  = renderPostProcessorFullscreenRender.Width;  // ->> Ideally `renderPostProcessorFullscreenRender` is still unused at this point
+        int        renderPostProcessorFullscreenRenderHeight = renderPostProcessorFullscreenRender.Height; // ->> Ideally `renderPostProcessorFullscreenRender` is still unused at this point
+        ulong[]    colorSum                                  = {0uL, 0uL, 0uL, 0uL};
+        byte []    colorAverage                              = {(byte) 0u, (byte) 0u, (byte) 0u, (byte) 0u};
+        byte []    blurVerticalData                          = renderPostProcessorFullscreenRenderSubdata[2];
+        float      blurMedian                                = 0.0f;
+        const uint blurIntensity                             = 5u;
+        byte[]     blurHorizontalData                        = renderPostProcessorFullscreenRenderSubdata[1];
+        float      blurFilterWidth                           = 0.0f;
+        byte[]     blurData                                  = blurVerticalData;
+
+        // ...
+        blurFilterWidth  = (float) Math.Sqrt(((blurIntensity * blurIntensity * 12.0f) / 3.0f) + 1.0f);
+        blurFilterWidth -= 0u == (uint) blurFilterWidth % 2u ? 1.0f : 0.0f;
+        blurMedian       = (float) Math.Round(((blurIntensity * blurIntensity * 12.0) - (blurFilterWidth * blurFilterWidth * 3.0) - (blurFilterWidth * 12.0) - 9.0) / ((blurFilterWidth * -4.0) - 4.0));
+
+        for (byte count = (byte) 0u; count != 3u; ++count) {
+          uint   boxRadius  = (uint) blurFilterWidth + (0u == blurFilterWidth % 2u ? 1u : 0u) + (count < blurMedian ? 0u : 2u);
+          byte[] renderData = 0u == count ? renderPostProcessorFullscreenRenderSubdata[0] : blurData;
+
+          // ... --- TODO (Lapys) -> Fix horizontal blurring
+          blurHorizontalData = renderData;
+          goto VerticalBoxBlur;
 
           // ...
-          blurFilterWidth  = (float) Math.Sqrt(((blurIntensity * blurIntensity * 12.0f) / 3.0f) + 1.0f);
-          blurFilterWidth -= 0u == (uint) blurFilterWidth % 2u ? 1.0f : 0.0f;
-          blurMedian       = (float) Math.Round(((blurIntensity * blurIntensity * 12.0) - (blurFilterWidth * blurFilterWidth * 3.0) - (blurFilterWidth * 12.0) - 9.0) / ((blurFilterWidth * -4.0) - 4.0));
+          HorizontalBoxBlur:
+          for (uint y = 0u; y != renderPostProcessorFullscreenRenderHeight * sizeof(byte) * 4u; y += 4u * sizeof(byte)) {
+            colorSum[0] = 0uL;
+            colorSum[1] = 0uL;
+            colorSum[2] = 0uL;
+            colorSum[3] = 0uL;
 
-          for (byte count = (byte) 0u; count != 3u; ++count) {
-            uint   boxRadius  = (uint) blurFilterWidth + (0u == blurFilterWidth % 2u ? 1u : 0u) + (count >= blurMedian ? 2u : 0u);
-            byte[] renderData = 0u == count ? renderPostProcessorFullscreenRenderSubdata[0] : blurData;
+            for (uint x = 0u; x != (boxRadius < renderPostProcessorFullscreenRenderWidth ? boxRadius : (uint) renderPostProcessorFullscreenRenderWidth) * sizeof(byte) * 4u; x += 4u * sizeof(byte)) {
+              uint index = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
 
-            // ... ->> Horizontal blurring --- TODO (Lapys)
-            for (uint y = 0u; y != renderPostProcessorFullscreenRenderHeight * sizeof(byte) * 4u; y += 4u * sizeof(byte)) {
-              colorSum[0] = 0uL;
-              colorSum[1] = 0uL;
-              colorSum[2] = 0uL;
-              colorSum[3] = 0uL;
+              colorSum[0] += renderData[index + 0];
+              colorSum[1] += renderData[index + 1];
+              colorSum[2] += renderData[index + 2];
+              colorSum[3] += renderData[index + 3];
+            }
 
-              for (uint x = 0u; x != (boxRadius < renderPostProcessorFullscreenRenderWidth ? boxRadius : renderPostProcessorFullscreenRenderWidth) * sizeof(byte) * 4u; x += 4u * sizeof(byte)) {
-                uint index = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
+            colorAverage[0] = (byte) (colorSum[0] / boxRadius);
+            colorAverage[1] = (byte) (colorSum[1] / boxRadius);
+            colorAverage[2] = (byte) (colorSum[2] / boxRadius);
+            colorAverage[3] = (byte) (colorSum[3] / boxRadius);
 
+            for (uint x = 0u; x != renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4u; x += 4u * sizeof(byte)) {
+              uint index = 0u;
+
+              if (x >= (boxRadius / 2u) * sizeof(byte) * 4u && x + ((boxRadius / 2u) * sizeof(byte) * 4u) + (4u * sizeof(byte)) < renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4u) {
+                index        = (uint) ((x - ((boxRadius / 2u) * sizeof(byte) * 4u) - (0u * 4u * sizeof(byte))) + (y * renderPostProcessorFullscreenRenderWidth));
+                colorSum[0] -= renderData[index + 0];
+                colorSum[1] -= renderData[index + 1];
+                colorSum[2] -= renderData[index + 2];
+                colorSum[3] -= renderData[index + 3];
+
+                index        = (uint) ((x - ((boxRadius / 2u) * sizeof(byte) * 4u) + (1u * 4u * sizeof(byte))) + (y * renderPostProcessorFullscreenRenderWidth));
                 colorSum[0] += renderData[index + 0];
                 colorSum[1] += renderData[index + 1];
                 colorSum[2] += renderData[index + 2];
                 colorSum[3] += renderData[index + 3];
+
+                colorAverage[0] = (byte) (colorSum[0] / boxRadius);
+                colorAverage[1] = (byte) (colorSum[1] / boxRadius);
+                colorAverage[2] = (byte) (colorSum[2] / boxRadius);
+                colorAverage[3] = (byte) (colorSum[3] / boxRadius);
               }
 
-              colorAverage[0] = (byte) (colorSum[0] / boxRadius);
-              colorAverage[1] = (byte) (colorSum[1] / boxRadius);
-              colorAverage[2] = (byte) (colorSum[2] / boxRadius);
-              colorAverage[3] = (byte) (colorSum[3] / boxRadius);
+              index                         = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
+              blurHorizontalData[index + 0] = colorAverage[0];
+              blurHorizontalData[index + 1] = colorAverage[1];
+              blurHorizontalData[index + 2] = colorAverage[2];
+              blurHorizontalData[index + 3] = colorAverage[3];
+            }
+          }
 
-              for (uint x = 0u; x != renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4u; x += 4u * sizeof(byte)) {
-                uint index = 0u;
+          VerticalBoxBlur:
+          for (uint x = 0u; x != renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4u; x += 4u * sizeof(byte)) {
+            colorSum[0] = 0uL;
+            colorSum[1] = 0uL;
+            colorSum[2] = 0uL;
+            colorSum[3] = 0uL;
 
-                if (x >= (boxRadius / 2u) * sizeof(byte) * 4u && x + ((boxRadius / 2u) * sizeof(byte) * 4u) + (4u * sizeof(byte)) < renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4u) {
-                  index        = (uint) ((x - ((boxRadius / 2u) * sizeof(byte) * 4u) - (0u * 4u * sizeof(byte))) + (y * renderPostProcessorFullscreenRenderWidth));
-                  colorSum[0] -= renderData[index + 0];
-                  colorSum[1] -= renderData[index + 1];
-                  colorSum[2] -= renderData[index + 2];
-                  colorSum[3] -= renderData[index + 3];
+            for (uint y = 0u; y != (boxRadius < renderPostProcessorFullscreenRenderHeight ? boxRadius : (uint) renderPostProcessorFullscreenRenderHeight) * sizeof(byte) * 4u; y += 4u * sizeof(byte)) {
+              uint index = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
 
-                  index        = (uint) ((x - ((boxRadius / 2u) * sizeof(byte) * 4u) + (1u * 4u * sizeof(byte))) + (y * renderPostProcessorFullscreenRenderWidth));
-                  colorSum[0] += renderData[index + 0];
-                  colorSum[1] += renderData[index + 1];
-                  colorSum[2] += renderData[index + 2];
-                  colorSum[3] += renderData[index + 3];
-
-                  colorAverage[0] = (byte) (colorSum[0] / boxRadius);
-                  colorAverage[1] = (byte) (colorSum[1] / boxRadius);
-                  colorAverage[2] = (byte) (colorSum[2] / boxRadius);
-                  colorAverage[3] = (byte) (colorSum[3] / boxRadius);
-                }
-
-                index                         = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
-                blurHorizontalData[index + 0] = colorAverage[0];
-                blurHorizontalData[index + 1] = colorAverage[1];
-                blurHorizontalData[index + 2] = colorAverage[2];
-                blurHorizontalData[index + 3] = colorAverage[3];
-              }
+              colorSum[0] += blurHorizontalData[index + 0];
+              colorSum[1] += blurHorizontalData[index + 1];
+              colorSum[2] += blurHorizontalData[index + 2];
+              colorSum[3] += blurHorizontalData[index + 3];
             }
 
-            Buffer.BlockCopy(renderData, 0, blurHorizontalData, 0, (int) renderPostProcessorFullscreenRenderHeight * (int) renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4);
+            colorAverage[0] = (byte) (colorSum[0] / boxRadius);
+            colorAverage[1] = (byte) (colorSum[1] / boxRadius);
+            colorAverage[2] = (byte) (colorSum[2] / boxRadius);
+            colorAverage[3] = (byte) (colorSum[3] / boxRadius);
 
-            // ... ->> Vertical blurring
-            for (uint x = 0u; x != renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4u; x += 4u * sizeof(byte)) {
-              colorSum[0] = 0uL;
-              colorSum[1] = 0uL;
-              colorSum[2] = 0uL;
-              colorSum[3] = 0uL;
+            for (uint y = 0u; y != renderPostProcessorFullscreenRenderHeight * sizeof(byte) * 4u; y += 4u * sizeof(byte)) {
+              uint index = 0u;
 
-              for (uint y = 0u; y != (boxRadius < renderPostProcessorFullscreenRenderHeight ? boxRadius : renderPostProcessorFullscreenRenderHeight) * sizeof(byte) * 4u; y += 4u * sizeof(byte)) {
-                uint index = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
+              if (y >= (boxRadius / 2u) * sizeof(byte) * 4u && y + ((boxRadius / 2u) * sizeof(byte) * 4u) + (4u * sizeof(byte)) < renderPostProcessorFullscreenRenderHeight * sizeof(byte) * 4u) {
+                index        = (uint) (x + ((y - ((boxRadius / 2u) * sizeof(byte) * 4u) - (0u * 4u * sizeof(byte))) * renderPostProcessorFullscreenRenderWidth));
+                colorSum[0] -= blurHorizontalData[index + 0];
+                colorSum[1] -= blurHorizontalData[index + 1];
+                colorSum[2] -= blurHorizontalData[index + 2];
+                colorSum[3] -= blurHorizontalData[index + 3];
 
+                index        = (uint) (x + ((y + ((boxRadius / 2u) * sizeof(byte) * 4u) + (1u * 4u * sizeof(byte))) * renderPostProcessorFullscreenRenderWidth));
                 colorSum[0] += blurHorizontalData[index + 0];
                 colorSum[1] += blurHorizontalData[index + 1];
                 colorSum[2] += blurHorizontalData[index + 2];
                 colorSum[3] += blurHorizontalData[index + 3];
+
+                colorAverage[0] = (byte) (colorSum[0] / boxRadius);
+                colorAverage[1] = (byte) (colorSum[1] / boxRadius);
+                colorAverage[2] = (byte) (colorSum[2] / boxRadius);
+                colorAverage[3] = (byte) (colorSum[3] / boxRadius);
               }
 
-              colorAverage[0] = (byte) (colorSum[0] / boxRadius);
-              colorAverage[1] = (byte) (colorSum[1] / boxRadius);
-              colorAverage[2] = (byte) (colorSum[2] / boxRadius);
-              colorAverage[3] = (byte) (colorSum[3] / boxRadius);
-
-              for (uint y = 0u; y != renderPostProcessorFullscreenRenderHeight * sizeof(byte) * 4u; y += 4u * sizeof(byte)) {
-                uint index = 0u;
-
-                if (y >= (boxRadius / 2u) * sizeof(byte) * 4u && y + ((boxRadius / 2u) * sizeof(byte) * 4u) + (4u * sizeof(byte)) < renderPostProcessorFullscreenRenderHeight * sizeof(byte) * 4u) {
-                  index        = (uint) (x + ((y - ((boxRadius / 2u) * sizeof(byte) * 4u) - (0u * 4u * sizeof(byte))) * renderPostProcessorFullscreenRenderWidth));
-                  colorSum[0] -= blurHorizontalData[index + 0];
-                  colorSum[1] -= blurHorizontalData[index + 1];
-                  colorSum[2] -= blurHorizontalData[index + 2];
-                  colorSum[3] -= blurHorizontalData[index + 3];
-
-                  index        = (uint) (x + ((y + ((boxRadius / 2u) * sizeof(byte) * 4u) + (1u * 4u * sizeof(byte))) * renderPostProcessorFullscreenRenderWidth));
-                  colorSum[0] += blurHorizontalData[index + 0];
-                  colorSum[1] += blurHorizontalData[index + 1];
-                  colorSum[2] += blurHorizontalData[index + 2];
-                  colorSum[3] += blurHorizontalData[index + 3];
-
-                  colorAverage[0] = (byte) (colorSum[0] / boxRadius);
-                  colorAverage[1] = (byte) (colorSum[1] / boxRadius);
-                  colorAverage[2] = (byte) (colorSum[2] / boxRadius);
-                  colorAverage[3] = (byte) (colorSum[3] / boxRadius);
-                }
-
-                index                       = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
-                blurVerticalData[index + 0] = colorAverage[0];
-                blurVerticalData[index + 1] = colorAverage[1];
-                blurVerticalData[index + 2] = colorAverage[2];
-                blurVerticalData[index + 3] = colorAverage[3];
-              }
+              index                       = (uint) (x + (y * renderPostProcessorFullscreenRenderWidth));
+              blurVerticalData[index + 0] = colorAverage[0];
+              blurVerticalData[index + 1] = colorAverage[1];
+              blurVerticalData[index + 2] = colorAverage[2];
+              blurVerticalData[index + 3] = colorAverage[3];
             }
           }
-
-          Buffer.BlockCopy(blurData, 0, renderPostProcessorFullscreenRenderData, 0, (int) renderPostProcessorFullscreenRenderHeight * (int) renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4);
         }
+
+        Buffer.BlockCopy(blurData, 0, renderPostProcessorFullscreenRenderData, 0, renderPostProcessorFullscreenRenderHeight * renderPostProcessorFullscreenRenderWidth * sizeof(byte) * 4);
       }
     }
 
     private static void RequestControllerIcons() {
-      if (null == renderControllerIcons) renderControllerIcons = new Image[] {null, null, null, null};
       if (null == renderControllerIcons[0]) try { renderControllerIcons[0] = Image.FromFile("assets/controls/keyboard.png"); } catch (SystemException) {}
       if (null == renderControllerIcons[1]) try { renderControllerIcons[1] = Image.FromFile("assets/controls/mouse.png");    } catch (SystemException) {}
       if (null == renderControllerIcons[2]) try { renderControllerIcons[2] = Image.FromFile("assets/controls/gamepad.png");  } catch (SystemException) {}
       if (null == renderControllerIcons[3]) try { renderControllerIcons[3] = Image.FromFile("assets/controls/touch.png");    } catch (SystemException) {}
-    }
-
-    private static void RequestFullscreen() {
-      renderResized          = true;
-      windowBorderStyle      = window.FormBorderStyle;
-      windowState            = window.WindowState;
-      window.FormBorderStyle = FormBorderStyle.None;
-      window.WindowState     = FormWindowState.Maximized;
     }
 
     private static void ResetFocusIndex() {
@@ -729,10 +774,11 @@ namespace Game {
       if (0x00u != (byte) (gameState & State.PAUSED))     state |= State.PAUSED;
       if (0x00u != (byte) (gameState & State.TERMINATED)) Terminate();
 
-      if (0x00u != (byte) (gameState & State.GAMEPLAY) && 0x00u == (byte) (state & State.GAMEPLAY)) { ResetFocusIndex(); state = State.GAMEPLAY | (state & State.PAUSED) | (state & State.TERMINATED); }
-      if (0x00u != (byte) (gameState & State.HELP)     && 0x00u == (byte) (state & State.HELP))     { ResetFocusIndex(); state = State.HELP     | (state & State.PAUSED) | (state & State.TERMINATED); }
-      if (0x00u != (byte) (gameState & State.MENU)     && 0x00u == (byte) (state & State.MENU))     { ResetFocusIndex(); state = State.MENU     | (state & State.PAUSED) | (state & State.TERMINATED); }
-      if (0x00u != (byte) (gameState & State.SETTINGS) && 0x00u == (byte) (state & State.SETTINGS)) { ResetFocusIndex(); state = State.SETTINGS | (state & State.PAUSED) | (state & State.TERMINATED); }
+      foreach (State value in Enum.GetValues(typeof(State)))
+      if (0x00u != (byte) (gameState & value) && 0x00u == (byte) (state & value)) {
+        ResetFocusIndex();
+        state = value | (state & State.PAUSED) | (state & State.TERMINATED);
+      }
     }
 
     /* ... */
@@ -742,31 +788,68 @@ namespace Game {
       RectangleF[] promptBounds        = {RectangleF.Empty};
 
       // ...
+      if (0x00u != (byte) (state & State.CREDITS))  { promptBounds = creditsPromptBounds;  promptStates = creditsPromptStates;  }
       if (0x00u != (byte) (state & State.HELP))     { promptBounds = helpPromptBounds;     promptStates = helpPromptStates;     }
       if (0x00u != (byte) (state & State.MENU))     { promptBounds = menuPromptBounds;     promptStates = menuPromptStates;     }
       if (0x00u != (byte) (state & State.SETTINGS)) { promptBounds = settingsPromptBounds; promptStates = settingsPromptStates; }
 
       // ... ->> Key input
       switch (releasedKey) {
-        case Keys.Enter : if (focusIndexed) selectedPromptState = promptStates[focusIndex % (ulong) promptStates.Length]; break;
-        case Keys.Escape: Terminate();                                                                                    break;
-        case Keys.F11   : if (IsFullscreen()) ExitFullscreen(); else RequestFullscreen();                                 break;
-        case Keys.Tab   : ++focusIndex; focusIndexed = true;                                                              break;
+        // ... ->> Select UI prompt
+        case Keys.Enter: {
+          for (int index = promptBounds.Length; 0 != index--; )
+          if (cursorBound.IntersectsWith(promptBounds[index])) {
+            selectedPromptState = promptStates[index];
+            break;
+          }
+
+          if (focusIndexed && (State) (byte) 0x00u == selectedPromptState)
+          selectedPromptState = promptStates[focusIndex % (ulong) promptStates.Length];
+        } break;
+
+        // ... ->> Quit the game
+        case Keys.Escape: {
+          if (0x00u != (byte) (state & State.MENU))       Terminate();
+          if (0x00u == (byte) (state & State.TERMINATED)) SetGameState(State.MENU);
+        } return;
+
+        // ... ->> Toggle game fullscreen
+        case Keys.F11: {
+          if (window.IsFullscreen()) window.ExitFullscreen();
+          else window.RequestFullscreen();
+        } break;
+
+        // ... ->> Switch focused UI prompt
+        case Keys.Tab: {
+          ++focusIndex;
+          focusIndexed = true;
+
+          foreach (Keys key in keys)
+          if (Keys.LShiftKey == key || Keys.RShiftKey == key || Keys.ShiftKey == key) {
+            focusIndex -= 2uL;
+            break;
+          }
+        } break;
+
+        // ... ->> Keyboard player fire
+        case Keys.OemPeriod: case Keys.X: break;
       }
 
       foreach (Keys key in keys)
       switch (key) {
+        // ... ->> Keyboard player movement
         case Keys.Down : case Keys.S: break;
-        case Keys.Left : case Keys.A: player.Rotation -= (float) Math.PI / 180.0f; Console.WriteLine("[^]: " + (player.Rotation * (180.0f / Math.PI))); break;
-        case Keys.Right: case Keys.D: player.Rotation += (float) Math.PI / 180.0f; Console.WriteLine("[^]: " + (player.Rotation * (180.0f / Math.PI))); break;
+        case Keys.Left : case Keys.A: break;
+        case Keys.Right: case Keys.D: break;
         case Keys.Up   : case Keys.W: break;
 
-        case Keys.OemPeriod:
-        case Keys.X: break;
+        // ... ->> Keyboard player fire
+        case Keys.OemPeriod: case Keys.X: break;
       }
 
       // ... ->> Mouse input
       if (cursorActivated) {
+        // ... ->> Select UI prompt
         for (int index = promptBounds.Length; 0 != index--; )
         if (cursorBound.IntersectsWith(promptBounds[index])) {
           selectedPromptState = promptStates[index];
@@ -780,15 +863,22 @@ namespace Game {
     }
 
     public static void Render(object target, PaintEventArgs arguments) {
-      Window   window         = target as Window; // ->> Same as `Game::window`… ideally
-      Graphics windowGraphics = arguments.Graphics;
-      Size     viewportSize   = window.GetViewportSize();
-      TimeSpan timestamp      = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      bool     rerender       = renderDelta <= timestamp - renderTimestamp;
-      Bitmap   render         = renders[rerender ? (renderIndex == 0u ? renders.Length : renderIndex) - 1u : renderIndex];
-      Graphics renderGraphics = Graphics.FromImage(render);
+      Window   window             = target as Window;
+      Size     windowViewportSize = window.ViewportSize;
+      TimeSpan timestamp          = TimeSpan.FromTicks(DateTime.Now.Ticks);
+      bool     rerender           = renderDelta <= timestamp - renderTimestamp;
+      Bitmap   render             = renders[rerender ? (renderIndex == 0u ? renders.Length : renderIndex) - 1u : renderIndex];
+      Graphics renderGraphics     = Graphics.FromImage(render);
+      Graphics graphics           = arguments.Graphics;
 
       // ...
+      graphics.CompositingMode    = CompositingMode   .SourceCopy;
+      graphics.CompositingQuality = CompositingQuality.HighQuality;
+      graphics.InterpolationMode  = InterpolationMode .High;
+      graphics.PixelOffsetMode    = PixelOffsetMode   .HighQuality;
+      graphics.SmoothingMode      = SmoothingMode     .HighQuality;
+      graphics.TextRenderingHint  = TextRenderingHint .ClearTypeGridFit;
+
       renderGraphics.CompositingMode    = CompositingMode   .SourceOver;
       renderGraphics.CompositingQuality = CompositingQuality.AssumeLinear;
       renderGraphics.InterpolationMode  = InterpolationMode .NearestNeighbor;
@@ -796,143 +886,107 @@ namespace Game {
       renderGraphics.SmoothingMode      = SmoothingMode     .AntiAlias;
       renderGraphics.TextRenderingHint  = TextRenderingHint .SystemDefault;
 
-      windowGraphics.CompositingMode    = CompositingMode   .SourceCopy;
-      windowGraphics.CompositingQuality = CompositingQuality.HighQuality;
-      windowGraphics.InterpolationMode  = InterpolationMode .High;
-      windowGraphics.PixelOffsetMode    = PixelOffsetMode   .HighQuality;
-      windowGraphics.SmoothingMode      = SmoothingMode     .HighQuality;
-      windowGraphics.TextRenderingHint  = TextRenderingHint .ClearTypeGridFit;
-
-      if (rerender || renderResized) {
-        PointF      viewportOrigin                = new PointF(viewportSize.Width / 2.0f, viewportSize.Height / 2.0f);
-        float       rotation                      = GetPlayersOverallRotation();
-        SizeF       promptsSize                   = new SizeF(viewportSize.Height * 0.8f, viewportSize.Width * 0.9f);
-        const float promptsTextMinimumFontSize    = 12.0f;
+      if (rerender) {
+        PointF      windowViewportOrigin          = new PointF(windowViewportSize.Width / 2.0f, windowViewportSize.Height / 2.0f);
+        float       starsRotation                 = GetPlayersOverallRotation();
+        float       starsRotationSine             = (float) Math.Sin(starsRotation);
+        float       starsRotationCosine           = (float) Math.Cos(starsRotation);
+        SizeF       promptsSize                   = new SizeF(windowViewportSize.Height * 0.8f, windowViewportSize.Width * 0.9f);
+        const float promptsTextMinimumFontSize    = 8.0f;
         float       promptsTextFontSize           = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 3.5f);
-        const float promptsHeadingMinimumFontSize = 15.0f;
-        float       promptsHeadingFontSize        = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 2.0f);
-        Font        promptTextFont                = null == textFontFamily    ? new Font(textFont   .Name, promptsTextFontSize) : new Font(textFontFamily,    promptsTextFontSize);
-        Font        promptHeadingFont             = null == headingFontFamily ? new Font(headingFont.Name, promptsTextFontSize) : new Font(headingFontFamily, promptsTextFontSize);
+        const float promptsHeadingMinimumFontSize = 10.0f;
+        float       promptsHeadingFontSize        = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 3.0f);
+        PointF      promptsCoordinates            = new PointF((windowViewportSize.Width - promptsSize.Width) / 2.0f, (windowViewportSize.Height - promptsSize.Height) / 2.0f);
+        Font        promptTextFont                = null == textFontFamily    ? new Font(textFont   .Name, promptsTextFontSize)    : new Font(textFontFamily,    promptsTextFontSize);
+        Font        promptHeadingFont             = null == headingFontFamily ? new Font(headingFont.Name, promptsHeadingFontSize) : new Font(headingFontFamily, promptsHeadingFontSize);
 
         // ... ->> Clear previously drawn frame
         renderGraphics.Clear(window.BackColor);
 
         renderIndex     = (byte) ((renderIndex + 1u) % renders.Length);
-        renderResized   = false;
         renderTimestamp = timestamp;
 
         // ... ->> Draw stars
         foreach (Star star in stars) {
-          Brush  brush                  = new SolidBrush(Color.FromArgb((int) (star.Opacity * (star.Delta > 0.5f ? 2.0f - (star.Delta * 2.0f) : (star.Delta * 2.0f))), star.Color)) as Brush;
-          PointF destinationCoordinates = (PointF) star.GetComputedDestinationCoordinates(viewportSize);
-          PointF sourceCoordinates      = (PointF) star.GetComputedSourceCoordinates     (viewportSize);
-          float  rotationCosine         = (float) Math.Cos(rotation);
-          float  rotationCull           = 0.0f;
-          float  rotationSine           = (float) Math.Sin(rotation);
+          Brush  starBrush                  = new SolidBrush(Color.FromArgb((int) (star.Opacity * (star.Delta > 0.5f ? 2.0f - (star.Delta * 2.0f) : (star.Delta * 2.0f))), star.Color)) as Brush;
+          PointF starDestinationCoordinates = (PointF) star.GetComputedDestinationCoordinates(windowViewportSize);
+          float  starRotationCull           = 0.0f;
+          PointF starSourceCoordinates      = (PointF) star.GetComputedSourceCoordinates(windowViewportSize);
 
           // ...
           do {
-            if (rotation >= Math.PI * 0.0f && rotation <= Math.PI * 0.5f) { rotationCull = (float) ((Math.PI * 0.0f) + (Math.PI / 4.0f)) - rotation; break; }
-            if (rotation >= Math.PI * 0.5f && rotation <= Math.PI * 1.0f) { rotationCull = (float) ((Math.PI * 0.5f) + (Math.PI / 4.0f)) - rotation; break; }
-            if (rotation >= Math.PI * 1.0f && rotation <= Math.PI * 1.5f) { rotationCull = (float) ((Math.PI * 1.0f) + (Math.PI / 4.0f)) - rotation; break; }
-            if (rotation >= Math.PI * 1.5f && rotation <= Math.PI * 2.0f) { rotationCull = (float) ((Math.PI * 1.5f) + (Math.PI / 4.0f)) - rotation; break; }
+            if (starsRotation >= Math.PI * 0.0f && starsRotation <= Math.PI * 0.5f) { starRotationCull = (float) ((Math.PI * 0.0f) + (Math.PI / 4.0f)) - starsRotation; break; }
+            if (starsRotation >= Math.PI * 0.5f && starsRotation <= Math.PI * 1.0f) { starRotationCull = (float) ((Math.PI * 0.5f) + (Math.PI / 4.0f)) - starsRotation; break; }
+            if (starsRotation >= Math.PI * 1.0f && starsRotation <= Math.PI * 1.5f) { starRotationCull = (float) ((Math.PI * 1.0f) + (Math.PI / 4.0f)) - starsRotation; break; }
+            if (starsRotation >= Math.PI * 1.5f && starsRotation <= Math.PI * 2.0f) { starRotationCull = (float) ((Math.PI * 1.5f) + (Math.PI / 4.0f)) - starsRotation; break; }
           } while (false);
 
-          rotationCull  = 1.0f - (float) (Math.Abs(rotationCull) / Math.PI / 4.0f);                                                                                                                                                           // ->> Scale based on rotation (45° angles are the most scaled)
-          rotationCull *= 1.0f - (float) (Math.Sqrt(Math.Pow(viewportSize.Width / 2.0f, 2.0f) - Math.Pow(sourceCoordinates.X > viewportOrigin.X ? viewportSize.Width - sourceCoordinates.X : sourceCoordinates.X, 2.0f)) / viewportOrigin.X); // ->> Scale based on center of rotation --- WARN (Lapys) -> Still not perfect
-          rotationCull *= 0.0f + (float) (Math.Sqrt(Math.Pow(viewportSize.Height, 2) + Math.Pow(viewportSize.Width, 2)));                                                                                                                     // ->> Convert to in-world coordinates
+          starRotationCull  = 1.0f - (float) (Math.Abs(starRotationCull) / Math.PI / 4.0f);                                                                                                                                                                    // ->> Scale based on degree of rotation (45° angles are the most scaled)
+          starRotationCull *= 1.0f - (float) (Math.Sqrt(((windowViewportSize.Width * windowViewportSize.Width) / 4.0f) - ((starSourceCoordinates.X % windowViewportOrigin.X) * (starSourceCoordinates.X % windowViewportOrigin.X))) / windowViewportOrigin.X); // ->> Scale based on center of rotation --- TODO (Lapys) -> Still not perfect
+          starRotationCull *= 0.0f + (float) (Math.Sqrt(((windowViewportSize.Width * windowViewportSize.Width))        + ((windowViewportSize.Height                         * windowViewportSize.Height))));                                                  // ->> Convert to in-world coordinates
 
-          destinationCoordinates.Y += rotationCull;
-          destinationCoordinates    = new PointF(
-            viewportOrigin.X + (rotationCosine * (destinationCoordinates.X - viewportOrigin.X)) - (rotationSine   * (destinationCoordinates.Y - viewportOrigin.Y)),
-            viewportOrigin.Y + (rotationSine   * (destinationCoordinates.X - viewportOrigin.X)) + (rotationCosine * (destinationCoordinates.Y - viewportOrigin.Y))
+          starDestinationCoordinates.Y += starRotationCull;
+          starDestinationCoordinates    = new PointF(
+            windowViewportOrigin.X + (starsRotationCosine * (starDestinationCoordinates.X - windowViewportOrigin.X)) - (starsRotationSine   * (starDestinationCoordinates.Y - windowViewportOrigin.Y)),
+            windowViewportOrigin.Y + (starsRotationSine   * (starDestinationCoordinates.X - windowViewportOrigin.X)) + (starsRotationCosine * (starDestinationCoordinates.Y - windowViewportOrigin.Y))
           );
 
-          sourceCoordinates.Y -= rotationCull;
-          sourceCoordinates    = new PointF(
-            viewportOrigin.X + (rotationCosine * (sourceCoordinates.X - viewportOrigin.X)) - (rotationSine   * (sourceCoordinates.Y - viewportOrigin.Y)),
-            viewportOrigin.Y + (rotationSine   * (sourceCoordinates.X - viewportOrigin.X)) + (rotationCosine * (sourceCoordinates.Y - viewportOrigin.Y))
+          starSourceCoordinates.Y -= starRotationCull;
+          starSourceCoordinates    = new PointF(
+            windowViewportOrigin.X + (starsRotationCosine * (starSourceCoordinates.X - windowViewportOrigin.X)) - (starsRotationSine   * (starSourceCoordinates.Y - windowViewportOrigin.Y)),
+            windowViewportOrigin.Y + (starsRotationSine   * (starSourceCoordinates.X - windowViewportOrigin.X)) + (starsRotationCosine * (starSourceCoordinates.Y - windowViewportOrigin.Y))
           );
 
           // ...
           renderGraphics.FillEllipse(
-            brush,
-            sourceCoordinates.X + (star.Delta * (destinationCoordinates.X - sourceCoordinates.X)),
-            sourceCoordinates.Y + (star.Delta * (destinationCoordinates.Y - sourceCoordinates.Y)),
+            starBrush,
+            starSourceCoordinates.X + (star.Delta * (starDestinationCoordinates.X - starSourceCoordinates.X)),
+            starSourceCoordinates.Y + (star.Delta * (starDestinationCoordinates.Y - starSourceCoordinates.Y)),
             star.Size,
             star.Size
           );
 
-          brush.Dispose();
+          starBrush.Dispose();
         }
 
         // ...
-        if (0x00u != (byte) (state & (State.HELP | State.SETTINGS))) {
-          RectangleF backPromptBound    = RectangleF.Empty;
-          Font       backPromptFont     = promptHeadingFont;
-          bool       backPromptHovered  = false;
-          bool       backPromptSelected = false;
-          string     backPromptText     = String.Empty;
-          Size       backPromptTextSize = Size  .Empty;
+        if (0x00u != (byte) (state & (State.CREDITS | State.HELP | State.SETTINGS))) {
+          RectangleF backPromptBound        = RectangleF.Empty;
+          Font       backPromptFont         = promptHeadingFont;
+          bool       backPromptHovered      = false;
+          bool       backPromptSelected     = false;
+          string     backPromptText         = String.Empty;
+          SizeF      backPromptTextSize     = SizeF .Empty;
+          Font       messageDescriptionFont = promptTextFont;
+          Font       messageHeadingFont     = promptHeadingFont;
+          bool       messageIsHeading       = true;
+          string[]   messages               = {};
+          float      messagesHeight         = 0.0f;
+          float      messagesWidth          = 0.0f;
+          float      messagesY              = 0.0f;
 
           // ...
-          if (0x00u != (byte) (state & State.HELP)) {
-            Font         helpDescriptionFont         = promptTextFont;
-            Font         helpHeadingFont             = promptHeadingFont;
-            GraphicsPath helpMessageGraphicsPath     = new GraphicsPath();
-            float        helpMessagesHeight          = 0.0f;
-            bool         helpMessageIsHeading        = false;
-            float        helpMessageMarginY          = 0.0f;
-            string[]     helpMessages                = {
-              "Git gud, lmao\n ¯\\_(ツ)_/¯\n\n",
-
-              "\u2328\uFE0F KEYBOARD",    "Standard arrow key convention and \u201CWASD\u201D PC controls; \u2018W\u2019 \u2191 to accelerate, \u2018S\u2019 \u2193 to reverse, \u2018A\u2019 \u2192 to strafe left, \u2018D\u2019 \u2190 to strafe right, and \u2018Spacebar\u2019 to fire",
-              "\uD83D\uDDB1\uFE0F MOUSE", "Computer mouse movement and control; Player follows where your cursor goes \u2014 click to blast away",
-              "\uD83C\uDFAE GAMEPAD",     "\u2026",
-              "\uD83D\uDC46 TOUCH",       "\u2026"
+          if (0x00u != (byte) (state & State.CREDITS)) {
+            backPromptSelected = focusIndexed && 0uL == focusIndex % (ulong) creditsPromptBounds.Length;
+            backPromptText     = creditsPromptTexts[0];
+            messages           = new string[] {
+              "Gameplay",      "Lapys",
+              "Graphics",      "Lapys",
+              "Sound Effects", "Lapys",
+              "Music Tracks",  "Phyrnna"
             };
+          }
 
-            // ...
-            while (true) {
-              float helpDescriptionFontSize = GetFontSizeInPixels(helpDescriptionFont, renderGraphics);
-              float helpHeadingFontSize     = GetFontSizeInPixels(helpHeadingFont, renderGraphics);
-
-              // ...
-              helpMessageIsHeading = false;
-              foreach (string helpMessage in helpMessages) {
-                helpMessagesHeight  += helpMessageMarginY + (helpMessageIsHeading ? helpHeadingFontSize : helpDescriptionFontSize);
-                helpMessageIsHeading = false == helpMessageIsHeading;
-              }
-
-              helpMessagesHeight -= helpMessageMarginY;
-
-              if (promptsHeadingMinimumFontSize < helpHeadingFont.Size && promptsTextMinimumFontSize < helpDescriptionFont.Size && promptsSize.Height < helpMessagesHeight) {
-                helpDescriptionFont = new Font(helpDescriptionFont.FontFamily, helpDescriptionFont.Size - (helpDescriptionFontSize / helpDescriptionFont.Size));
-                helpHeadingFont     = new Font(helpHeadingFont    .FontFamily, helpHeadingFont    .Size - (helpHeadingFontSize     / helpHeadingFont    .Size));
-
-                continue;
-              }
-
-              break;
-            }
-
-            helpMessageIsHeading = false;
-            foreach (string helpMessage in helpMessages) {
-              Size helpMessageSize = TextRenderer.MeasureText(helpMessage, helpMessageFont, viewportSize);
-
-              // ...
-              if (helpMessageIsHeading) {
-                helpMessageGraphicsPath.AddString(helpMessage, helpMessageFont.FontFamily, (Int32) helpMessageFont.FontStyle, helpMessageSize.Height, new PointF(
-                  0.0f,
-                  helpMessagesHeight
-                ), new StringFormat());
-                helpMessageGraphicsPath.CloseFigure();
-              }
-            }
-
-            // ...
+          if (0x00u != (byte) (state & State.HELP)) {
             backPromptSelected = focusIndexed && 0uL == focusIndex % (ulong) helpPromptBounds.Length;
             backPromptText     = helpPromptTexts[0];
+            messages           = new string[] {
+              "  ¯\\_(ツ)_/¯", "Git gud, lmao\n\n",
+              "\u2328 KEYBOARD",          "Standard arrow key convention and \u201CWASD\u201D PC controls;\n  \u2022 \u2018W\u2019 \u2191 to accelerate,\n  \u2022 \u2018S\u2019 \u2193 to reverse,\n  \u2022 \u2018A\u2019 \u2190 to strafe left,\n  \u2022 \u2018D\u2019 \u2192 to strafe right,\n  \u2022 \u2018Spacebar\u2019 to fire",
+              "\uD83D\uDDB1\uFE0F MOUSE", "Computer mouse movement and control;\n  Player follows where your cursor goes\n  \u2014 click to blast away",
+              "\uD83C\uDFAE GAMEPAD",     "\u2026",
+              "\u270E TOUCH",             "\u2026"
+            };
           }
 
           if (0x00u != (byte) (state & State.SETTINGS)) {
@@ -941,12 +995,59 @@ namespace Game {
           }
 
           // ...
-          backPromptTextSize = TextRenderer.MeasureText(backPromptText, backPromptFont, viewportSize);
-          backPromptBound    = new RectangleF(viewportSize.Width * 0.05f, viewportSize.Height * 0.05f, backPromptTextSize.Width * 1.5f, backPromptTextSize.Height * 1.5f);
+          while (true) {
+            messageIsHeading = true;
+            messagesHeight   = 0.0f;
+            messagesWidth    = 0.0f;
+
+            foreach (string message in messages) {
+              Font  messageFont = messageIsHeading ? messageHeadingFont : messageDescriptionFont;
+              SizeF messageSize = renderGraphics.MeasureString(message, messageFont, promptsSize);
+
+              // ...
+              messagesWidth    = messagesWidth > messageSize.Width ? messagesWidth : messageSize.Width;
+              messagesHeight  += messageSize.Height;
+              messageIsHeading = false == messageIsHeading;
+            }
+
+            messagesY = promptsCoordinates.Y + ((promptsSize.Height - messagesHeight) / 2.0f);
+
+            if (promptsHeadingMinimumFontSize < messageHeadingFont.Size && promptsTextMinimumFontSize < messageDescriptionFont.Size && (promptsSize.Height < messagesHeight || promptsSize.Width < messagesWidth)) {
+              messageDescriptionFont = new Font(messageDescriptionFont.FontFamily, messageDescriptionFont.Size - (GetFontSizeInPixels(messageDescriptionFont, renderGraphics) / messageDescriptionFont.Size));
+              messageHeadingFont     = new Font(messageHeadingFont    .FontFamily, messageHeadingFont    .Size - (GetFontSizeInPixels(messageHeadingFont,     renderGraphics) / messageHeadingFont    .Size));
+
+              continue;
+            }
+
+            break;
+          }
+
+          messageIsHeading = true;
+          renderGraphics.DrawRectangle(Pens.White, promptsCoordinates.X, promptsCoordinates.Y, promptsSize.Width, promptsSize.Height);
+          renderGraphics.DrawRectangle(Pens.Red,   promptsCoordinates.X, messagesY, messagesWidth, messagesHeight);
+
+          foreach (string message in messages) {
+            Font         messageFont         = messageIsHeading ? messageHeadingFont : messageDescriptionFont;
+            GraphicsPath messageGraphicsPath = new GraphicsPath();
+            SizeF        messageSize         = renderGraphics.MeasureString(message, messageFont, promptsSize);
+
+            // ...
+            messageGraphicsPath.AddString(message, messageFont.FontFamily, (Int32) messageFont.Style, GetFontSizeInPixels(messageFont, renderGraphics), new PointF(promptsCoordinates.X, messagesY), new StringFormat());
+            renderGraphics.DrawPath(Pens.Black,    messageGraphicsPath);
+            renderGraphics.FillPath(Brushes.White, messageGraphicsPath);
+
+            messageIsHeading = false == messageIsHeading;
+            messagesY       += messageSize.Height;
+          }
+
+          // ...
+          backPromptTextSize = renderGraphics.MeasureString(backPromptText, backPromptFont);
+          backPromptBound    = new RectangleF(windowViewportSize.Width * 0.05f, windowViewportSize.Height * 0.05f, backPromptTextSize.Width * 1.5f, backPromptTextSize.Height * 1.5f);
           backPromptHovered  = cursorBound.IntersectsWith(backPromptBound);
           backPromptSelected = backPromptHovered || backPromptSelected;
 
           if (backPromptHovered) ResetFocusIndex();
+          if (0x00u != (byte) (state & State.CREDITS))  creditsPromptBounds [0] = backPromptBound;
           if (0x00u != (byte) (state & State.HELP))     helpPromptBounds    [0] = backPromptBound;
           if (0x00u != (byte) (state & State.SETTINGS)) settingsPromptBounds[0] = backPromptBound;
 
@@ -958,11 +1059,11 @@ namespace Game {
 
         if (0x00u != (byte) (state & State.MENU)) {
           Font  menuFooterFont          = new Font(promptTextFont.FontFamily, (promptTextFont.Size * 2.0f) / 3.0f);
-          Size  menuFooterSize          = TextRenderer.MeasureText(menuFooter, menuFooterFont, viewportSize);
+          SizeF menuFooterSize          = renderGraphics.MeasureString(menuFooter, menuFooterFont);
           Font  menuPromptFont          = promptTextFont;
           float menuPromptMarginY       = 0.0f;
-          SizeF menuPromptSelectionSize = new SizeF(viewportSize.Width * 0.715f, 0.0f);
-          SizeF menuPromptSize          = new SizeF(viewportSize.Width * 0.650f, 0.0f);
+          SizeF menuPromptSelectionSize = new SizeF(windowViewportSize.Width * 0.715f, 0.0f);
+          SizeF menuPromptSize          = new SizeF(windowViewportSize.Width * 0.650f, 0.0f);
           float menuPromptsY            = 0.0f;
 
           // ...
@@ -975,7 +1076,7 @@ namespace Game {
             menuPromptMarginY              = menuPromptFontSize * menuPromptMarginYRatio;
             menuPromptSelectionSize.Height = menuPromptFontSize * menuPromptHeightRatio;
             menuPromptSize.Height          = menuPromptFontSize * menuPromptHeightRatio;
-            menuPromptsY                   = (viewportSize.Height - ((menuPromptMarginY * (menuPromptTexts.Length - 1)) + (menuPromptSize.Height * (menuPromptTexts.Length - 0)))) / 2.0f;
+            menuPromptsY                   = (windowViewportSize.Height - ((menuPromptMarginY * (menuPromptTexts.Length - 1)) + (menuPromptSize.Height * (menuPromptTexts.Length - 0)))) / 2.0f;
 
             if (promptsTextMinimumFontSize < menuPromptFont.Size && promptsSize.Height < (menuPromptMarginY * (menuPromptTexts.Length - 1)) + (menuPromptSize.Height * (menuPromptTexts.Length - 0))) {
               menuPromptFont = new Font(menuPromptFont.FontFamily, menuPromptFont.Size - (menuPromptFontSize / menuPromptFont.Size));
@@ -986,12 +1087,12 @@ namespace Game {
           }
 
           for (int index = menuPromptBounds.Length | menuPromptTexts.Length; 0 != index--; ) {
-            RectangleF menuPromptBound          = new RectangleF(new PointF((viewportSize.Width - menuPromptSize.Width) / 2.0f, menuPromptsY + (index * (menuPromptMarginY + menuPromptSize.Height))), menuPromptSize);
+            RectangleF menuPromptBound          = new RectangleF(new PointF((windowViewportSize.Width - menuPromptSize.Width) / 2.0f, menuPromptsY + (index * (menuPromptMarginY + menuPromptSize.Height))), menuPromptSize);
             bool       menuPromptHovered        = cursorBound.IntersectsWith(menuPromptBound);
             bool       menuPromptSelected       = menuPromptHovered || (focusIndexed && (ulong) index == focusIndex % (ulong) menuPromptBounds.Length);
-            RectangleF menuPromptSelectionBound = new RectangleF(new PointF((viewportSize.Width - menuPromptSelectionSize.Width) / 2.0f, menuPromptsY + (index * (menuPromptMarginY + menuPromptSelectionSize.Height))), menuPromptSelectionSize);
+            RectangleF menuPromptSelectionBound = new RectangleF(new PointF((windowViewportSize.Width - menuPromptSelectionSize.Width) / 2.0f, menuPromptsY + (index * (menuPromptMarginY + menuPromptSelectionSize.Height))), menuPromptSelectionSize);
             string     menuPromptText           = menuPromptTexts[index];
-            Size       menuPromptTextSize       = TextRenderer.MeasureText(menuPromptText, menuPromptFont, menuPromptSize.ToSize());
+            SizeF      menuPromptTextSize       = renderGraphics.MeasureString(menuPromptText, menuPromptFont);
 
             // ...
             menuPromptBounds[index] = menuPromptBound;
@@ -1002,17 +1103,17 @@ namespace Game {
             renderGraphics.DrawString(menuPromptText, menuPromptFont, promptFontBrush, menuPromptBound.Left + ((menuPromptBound.Width - menuPromptTextSize.Width) / 2.0f), menuPromptBound.Top + ((menuPromptBound.Height - menuPromptTextSize.Height) / 2.0f));
           }
 
-          renderGraphics.DrawString(menuFooter, menuFooterFont, Brushes.White, (viewportSize.Width - menuFooterSize.Width) / 2.0f, viewportSize.Height - (menuFooterSize.Height * 1.5f));
+          renderGraphics.DrawString(menuFooter, menuFooterFont, Brushes.White, (windowViewportSize.Width - menuFooterSize.Width) / 2.0f, windowViewportSize.Height - (menuFooterSize.Height * 1.5f));
         }
 
         // ... ->> Draw cursor (avoid drawing over system cursor)
-        if (false == cursorBound.Size.IsEmpty && cursorWithinWindow) {
+        if (false == cursorBound.IsEmpty && cursorWithinWindow) {
           renderGraphics.FillEllipse(cursorBrush, cursorBound.Left + 0.0f, cursorBound.Top + 0.0f, cursorBound.Width - 0.0f, cursorBound.Height - 0.0f);
           renderGraphics.DrawArc    (cursorPen,   cursorBound.Left + 2.0f, cursorBound.Top + 2.0f, cursorBound.Width - 4.0f, cursorBound.Height - 4.0f, 0, 360);
         }
 
         // ... ->> Draw fullscreen background
-        if (IsFullscreen()) {
+        if (window.IsFullscreen()) {
           Bitmap          renderCopy                      = null;
           Graphics        renderCopyGraphics              = null;
           Bitmap          renderFullscreen                = renders[renderIndex];
@@ -1070,6 +1171,7 @@ namespace Game {
             windowScreenSize * (renderPostProcessorFullscreenRender.Width  < renderPostProcessorFullscreenRender.Height ? renderPostProcessorFullscreenRender.Height / (float) renderPostProcessorFullscreenRender.Width  : 1.0f)
           );
 
+          if (null != renderFullscreenImage)
           renderFullscreenGraphics.DrawImage(renderFullscreenImage,  new Rectangle(
             (int) ((windowScreenSize - windowScreenBounds.Width)  / -2.0f),
             (int) ((windowScreenSize - windowScreenBounds.Height) / -2.0f),
@@ -1094,13 +1196,13 @@ namespace Game {
               FontFamily   controllerPromptFontFamily   = null == textFontFamily ? FontFamily.GenericMonospace    : textFontFamily;
               GraphicsPath controllerPromptGraphicsPath = new GraphicsPath();
               const uint   controllerPromptMarginY      = 10u;
-              Size         controllerPromptSize         = TextRenderer.MeasureText(controllerPrompt, controllerPromptFont, renderFullscreen.Size);
+              SizeF        controllerPromptSize         = renderFullscreenGraphics.MeasureString(controllerPrompt, controllerPromptFont);
               string       controllerTitle              = (new string[] {"KEYBOARD", "MOUSE", "GAMEPAD", "TOUCH"})[index];
               Font         controllerTitleFont          = null == headingFontFamily ? new Font(headingFont.Name, 18.0f) : new Font(headingFontFamily, 18.0f);
               FontFamily   controllerTitleFontFamily    = null == headingFontFamily ? FontFamily.GenericSansSerif       : headingFontFamily;
               GraphicsPath controllerTitleGraphicsPath  = new GraphicsPath();
               const uint   controllerTitleMarginY       = 15u;
-              Size         controllerTitleSize          = TextRenderer.MeasureText(controllerTitle, controllerTitleFont, renderFullscreen.Size);
+              SizeF        controllerTitleSize          = renderFullscreenGraphics.MeasureString(controllerTitle, controllerTitleFont);
               Bitmap       controllerRender             = null;
               BitmapData   controllerRenderBitmapData   = null;
               byte[]       controllerRenderData         = null;
@@ -1141,7 +1243,7 @@ namespace Game {
 
               // ... ->> Draw either controller or player status
               if (null == player) {
-                controllerPromptGraphicsPath.AddString(controllerPrompt, controllerPromptFontFamily, (Int32) controllerPromptFont.FontStyle, controllerPromptSize.Height, new PointF(
+                controllerPromptGraphicsPath.AddString(controllerPrompt, controllerPromptFontFamily, (Int32) controllerPromptFont.Style, GetFontSizeInPixels(controllerPromptFont, renderGraphics), new PointF(
                   controllerCoordinates.X + ((controllerSize - controllerPromptSize.Width) / 2.0f),
                   controllerCoordinates.Y + (controllerTitleMarginY + controllerTitleSize.Height + controllerPromptMarginY + controllerSize)
                 ), new StringFormat());
@@ -1191,7 +1293,7 @@ namespace Game {
               }
 
               // ... ->> Draw controller title
-              controllerTitleGraphicsPath.AddString(controllerTitle, controllerTitleFontFamily, (Int32) controllerTitleFont.FontStyle, controllerTitleSize.Height, new PointF(
+              controllerTitleGraphicsPath.AddString(controllerTitle, controllerTitleFontFamily, (Int32) controllerTitleFont.Style, GetFontSizeInPixels(controllerTitleFont, renderGraphics), new PointF(
                 controllerCoordinates.X + ((controllerSize - controllerTitleSize.Width) / 2.0f),
                 controllerCoordinates.Y + (controllerTitleMarginY + controllerSize)
               ), new StringFormat());
@@ -1207,8 +1309,8 @@ namespace Game {
           }
 
           // ... ->> Draw gameplay graphics and its border
-          renderFullscreenGraphics.DrawImageUnscaledAndClipped(render != renderFullscreen ? render : renderCopy, new Rectangle((windowScreenBounds.Width - viewportSize.Width) / 2, (windowScreenBounds.Height - viewportSize.Height) / 2, viewportSize.Width - 0, viewportSize.Height - 0));
-          renderFullscreenGraphics.DrawRectangle              (renderFullscreenPen,                              new Rectangle((windowScreenBounds.Width - viewportSize.Width) / 2, (windowScreenBounds.Height - viewportSize.Height) / 2, viewportSize.Width - 2, viewportSize.Height - 2));
+          renderFullscreenGraphics.DrawImageUnscaledAndClipped(render != renderFullscreen ? render : renderCopy, new Rectangle((windowScreenBounds.Width - windowViewportSize.Width) / 2, (windowScreenBounds.Height - windowViewportSize.Height) / 2, windowViewportSize.Width - 0, windowViewportSize.Height - 0));
+          renderFullscreenGraphics.DrawRectangle              (renderFullscreenPen,                              new Rectangle((windowScreenBounds.Width - windowViewportSize.Width) / 2, (windowScreenBounds.Height - windowViewportSize.Height) / 2, windowViewportSize.Width - 2, windowViewportSize.Height - 2));
 
           renderGraphics.DrawImageUnscaled(renderFullscreen, 0, 0);
 
@@ -1219,7 +1321,7 @@ namespace Game {
       }
 
       // ...
-      windowGraphics.DrawImageUnscaled(render, 0, 0);
+      graphics.DrawImageUnscaled(render, 0, 0);
       renderGraphics.Dispose();
     }
 
@@ -1227,7 +1329,7 @@ namespace Game {
       if (0x00u != (byte) (state & State.TERMINATED)) return;
       state = State.TERMINATED;
 
-      // ...
+      // ... ->> Cleanup reserved game memory
       cursorBrush                                  .Dispose();
       cursorPen                                    .Dispose();
       promptBrush                                  .Dispose();
@@ -1244,41 +1346,35 @@ namespace Game {
       renderPostProcessorFullscreenRenderAllocation.Free();
       window                                       .Close();
 
-      if (Application.MessageLoop) Application.Exit(); else Environment.Exit(0x00);
+      // ... ->> Exit the game
+      if (Application.MessageLoop) {
+        Application.Exit();
+        return;
+      }
+
+      Environment.Exit(0x00);
     }
 
     public static void Update(object target, EventArgs arguments) {
-      float    rotation     = GetPlayersOverallRotation();
-      int      starsLength  = stars.Count;
-      TimeSpan timestamp    = TimeSpan.FromTicks(DateTime.Now.Ticks);
-      Size     viewportSize = window.GetViewportSize();
+      float    cursorSize         = null != Cursor.Current ? (Cursor.Current.Size.Height + Cursor.Current.Size.Width) / 2.0f : 0.0f;
+      int      starsLength        = stars.Count;
+      TimeSpan timestamp          = TimeSpan.FromTicks(DateTime.Now.Ticks);
+      Size     windowViewportSize = window.ViewportSize;
 
       /* ... ->> Game logic unbounded by framerate ie: calculations, flags, … */ {
         // ... ->> Update cursor
-        if (null == Cursor.Current)
-          cursorBound.Size = SizeF.Empty;
-
-        else {
-          float cursorSize = (Cursor.Current.Size.Height + Cursor.Current.Size.Width) / 2.0f;
-          cursorBound.Size = new SizeF(cursorSize * 0.75f, cursorSize * 0.75f);
-        }
+        cursorBound.Height = cursorBound.Width = cursorSize * 0.75f;
 
         // ... ->> Remove fallen (excess) stars; update maximum star count based on viewport size
-        starsMaximumLength = (ushort) ((viewportSize.Height + viewportSize.Width) / 20u);
+        starsMaximumLength = (ushort) ((windowViewportSize.Height + windowViewportSize.Width) / 20u);
 
-        while (starsLength > starsMaximumLength)
-        stars.Remove(stars[--starsLength]);
-
-        for (int index = starsLength; 0 != index--; )
-        if (stars[index].Delta >= 1.0f) {
-          stars.Remove(stars[index]);
-          --starsLength;
-
-          continue;
+        if (starsLength > starsMaximumLength) {
+          stars.RemoveRange(starsMaximumLength, starsLength - starsMaximumLength);
+          starsLength = starsMaximumLength;
         }
 
-        // ...
-        if (0x00u != (byte) (state & State.GAMEPLAY)) {}
+        for (int index = starsLength; 0 != index--; )
+        if (stars[index].Delta >= 1.0f) starsLength -= stars.Remove(stars[index]) ? 1 : 0;
       }
 
       /* ... ->> Game logic unbounded by `Update(…)` framerate ie: calculations, flags, … */ {
@@ -1292,14 +1388,15 @@ namespace Game {
           starsSpawnTimestamp = timestamp;
 
           while (0u != starsSpawnCount--) {
-            Star star = new Star();
+            Star  star               = new Star();
+            float starFallCoordinate = (float) Star.Randomizer.NextDouble();
 
             // ...
-            star.DestinationCoordinates.X = (float) Star.Randomizer.NextDouble();
+            star.DestinationCoordinates.X = starFallCoordinate;
             star.DestinationCoordinates.Y = 1.0f;
             star.Opacity                  = (byte) Star.Randomizer.Next(127, 255);
-            star.SourceCoordinates.X      = star.DestinationCoordinates.X;
-            star.SourceCoordinates.Y      = (float) Star.Randomizer.NextDouble() * 0.65f;
+            star.SourceCoordinates.X      = starFallCoordinate;
+            star.SourceCoordinates.Y      = (float) Star.Randomizer.NextDouble() * 0.6500f;
             star.Speed                    = (float) Star.Randomizer.NextDouble() * 0.0025f;
 
             stars.Add(star);
@@ -1325,42 +1422,42 @@ namespace Game {
       const string backPromptText  = "ᐊ BACK";
       TimeSpan     delta           = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 60L);
       DEVMODE      deviceMode      = new DEVMODE();
-      uint         deviceFramerate = 60u;
-      FontFamily[] fontFamilies    = {null, null};
+      FontFamily[] fontFamilies    = {null, null}; // --> headingFontFamily, textFontFamily
       string[]     fontFilePaths   = {null, null};
       TimeSpan     timestamp       = TimeSpan.FromTicks(DateTime.Now.Ticks);
       Timer        updateTimer     = null;
       Screen       windowScreen    = null;
       Int32        windowSize      = 0;
 
-      /* Update > ... */
-      if (EnumerateDisplaySettings(null, DEVMODE.ENUM_CURRENT_SETTINGS, ref deviceMode)) {
-        deviceFramerate = (uint) deviceMode.dmDisplayFrequency;
-        delta           = 0u != deviceFramerate ? TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long) deviceFramerate) : delta;
-      }
+      /* Update > ... ->> Setup game variables and such */
+      if (EnumerateDisplaySettings(null, DEVMODE.ENUM_CURRENT_SETTINGS, ref deviceMode))
+      delta = 0u != deviceMode.dmDisplayFrequency ? TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long) deviceMode.dmDisplayFrequency) : delta;
 
+      creditsPromptStates         = new State[] {State.MENU};                                                                   //
+      creditsPromptTexts          = new string[] {backPromptText};                                                              //
       cursorActivated             = false;                                                                                      //
-      cursorBound                 = RectangleF.Empty;                                                                           //
+      cursorBound                 = new RectangleF(0.0f, 0.0f, 0.0f, 0.0f);                                                     //
       cursorBrush                 = new SolidBrush(Color.FromArgb(255 / 3, 0xFF, 0xFF, 0xFF)) as Brush;                         //
       cursorPen                   = new Pen(Color.DodgerBlue);                                                                  // --> Pens.DodgerBlue
-      cursorWithinWindow          = false;                                                                                      //
       cursorVisibility            = true;                                                                                       //
+      cursorWithinWindow          = false;                                                                                      //
       difficulty                  = 1.0f;                                                                                       //
-      fontFilePaths[0]            = "assets/fonts/riviera.otf";                                                                 //
+      fontFilePaths[0]            = "assets/fonts/panton.otf";                                                                  //
       fontFilePaths[1]            = "assets/fonts/randy-gg.ttf";                                                                //
       headingFont                 = SystemFonts.CaptionFont;                                                                    //
       helpPromptStates            = new State[] {State.MENU};                                                                   //
       helpPromptTexts             = new string[] {backPromptText};                                                              //
       keys                        = new List<Keys>();                                                                           //
-      menuFooter                  = "Made with \uD83D\uDC99 by LapysDev, 2023 \u00A9 Phyrnna";                                  //
-      menuPromptStates            = new State[] {State.GAMEPLAY, State.HELP, State.SETTINGS, State.TERMINATED};                 //
-      menuPromptTexts             = new string[] {"PLAY", "HOW TO PLAY", "SETTINGS", "EXIT"};                                   //
-      player                      = new Infantry(Point.Empty);                                                                  //
+      menuFooter                  = "Made with \uD83D\uDC99 by Lapys, 2023";                                                    //
+      menuPromptStates            = new State[] {State.GAMEPLAY, State.HELP, State.SETTINGS, State.CREDITS, State.TERMINATED};  //
+      menuPromptTexts             = new string[] {"PLAY", "HOW TO PLAY", "SETTINGS", "CREDITS", "EXIT"};                        //
+      players[0]                  = new Infantry(Point.Empty);                                                                  //
       promptBrush                 = new SolidBrush(Color.FromArgb(85, 0x33, 0x33, 0x33)) as Brush;                              //
       promptFontBrush             = new SolidBrush(Color.White);                                                                // --> Brushes.White
-      promptSelectionBrush        = new SolidBrush(Color.FromArgb(85, 0xCF, 0xCF, 0xCF)) as Brush;                              //
+      promptSelectionBrush        = new SolidBrush(Color.FromArgb(85,  0xCF, 0xCF, 0xCF)) as Brush;                             //
       renderControllerIconBrush   = new SolidBrush(Color.FromArgb(225, 0x00, 0x00, 0x00)) as Brush;                             //
       renderControllerIconPen     = new Pen(Color.DarkGray);                                                                    // --> Pens.DarkGray
+      renderControllerIcons       = new Image[] {null, null, null, null};                                                       //
       renderControllerPromptBrush = new SolidBrush(Color.FromArgb(225, 0xFF, 0xFF, 0xFF)) as Brush;                             //
       renderControllerPromptPen   = new Pen(Color.Transparent);                                                                 // --> Pens.Transparent
       renderControllerTitleBrush  = new SolidBrush(Color.White) as Brush;                                                       // --> Brushes.White
@@ -1384,10 +1481,8 @@ namespace Game {
       updateTimer                 = new Timer();                                                                                //
       updateTimestamp             = timestamp;                                                                                  //
       window                      = new Window();                                                                               //
-      windowBorderStyle           = window.FormBorderStyle;                                                                     //
       windowScreen                = Screen.FromControl(window);                                                                 //
       windowSize                  = (Int32) (Math.Min(windowScreen.WorkingArea.Height, windowScreen.WorkingArea.Width) * 0.8f); //
-      windowState                 = window.WindowState;                                                                         //
 
       for (int index = fontFamilies.Length | fontFilePaths.Length; 0 != index--; )
       try {
@@ -1402,26 +1497,31 @@ namespace Game {
         fontAllocation.Free();
       } catch (SystemException) {}
 
-      for (int index = renders.Length; 0 != index; )
-      renders[--index] = new Bitmap(windowScreen.Bounds.Width, windowScreen.Bounds.Height, PixelFormat.Format32bppPArgb);
+      for (int index = renders.Length; 0 != index--; )
+      renders[index] = new Bitmap(windowScreen.Bounds.Width, windowScreen.Bounds.Height, PixelFormat.Format32bppPArgb);
 
       foreach (string format in new string[] {"jpg", "jpeg", "jfif", "jpe", "jif", "jfi", "png", "bmp", "dib", "tiff", "tif", "gif"}) {
         try { renderFullscreenImage = Image.FromFile("assets/fullscreen." + format); break; }
         catch (FileNotFoundException) {} catch (OutOfMemoryException) { throw new OutOfMemoryException("Fullscreen background uses an invalid image format or unsupported pixel format"); }
       }
 
-      headingFontFamily                             = fontFamilies[0];
-      helpPromptBounds                              = new RectangleF[helpPromptTexts.Length];
-      menuPromptBounds                              = new RectangleF[menuPromptTexts.Length];
+      creditsPromptBounds  = new RectangleF[creditsPromptStates .Length | creditsPromptTexts .Length];
+      helpPromptBounds     = new RectangleF[helpPromptStates    .Length | helpPromptTexts    .Length];
+      menuPromptBounds     = new RectangleF[menuPromptStates    .Length | menuPromptTexts    .Length];
+      settingsPromptBounds = new RectangleF[settingsPromptStates.Length | settingsPromptTexts.Length];
+
+      headingFontFamily = fontFamilies[0];
+      textFontFamily    = fontFamilies[1];
+
       renderPostProcessorFullscreenRenderData       = new byte[windowScreen.Bounds.Height * windowScreen.Bounds.Width * sizeof(byte) * 4u];
       renderPostProcessorFullscreenRenderSubdata    = new byte[][] {new byte[renderPostProcessorFullscreenRenderData.Length], new byte[renderPostProcessorFullscreenRenderData.Length], new byte[renderPostProcessorFullscreenRenderData.Length]};
       renderPostProcessorFullscreenRenderAllocation = GCHandle.Alloc(renderPostProcessorFullscreenRenderData, GCHandleType.Pinned);
       renderPostProcessorFullscreenRender           = new Bitmap(windowScreen.Bounds.Width, windowScreen.Bounds.Height, windowScreen.Bounds.Width * sizeof(byte) * 4, PixelFormat.Format32bppPArgb, renderPostProcessorFullscreenRenderAllocation.AddrOfPinnedObject());
-      settingsPromptBounds                          = new RectangleF[settingsPromptTexts.Length];
-      textFontFamily                                = fontFamilies[1];
 
-      for (int index = menuPromptBounds.Length; 0 != index; )
-      menuPromptBounds[--index] = RectangleF.Empty;
+      for (int index = creditsPromptBounds .Length; 0 != index--; ) creditsPromptBounds [index] = RectangleF.Empty;
+      for (int index = helpPromptBounds    .Length; 0 != index--; ) helpPromptBounds    [index] = RectangleF.Empty;
+      for (int index = menuPromptBounds    .Length; 0 != index--; ) menuPromptBounds    [index] = RectangleF.Empty;
+      for (int index = settingsPromptBounds.Length; 0 != index--; ) settingsPromptBounds[index] = RectangleF.Empty;
 
       /* Modification > ... */
       Application.Idle += new EventHandler(Update);
@@ -1436,12 +1536,13 @@ namespace Game {
       window.FormBorderStyle = FormBorderStyle.FixedSingle;
       window.MaximizeBox     = false;
       window.MinimizeBox     = false;
-      window.KeyDown        += new KeyEventHandler  (delegate(object target, KeyEventArgs   arguments) { if (keys.Contains(arguments.KeyCode)) return; keys.Add(arguments.KeyCode);                 Input(null);              });
-      window.KeyUp          += new KeyEventHandler  (delegate(object target, KeyEventArgs   arguments) { int index = keys.IndexOf(arguments.KeyCode); if (index == -1) return;keys.RemoveAt(index); Input(arguments.KeyCode); });
-      window.MouseDown      += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { cursorActivated = true;  Input(null); });
-      window.MouseEnter     += new EventHandler     (delegate(object target, EventArgs      arguments) { cursorWithinWindow = true;  if (false != cursorVisibility) { cursorVisibility = false; Cursor.Hide(); } });
-      window.MouseLeave     += new EventHandler     (delegate(object target, EventArgs      arguments) { cursorWithinWindow = false; if (false == cursorVisibility) { cursorVisibility = true;  Cursor.Show(); } });
-      window.MouseMove      += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { cursorBound.Location = (PointF) arguments.Location; Input(null); });
+      window.KeyDown        += new KeyEventHandler  (delegate(object target, KeyEventArgs   arguments) { if (keys.Contains(arguments.KeyCode)) return; keys.Add(arguments.KeyCode);                  Input(null);                                                                                                                                                                                         });
+      window.KeyUp          += new KeyEventHandler  (delegate(object target, KeyEventArgs   arguments) { int index = keys.IndexOf(arguments.KeyCode); if (index == -1) return; keys.RemoveAt(index); Input(arguments.KeyCode);                                                                                                                                                                            });
+      window.MouseDown      += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { cursorActivated = true;  Input(null);                                                                                                                                                                                                                                                            });
+      window.MouseEnter     += new EventHandler     (delegate(object target, EventArgs      arguments) { cursorWithinWindow = true;  if (false != cursorVisibility) { cursorVisibility = false; Cursor.Hide(); }                                                                                                                                                                                          });
+      window.MouseLeave     += new EventHandler     (delegate(object target, EventArgs      arguments) { cursorWithinWindow = false; if (false == cursorVisibility) { cursorVisibility = true;  Cursor.Show(); }                                                                                                                                                                                          });
+      window.MouseMove      += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { Window targetWindow = target as Window; cursorBound.Location = (PointF) arguments.Location; cursorBound.X -= (targetWindow.ClientSize.Width - targetWindow.ViewportSize.Width) / 2.0f; cursorBound.Y -= (targetWindow.ClientSize.Height - targetWindow.ViewportSize.Height) / 2.0f; Input(null); });
+
       window.MouseUp        += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { cursorActivated = false; Input(null); });
       window.Paint          += new PaintEventHandler(Render);
       window.Size            = new Size(windowSize, windowSize);

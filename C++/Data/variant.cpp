@@ -66,16 +66,6 @@ struct variant final {
       static bool const value = false;
     };
 
-    // ...
-    template <std::size_t>
-    struct null final {};
-
-    // ...
-    template <std::size_t index>
-    struct typeat final {
-      typedef null<index> type;
-    };
-
     /* ... */
     constexpr variant() noexcept {}
 
@@ -135,17 +125,6 @@ struct variant<base, bases...> final {
     };
 
     // ...
-    template <std::size_t index, std::nullptr_t = nullptr>
-    struct typeat final {
-      typedef typename variant<bases...>::template typeat<index - 1u>::type type;
-    };
-
-    template <std::nullptr_t specialization>
-    struct typeat<0u, specialization> final {
-      typedef base type;
-    };
-
-    // ...
     struct variant_value final {
       base value;
     };
@@ -189,6 +168,9 @@ struct variant<base, bases...> final {
     #ifdef __circle_lang__
       template <typename type, typename std::enable_if<false == is_accessible<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept;
+
+      template <typename type, typename std::enable_if<false == is_accessible<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      constexpr operator type&&() const volatile noexcept;
     #endif
 
     // ...
@@ -201,6 +183,11 @@ struct variant<base, bases...> final {
       template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept {
         return (type&) this -> submember;
+      }
+
+      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      constexpr operator type&&() const volatile noexcept {
+        return (type&&) this -> submember;
       }
     #endif
 
@@ -222,6 +209,11 @@ struct variant<base, bases...> final {
       constexpr operator type&() const volatile noexcept {
         return (type&) this -> member.value;
       }
+
+      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      constexpr operator type&&() const volatile noexcept {
+        return (type&&) this -> member.value;
+      }
     #endif
 
     #ifndef _MSVC_LANG
@@ -239,7 +231,7 @@ int main(int, char*[]) /* noexcept */ {
   variant<int, double, void*> object       = {42};           // ->> active `int` member
 
   // ->> access most similar member by type
-  std::printf("[object]: %i %i" "\r\n", (int) object, object.operator int&());
+  std::printf("[object]: %i %i %i" "\r\n", (int) object, object.operator int&(), object.operator int&&());
 
   // ->> modify most similar member by type
   object = 1337;
