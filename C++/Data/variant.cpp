@@ -49,14 +49,14 @@ struct variant final {
     };
 
     // ...
-    template <template <typename, typename...> class, typename>
-    struct is_accessible final {
+    template <template <typename, typename...> class, typename, variant::access>
+    struct is_deferrable final {
       static bool const value = false;
     };
 
     // ...
-    template <template <typename, typename...> class, typename, variant::access>
-    struct is_deferrable final {
+    template <template <typename, typename...> class, typename>
+    struct is_evaluable final {
       static bool const value = false;
     };
 
@@ -101,15 +101,15 @@ struct variant<base, bases...> final {
     };
 
     // ...
-    template <template <typename, typename...> class trait, typename subbase>
-    struct is_accessible final {
-      static bool const value = variant<>::unfit != evaluate<trait, subbase>::value || variant<bases...>::template is_accessible<trait, subbase>::value;
-    };
-
-    // ...
     template <template <typename, typename...> class trait, typename subbase, variant<>::access evaluation = evaluate<trait, subbase>::value>
     struct is_deferrable final {
       static bool const value = (evaluation < evaluate<trait, subbase>::value) || variant<bases...>::template is_deferrable<trait, subbase, evaluation>::value;
+    };
+
+    // ...
+    template <template <typename, typename...> class trait, typename subbase>
+    struct is_evaluable final {
+      static bool const value = variant<>::unfit != evaluate<trait, subbase>::value || variant<bases...>::template is_evaluable<trait, subbase>::value;
     };
 
     // ...
@@ -142,15 +142,15 @@ struct variant<base, bases...> final {
       submember()
     {}
 
-    template <typename type, typename std::enable_if<false == is_accessible<variant<>::can_initialize, type>::value, std::nullptr_t>::type = nullptr>
+    template <typename type, typename std::enable_if<false == is_evaluable<variant<>::can_initialize, type>::value, std::nullptr_t>::type = nullptr>
     constexpr variant(type&&) noexcept = delete;
 
-    template <typename type, typename std::enable_if<is_accessible<variant<>::can_initialize, type>::value && false != is_deferrable<variant<>::can_initialize, type>::value, std::nullptr_t>::type = nullptr>
+    template <typename type, typename std::enable_if<is_evaluable<variant<>::can_initialize, type>::value && false != is_deferrable<variant<>::can_initialize, type>::value, std::nullptr_t>::type = nullptr>
     constexpr variant(type&& argument) noexcept :
       submember(std::forward<type>(argument))
     {}
 
-    template <typename type, typename std::enable_if<is_accessible<variant<>::can_initialize, type>::value && false == is_deferrable<variant<>::can_initialize, type>::value, std::nullptr_t>::type = nullptr>
+    template <typename type, typename std::enable_if<is_evaluable<variant<>::can_initialize, type>::value && false == is_deferrable<variant<>::can_initialize, type>::value, std::nullptr_t>::type = nullptr>
     constexpr variant(type&& argument) noexcept :
       member{(base) std::forward<type>(argument)}
     {}
@@ -162,62 +162,62 @@ struct variant<base, bases...> final {
     inline operator void() const volatile noexcept {}
 
     // ...
-    template <typename type, typename std::enable_if<false == is_accessible<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+    template <typename type, typename std::enable_if<false == is_evaluable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
     constexpr operator type() const volatile noexcept;
 
     #ifdef __circle_lang__
-      template <typename type, typename std::enable_if<false == is_accessible<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<false == is_evaluable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept;
 
-      template <typename type, typename std::enable_if<false == is_accessible<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<false == is_evaluable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&&() const volatile noexcept;
     #endif
 
     // ...
-    template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+    template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
     constexpr operator type() const volatile noexcept {
       return (type) this -> submember;
     }
 
     #ifdef __circle_lang__
-      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept {
         return (type&) this -> submember;
       }
 
-      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&&() const volatile noexcept {
         return (type&&) this -> submember;
       }
     #endif
 
     #ifndef _MSVC_LANG
-      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false != is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type() const noexcept {
         return (type) this -> submember;
       }
     #endif
 
     // ...
-    template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+    template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
     constexpr operator type() const volatile noexcept {
       return (type) this -> member.value;
     }
 
     #ifdef __circle_lang__
-      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept {
         return (type&) this -> member.value;
       }
 
-      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&&() const volatile noexcept {
         return (type&&) this -> member.value;
       }
     #endif
 
     #ifndef _MSVC_LANG
-      template <typename type, typename std::enable_if<is_accessible<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_evaluable<variant<>::can_cast, type>::value && false == is_deferrable<variant<>::can_cast, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type() const noexcept {
         return (type) this -> member.value;
       }

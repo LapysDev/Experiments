@@ -1,4 +1,4 @@
-/* Import --> del space-shooter.exe & cls && csc /NoWarn:0162,0164 /optimize /out:space-shooter.exe /r:System.Collections.dll /r:System.Drawing.Primitives.dll /r:System.Runtime.dll /r:System.Threading.Thread.dll /r:System.Windows.Forms.dll /t:exe space-shooter.cs && space-shooter.exe & del space-shooter.exe */
+/* Import --> del source.exe & cls && csc /NoWarn:0162,0164 /optimize /out:source.exe /r:System.Collections.dll /r:System.Drawing.Primitives.dll /r:System.Runtime.dll /r:System.Threading.Thread.dll /r:System.Windows.Forms.dll /t:exe source.cs && source.exe & del source.exe */
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -18,7 +18,7 @@ using Timer = System.Windows.Forms.Timer;
 namespace Game {
   class Game {
     /* Class */
-      /* ... */
+      /* ... ->> see `EnumerateDisplaySettings(…)` */
       [StructLayout(LayoutKind.Sequential)]
       private struct DEVMODE {
         public static ulong ENUM_CURRENT_SETTINGS  = unchecked((ulong) -1);
@@ -65,7 +65,27 @@ namespace Game {
 
       /* Entity */
       private class Entity {
+        public sealed class EntityCoordinates {
+          private PointF coordinates;
+          public float   X { get { return coordinates.X; } set { coordinates.X = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
+          public float   Y { get { return coordinates.Y; } set { coordinates.Y = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } }
+
+          // ...
+          public EntityCoordinates(float x, float y) {
+            this.coordinates = new PointF(0.0f, 0.0f);
+            this.X           = x;
+            this.Y           = y;
+          }
+        };
+
+        public enum MoveDirection : byte {
+          Forward,
+          Reverse
+        };
+
+        // ...
         public    const           uint   BaseHealth = 0u;
+        public    const           float  BaseSize   = 0.0f;
         protected readonly static Random Randomizer = new Random();
 
         protected float acceleration;
@@ -73,43 +93,68 @@ namespace Game {
         protected float size;
         protected float speed;
 
-        public Point Coordinates;
-        public uint  Health;
-        public float MaximumSpeed;
-        public float Acceleration { get { return acceleration; } set { acceleration = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
-        public float Rotation     { get { return rotation;     } set { rotation     = (value < 0.0f ? (float) (Math.PI * 2.0f) + value : value) % (float) (Math.PI * 2.0f); } }
-        public float Size         { get { return size;         } set { size         = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
-        public float Speed        { get { return speed;        } set { speed        = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
+        public EntityCoordinates Coordinates;
+        public MoveDirection     Direction;
+        public uint              Health;
+        public float             MaximumSpeed;
+        public bool              Moving;
+        public float             Acceleration { get { return acceleration; } set { acceleration = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
+        public float             Rotation     { get { return rotation;     } set { rotation     = (value < 0.0f ? (float) (Math.PI * 2.0f) + value : value) % (float) (Math.PI * 2.0f); } }
+        public float             Size         { get { return size;         } set { size         = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
+        public float             Speed        { get { return speed;        } set { speed        = (value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value);                                  } }
 
         // ...
-        public Entity(Point coordinates, float size) {
+        public Entity(PointF coordinates, float size) {
           this.Acceleration = 0.0f;
-          this.Coordinates  = Point.Empty == coordinates ? new Point(0, 0) : coordinates;
+          this.Coordinates  = new EntityCoordinates(coordinates.X, coordinates.Y);
           this.Health       = 0u;
           this.MaximumSpeed = 0.0f;
+          this.Moving       = false;
           this.Rotation     = (float) (Math.PI * Entity.Randomizer.NextDouble() * 2.0f);
           this.Size         = size;
           this.Speed        = 0.0f;
         }
 
-        // ...
-        public SizeF GetComputedSize(SizeF size) {
+        public RectangleF GetComputedBounds(Size size) {
+          return new RectangleF(this.GetComputedCoordinates(size), this.GetComputedSize(size));
+        }
+
+        public PointF GetComputedCoordinates(Size size) {
+          return new PointF(this.Coordinates.X * size.Width, this.Coordinates.Y * size.Height);
+        }
+
+        public SizeF GetComputedSize(Size size) {
           return new SizeF(this.Size * size.Width, this.Size * size.Height);
+        }
+
+        public SizeF GetMovementSlope() {
+          if (this.Rotation >= Math.PI * 0.0f && this.Rotation <= Math.PI * 0.5f) { float rotation = (float) (this.Rotation * (180.0f / Math.PI)) % 90.0f; return new SizeF(+(0.0f + (rotation / 90.0f)), -(1.0f - (rotation / 90.0f))); }
+          if (this.Rotation >= Math.PI * 0.5f && this.Rotation <= Math.PI * 1.0f) { float rotation = (float) (this.Rotation * (180.0f / Math.PI)) % 90.0f; return new SizeF(+(1.0f - (rotation / 90.0f)), +(0.0f + (rotation / 90.0f))); }
+          if (this.Rotation >= Math.PI * 1.0f && this.Rotation <= Math.PI * 1.5f) { float rotation = (float) (this.Rotation * (180.0f / Math.PI)) % 90.0f; return new SizeF(-(0.0f + (rotation / 90.0f)), +(1.0f - (rotation / 90.0f))); }
+          if (this.Rotation >= Math.PI * 1.5f && this.Rotation <= Math.PI * 2.0f) { float rotation = (float) (this.Rotation * (180.0f / Math.PI)) % 90.0f; return new SizeF(-(1.0f - (rotation / 90.0f)), -(0.0f + (rotation / 90.0f))); }
+
+          return SizeF.Empty;
+        }
+
+        public void Move(MoveDirection direction) {
+          this.Direction = direction;
+          this.Moving    = true;
+          this.Speed     = this.Speed + this.Acceleration < this.MaximumSpeed ? this.Speed + this.Acceleration : this.MaximumSpeed;
         }
       };
         /* Item */
         private class Item : Entity {
-          public Item(Point coordinates, float size) :
+          public Item(PointF coordinates, float size) :
             base(coordinates, size)
           {}
         };
           /* Asteroid */
           private sealed class Asteroid : Item {
             new public const uint  BaseHealth = 75u;
-            public     const float BaseSize   = 0.0300f;
+            new public const float BaseSize   = 0.0300f;
 
             // ...
-            public Asteroid(Point coordinates, float size) :
+            public Asteroid(PointF coordinates, float size) :
               base(coordinates, size)
             {
               this.Acceleration = 0.001f + (Asteroid.BaseSize / size);
@@ -117,7 +162,7 @@ namespace Game {
               this.MaximumSpeed = 0.050f;
             }
 
-            public Asteroid(Point coordinates) :
+            public Asteroid(PointF coordinates) :
               this(coordinates, Asteroid.BaseSize + (float) (Entity.Randomizer.NextDouble() * 0.1000f))
             {}
           };
@@ -139,10 +184,11 @@ namespace Game {
             };
 
             // ...
-            BonusType Type;
+            new public const float BaseSize = 0.0500f;
+            public BonusType Type;
 
             // ...
-            public Bonus(Point coordinates, BonusType type) :
+            public Bonus(PointF coordinates, BonusType type) :
               base(coordinates, 0.0300f)
             {
               this.Acceleration = 0.01f;
@@ -153,7 +199,9 @@ namespace Game {
 
         /* Unit */
         private class Unit : Entity {
+          new public const       float    BaseSize    = 0.0600f;
           public readonly static TimeSpan OffenseRate = TimeSpan.Zero;
+
           protected float defense;
 
           public List<Unit> Clones;                                                                                                  // --> Bonus.CLONE
@@ -164,10 +212,10 @@ namespace Game {
           public TimeSpan   OffenseTimestamp;                                                                                        //
           public uint       Shield;                                                                                                  // --> Bonus.DEFENSE
           public float      Defense { get { return defense; } set { defense = value > 0.0f ? value < 1.0f ? value : 1.0f : 0.0f; } } // ->> Proportion damage is reduced by
-          public Image      Render  { get; protected set;                                                                          } //
+          public Bitmap     Render  { get; protected set;                                                                          } //
 
           // ...
-          public Unit(Point coordinates, float size) :
+          public Unit(PointF coordinates, float size) :
             base(coordinates, size)
           {
             this.Clones           = new List<Unit>();
@@ -181,12 +229,12 @@ namespace Game {
             this.Shield           = 0u;
           }
         };
-          /* Alien */
+          /* Alien ->> Designs based on biological life */
           private class Alien : Unit {
             public float LineOfSight; // ->> Frustum representing fog-of-war
 
             // ...
-            public Alien(Point coordinates, float size) :
+            public Alien(PointF coordinates, float size) :
               base(coordinates, size)
             {
               this.LineOfSight = (float) Math.PI / 5.0f;
@@ -199,21 +247,23 @@ namespace Game {
               new public readonly bool Infectious = true;
 
               // ...
-              public Carrier(Point coordinates, byte stage) :
+              public Carrier(PointF coordinates) :
                 base(coordinates, 0.03500f)
               {
+                this.Acceleration     = 0.0001f;
                 this.Health           = Carrier.BaseHealth;
                 this.LineOfSight      = (float) Math.PI * 2.0f;
+                this.MaximumSpeed     = 0.0050f;
                 this.Offense          = 3u;
                 this.OffenseTimestamp = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 500L);
-                this.Render           = Image.FromFile("assets/entities/aliens/carrier.png");
+                this.Render           = Image.FromFile("assets/entities/aliens/carrier.png") as Bitmap;
               }
             };
 
             /* Globule ->> Semi-solid melee parasite */
             private class Globule : Alien {
               new public const           uint     BaseHealth  = 30u;
-              public     const           float    BaseSize    = 0.0400f;
+              new public const           float    BaseSize    = 0.0400f;
               new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 800L);
 
               protected float cojoinTendency;
@@ -224,23 +274,26 @@ namespace Game {
               public float     CojoinTendency      { get { return cojoinTendency;                        } set { cojoinTendency      = value > 1.0f ? 1.0f : value;                                      } } // ->> Tendency to join allied `Globule` via mitosis
               public float     DetachDodgeTendency { get { return detachDodgeTendency;                   } set { detachDodgeTendency = value > 1.0f ? 1.0f : value;                                      } } // ->> Tendency to dodge visible enemy fire via meiosis
               new public float LineOfSight         { get { return (float) Math.PI / (5.0f - this.Stage); }                                                                                                 } //
+              public float[]   Rotations           { get { return new float[] {this.Rotation * 1.00f, this.Rotation * 0.75f, this.Rotation * 0.50f, this.Rotation * 0.25f}; }                              } //
               new public float Size                { get { return size / Globule.BaseSize;               } set { size                = value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;                } } //
               public byte      Stage               { get { return stage;                                 } set { stage               = (byte) (value > 0u ? value < 5u ? value : 4u : 1u); size = stage; } } // ->> Number of co-joined `Globule`s
               public float     ThrowTendency       { get { return throwTendency;                         } set { throwTendency       = value > 1.0f ? 1.0f : value;                                      } } // ->> Tendency to lunge at enemies via meiosis
 
               // ...
-              public Globule(Point coordinates, byte stage) :
+              public Globule(PointF coordinates, byte stage) :
                 base(coordinates, 1.0f)
               {
+                this.Acceleration        = 0.0050f;
                 this.Defense             = 0.01f;
                 this.DetachDodgeTendency = difficulty / 6.0f;
                 this.Health              = Globule.BaseHealth;
+                this.MaximumSpeed        = 0.0050f;
                 this.Offense             = 10u;
                 this.Stage               = stage;
                 this.ThrowTendency       = (float) Entity.Randomizer.NextDouble() * (difficulty / 3.5f);
               }
 
-              public Globule(Point coordinates) :
+              public Globule(PointF coordinates) :
                 this(coordinates, (byte) Entity.Randomizer.Next(1, (int) difficulty))
               {}
             };
@@ -254,12 +307,14 @@ namespace Game {
               new public readonly uint  Shield      = 0u;
 
               // ...
-              public Kamikaze(Point coordinates) :
+              public Kamikaze(PointF coordinates) :
                 base(coordinates, 0.0400f)
               {
-                this.Health  = Kamikaze.BaseHealth;
-                this.Offense = 30u;
-                this.Render  = Image.FromFile("assets/entities/aliens/kamikaze.png");
+                this.Acceleration = 0.0003f;
+                this.Health       = Kamikaze.BaseHealth;
+                this.MaximumSpeed = 0.0080f;
+                this.Offense      = 30u;
+                this.Render       = Image.FromFile("assets/entities/aliens/kamikaze.png") as Bitmap;
               }
             };
 
@@ -269,18 +324,20 @@ namespace Game {
               new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 1650L);
 
               // ...
-              public ManOWar(Point coordinates) :
+              public ManOWar(PointF coordinates) :
                 base(coordinates, 0.0600f)
               {
-                this.Defense = 0.35f;
-                this.Health  = ManOWar.BaseHealth;
-                this.Offense = 20u;
-                this.Render  = Image.FromFile("assets/entities/aliens/man-o'-war.png");
-                this.Shield  = 15u;
+                this.Acceleration = 0.0035f;
+                this.Defense      = 0.35f;
+                this.Health       = ManOWar.BaseHealth;
+                this.MaximumSpeed = 0.0035f;
+                this.Offense      = 20u;
+                this.Render       = Image.FromFile("assets/entities/aliens/man-o'-war.png") as Bitmap;
+                this.Shield       = 15u;
               }
             };
 
-          /* Ship */
+          /* Ship ->> Designs based on paper airplanes */
           private class Ship : Unit {
             public enum WeaponType : byte {
               BOUNCE,  // ->> Interactable bullets
@@ -297,14 +354,16 @@ namespace Game {
             public readonly static TimeSpan DeployRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 900L);
 
             public TimeSpan   DeployTimestamp;
+            public bool       Spawning;
             public WeaponType Weapon;
 
             // ...
-            public Ship(Point coordinates, float size) :
+            public Ship(PointF coordinates, float size) :
               base(coordinates, size)
             {
               this.DeployTimestamp = TimeSpan.Zero;
               this.Rotation        = 0.0f;
+              this.Spawning        = false;
               this.Weapon          = Ship.WeaponType.STANDARD;
             }
           };
@@ -313,12 +372,14 @@ namespace Game {
               new public const           uint     BaseHealth  = 250u;
               new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 200L);
 
-              public Artillery(Point coordinates) :
+              public Artillery(PointF coordinates) :
                 base(coordinates, 0.0675f)
               {
-                this.Health  = Artillery.BaseHealth;
-                this.Offense = 40u;
-                this.Render  = Image.FromFile("assets/entities/ships/artillery.png");
+                this.Acceleration = 0.0005f;
+                this.Health       = Artillery.BaseHealth;
+                this.MaximumSpeed = 0.0075f;
+                this.Offense      = 40u;
+                this.Render       = Image.FromFile("assets/entities/ships/artillery.png") as Bitmap;
               }
             };
 
@@ -331,13 +392,15 @@ namespace Game {
               public TimeSpan DashTimestamp;
 
               // ...
-              public Infantry(Point coordinates) :
+              public Infantry(PointF coordinates) :
                 base(coordinates, 0.0500f)
               {
+                this.Acceleration  = 0.00020f;
                 this.DashTimestamp = TimeSpan.Zero;
                 this.Health        = Infantry.BaseHealth;
+                this.MaximumSpeed  = 0.00100f;
                 this.Offense       = 20u;
-                this.Render        = Image.FromFile("assets/entities/ships/infantry.png");
+                this.Render        = Image.FromFile("assets/entities/ships/infantry.png") as Bitmap;
               }
             };
 
@@ -350,12 +413,14 @@ namespace Game {
               public TimeSpan StealthTimestamp;
 
               // ...
-              public Rogue(Point coordinates) :
+              public Rogue(PointF coordinates) :
                 base(coordinates, 0.0400f)
               {
+                this.Acceleration     = 0.00040f;
                 this.Health           = Rogue.BaseHealth;
+                this.MaximumSpeed     = 0.00150f;
                 this.Offense          = 10u;
-                this.Render           = Image.FromFile("assets/entities/ships/rogue.png");
+                this.Render           = Image.FromFile("assets/entities/ships/rogue.png") as Bitmap;
                 this.StealthTimestamp = TimeSpan.Zero;
               }
             };
@@ -366,11 +431,13 @@ namespace Game {
                 new public const           uint     BaseHealth  = 13u;
                 new public readonly static TimeSpan OffenseRate = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 900L);
 
-                public Drone(Point coordinates) :
+                public Drone(PointF coordinates) :
                   base(coordinates, 0.0300f)
                 {
-                  this.Health = Drone.BaseHealth;
-                  this.Render = Image.FromFile("assets/entities/ships/swarm-drone.png");
+                  this.Acceleration = 0.00133f;
+                  this.Health       = Drone.BaseHealth;
+                  this.MaximumSpeed = 0.00133f;
+                  this.Render       = Image.FromFile("assets/entities/ships/swarm-drone.png") as Bitmap;
                 }
               };
 
@@ -383,17 +450,19 @@ namespace Game {
               public TimeSpan    SpawnTimestamp;
 
               // ...
-              public Swarm(Point coordinates) :
+              public Swarm(PointF coordinates) :
                 base(coordinates, 0.0350f)
               {
+                this.Acceleration   = 0.00020f;
                 this.Carriers       = new List<Drone>();
                 this.Health         = Swarm.BaseHealth;
-                this.Render         = Image.FromFile("assets/entities/ships/swarm.png");
+                this.MaximumSpeed   = 0.00080f;
+                this.Render         = Image.FromFile("assets/entities/ships/swarm.png") as Bitmap;
                 this.SpawnTimestamp = TimeSpan.Zero;
 
-                this.Carriers.Add(new Drone(Point.Empty));
-                this.Carriers.Add(new Drone(Point.Empty));
-                this.Carriers.Add(new Drone(Point.Empty));
+                this.Carriers.Add(new Drone(PointF.Empty));
+                this.Carriers.Add(new Drone(PointF.Empty));
+                this.Carriers.Add(new Drone(PointF.Empty));
               }
             };
 
@@ -406,7 +475,7 @@ namespace Game {
 
           // ...
           public StarCoordinates(float x, float y) {
-            this.coordinates = new PointF(0.0f, 0.0f); // ->> not `PointF.Empty`
+            this.coordinates = new PointF(0.0f, 0.0f);
             this.X           = x;
             this.Y           = y;
           }
@@ -470,9 +539,10 @@ namespace Game {
       /* Window */
       public sealed class Window : Form {
         private FormBorderStyle borderStyle;
-        private Screen          screen;
         private FormWindowState windowState;
-        public  Size            ViewportSize { get; private set; }
+
+        public  Screen Screen       { get; private set; }
+        public  Size   ViewportSize { get; private set; }
 
         // ...
         public Window() :
@@ -480,8 +550,8 @@ namespace Game {
         {
           this.ClientSizeChanged += new EventHandler(delegate(object target, EventArgs arguments) { this.UpdateViewportSize(this.ClientSize); });
           this.DoubleBuffered     = true;
-          this.ResizeEnd         += new EventHandler(delegate(object target, EventArgs arguments) { this.screen = Screen.FromControl(target as Window); });
-          this.screen             = Screen.FromControl(this);
+          this.ResizeEnd         += new EventHandler(delegate(object target, EventArgs arguments) { this.Screen = Screen.FromControl(target as Window); });
+          this.Screen             = Screen.FromControl(this);
 
           this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.DoubleBuffer | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
           this.UpdateViewportSize(this.ClientSize);
@@ -510,7 +580,7 @@ namespace Game {
           this.FormBorderStyle = FormBorderStyle.None;
           this.WindowState     = FormWindowState.Maximized;
 
-          this.UpdateViewportSize(this.screen.Bounds.Size);
+          this.UpdateViewportSize(this.Screen.Bounds.Size);
         }
 
         private void UpdateViewportSize(Size size) {
@@ -526,10 +596,12 @@ namespace Game {
     private static bool            cursorActivated;                               // ->> Mouse pointer activation state by user
     private static RectangleF      cursorBound;                                   // ->> Mouse pointer bounds in game window --- UPDATE (Lapys) -> Normalize for window viewport, instead
     private static Brush           cursorBrush;                                   // ->> Mouse pointer fill
+    private static bool            cursorClicked;                                 // ->> Mouse pointer click state by user (unrelated to system click speed)
     private static Pen             cursorPen;                                     // ->> Mouse pointer secondary fill
     private static bool            cursorVisibility;                              // ->> Mouse pointer visibility
     private static bool            cursorWithinWindow;                            // ->> Mouse pointer intersection with game window
     private static float           difficulty;                                    // ->> Stats. calculator
+    private static List<Unit>      enemies;                                       // ->> ...
     private static ulong           focusIndex;                                    // ->> UI focus index
     private static bool            focusIndexed;                                  // ->> UI focus is active
     private static Font            headingFont;                                   // ->> Game heading UI fallback font
@@ -542,6 +614,11 @@ namespace Game {
     private static RectangleF[]    menuPromptBounds;                              // ->> Game menu prompts bound
     private static State[]         menuPromptStates;                              // ->> Game menu prompts game state
     private static string[]        menuPromptTexts;                               // ->> Game menu prompts text
+    private static RectangleF[]    pausePromptBounds;                             // ->> Game pause prompts bound
+    private static State[]         pausePromptStates;                             // ->> Game pause prompts game state
+    private static string[]        pausePromptTexts;                              // ->> Game pause prompts text
+    private static bool[]          playerRequests;                                // ->> Pending request to spawn player via `Input(…)`
+    private static Unit[]          players;                                       // ->> ...
     private static Brush           promptBrush;                                   // ->> Game prompts fill
     private static Brush           promptFontBrush;                               // ->> Game prompts font fill
     private static Brush           promptSelectionBrush;                          // ->> Game prompts selection fill
@@ -557,6 +634,7 @@ namespace Game {
     private static Pen             renderFullscreenPen;                           // ->> Fullscreen graphic border
     private static byte            renderIndex;                                   // ->> Multiple-buffering index
     private static Thread          renderPostProcessor;                           // ->> Background processor to handle strenuous synchronous image effects processing & filtering
+    private static bool            renderPostProcessorLocked;                     // ->> Background processor mutually-exclusive lock
     private static Bitmap          renderPostProcessorFullscreenRender;           // ->> Fullscreen graphic
     private static GCHandle        renderPostProcessorFullscreenRenderAllocation; // ->> Fullscreen graphic allocated render data
     private static BitmapData      renderPostProcessorFullscreenRenderBitmapData; // ->> Fullscreen graphic `BitmapData` for bit-block transferring from the main render
@@ -578,14 +656,13 @@ namespace Game {
     private static string          title;                                         // ->> Game title
     private static TimeSpan        updateDelta;                                   // ->> Time between each `Update(…)`
     private static TimeSpan        updateTimestamp;                               // ->> Time till next `Update(…)`
+    private static string[]        waveDescriptions;                              // ->> Level description
+    private static string[]        waveHeadings;                                  // ->> Level name
+    private static Type[][]        waveEnemySpawns;                               // ->> Hard-coded enemy spawn for first set of levels
+    private static TimeSpan        waveMessageDelta;                              // ->> Time for wave description & heading to display
+    private static TimeSpan        waveMessageTimestamp;                          // ->> Time till wave description & heading disappear
+    private static ulong           waveIndex;                                     // ->> Current level
     private static Window          window;                                        // ->> Game window
-
-    private static Unit[] players = {
-      null, // ->> Keyboard ⌨
-      null, // ->> Mouse    🖱️
-      null, // ->> Gamepad  🎮
-      null  // ->> Touch    👆
-    };
 
     /* Function > ... */
     [DllImport("user32.dll",
@@ -613,24 +690,29 @@ namespace Game {
     }
 
     private static float GetPlayersOverallRotation() {
+      byte  count    = GetPlayerCount();
       float rotation = 0.0f;
 
       // ...
       foreach (Unit player in players)
       rotation += null != player ? player.Rotation : 0.0f;
 
-      return rotation / GetPlayerCount();
+      return rotation / (0u == count ? 1u : count);
+    }
+
+    private static void PauseGame() {
+      state |= State.PAUSED;
     }
 
     private static void PostProcessRender() {
       /* ... ->> Post-process fullscreen background: Gaussian blur */
       while (0x00u == (byte) (state & State.TERMINATED))
-      if (null != renderPostProcessorFullscreenRenderBitmapData) {
+      if (false == renderPostProcessorLocked) {
         int        renderPostProcessorFullscreenRenderWidth  = renderPostProcessorFullscreenRender.Width;  // ->> Ideally `renderPostProcessorFullscreenRender` is still unused at this point
         int        renderPostProcessorFullscreenRenderHeight = renderPostProcessorFullscreenRender.Height; // ->> Ideally `renderPostProcessorFullscreenRender` is still unused at this point
         ulong[]    colorSum                                  = {0uL, 0uL, 0uL, 0uL};
-        byte []    colorAverage                              = {(byte) 0u, (byte) 0u, (byte) 0u, (byte) 0u};
-        byte []    blurVerticalData                          = renderPostProcessorFullscreenRenderSubdata[2];
+        byte[]     colorAverage                              = {(byte) 0u, (byte) 0u, (byte) 0u, (byte) 0u};
+        byte[]     blurVerticalData                          = renderPostProcessorFullscreenRenderSubdata[2];
         float      blurMedian                                = 0.0f;
         const uint blurIntensity                             = 5u;
         byte[]     blurHorizontalData                        = renderPostProcessorFullscreenRenderSubdata[1];
@@ -758,22 +840,25 @@ namespace Game {
       }
     }
 
-    private static void RequestControllerIcons() {
-      if (null == renderControllerIcons[0]) try { renderControllerIcons[0] = Image.FromFile("assets/controls/keyboard.png"); } catch (SystemException) {}
-      if (null == renderControllerIcons[1]) try { renderControllerIcons[1] = Image.FromFile("assets/controls/mouse.png");    } catch (SystemException) {}
-      if (null == renderControllerIcons[2]) try { renderControllerIcons[2] = Image.FromFile("assets/controls/gamepad.png");  } catch (SystemException) {}
-      if (null == renderControllerIcons[3]) try { renderControllerIcons[3] = Image.FromFile("assets/controls/touch.png");    } catch (SystemException) {}
-    }
-
     private static void ResetFocusIndex() {
       focusIndex   = UInt64.MaxValue;
       focusIndexed = false;
     }
 
     private static void SetGameState(State gameState) {
-      if (0x00u != (byte) (gameState & State.PAUSED))     state |= State.PAUSED;
-      if (0x00u != (byte) (gameState & State.TERMINATED)) Terminate();
+      if (0x00u != (byte) (gameState & State.PAUSED)) {
+        ResetFocusIndex();
+        state = 0x00u == (byte) (state & State.PAUSED) ? (state | State.PAUSED) : (state & ~State.PAUSED);
 
+        return;
+      }
+
+      if (0x00u != (byte) (gameState & State.TERMINATED)) {
+        Terminate();
+        return;
+      }
+
+      // ...
       foreach (State value in Enum.GetValues(typeof(State)))
       if (0x00u != (byte) (gameState & value) && 0x00u == (byte) (state & value)) {
         ResetFocusIndex();
@@ -781,17 +866,63 @@ namespace Game {
       }
     }
 
+    private static void UnpauseGame() {
+      state &= ~State.PAUSED;
+    }
+
     /* ... */
-    public static void Input(Keys? releasedKey) {
+    public static void Input(Window window, Keys? releasedKey) {
+      Size         windowViewportSize  = window.ViewportSize;
       State        selectedPromptState = (State) (byte) 0x00u;
       State[]      promptStates        = {selectedPromptState};
       RectangleF[] promptBounds        = {RectangleF.Empty};
+      bool[]       playerRequested     = new bool[playerRequests.Length];
 
       // ...
       if (0x00u != (byte) (state & State.CREDITS))  { promptBounds = creditsPromptBounds;  promptStates = creditsPromptStates;  }
       if (0x00u != (byte) (state & State.HELP))     { promptBounds = helpPromptBounds;     promptStates = helpPromptStates;     }
+      if (0x00u != (byte) (state & State.PAUSED))   { promptBounds = pausePromptBounds;    promptStates = pausePromptStates;    }
       if (0x00u != (byte) (state & State.MENU))     { promptBounds = menuPromptBounds;     promptStates = menuPromptStates;     }
       if (0x00u != (byte) (state & State.SETTINGS)) { promptBounds = settingsPromptBounds; promptStates = settingsPromptStates; }
+
+      // ... ->> Player input
+      if (0x00u != (byte) (state & State.GAMEPLAY) && 0x00u == (byte) (state & State.PAUSED)) {
+        for (int index = playerRequested.Length; 0 != index--; )
+        playerRequested[index] = false;
+
+        if (0x00u != (byte) (state & State.GAMEPLAY)) {
+          playerRequested[0] = 0 != keys.Count;
+          playerRequested[1] = cursorActivated;
+        }
+
+        for (int index = playerRequested.Length; 0 != index--; )
+        if (playerRequested[index] && false == playerRequests[index]) {
+          Infantry player = new Infantry(new PointF(0.5f, 1.0f));
+
+          // ...
+          player.Spawning       = true;
+          players       [index] = player;
+          playerRequests[index] = true;
+        }
+
+        if (null != players[0]) {
+          Infantry player = players[0] as Infantry;
+
+          // ...
+          if (false == player.Spawning)
+          foreach (Keys key in keys)
+          switch (key) {
+            // ... ->> Keyboard player movement
+            case Keys.Down : case Keys.S: player.Move(Entity.MoveDirection.Reverse);            break;
+            case Keys.Left : case Keys.A: player.Rotation -= 5.0f * ((float) Math.PI / 180.0f); break;
+            case Keys.Right: case Keys.D: player.Rotation += 5.0f * ((float) Math.PI / 180.0f); break;
+            case Keys.Up   : case Keys.W: player.Move(Entity.MoveDirection.Forward);            break;
+
+            // ... ->> Keyboard player fire
+            case Keys.OemPeriod: case Keys.X: break;
+          }
+        }
+      }
 
       // ... ->> Key input
       switch (releasedKey) {
@@ -809,8 +940,10 @@ namespace Game {
 
         // ... ->> Quit the game
         case Keys.Escape: {
-          if (0x00u != (byte) (state & State.MENU))       Terminate();
-          if (0x00u == (byte) (state & State.TERMINATED)) SetGameState(State.MENU);
+          if      (0x00u != (byte) (state & State.MENU))     Terminate();
+          else if (0x00u != (byte) (state & State.PAUSED))   UnpauseGame();
+          else if (0x00u != (byte) (state & State.GAMEPLAY)) PauseGame();
+          else                                               SetGameState(State.MENU);
         } return;
 
         // ... ->> Toggle game fullscreen
@@ -831,24 +964,19 @@ namespace Game {
           }
         } break;
 
-        // ... ->> Keyboard player fire
-        case Keys.OemPeriod: case Keys.X: break;
-      }
-
-      foreach (Keys key in keys)
-      switch (key) {
         // ... ->> Keyboard player movement
-        case Keys.Down : case Keys.S: break;
-        case Keys.Left : case Keys.A: break;
-        case Keys.Right: case Keys.D: break;
-        case Keys.Up   : case Keys.W: break;
+        case Keys.Down: case Keys.S:
+        case Keys.Up  : case Keys.W: {
+          if (null != players[0])
+          players[0].Moving = keys.Contains(Keys.Down) || keys.Contains(Keys.S) || keys.Contains(Keys.Up) || keys.Contains(Keys.W);
+        } break;
 
         // ... ->> Keyboard player fire
         case Keys.OemPeriod: case Keys.X: break;
       }
 
       // ... ->> Mouse input
-      if (cursorActivated) {
+      if (cursorClicked) {
         // ... ->> Select UI prompt
         for (int index = promptBounds.Length; 0 != index--; )
         if (cursorBound.IntersectsWith(promptBounds[index])) {
@@ -862,8 +990,7 @@ namespace Game {
       SetGameState(selectedPromptState);
     }
 
-    public static void Render(object target, PaintEventArgs arguments) {
-      Window   window             = target as Window;
+    public static void Render(Window window, PaintEventArgs arguments) {
       Size     windowViewportSize = window.ViewportSize;
       TimeSpan timestamp          = TimeSpan.FromTicks(DateTime.Now.Ticks);
       bool     rerender           = renderDelta <= timestamp - renderTimestamp;
@@ -892,10 +1019,10 @@ namespace Game {
         float       starsRotationSine             = (float) Math.Sin(starsRotation);
         float       starsRotationCosine           = (float) Math.Cos(starsRotation);
         SizeF       promptsSize                   = new SizeF(windowViewportSize.Height * 0.8f, windowViewportSize.Width * 0.9f);
-        const float promptsTextMinimumFontSize    = 8.0f;
-        float       promptsTextFontSize           = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 3.5f);
-        const float promptsHeadingMinimumFontSize = 10.0f;
-        float       promptsHeadingFontSize        = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 3.0f);
+        const float promptsTextMinimumFontSize    = 6.0f;
+        float       promptsTextFontSize           = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 3.0f);
+        const float promptsHeadingMinimumFontSize = 8.0f;
+        float       promptsHeadingFontSize        = Math.Min(promptsSize.Height, promptsSize.Width) * (0.1f / 2.5f);
         PointF      promptsCoordinates            = new PointF((windowViewportSize.Width - promptsSize.Width) / 2.0f, (windowViewportSize.Height - promptsSize.Height) / 2.0f);
         Font        promptTextFont                = null == textFontFamily    ? new Font(textFont   .Name, promptsTextFontSize)    : new Font(textFontFamily,    promptsTextFontSize);
         Font        promptHeadingFont             = null == headingFontFamily ? new Font(headingFont.Name, promptsHeadingFontSize) : new Font(headingFontFamily, promptsHeadingFontSize);
@@ -949,7 +1076,7 @@ namespace Game {
           starBrush.Dispose();
         }
 
-        // ...
+        // ... ->> Draw Credits, Help, and Settings UI
         if (0x00u != (byte) (state & (State.CREDITS | State.HELP | State.SETTINGS))) {
           RectangleF backPromptBound        = RectangleF.Empty;
           Font       backPromptFont         = promptHeadingFont;
@@ -970,10 +1097,10 @@ namespace Game {
             backPromptSelected = focusIndexed && 0uL == focusIndex % (ulong) creditsPromptBounds.Length;
             backPromptText     = creditsPromptTexts[0];
             messages           = new string[] {
-              "Gameplay",      "Lapys",
-              "Graphics",      "Lapys",
-              "Sound Effects", "Lapys",
-              "Music Tracks",  "Phyrnna"
+              "Gameplay",      "Lapys\n\n",
+              "Graphics",      "Lapys\n\n",
+              "Sound Effects", "Lapys\n\n",
+              "Music Tracks",  "Phyrnna\n\n"
             };
           }
 
@@ -992,6 +1119,9 @@ namespace Game {
           if (0x00u != (byte) (state & State.SETTINGS)) {
             backPromptSelected = focusIndexed && 0uL == focusIndex % (ulong) settingsPromptBounds.Length;
             backPromptText     = settingsPromptTexts[0];
+            messages           = new string[] {
+              String.Empty, "To be developed\u2026"
+            };
           }
 
           // ...
@@ -1005,9 +1135,9 @@ namespace Game {
               SizeF messageSize = renderGraphics.MeasureString(message, messageFont, promptsSize);
 
               // ...
-              messagesWidth    = messagesWidth > messageSize.Width ? messagesWidth : messageSize.Width;
-              messagesHeight  += messageSize.Height;
               messageIsHeading = false == messageIsHeading;
+              messagesHeight  += messageSize.Height;
+              messagesWidth    = messagesWidth > messageSize.Width ? messagesWidth : messageSize.Width;
             }
 
             messagesY = promptsCoordinates.Y + ((promptsSize.Height - messagesHeight) / 2.0f);
@@ -1023,16 +1153,13 @@ namespace Game {
           }
 
           messageIsHeading = true;
-          renderGraphics.DrawRectangle(Pens.White, promptsCoordinates.X, promptsCoordinates.Y, promptsSize.Width, promptsSize.Height);
-          renderGraphics.DrawRectangle(Pens.Red,   promptsCoordinates.X, messagesY, messagesWidth, messagesHeight);
-
           foreach (string message in messages) {
             Font         messageFont         = messageIsHeading ? messageHeadingFont : messageDescriptionFont;
             GraphicsPath messageGraphicsPath = new GraphicsPath();
             SizeF        messageSize         = renderGraphics.MeasureString(message, messageFont, promptsSize);
 
             // ...
-            messageGraphicsPath.AddString(message, messageFont.FontFamily, (Int32) messageFont.Style, GetFontSizeInPixels(messageFont, renderGraphics), new PointF(promptsCoordinates.X, messagesY), new StringFormat());
+            messageGraphicsPath.AddString(message, messageFont.FontFamily, (Int32) (messageFont.Style | (messageIsHeading ? FontStyle.Underline : FontStyle.Regular)), GetFontSizeInPixels(messageFont, renderGraphics), new RectangleF(new PointF(promptsCoordinates.X + ((promptsSize.Width - messagesWidth) / 2.0f), messagesY), promptsSize), new StringFormat());
             renderGraphics.DrawPath(Pens.Black,    messageGraphicsPath);
             renderGraphics.FillPath(Brushes.White, messageGraphicsPath);
 
@@ -1052,64 +1179,184 @@ namespace Game {
           if (0x00u != (byte) (state & State.SETTINGS)) settingsPromptBounds[0] = backPromptBound;
 
           renderGraphics.FillRectangle(backPromptSelected ? promptSelectionBrush : promptBrush, backPromptBound);
-          renderGraphics.DrawString(backPromptText, backPromptFont, promptFontBrush, backPromptBound.Left + ((backPromptBound.Width - backPromptTextSize.Width) / 2.0f), backPromptBound.Top + ((backPromptBound.Height - backPromptTextSize.Height) / 2.0f));
+          renderGraphics.DrawString(backPromptText, backPromptFont, promptFontBrush, backPromptBound.X + ((backPromptBound.Width - backPromptTextSize.Width) / 2.0f), backPromptBound.Y + ((backPromptBound.Height - backPromptTextSize.Height) / 2.0f));
         }
 
-        if (0x00u != (byte) (state & State.GAMEPLAY)) {}
-
-        if (0x00u != (byte) (state & State.MENU)) {
-          Font  menuFooterFont          = new Font(promptTextFont.FontFamily, (promptTextFont.Size * 2.0f) / 3.0f);
-          SizeF menuFooterSize          = renderGraphics.MeasureString(menuFooter, menuFooterFont);
-          Font  menuPromptFont          = promptTextFont;
-          float menuPromptMarginY       = 0.0f;
-          SizeF menuPromptSelectionSize = new SizeF(windowViewportSize.Width * 0.715f, 0.0f);
-          SizeF menuPromptSize          = new SizeF(windowViewportSize.Width * 0.650f, 0.0f);
-          float menuPromptsY            = 0.0f;
-
-          // ...
-          while (true) {
-            float       menuPromptFontSize     = GetFontSizeInPixels(menuPromptFont, renderGraphics);
-            const float menuPromptHeightRatio  = 3.65f;
-            const float menuPromptMarginYRatio = 1.75f;
+        // ...
+        if (0x00u != (byte) (state & State.GAMEPLAY)) {
+          // ... ->> Draw wave message
+          if (waveMessageDelta > timestamp - waveMessageTimestamp) {
+            Brush  waveBrush           = new SolidBrush(Color.FromArgb(113 - (int) (0x00u == (byte) (state & State.PAUSED) ? 113 * ((timestamp - waveMessageTimestamp).TotalMilliseconds / waveMessageDelta.TotalMilliseconds) : 0), 0x33, 0x33, 0x33)) as Brush;
+            string waveDescription     = waveIndex > (ulong) waveDescriptions.Length ? String.Empty : waveDescriptions[waveIndex];
+            Font   waveDescriptionFont = promptTextFont;
+            SizeF  waveDescriptionSize = renderGraphics.MeasureString(waveDescription, waveDescriptionFont, (SizeF) windowViewportSize);
+            string waveHeading         = (waveIndex + 1uL) + " " + (waveIndex > (ulong) waveHeadings.Length ? String.Empty : waveHeadings[waveIndex]);
+            Font   waveHeadingFont     = new Font(promptHeadingFont.FontFamily, promptHeadingFont.Size * 1.5f);
+            SizeF  waveHeadingSize     = renderGraphics.MeasureString(waveHeading, waveHeadingFont);
+            SizeF  waveMessagesSize    = new SizeF(windowViewportSize.Width, 0);
 
             // ...
-            menuPromptMarginY              = menuPromptFontSize * menuPromptMarginYRatio;
-            menuPromptSelectionSize.Height = menuPromptFontSize * menuPromptHeightRatio;
-            menuPromptSize.Height          = menuPromptFontSize * menuPromptHeightRatio;
-            menuPromptsY                   = (windowViewportSize.Height - ((menuPromptMarginY * (menuPromptTexts.Length - 1)) + (menuPromptSize.Height * (menuPromptTexts.Length - 0)))) / 2.0f;
+            waveMessagesSize.Height += waveDescriptionSize.Height;
+            waveMessagesSize.Height += waveHeadingSize    .Height;
 
-            if (promptsTextMinimumFontSize < menuPromptFont.Size && promptsSize.Height < (menuPromptMarginY * (menuPromptTexts.Length - 1)) + (menuPromptSize.Height * (menuPromptTexts.Length - 0))) {
-              menuPromptFont = new Font(menuPromptFont.FontFamily, menuPromptFont.Size - (menuPromptFontSize / menuPromptFont.Size));
+            renderGraphics.FillRectangle(waveBrush, 0.0f, (windowViewportSize.Height - (waveMessagesSize.Height * 1.125f)) / 2.0f, window.ClientSize.Width, waveMessagesSize.Height * 1.125f);
+            renderGraphics.DrawString(waveDescription, waveDescriptionFont, Brushes.White, GetFontSizeInPixels(waveDescriptionFont, renderGraphics) + Math.Max(0.0f, (windowViewportSize.Width - Math.Max(waveDescriptionSize.Width, waveHeadingSize.Width)) / 2.0f), waveHeadingFont.Height + ((windowViewportSize.Height - waveMessagesSize.Height) / 2.0f));
+            renderGraphics.DrawString(waveHeading,     waveHeadingFont,     Brushes.White, 0.0f                                                     + Math.Max(0.0f, (windowViewportSize.Width - Math.Max(waveDescriptionSize.Width, waveHeadingSize.Width)) / 2.0f), 0.0f                   + ((windowViewportSize.Height - waveMessagesSize.Height) / 2.0f));
+            waveBrush.Dispose();
+          }
+
+          // ... ->> Draw enemies
+          foreach (Unit enemy in enemies) {
+            if (null != enemy.Render) {
+              // renderGraphics.ResetTransform();
+              // renderGraphics.RotateTransform();
+              renderGraphics.DrawImage(enemy.Render, enemy.GetComputedBounds(windowViewportSize));
+              continue;
+            }
+
+            // ... ->> Draw `Globule`
+            // for (byte stage = 0u; stage != enemy.Stage; ++stage) {
+              // enemy.Rotations[stage]
+              // starDestinationCoordinates    = new PointF(
+              //   windowViewportOrigin.X + (starsRotationCosine * (starDestinationCoordinates.X - windowViewportOrigin.X)) - (starsRotationSine   * (starDestinationCoordinates.Y - windowViewportOrigin.Y)),
+              //   windowViewportOrigin.Y + (starsRotationSine   * (starDestinationCoordinates.X - windowViewportOrigin.X)) + (starsRotationCosine * (starDestinationCoordinates.Y - windowViewportOrigin.Y))
+              // );
+
+              // starSourceCoordinates.Y -= starRotationCull;
+              // starSourceCoordinates    = new PointF(
+              //   windowViewportOrigin.X + (starsRotationCosine * (starSourceCoordinates.X - windowViewportOrigin.X)) - (starsRotationSine   * (starSourceCoordinates.Y - windowViewportOrigin.Y)),
+              //   windowViewportOrigin.Y + (starsRotationSine   * (starSourceCoordinates.X - windowViewportOrigin.X)) + (starsRotationCosine * (starSourceCoordinates.Y - windowViewportOrigin.Y))
+              // );
+            // }
+          }
+
+          // ... ->> Draw players
+          for (int index = players.Length; 0 != index--; )
+          if (null != players[index]) {
+            Ship        player       = players[index] as Ship;
+            RectangleF  playerBounds = player.GetComputedBounds(windowViewportSize);
+            Color       playerColor  = (new Color[] {Color.DeepSkyBlue, Color.Red, Color.Lime, Color.Yellow})[index];
+            Bitmap      playerRender = player.Render;
+
+            // ...
+            if (player.Spawning) {
+              Pen        playerSpawnShieldPen    = new Pen(Color.FromArgb(127, playerColor.R, playerColor.G, playerColor.B), 2.0f);
+              Brush      playerSpawnShieldBrush  = new SolidBrush(Color.FromArgb(63, playerColor.R, playerColor.G, playerColor.B)) as Brush;
+              RectangleF playerSpawnShieldBounds = new RectangleF(
+                playerBounds.X - (0.5f * playerBounds.Width),
+                playerBounds.Y - (0.5f * playerBounds.Height),
+                playerBounds.Width  + (1.0f * playerBounds.Width),
+                playerBounds.Height + (1.0f * playerBounds.Height)
+              );
+
+              // ...
+              renderGraphics.FillEllipse(playerSpawnShieldBrush, playerSpawnShieldBounds);
+              renderGraphics.DrawEllipse(playerSpawnShieldPen, playerSpawnShieldBounds);
+
+              playerSpawnShieldPen  .Dispose();
+              playerSpawnShieldBrush.Dispose();
+            }
+
+            if (null != playerRender) {
+              ImageAttributes playerRenderImageAttributes = new ImageAttributes();
+              Bitmap          playerScaledRender          = new Bitmap((int) playerBounds.Width, (int) playerBounds.Height, playerRender.PixelFormat);
+              Graphics        playerScaledRenderGraphics  = Graphics.FromImage(playerScaledRender);
+
+              // ...
+              playerRenderImageAttributes.SetColorMatrix(new ColorMatrix(new Single[][] {
+                new Single[] {playerColor.R / 255.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+                new Single[] {0.0f, playerColor.G / 255.0f, 0.0f, 0.0f, 0.0f},
+                new Single[] {0.0f, 0.0f, playerColor.B / 255.0f, 0.0f, 0.0f},
+                new Single[] {0.0f, 0.0f, 0.0f, playerColor.A / 255.0f / 4.0f, 0.0f},
+                new Single[] {0.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+              }), ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+
+              playerScaledRender.SetResolution(renderGraphics.DpiX, renderGraphics.DpiY);
+
+              playerScaledRenderGraphics.DrawImage(playerRender, 0.0f, 0.0f, playerBounds.Width, playerBounds.Height);
+              playerScaledRenderGraphics.Dispose();
+
+              renderGraphics.TranslateTransform(+(playerBounds.X + (playerBounds.Width / 2.0f)), +(playerBounds.Y + (playerBounds.Height / 2.0f)));
+              renderGraphics.RotateTransform   (player.Rotation * (float) (180.0f / Math.PI));
+              renderGraphics.TranslateTransform(-(playerBounds.X + (playerBounds.Width / 2.0f)), -(playerBounds.Y + (playerBounds.Height / 2.0f)));
+              renderGraphics.DrawImage        (playerScaledRender, new Rectangle((int) playerBounds.X - 2, (int) playerBounds.Y - 2, (int) playerBounds.Width + 4, (int) playerBounds.Height + 4), 0, 0, playerScaledRender.Width, playerScaledRender.Height, GraphicsUnit.Pixel, playerRenderImageAttributes);
+              renderGraphics.DrawImageUnscaled(playerScaledRender, (int) playerBounds.X, (int) playerBounds.Y);
+              renderGraphics.ResetTransform();
+            }
+          }
+        }
+
+        // ... ->> Draw Menu or Paused UI
+        if (0x00u != (byte) (state & (State.MENU | State.PAUSED))) {
+          RectangleF[] promptBounds        = {};
+          Font         promptFont          = promptTextFont;
+          float        promptMarginY       = 0.0f;
+          SizeF        promptSelectionSize = new SizeF(windowViewportSize.Width * 0.715f, 0.0f);
+          SizeF        promptSize          = new SizeF(windowViewportSize.Width * 0.650f, 0.0f);
+          string[]     promptTexts         = {};
+          float        promptsY            = 0.0f;
+
+          // ...
+          if (0x00u != (byte) (state & State.MENU)) {
+            Font  menuFooterFont = new Font(promptTextFont.FontFamily, (promptTextFont.Size * 2.0f) / 3.0f);
+            SizeF menuFooterSize = renderGraphics.MeasureString(menuFooter, menuFooterFont);
+
+            // ...
+            promptBounds = menuPromptBounds;
+            promptTexts  = menuPromptTexts;
+            renderGraphics.DrawString(menuFooter, menuFooterFont, Brushes.White, (windowViewportSize.Width - menuFooterSize.Width) / 2.0f, windowViewportSize.Height - (menuFooterSize.Height * 1.5f));
+          }
+
+          if (0x00u != (byte) (state & State.PAUSED)) {
+            promptBounds = pausePromptBounds;
+            promptFont   = new Font(promptFont.FontFamily, (promptFont.Size * 2.5f) / 3.0f);
+            promptTexts  = pausePromptTexts;
+          }
+
+          // ... ->> Draw the prompts
+          while (true) {
+            float       promptFontSize     = GetFontSizeInPixels(promptFont, renderGraphics);
+            const float promptHeightRatio  = 3.00f;
+            const float promptMarginYRatio = 1.25f;
+
+            // ...
+            promptMarginY              = promptFontSize * promptMarginYRatio;
+            promptSelectionSize.Height = promptFontSize * promptHeightRatio;
+            promptSize         .Height = promptFontSize * promptHeightRatio;
+            promptsY                   = (windowViewportSize.Height - ((promptMarginY * (promptTexts.Length - 1)) + (promptSize.Height * (promptTexts.Length - 0)))) / 2.0f;
+
+            if (promptsTextMinimumFontSize < promptFont.Size && promptsSize.Height < (promptMarginY * (promptTexts.Length - 1)) + (promptSize.Height * (promptTexts.Length - 0))) {
+              promptFont = new Font(promptFont.FontFamily, promptFont.Size - (promptFontSize / promptFont.Size));
               continue;
             }
 
             break;
           }
 
-          for (int index = menuPromptBounds.Length | menuPromptTexts.Length; 0 != index--; ) {
-            RectangleF menuPromptBound          = new RectangleF(new PointF((windowViewportSize.Width - menuPromptSize.Width) / 2.0f, menuPromptsY + (index * (menuPromptMarginY + menuPromptSize.Height))), menuPromptSize);
-            bool       menuPromptHovered        = cursorBound.IntersectsWith(menuPromptBound);
-            bool       menuPromptSelected       = menuPromptHovered || (focusIndexed && (ulong) index == focusIndex % (ulong) menuPromptBounds.Length);
-            RectangleF menuPromptSelectionBound = new RectangleF(new PointF((windowViewportSize.Width - menuPromptSelectionSize.Width) / 2.0f, menuPromptsY + (index * (menuPromptMarginY + menuPromptSelectionSize.Height))), menuPromptSelectionSize);
-            string     menuPromptText           = menuPromptTexts[index];
-            SizeF      menuPromptTextSize       = renderGraphics.MeasureString(menuPromptText, menuPromptFont);
+          for (int index = promptTexts.Length; 0 != index--; ) {
+            RectangleF promptBound          = new RectangleF(new PointF((windowViewportSize.Width - promptSize         .Width) / 2.0f, promptsY + (index * (promptMarginY + promptSize         .Height))), promptSize);
+            RectangleF promptSelectionBound = new RectangleF(new PointF((windowViewportSize.Width - promptSelectionSize.Width) / 2.0f, promptsY + (index * (promptMarginY + promptSelectionSize.Height))), promptSelectionSize);
+            bool       promptHovered        = cursorBound.IntersectsWith(promptBound);
+            bool       promptSelected       = promptHovered || (focusIndexed && (ulong) index == focusIndex % (ulong) promptTexts.Length);
+            string     promptText           = promptTexts[index];
+            SizeF      promptTextSize       = renderGraphics.MeasureString(promptText, promptFont);
 
             // ...
-            menuPromptBounds[index] = menuPromptBound;
-            menuPromptBound         = menuPromptSelected ? menuPromptSelectionBound : menuPromptBound;
-            if (menuPromptHovered) ResetFocusIndex();
+            promptBounds[index] = promptBound;
+            promptBound         = promptSelected ? promptSelectionBound : promptBound;
+            if (promptHovered) ResetFocusIndex();
 
-            renderGraphics.FillRectangle(menuPromptSelected ? menuPromptText == "EXIT" ? Brushes.DarkRed : promptSelectionBrush : promptBrush, menuPromptBound);
-            renderGraphics.DrawString(menuPromptText, menuPromptFont, promptFontBrush, menuPromptBound.Left + ((menuPromptBound.Width - menuPromptTextSize.Width) / 2.0f), menuPromptBound.Top + ((menuPromptBound.Height - menuPromptTextSize.Height) / 2.0f));
+            renderGraphics.FillRectangle(promptSelected ? promptText.TrimStart().StartsWith("EXIT") ? Brushes.DarkRed : promptSelectionBrush : promptBrush, promptBound);
+            renderGraphics.DrawString(promptText, promptFont, promptFontBrush, promptBound.X + ((promptBound.Width - promptTextSize.Width) / 2.0f), promptBound.Y + ((promptBound.Height - promptTextSize.Height) / 2.0f));
           }
-
-          renderGraphics.DrawString(menuFooter, menuFooterFont, Brushes.White, (windowViewportSize.Width - menuFooterSize.Width) / 2.0f, windowViewportSize.Height - (menuFooterSize.Height * 1.5f));
         }
 
         // ... ->> Draw cursor (avoid drawing over system cursor)
         if (false == cursorBound.IsEmpty && cursorWithinWindow) {
-          renderGraphics.FillEllipse(cursorBrush, cursorBound.Left + 0.0f, cursorBound.Top + 0.0f, cursorBound.Width - 0.0f, cursorBound.Height - 0.0f);
-          renderGraphics.DrawArc    (cursorPen,   cursorBound.Left + 2.0f, cursorBound.Top + 2.0f, cursorBound.Width - 4.0f, cursorBound.Height - 4.0f, 0, 360);
+          if (false == cursorActivated) renderGraphics.FillEllipse(cursorBrush, cursorBound.X, cursorBound.Y, cursorBound.Width, cursorBound.Height);
+          else renderGraphics.FillEllipse(cursorBrush, cursorBound.X + (cursorBound.Width * 0.15f), cursorBound.Y + (cursorBound.Width * 0.15f), cursorBound.Width - (cursorBound.Width * 0.30f), cursorBound.Height - (cursorBound.Width * 0.30f));
+
+          renderGraphics.DrawArc(cursorPen, cursorBound.X + 2.0f, cursorBound.Y + 2.0f, cursorBound.Width - 4.0f, cursorBound.Height - 4.0f, 0, 360);
         }
 
         // ... ->> Draw fullscreen background
@@ -1119,8 +1366,8 @@ namespace Game {
           Bitmap          renderFullscreen                = renders[renderIndex];
           Graphics        renderFullscreenGraphics        = Graphics.FromImage(renderFullscreen);
           ImageAttributes renderFullscreenImageAttributes = new ImageAttributes();
-          Rectangle       windowScreenBounds              = Screen.FromControl(window).Bounds;
-          Int32           windowScreenSize                = Math.Max(windowScreenBounds.Height, windowScreenBounds.Width);
+          Rectangle       windowScreenBounds              = window.Screen.Bounds;
+          int             windowScreenSize                = windowScreenBounds.Height > windowScreenBounds.Width ? windowScreenBounds.Height : windowScreenBounds.Width;
 
           // ...
           renderFullscreenGraphics.CompositingMode   = renderGraphics.CompositingMode;
@@ -1131,11 +1378,14 @@ namespace Game {
           renderFullscreenGraphics.SmoothingMode      = SmoothingMode     .HighQuality;
           renderFullscreenGraphics.TextRenderingHint  = TextRenderingHint .ClearTypeGridFit;
 
-          // ... ->> Render asynchronously filtered gameplay graphics; see `PostProcessRender()` (a fast blur function would be useful here)
+          // ... ->> Render asynchronously filtered gameplay graphics; see `PostProcessRender()`
           renderPostProcessorFullscreenRenderBitmapData = render.LockBits(new Rectangle(Point.Empty, render.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
+          renderPostProcessorLocked                     = false;
+
           Marshal.Copy(renderPostProcessorFullscreenRenderBitmapData.Scan0, renderPostProcessorFullscreenRenderSubdata[0], 0, render.Height * render.Width * sizeof(byte) * 4);
           render.UnlockBits(renderPostProcessorFullscreenRenderBitmapData);
-          renderPostProcessorFullscreenRenderBitmapData = null;
+
+          renderPostProcessorLocked = true;
 
           // ... ->> Apply transparency matrix to fullscreen background image
           renderFullscreenImageAttributes.SetColorMatrix(new ColorMatrix(new Single[][] {
@@ -1180,7 +1430,10 @@ namespace Game {
           ), 0, 0, renderFullscreenImage.Width, renderFullscreenImage.Height, GraphicsUnit.Pixel, renderFullscreenImageAttributes);
 
           // ... ->> Draw controller prompts
-          RequestControllerIcons();
+          if (null == renderControllerIcons[0]) try { renderControllerIcons[0] = Image.FromFile("assets/controls/keyboard.png"); } catch (SystemException) {}
+          if (null == renderControllerIcons[1]) try { renderControllerIcons[1] = Image.FromFile("assets/controls/mouse.png");    } catch (SystemException) {}
+          if (null == renderControllerIcons[2]) try { renderControllerIcons[2] = Image.FromFile("assets/controls/gamepad.png");  } catch (SystemException) {}
+          if (null == renderControllerIcons[3]) try { renderControllerIcons[3] = Image.FromFile("assets/controls/touch.png");    } catch (SystemException) {}
 
           for (int index = renderControllerIcons.Length; 0 != index--; ) {
             Image controllerIcon = renderControllerIcons[index];
@@ -1192,14 +1445,12 @@ namespace Game {
               Size         controllerIconSize           = controllerIcon.Size;
               float        controllerMarginY            = windowScreenBounds.Height * 0.050f;
               const string controllerPrompt             = "Awaiting input\u2026";
-              Font         controllerPromptFont         = null == textFontFamily ? new Font(textFont.Name, 10.0f) : new Font(textFontFamily, 10.0f);
-              FontFamily   controllerPromptFontFamily   = null == textFontFamily ? FontFamily.GenericMonospace    : textFontFamily;
+              Font         controllerPromptFont         = null == textFontFamily ? new Font(textFont.Name, 12.0f) : new Font(textFontFamily, 12.0f);
               GraphicsPath controllerPromptGraphicsPath = new GraphicsPath();
               const uint   controllerPromptMarginY      = 10u;
               SizeF        controllerPromptSize         = renderFullscreenGraphics.MeasureString(controllerPrompt, controllerPromptFont);
               string       controllerTitle              = (new string[] {"KEYBOARD", "MOUSE", "GAMEPAD", "TOUCH"})[index];
-              Font         controllerTitleFont          = null == headingFontFamily ? new Font(headingFont.Name, 18.0f) : new Font(headingFontFamily, 18.0f);
-              FontFamily   controllerTitleFontFamily    = null == headingFontFamily ? FontFamily.GenericSansSerif       : headingFontFamily;
+              Font         controllerTitleFont          = null == headingFontFamily ? new Font(headingFont.Name, 20.0f) : new Font(headingFontFamily, 20.0f);
               GraphicsPath controllerTitleGraphicsPath  = new GraphicsPath();
               const uint   controllerTitleMarginY       = 15u;
               SizeF        controllerTitleSize          = renderFullscreenGraphics.MeasureString(controllerTitle, controllerTitleFont);
@@ -1243,7 +1494,7 @@ namespace Game {
 
               // ... ->> Draw either controller or player status
               if (null == player) {
-                controllerPromptGraphicsPath.AddString(controllerPrompt, controllerPromptFontFamily, (Int32) controllerPromptFont.Style, GetFontSizeInPixels(controllerPromptFont, renderGraphics), new PointF(
+                controllerPromptGraphicsPath.AddString(controllerPrompt, controllerPromptFont.FontFamily, (Int32) controllerPromptFont.Style, GetFontSizeInPixels(controllerPromptFont, renderGraphics), new PointF(
                   controllerCoordinates.X + ((controllerSize - controllerPromptSize.Width) / 2.0f),
                   controllerCoordinates.Y + (controllerTitleMarginY + controllerTitleSize.Height + controllerPromptMarginY + controllerSize)
                 ), new StringFormat());
@@ -1252,34 +1503,31 @@ namespace Game {
               }
 
               else {
-                uint   playerBaseHealth = (uint) player.GetType().GetField("BaseHealth").GetValue(player);
-                PointF playerCoordinates = new PointF(
-                  controllerCoordinates.X + ((controllerSize - controllerPromptSize.Width) / 2.0f),
-                  controllerCoordinates.Y + (controllerTitleMarginY + controllerTitleSize.Height + controllerPromptMarginY + controllerSize)
-                );
+                uint   playerBaseHealth           = (uint) player.GetType().GetField("BaseHealth", BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.Static).GetValue(player);
+                PointF playerHealthBarCoordinates = new PointF(controllerCoordinates.X, controllerCoordinates.Y + (controllerTitleMarginY + controllerTitleSize.Height + controllerPromptMarginY + controllerSize));
 
-                const float  playerHealthBarFrameBorderSize   = 1.675f;                                                                                                                                                                                                                                                                                                                     //
-                SizeF        playerHealthBarFrameSize         = new SizeF(controllerSize, Math.Max(10.0f, controllerPromptSize.Height / 2.0f));                                                                                                                                                                                                                                             //
-                Pen          playerHealthBarFramePen          = new Pen(Color.DarkGray, playerHealthBarFrameBorderSize);                                                                                                                                                                                                                                                                    // --> Pens.DarkGray
-                GraphicsPath playerHealthBarFrameGraphicsPath = new GraphicsPath();                                                                                                                                                                                                                                                                                                         //
-                Brush        playerHealthBarFrameBrush        = new SolidBrush(Color.Black) as Brush;                                                                                                                                                                                                                                                                                       // --> Brushes.Black
-                Single       playerHealthBarFrameBorderRadius = Math.Min(playerHealthBarFrameSize.Height, playerHealthBarFrameSize.Width) / 2.0f;                                                                                                                                                                                                                                           //
-                SizeF        playerHealthBarSize              = new SizeF((playerHealthBarFrameSize.Width - (playerHealthBarFrameBorderSize * 0.5f)) * (player.Health / (float) playerBaseHealth), playerHealthBarFrameSize.Height - (playerHealthBarFrameBorderSize * 0.5f));                                                                                                              //
-                GraphicsPath playerHealthBarGraphicsPath      = new GraphicsPath();                                                                                                                                                                                                                                                                                                         //
-                Brush        playerHealthBarBrush             = new LinearGradientBrush(new PointF(playerCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f), playerHealthBarSize.Height / 2.0f), new PointF(playerCoordinates.X + playerHealthBarFrameSize.Width + (playerHealthBarFrameBorderSize * 1.0f), playerHealthBarSize.Height / 2.0f), Color.DarkGreen, Color.Lime) as Brush; //
-                Single       playerHealthBarBorderRadius      = playerHealthBarFrameBorderRadius;                                                                                                                                                                                                                                                                                           //
+                const float  playerHealthBarFrameBorderSize   = 1.675f;                                                                                                                                                                                                                                                                                                                                       //
+                SizeF        playerHealthBarFrameSize         = new SizeF(controllerSize, Math.Max(10.0f, controllerPromptSize.Height / 2.0f));                                                                                                                                                                                                                                                               //
+                Pen          playerHealthBarFramePen          = new Pen(Color.DarkGray, playerHealthBarFrameBorderSize);                                                                                                                                                                                                                                                                                      // --> Pens.DarkGray
+                GraphicsPath playerHealthBarFrameGraphicsPath = new GraphicsPath();                                                                                                                                                                                                                                                                                                                           //
+                Brush        playerHealthBarFrameBrush        = new SolidBrush(Color.Black) as Brush;                                                                                                                                                                                                                                                                                                         // --> Brushes.Black
+                Single       playerHealthBarFrameBorderRadius = Math.Min(playerHealthBarFrameSize.Height, playerHealthBarFrameSize.Width) / 2.0f;                                                                                                                                                                                                                                                             //
+                SizeF        playerHealthBarSize              = new SizeF((playerHealthBarFrameSize.Width - (playerHealthBarFrameBorderSize * 0.5f)) * (player.Health / (float) playerBaseHealth), playerHealthBarFrameSize.Height - (playerHealthBarFrameBorderSize * 0.5f));                                                                                                                                //
+                GraphicsPath playerHealthBarGraphicsPath      = new GraphicsPath();                                                                                                                                                                                                                                                                                                                           //
+                Brush        playerHealthBarBrush             = new LinearGradientBrush(new PointF(playerHealthBarCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f), playerHealthBarSize.Height * 0.5f), new PointF(playerHealthBarCoordinates.X + playerHealthBarFrameSize.Width + (playerHealthBarFrameBorderSize * 1.0f), playerHealthBarSize.Height * 0.5f), Color.DarkGreen, Color.Lime) as Brush; //
+                Single       playerHealthBarBorderRadius      = playerHealthBarFrameBorderRadius;                                                                                                                                                                                                                                                                                                             //
 
                 // ... ->> Draw health bar and its frame
-                playerHealthBarGraphicsPath.AddArc(playerCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f),                             playerCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f),                              playerHealthBarBorderRadius, playerHealthBarBorderRadius, 180.0f, 90.0f);
-                playerHealthBarGraphicsPath.AddArc(playerCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Width, playerCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f),                              playerHealthBarBorderRadius, playerHealthBarBorderRadius, 270.0f, 90.0f);
-                playerHealthBarGraphicsPath.AddArc(playerCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Width, playerCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Height, playerHealthBarBorderRadius, playerHealthBarBorderRadius, 0.0f,   90.0f);
-                playerHealthBarGraphicsPath.AddArc(playerCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f),                             playerCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Height, playerHealthBarBorderRadius, playerHealthBarBorderRadius, 90.0f,  90.0f);
+                playerHealthBarGraphicsPath.AddArc(playerHealthBarCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f),                             playerHealthBarCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f),                              playerHealthBarBorderRadius, playerHealthBarBorderRadius, 180.0f, 90.0f);
+                playerHealthBarGraphicsPath.AddArc(playerHealthBarCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Width, playerHealthBarCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f),                              playerHealthBarBorderRadius, playerHealthBarBorderRadius, 270.0f, 90.0f);
+                playerHealthBarGraphicsPath.AddArc(playerHealthBarCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Width, playerHealthBarCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Height, playerHealthBarBorderRadius, playerHealthBarBorderRadius, 0.0f,   90.0f);
+                playerHealthBarGraphicsPath.AddArc(playerHealthBarCoordinates.X + (playerHealthBarFrameBorderSize * 0.5f),                             playerHealthBarCoordinates.Y + (playerHealthBarFrameBorderSize * 0.5f) + playerHealthBarSize.Height, playerHealthBarBorderRadius, playerHealthBarBorderRadius, 90.0f,  90.0f);
                 playerHealthBarGraphicsPath.CloseFigure();
 
-                playerHealthBarFrameGraphicsPath.AddArc(playerCoordinates.X,                                  playerCoordinates.Y,                                   playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 180.0f, 90.0f);
-                playerHealthBarFrameGraphicsPath.AddArc(playerCoordinates.X + playerHealthBarFrameSize.Width, playerCoordinates.Y,                                   playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 270.0f, 90.0f);
-                playerHealthBarFrameGraphicsPath.AddArc(playerCoordinates.X + playerHealthBarFrameSize.Width, playerCoordinates.Y + playerHealthBarFrameSize.Height, playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 0.0f,   90.0f);
-                playerHealthBarFrameGraphicsPath.AddArc(playerCoordinates.X,                                  playerCoordinates.Y + playerHealthBarFrameSize.Height, playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 90.0f,  90.0f);
+                playerHealthBarFrameGraphicsPath.AddArc(playerHealthBarCoordinates.X,                                  playerHealthBarCoordinates.Y,                                   playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 180.0f, 90.0f);
+                playerHealthBarFrameGraphicsPath.AddArc(playerHealthBarCoordinates.X + playerHealthBarFrameSize.Width, playerHealthBarCoordinates.Y,                                   playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 270.0f, 90.0f);
+                playerHealthBarFrameGraphicsPath.AddArc(playerHealthBarCoordinates.X + playerHealthBarFrameSize.Width, playerHealthBarCoordinates.Y + playerHealthBarFrameSize.Height, playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 0.0f,   90.0f);
+                playerHealthBarFrameGraphicsPath.AddArc(playerHealthBarCoordinates.X,                                  playerHealthBarCoordinates.Y + playerHealthBarFrameSize.Height, playerHealthBarFrameBorderRadius, playerHealthBarFrameBorderRadius, 90.0f,  90.0f);
                 playerHealthBarFrameGraphicsPath.CloseFigure();
 
                 renderFullscreenGraphics.FillPath(playerHealthBarFrameBrush, playerHealthBarFrameGraphicsPath);
@@ -1293,7 +1541,7 @@ namespace Game {
               }
 
               // ... ->> Draw controller title
-              controllerTitleGraphicsPath.AddString(controllerTitle, controllerTitleFontFamily, (Int32) controllerTitleFont.Style, GetFontSizeInPixels(controllerTitleFont, renderGraphics), new PointF(
+              controllerTitleGraphicsPath.AddString(controllerTitle, controllerTitleFont.FontFamily, (Int32) controllerTitleFont.Style, GetFontSizeInPixels(controllerTitleFont, renderGraphics), new PointF(
                 controllerCoordinates.X + ((controllerSize - controllerTitleSize.Width) / 2.0f),
                 controllerCoordinates.Y + (controllerTitleMarginY + controllerSize)
               ), new StringFormat());
@@ -1355,7 +1603,7 @@ namespace Game {
       Environment.Exit(0x00);
     }
 
-    public static void Update(object target, EventArgs arguments) {
+    public static void Update(Window window, EventArgs arguments) {
       float    cursorSize         = null != Cursor.Current ? (Cursor.Current.Size.Height + Cursor.Current.Size.Width) / 2.0f : 0.0f;
       int      starsLength        = stars.Count;
       TimeSpan timestamp          = TimeSpan.FromTicks(DateTime.Now.Ticks);
@@ -1364,6 +1612,7 @@ namespace Game {
       /* ... ->> Game logic unbounded by framerate ie: calculations, flags, … */ {
         // ... ->> Update cursor
         cursorBound.Height = cursorBound.Width = cursorSize * 0.75f;
+        cursorClicked      = false;
 
         // ... ->> Remove fallen (excess) stars; update maximum star count based on viewport size
         starsMaximumLength = (ushort) ((windowViewportSize.Height + windowViewportSize.Width) / 20u);
@@ -1375,6 +1624,91 @@ namespace Game {
 
         for (int index = starsLength; 0 != index--; )
         if (stars[index].Delta >= 1.0f) starsLength -= stars.Remove(stars[index]) ? 1 : 0;
+
+        // ...
+        if (0x00u != (byte) (state & State.GAMEPLAY)) {
+          // ... ->> Begin new wave
+          if (0 == enemies.Count) {
+            byte       waveEnemySpawnAttempts        = (byte) 0u;
+            int        waveEnemySpawnIndex           = -1;
+            const byte waveEnemySpawnMaximumAttempts = (byte) 100u;
+            Random     waveEnemySpawnRandomizer      = new Random((int) DateTime.Now.Ticks);
+
+            // ... ->> Create new wave enemies
+            if (waveIndex > (ulong) waveEnemySpawns.Length) {
+              while (enemies.Count != (ushort) (difficulty * 6u))
+              enemies.Add(Activator.CreateInstance((new Type[] {typeof(Carrier), typeof(Globule), typeof(Kamikaze), typeof(ManOWar)})[waveEnemySpawnRandomizer.Next(0, 4)], PointF.Empty) as Unit);
+            }
+
+            else {
+              foreach (Type waveEnemySpawn in waveEnemySpawns[waveIndex])
+              enemies.Add(Activator.CreateInstance(waveEnemySpawn, PointF.Empty) as Unit);
+            }
+
+            // ... ->> Position each enemy fairly ie: not directly on top of any `Player`
+            for (int index = enemies.Count; 0 != index--; ) {
+              Unit enemy = enemies[index];
+
+              // ...
+              enemy.Coordinates.X = (float) (waveEnemySpawnRandomizer.NextDouble() * windowViewportSize.Width);
+              enemy.Coordinates.Y = (float) (waveEnemySpawnRandomizer.NextDouble() * windowViewportSize.Height);
+
+              waveEnemySpawnAttempts = (byte) (index == waveEnemySpawnIndex ? waveEnemySpawnAttempts + 1u : 0u);
+              waveEnemySpawnIndex    = index;
+
+              foreach (Unit player in players)
+              if (null != player && enemy.GetComputedBounds(windowViewportSize).IntersectsWith(player.GetComputedBounds(windowViewportSize))) {
+                index += waveEnemySpawnAttempts != waveEnemySpawnMaximumAttempts ? 1 : 0;
+                break;
+              }
+            }
+
+            // ...
+            difficulty          += 0.05f;
+            waveIndex           += 1uL;
+            waveMessageTimestamp = timestamp;
+          }
+
+          // ... ->> Persist wave message on pause
+          if (waveMessageDelta > timestamp - waveMessageTimestamp && 0x00u != (byte) (state & State.PAUSED))
+          waveMessageTimestamp = timestamp + (timestamp - waveMessageTimestamp);
+
+          // ...
+          if (0x00u == (byte) (state & State.PAUSED))
+          foreach (Unit player in players)
+          if (null != player) {
+            PointF playerMovementSlope = (PointF) player.GetMovementSlope();
+
+            // ... ->> Spawn players
+            if ((player as Ship).Spawning) {
+              const float spawnHorizontalSpeed = 0.00175f;
+              const float spawnVerticalSpeed   = 0.00175f;
+
+              // ...
+              player.Coordinates.X      = spawnHorizontalSpeed < Math.Abs(player.Coordinates.X - 0.5f) ? player.Coordinates.X + (player.Coordinates.X < 0.5f ? +spawnHorizontalSpeed : -spawnHorizontalSpeed) : 0.5f;
+              player.Coordinates.Y      = spawnVerticalSpeed   < Math.Abs(player.Coordinates.Y - 0.5f) ? player.Coordinates.Y + (player.Coordinates.Y < 0.5f ? +spawnVerticalSpeed   : -spawnVerticalSpeed)   : 0.5f;
+              (player as Ship).Spawning = player.Coordinates.X != 0.5f || player.Coordinates.Y != 0.5f;
+
+              continue;
+            }
+
+            // ... ->> Move players
+            if (false == player.Moving)
+            player.Speed -= player.Acceleration / 20.0f;
+
+            switch (player.Direction) {
+              case Entity.MoveDirection.Forward: {
+                player.Coordinates.X += player.Speed * playerMovementSlope.X;
+                player.Coordinates.Y += player.Speed * playerMovementSlope.Y;
+              } break;
+
+              case Entity.MoveDirection.Reverse: {
+                player.Coordinates.X -= player.Speed * playerMovementSlope.X;
+                player.Coordinates.Y -= player.Speed * playerMovementSlope.Y;
+              } break;
+            }
+          }
+        }
       }
 
       /* ... ->> Game logic unbounded by `Update(…)` framerate ie: calculations, flags, … */ {
@@ -1394,7 +1728,7 @@ namespace Game {
             // ...
             star.DestinationCoordinates.X = starFallCoordinate;
             star.DestinationCoordinates.Y = 1.0f;
-            star.Opacity                  = (byte) Star.Randomizer.Next(127, 255);
+            star.Opacity                  = (byte) Star.Randomizer.Next(127, 191);
             star.SourceCoordinates.X      = starFallCoordinate;
             star.SourceCoordinates.Y      = (float) Star.Randomizer.NextDouble() * 0.6500f;
             star.Speed                    = (float) Star.Randomizer.NextDouble() * 0.0025f;
@@ -1409,8 +1743,10 @@ namespace Game {
         updateTimestamp = timestamp;
 
         // ... ->> Fell stars
-        foreach (Star star in stars)
-        star.Delta += star.Speed;
+        if (0x00u == (byte) (state & State.PAUSED)) {
+          foreach (Star star in stars)
+          star.Delta += star.Speed;
+        }
       }
 
       /* Render ->> Game render bounded by `Render(…)` */
@@ -1419,7 +1755,7 @@ namespace Game {
 
     /* Main */
     static void Main(String[] commandLineArguments) {
-      const string backPromptText  = "ᐊ BACK";
+      const string backPromptText  = "\u140A BACK";
       TimeSpan     delta           = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 60L);
       DEVMODE      deviceMode      = new DEVMODE();
       FontFamily[] fontFamilies    = {null, null}; // --> headingFontFamily, textFontFamily
@@ -1430,59 +1766,61 @@ namespace Game {
       Int32        windowSize      = 0;
 
       /* Update > ... ->> Setup game variables and such */
-      if (EnumerateDisplaySettings(null, DEVMODE.ENUM_CURRENT_SETTINGS, ref deviceMode))
-      delta = 0u != deviceMode.dmDisplayFrequency ? TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long) deviceMode.dmDisplayFrequency) : delta;
-
-      creditsPromptStates         = new State[] {State.MENU};                                                                   //
-      creditsPromptTexts          = new string[] {backPromptText};                                                              //
-      cursorActivated             = false;                                                                                      //
-      cursorBound                 = new RectangleF(0.0f, 0.0f, 0.0f, 0.0f);                                                     //
-      cursorBrush                 = new SolidBrush(Color.FromArgb(255 / 3, 0xFF, 0xFF, 0xFF)) as Brush;                         //
-      cursorPen                   = new Pen(Color.DodgerBlue);                                                                  // --> Pens.DodgerBlue
-      cursorVisibility            = true;                                                                                       //
-      cursorWithinWindow          = false;                                                                                      //
-      difficulty                  = 1.0f;                                                                                       //
-      fontFilePaths[0]            = "assets/fonts/panton.otf";                                                                  //
-      fontFilePaths[1]            = "assets/fonts/randy-gg.ttf";                                                                //
-      headingFont                 = SystemFonts.CaptionFont;                                                                    //
-      helpPromptStates            = new State[] {State.MENU};                                                                   //
-      helpPromptTexts             = new string[] {backPromptText};                                                              //
-      keys                        = new List<Keys>();                                                                           //
-      menuFooter                  = "Made with \uD83D\uDC99 by Lapys, 2023";                                                    //
-      menuPromptStates            = new State[] {State.GAMEPLAY, State.HELP, State.SETTINGS, State.CREDITS, State.TERMINATED};  //
-      menuPromptTexts             = new string[] {"PLAY", "HOW TO PLAY", "SETTINGS", "CREDITS", "EXIT"};                        //
-      players[0]                  = new Infantry(Point.Empty);                                                                  //
-      promptBrush                 = new SolidBrush(Color.FromArgb(85, 0x33, 0x33, 0x33)) as Brush;                              //
-      promptFontBrush             = new SolidBrush(Color.White);                                                                // --> Brushes.White
-      promptSelectionBrush        = new SolidBrush(Color.FromArgb(85,  0xCF, 0xCF, 0xCF)) as Brush;                             //
-      renderControllerIconBrush   = new SolidBrush(Color.FromArgb(225, 0x00, 0x00, 0x00)) as Brush;                             //
-      renderControllerIconPen     = new Pen(Color.DarkGray);                                                                    // --> Pens.DarkGray
-      renderControllerIcons       = new Image[] {null, null, null, null};                                                       //
-      renderControllerPromptBrush = new SolidBrush(Color.FromArgb(225, 0xFF, 0xFF, 0xFF)) as Brush;                             //
-      renderControllerPromptPen   = new Pen(Color.Transparent);                                                                 // --> Pens.Transparent
-      renderControllerTitleBrush  = new SolidBrush(Color.White) as Brush;                                                       // --> Brushes.White
-      renderControllerTitlePen    = new Pen(Color.DarkGray);                                                                    // --> Pens.DarkGray
-      renderDelta                 = delta;                                                                                      //
-      renderFullscreenPen         = new Pen(Color.FromArgb(255, 0xFF, 0xFF, 0xFF), 1.5f);                                       //
-      renderPostProcessor         = new Thread(new ThreadStart(PostProcessRender));                                             //
-      renders                     = new Bitmap[] {null, null};                                                                  //
-      renderTimestamp             = timestamp;                                                                                  //
-      settingsPromptStates        = new State[] {State.MENU};                                                                   //
-      settingsPromptTexts         = new string[] {backPromptText};                                                              //
-      stars                       = new List<Star>();                                                                           //
-      starsMaximumLength          = (ushort) 69u;                                                                               //
-      starsSpawnCountDelta        = new ushort[] {(ushort) 1u, (ushort) 5u};                                                    //
-      starsSpawnDelta             = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 600L);                                    //
-      starsSpawnTimestamp         = timestamp;                                                                                  //
-      state                       = State.MENU;                                                                                 //
-      textFont                    = SystemFonts.DefaultFont;                                                                    //
-      title                       = "Space Shooter";                                                                            //
-      updateDelta                 = delta;                                                                                      //
-      updateTimer                 = new Timer();                                                                                //
-      updateTimestamp             = timestamp;                                                                                  //
-      window                      = new Window();                                                                               //
-      windowScreen                = Screen.FromControl(window);                                                                 //
-      windowSize                  = (Int32) (Math.Min(windowScreen.WorkingArea.Height, windowScreen.WorkingArea.Width) * 0.8f); //
+      creditsPromptStates         = new State [] {State.MENU};                                                                                                                                                                                         //
+      creditsPromptTexts          = new string[] {backPromptText};                                                                                                                                                                                     //
+      cursorActivated             = false;                                                                                                                                                                                                             //
+      cursorBound                 = new RectangleF(0.0f, 0.0f, 0.0f, 0.0f);                                                                                                                                                                            //
+      cursorBrush                 = new SolidBrush(Color.FromArgb(255 / 3, 0xFF, 0xFF, 0xFF)) as Brush;                                                                                                                                                //
+      cursorPen                   = new Pen(Color.DodgerBlue);                                                                                                                                                                                         // --> Pens.DodgerBlue
+      cursorVisibility            = true;                                                                                                                                                                                                              //
+      cursorWithinWindow          = false;                                                                                                                                                                                                             //
+      delta                       = EnumerateDisplaySettings(null, DEVMODE.ENUM_CURRENT_SETTINGS, ref deviceMode) && 0u != deviceMode.dmDisplayFrequency ? TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long) deviceMode.dmDisplayFrequency) : delta; //
+      difficulty                  = 1.0f;                                                                                                                                                                                                              //
+      fontFilePaths[0]            = "assets/fonts/panton.otf";                                                                                                                                                                                         //
+      fontFilePaths[1]            = "assets/fonts/randy-gg.ttf";                                                                                                                                                                                       //
+      headingFont                 = SystemFonts.CaptionFont;                                                                                                                                                                                           //
+      helpPromptStates            = new State [] {State.MENU};                                                                                                                                                                                         //
+      helpPromptTexts             = new string[] {backPromptText};                                                                                                                                                                                     //
+      keys                        = new List<Keys>();                                                                                                                                                                                                  //
+      menuFooter                  = "Made with \uD83D\uDC99 by Lapys, 2023";                                                                                                                                                                           //
+      menuPromptStates            = new State [] {State.GAMEPLAY, State.HELP,    State.SETTINGS, State.CREDITS, State.TERMINATED};                                                                                                                     //
+      menuPromptTexts             = new string[] {"PLAY",         "HOW TO PLAY", "SETTINGS",     "CREDITS",     "EXIT"};                                                                                                                               //
+      pausePromptStates           = new State [] {State.PAUSED,   State.TERMINATED};                                                                                                                                                                   //
+      pausePromptTexts            = new string[] {"BACK TO GAME", "EXIT"};                                                                                                                                                                             //
+      promptBrush                 = new SolidBrush(Color.FromArgb(85, 0x33, 0x33, 0x33)) as Brush;                                                                                                                                                     //
+      promptFontBrush             = new SolidBrush(Color.White);                                                                                                                                                                                       // --> Brushes.White
+      promptSelectionBrush        = new SolidBrush(Color.FromArgb(85,  0xCF, 0xCF, 0xCF)) as Brush;                                                                                                                                                    //
+      renderControllerIconBrush   = new SolidBrush(Color.FromArgb(225, 0x00, 0x00, 0x00)) as Brush;                                                                                                                                                    //
+      renderControllerIconPen     = new Pen(Color.DarkGray);                                                                                                                                                                                           // --> Pens.DarkGray
+      renderControllerIcons       = new Image[] {null, null, null, null};                                                                                                                                                                              //
+      renderControllerPromptBrush = new SolidBrush(Color.FromArgb(225, 0xFF, 0xFF, 0xFF)) as Brush;                                                                                                                                                    //
+      renderControllerPromptPen   = new Pen(Color.Transparent);                                                                                                                                                                                        // --> Pens.Transparent
+      renderControllerTitleBrush  = new SolidBrush(Color.White) as Brush;                                                                                                                                                                              // --> Brushes.White
+      renderControllerTitlePen    = new Pen(Color.DarkGray);                                                                                                                                                                                           // --> Pens.DarkGray
+      renderDelta                 = delta;                                                                                                                                                                                                             //
+      renderFullscreenPen         = new Pen(Color.FromArgb(255, 0xFF, 0xFF, 0xFF), 1.5f);                                                                                                                                                              //
+      renderPostProcessor         = new Thread(new ThreadStart(PostProcessRender));                                                                                                                                                                    //
+      renders                     = new Bitmap[] {null, null};                                                                                                                                                                                         //
+      renderTimestamp             = timestamp;                                                                                                                                                                                                         //
+      settingsPromptStates        = new State[] {State.MENU};                                                                                                                                                                                          //
+      settingsPromptTexts         = new string[] {backPromptText};                                                                                                                                                                                     //
+      stars                       = new List<Star>();                                                                                                                                                                                                  //
+      starsMaximumLength          = (ushort) 69u;                                                                                                                                                                                                      //
+      starsSpawnCountDelta        = new ushort[] {(ushort) 1u, (ushort) 5u};                                                                                                                                                                           //
+      starsSpawnDelta             = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 600L);                                                                                                                                                           //
+      starsSpawnTimestamp         = timestamp;                                                                                                                                                                                                         //
+      state                       = State.MENU;                                                                                                                                                                                                        //
+      textFont                    = SystemFonts.DefaultFont;                                                                                                                                                                                           //
+      title                       = "Space Shooter";                                                                                                                                                                                                   //
+      updateDelta                 = delta;                                                                                                                                                                                                             //
+      updateTimer                 = new Timer();                                                                                                                                                                                                       //
+      updateTimestamp             = timestamp;                                                                                                                                                                                                         //
+      waveIndex                   = unchecked((ulong) -1L);                                                                                                                                                                                            //
+      waveMessageDelta            = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond * 2000L);                                                                                                                                                          //
+      waveMessageTimestamp        = timestamp;                                                                                                                                                                                                         //
+      window                      = new Window();                                                                                                                                                                                                      //
+      windowScreen                = Screen.FromControl(window);                                                                                                                                                                                        //
+      windowSize                  = (Int32) (Math.Min(windowScreen.WorkingArea.Height, windowScreen.WorkingArea.Width) * 0.875f);                                                                                                                        //
 
       for (int index = fontFamilies.Length | fontFilePaths.Length; 0 != index--; )
       try {
@@ -1508,7 +1846,17 @@ namespace Game {
       creditsPromptBounds  = new RectangleF[creditsPromptStates .Length | creditsPromptTexts .Length];
       helpPromptBounds     = new RectangleF[helpPromptStates    .Length | helpPromptTexts    .Length];
       menuPromptBounds     = new RectangleF[menuPromptStates    .Length | menuPromptTexts    .Length];
+      pausePromptBounds    = new RectangleF[pausePromptStates   .Length | pausePromptTexts   .Length];
       settingsPromptBounds = new RectangleF[settingsPromptStates.Length | settingsPromptTexts.Length];
+
+      enemies = new List<Unit>();
+      players = new Unit[] {
+        null, // ->> Keyboard ⌨
+        null, // ->> Mouse    🖱️
+        null, // ->> Gamepad  🎮
+        null  // ->> Touch    👆
+      };
+      playerRequests = new bool[players.Length];
 
       headingFontFamily = fontFamilies[0];
       textFontFamily    = fontFamilies[1];
@@ -1521,30 +1869,75 @@ namespace Game {
       for (int index = creditsPromptBounds .Length; 0 != index--; ) creditsPromptBounds [index] = RectangleF.Empty;
       for (int index = helpPromptBounds    .Length; 0 != index--; ) helpPromptBounds    [index] = RectangleF.Empty;
       for (int index = menuPromptBounds    .Length; 0 != index--; ) menuPromptBounds    [index] = RectangleF.Empty;
+      for (int index = pausePromptBounds   .Length; 0 != index--; ) pausePromptBounds   [index] = RectangleF.Empty;
       for (int index = settingsPromptBounds.Length; 0 != index--; ) settingsPromptBounds[index] = RectangleF.Empty;
 
+      for (int index = playerRequests.Length; 0 != index--; ) playerRequests[index] = false;
+
+      waveDescriptions = new string[] {
+        "The alien invasion begins\u2026",
+        "Three\u2019s a crowd",
+        "4 standard enemies",
+        "5 standard enemies",
+        "2 suicide bombers",
+        "2 standard enemies; 1 suicide bomber",
+        "4 suicide bombers",
+        "1 tanky boi",
+        "1 tanky boi; 2 standard enemies; 1 suicide bomber",
+        "6 poison enemies",
+        "All four types of enemies"
+      };
+
+      waveEnemySpawns = new Type[][] {
+        new Type[] {typeof(Globule)},
+        new Type[] {typeof(Globule),  typeof(Globule),  typeof(Globule)},
+        new Type[] {typeof(Globule),  typeof(Globule),  typeof(Globule), typeof(Globule)},
+        new Type[] {typeof(Globule),  typeof(Globule),  typeof(Globule), typeof(Globule), typeof(Globule)},
+        new Type[] {typeof(Kamikaze), typeof(Kamikaze)},
+        new Type[] {typeof(Globule),  typeof(Globule),  typeof(Kamikaze)},
+        new Type[] {typeof(Kamikaze), typeof(Kamikaze), typeof(Kamikaze), typeof(Kamikaze)},
+        new Type[] {typeof(ManOWar)},
+        new Type[] {typeof(ManOWar), typeof(Globule), typeof(Globule), typeof(Kamikaze)},
+        new Type[] {typeof(Carrier), typeof(Carrier), typeof(Carrier), typeof(Carrier), typeof(Carrier), typeof(Carrier)},
+        new Type[] {typeof(Carrier), typeof(Globule), typeof(Kamikaze), typeof(ManOWar)}
+      };
+
+      waveHeadings = new string[] {
+        "Beginnings",
+        "Stage II",
+        "Stage III",
+        "Stage IV",
+        "Stage V",
+        "Stage VI",
+        "Stage VII",
+        "Stage VIII",
+        "Stage IX",
+        "Stage X",
+        "Stage XI"
+      };
+
       /* Modification > ... */
-      Application.Idle += new EventHandler(Update);
+      Application.Idle += new EventHandler(delegate(object target, EventArgs arguments) { Update(window, arguments); });
 
       renderPostProcessor.Priority = ThreadPriority.BelowNormal;
 
       updateTimer.Enabled  = true;
       updateTimer.Interval = (int) updateDelta.TotalMilliseconds / 2;
-      updateTimer.Tick    += new EventHandler(Update);
+      updateTimer.Tick    += new EventHandler(delegate(object target, EventArgs arguments) { Update(window, arguments); });
 
       window.BackColor       = Color.Black;
       window.FormBorderStyle = FormBorderStyle.FixedSingle;
       window.MaximizeBox     = false;
       window.MinimizeBox     = false;
-      window.KeyDown        += new KeyEventHandler  (delegate(object target, KeyEventArgs   arguments) { if (keys.Contains(arguments.KeyCode)) return; keys.Add(arguments.KeyCode);                  Input(null);                                                                                                                                                                                         });
-      window.KeyUp          += new KeyEventHandler  (delegate(object target, KeyEventArgs   arguments) { int index = keys.IndexOf(arguments.KeyCode); if (index == -1) return; keys.RemoveAt(index); Input(arguments.KeyCode);                                                                                                                                                                            });
-      window.MouseDown      += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { cursorActivated = true;  Input(null);                                                                                                                                                                                                                                                            });
-      window.MouseEnter     += new EventHandler     (delegate(object target, EventArgs      arguments) { cursorWithinWindow = true;  if (false != cursorVisibility) { cursorVisibility = false; Cursor.Hide(); }                                                                                                                                                                                          });
-      window.MouseLeave     += new EventHandler     (delegate(object target, EventArgs      arguments) { cursorWithinWindow = false; if (false == cursorVisibility) { cursorVisibility = true;  Cursor.Show(); }                                                                                                                                                                                          });
-      window.MouseMove      += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { Window targetWindow = target as Window; cursorBound.Location = (PointF) arguments.Location; cursorBound.X -= (targetWindow.ClientSize.Width - targetWindow.ViewportSize.Width) / 2.0f; cursorBound.Y -= (targetWindow.ClientSize.Height - targetWindow.ViewportSize.Height) / 2.0f; Input(null); });
-
-      window.MouseUp        += new MouseEventHandler(delegate(object target, MouseEventArgs arguments) { cursorActivated = false; Input(null); });
-      window.Paint          += new PaintEventHandler(Render);
+      window.KeyDown        += new KeyEventHandler     (delegate(object target, KeyEventArgs      arguments) { if (false == keys.Contains(arguments.KeyCode)) keys.Add(arguments.KeyCode);         Input(target as Window, null);                                                                                                                                                                                             });
+      window.KeyPress       += new KeyPressEventHandler(delegate(object target, KeyPressEventArgs arguments) {                                                                                     Input(target as Window, null);                                                                                                                                                                                             });
+      window.KeyUp          += new KeyEventHandler     (delegate(object target, KeyEventArgs      arguments) { int index = keys.IndexOf(arguments.KeyCode); if (index != -1) keys.RemoveAt(index); Input(target as Window, arguments.KeyCode);                                                                                                                                                                                });
+      window.MouseDown      += new MouseEventHandler   (delegate(object target, MouseEventArgs    arguments) { cursorActivated = true;                        Input(target as Window, null);                                                                                                                                                                                                                                  });
+      window.MouseUp        += new MouseEventHandler   (delegate(object target, MouseEventArgs    arguments) { cursorActivated = false; cursorClicked = true; Input(target as Window, null);                                                                                                                                                                                                                                  });
+      window.MouseEnter     += new EventHandler        (delegate(object target, EventArgs         arguments) { cursorWithinWindow = true;  if (false != cursorVisibility) { cursorVisibility = false; Cursor.Hide(); }                                                                                                                                                                                                        });
+      window.MouseLeave     += new EventHandler        (delegate(object target, EventArgs         arguments) { cursorWithinWindow = false; if (false == cursorVisibility) { cursorVisibility = true;  Cursor.Show(); }                                                                                                                                                                                                        });
+      window.MouseMove      += new MouseEventHandler   (delegate(object target, MouseEventArgs    arguments) { Window targetWindow = target as Window; cursorBound.Location = (PointF) arguments.Location; cursorBound.X -= (targetWindow.ClientSize.Width - targetWindow.ViewportSize.Width) / 2.0f; cursorBound.Y -= (targetWindow.ClientSize.Height - targetWindow.ViewportSize.Height) / 2.0f; Input(targetWindow, null); });
+      window.Paint          += new PaintEventHandler   (delegate(object target, PaintEventArgs    arguments) { Render(target as Window, arguments); });
       window.Size            = new Size(windowSize, windowSize);
       window.StartPosition   = FormStartPosition.CenterScreen;
       window.Text            = title;
