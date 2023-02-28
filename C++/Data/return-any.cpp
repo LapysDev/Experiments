@@ -134,6 +134,11 @@ struct any final {
     {}
 
     /* ... */
+    #if __cpp_constexpr >= 201304L
+      constexpr
+    #endif
+    inline operator void() const noexcept {}
+
     #ifdef __circle_lang__
       template <typename type>
       constexpr operator type&() noexcept {

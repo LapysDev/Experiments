@@ -1,3 +1,9 @@
+/* ...
+    --- CITE ---
+      #Lapys:
+        - Circle:                                             https://lapys.godbolt.org/z/fjWhrbYG9
+        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/75z9afshz
+*/
 #include <type_traits>
 #include <utility>
 #include <version>
@@ -60,7 +66,13 @@ struct variant final {
       };
 
       template <typename subbase, typename... subbases>
-      struct valueof<decltype(static_cast<void>(base(std::declval<typename std::conditional<std::is_void<subbase>::value, base, subbase>::type>(), std::declval<subbases>()...))), subbase, subbases...> final {
+      struct valueof<decltype(static_cast<void>(
+        #if defined(__GNUC__) && false == (defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__NVCC__) || defined(__NVCOMPILER))
+          base(std::declval<typename std::conditional<std::is_void<subbase>::value, base, subbase>::type>(), std::declval<subbases>()...)
+        #else
+          base{std::declval<typename std::conditional<std::is_void<subbase>::value, base, subbase>::type>(), std::declval<subbases>()...}
+        #endif
+      )), subbase, subbases...> final {
         static bool const value = true;
       };
 
@@ -323,7 +335,7 @@ struct variant<base, bases...> final {
         return (type) (type&) this -> members;
       }
 
-      #ifndef _MSVC_LANG
+      #if false == (defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(_MSC_VER) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__NVCC__) || defined(__NVCOMPILER))
         template <typename type>
         constexpr operator type() const noexcept {
           return (type) (type&) this -> members;
@@ -352,7 +364,7 @@ int main(int, char*[]) /* noexcept */ {
   variant<int&&>     {42};
 
   /* Access most similar member by type */
-  #ifndef _MSVC_LANG
+  #ifndef _MSC_VER
     constexpr // MSVC can not cast lvalue reference to an rvalue reference in a constant expression
   #endif
   int const          &&constant_rvalue_reference = constant.operator int const&&(); // Requires a `variant` with static storage duration to be constant evaluated
@@ -372,7 +384,7 @@ int main(int, char*[]) /* noexcept */ {
   object = variant<int, double, void*>{1337.0}; std::printf("[object]: %f" "\r\n", (double) object);
 
   /* Switch active member */
-  #ifdef _MSVC_LANG // Disregards current active member
+  #ifdef _MSC_VER // Disregards current active member
     object = static_cast<void const*>("Hello, World!");
   #else
     object = "Hello, World!";
@@ -386,8 +398,10 @@ int main(int, char*[]) /* noexcept */ {
   std::printf("[object]: %hhi" "\r\n", (signed char) object);
 
   /* Empty or uninitialized `variant` objects can be freely destructed (multiple times over) */
-  empty   .~variant();
   unusable.~variant();
+  #ifndef __ICC
+    empty.~variant();
+  #endif
 
   /* Assignable by proxy */
   std::printf("[unassignable]: %i" "\r\n", (int) unassignable);
@@ -395,7 +409,7 @@ int main(int, char*[]) /* noexcept */ {
   std::printf("[unassignable]: %i" "\r\n", (int) unassignable);
 
   /* Usable by complete re-initialization (destructor unneeded after default-initialization) */
-  #ifdef _MSVC_LANG
+  #ifdef _MSC_VER
     ::new (&unusable) variant<int, double, void*>{static_cast<void*>(&unusable)};
   #else
     ::new (&unusable) variant<int, double, void*>{&unusable};
