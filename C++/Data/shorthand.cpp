@@ -1,8 +1,8 @@
 /* ...
     --- CITE ---
       #Lapys:
-        - Circle:
-        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA:
+        - Circle:                                             https://lapys.godbolt.org/z/hcdss8vfv
+        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/MEEnz4srP
 */
 #include <atomic>
 #include <climits>

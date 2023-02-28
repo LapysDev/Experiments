@@ -1,3 +1,9 @@
+/* ...
+    --- CITE ---
+      #Lapys:
+        - Circle:                                             https://lapys.godbolt.org/z/oKdeP1cx5
+        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/ceavh8Gdq
+*/
 #include <cstdio>
 #include <new>
 #include <type_traits>
