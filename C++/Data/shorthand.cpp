@@ -1,190 +1,597 @@
-/* ...
+/* ... ->> see `struct $shorthand::operation_value::variant`
     --- CITE ---
       #Lapys:
-        - Circle:                                             https://lapys.godbolt.org/z/hcdss8vfv
-        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/MEEnz4srP
+        - Circle:                                             https://lapys.godbolt.org/z/4baE1rxs7
+        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/jn1Y5fzdT
 */
-#include <atomic>
-#include <climits>
-#include <cstdarg>
-#include <cstddef>
-#include <cstdlib>
-#include <exception>
-#include <functional>
-#include <initializer_list>
-#include <iterator>
-#include <memory>
-#include <new>
-#include <ratio>
-#include <stdexcept>
-#include <stdint.h>
-#include <typeinfo>
-#include <type_traits>
-#include <utility>
-#include <version>
+#include <atomic>      // --> std::atomic_bool, std::atomic_char, std::atomic_char16_t, std::atomic_char32_t, std::atomic_char8_t, std::atomic_flag, std::atomic_int, std::atomic_int16_t, std::atomic_int32_t, std::atomic_int64_t, std::atomic_int8_t, std::atomic_int_fast16_t, std::atomic_int_fast32_t, std::atomic_int_fast64_t, std::atomic_int_fast8_t, std::atomic_int_least16_t, std::atomic_int_least32_t, std::atomic_int_least64_t, std::atomic_int_least8_t, std::atomic_intmax_t, std::atomic_intptr_t, std::atomic_llong, std::atomic_long, std::atomic_ptrdiff_t, std::atomic_schar, std::atomic_short, std::atomic_size_t, std::atomic_uchar, std::atomic_uint, std::atomic_uint16_t, std::atomic_uint32_t, std::atomic_uint64_t, std::atomic_uint8_t, std::atomic_uint_fast16_t, std::atomic_uint_fast32_t, std::atomic_uint_fast64_t, std::atomic_uint_fast8_t, std::atomic_uint_least16_t, std::atomic_uint_least32_t, std::atomic_uint_least64_t, std::atomic_uint_least8_t, std::atomic_uintmax_t, std::atomic_uintptr_t, std::atomic_ullong, std::atomic_ulong, std::atomic_ushort, std::atomic_wchar_t, std::memory_order
+#include <climits>     //
+#include <cstddef>     //
+#include <cstdlib>     // --> std::div_t, std::ldiv_t, std::lldiv_t
+#include <exception>   // --> std::bad_exception, std::exception, std::exception_ptr, std::nested_exception, std::terminate_handler, std::unexpected_handler
+#include <functional>  // --> std::bad_function_call, std::bit_and<void>, std::bit_not<>, std::bit_or<void>, std::bit_xor<void>, std::divides<void>, std::equal_to<void>, std::greater<void>, std::greater_equal<void>, std::identity, std::less<void>, std::less_equal<void>, std::logical_and<void>, std::logical_not<void>, std::logical_or<void>, std::minus<void>, std::modulus<void>, std::multiplies<void>, std::negate<void>, std::not_equal_to<void>, std::plus<void>, decltype(std::placeholders::_1), decltype(std::placeholders::_2)
+#include <iterator>    // --> std::bidirectional_iterator_tag, std::contiguous_iterator_tag, std::default_sentinel_t, std::forward_iterator_tag, std::input_iterator_tag, std::output_iterator_tag, std::random_access_iterator_tag, std::unreachable_sentinel_t
+#include <memory>      // --> std::allocator_arg_t, std::bad_weak_ptr, std::owner_less<void>, std::pointer_safety
+#include <new>         // --> std::align_val_t, std::bad_alloc, std::bad_array_new_length, std::destroying_delete_t, std::new_handler, std::nothrow_t
+#include <ratio>       // --> std::atto, std::centi, std::deca, std::deci, std::exa, std::femto, std::giga, std::hecto, std::kilo, std::mega, std::micro, std::milli, std::nano, std::peta, std::pico, std::tera, std::yocto, std::yotta, std::zepto, std::zetta
+#include <stdint.h>    //
+#include <type_traits> // --> std::false_type, std::true_type, std::void_t
+#include <typeinfo>    // --> std::bad_cast, std::bad_typeid, std::type_info
+#include <utility>     // --> std::in_place_t, std::piecewise_construct_t
+#include <version>     //
 #ifdef __cpp_lib_endian
-# include <bit>
+# include <bit> // --> std::endian
 #endif
 #ifdef __cpp_lib_three_way_comparison
-# include <compare>
+# include <compare> // --> std::compare_three_way, std::compare_three_way_result, std::partial_ordering, std::strong_ordering, std::weak_ordering
 # ifdef __cpp_lib_coroutine
-#   include <coroutine>
+#   include <coroutine> // --> std::coroutine_handle<void>, std::coroutine_handle<std::noop_coroutine_promise>, std::noop_coroutine_handle, std::noop_coroutine_promise, std::suspend_always, std::suspend_never
 # endif
 #endif
 #ifdef __cpp_lib_ranges
-# include <ranges>
+# include <ranges> // --> std::dangling, std::from_range_t, std::subrange_kind
 #endif
 #ifdef __cpp_lib_source_location
-# include <source_location>
+# include <source_location> // --> std::source_location
 #endif
 
 /* ... ->> Functor expression, coerce-able to a free function */
 struct $shorthand {
   private:
+    // ... ->> Metafunction for evaluating operation validity without implicit rvalue-reference-qualification unlike `std::declval<...>()`
+    template <typename type>
+    constexpr static type instanceof() noexcept = delete;
+
+    // ... ->> Constants denoting the number of `$shorthand::operand`s in an `$shorthand::operation`
     enum class operation_arity : unsigned char {
-      niladic  = 0u,
-      monoadic = 1u,
-      diadic   = 2u,
-      triadic  = 3u,
+      nullary  = 0u,
+      unary    = 1u,
+      binary   = 2u,
+      ternary  = 3u,
       variadic = static_cast<unsigned char>(-1)
     };
 
-    // ... ->> Flags denoting overload-able C++ operators; used as type-agnostic `$shorthand::operation`, which is un-preferably type-erased
+    // ... ->> Flags denoting (overload-able) C++ operators; used as type-agnostic `$shorthand::operation`, which is un-preferably type-erased
     enum class operation_identity : unsigned char {
-      $add,
-      $address,
-      $assign,
-      $assign_add,
-      $assign_bitwise_and,
-      $assign_bitwise_or,
-      $assign_bitwise_xor,
-      $assign_divide,
-      $assign_left_shift,
-      $assign_modulo,
-      $assign_multiply,
-      $assign_right_shift,
-      $assign_subtract,
-      $bitwise_and,
-      $bitwise_or,
-      $bitwise_xor,
-      $boolean_and,
-      $boolean_or,
-      $call,
-      $cast,
-      $comma,
-      $compare,
-      $complement,
-      $dereference,
-      $divide,
-      $equals,
-      $equals_greater,
-      $equals_lesser,
-      $greater,
-      $left_shift,
-      $lesser,
-      $member_access,
-      $member_pointer_access,
-      $minus,
-      $modulo,
-      $multiply,
-      $negate,
-      $plus,
-      $post_decrement,
-      $post_increment,
-      $pre_decrement,
-      $pre_increment,
-      $right_shift,
-      $self,
-      $subscript,
-      $subtract,
-      $ternary,
-      $unequal
+      add,
+      address,
+      assign,
+      assign_add,
+      assign_bitwise_and,
+      assign_bitwise_or,
+      assign_bitwise_xor,
+      assign_divide,
+      assign_left_shift,
+      assign_modulo,
+      assign_multiply,
+      assign_right_shift,
+      assign_subtract,
+      bitwise_and,
+      bitwise_or,
+      bitwise_xor,
+      boolean_and,
+      boolean_or,
+      call,
+      cast,
+      comma,
+      compare,
+      complement,
+      construct,
+      dereference,
+      divide,
+      equals,
+      equals_greater,
+      equals_lesser,
+      greater,
+      left_shift,
+      lesser,
+      member_access,
+      member_pointer_access,
+      minus,
+      modulo,
+      multiply,
+      negate,
+      plus,
+      post_decrement,
+      post_increment,
+      pre_decrement,
+      pre_increment,
+      right_shift,
+      self,
+      subscript,
+      subtract,
+      ternary,
+      unequal,
+
+      overloaded_address,
+      overloaded_member_access = member_access
     };
 
-    // ...
-    struct operation_value final {};
-
-    /* ... */
-    template <$shorthand::operation_identity, typename = void, typename... bases>
+    // ... ->> Metafunction evaluating (overload-able) C++ operators
+    template <operation_identity, typename = void, typename... bases>
     struct operate final {
       constexpr static bool   value                         = false;
       constexpr static void (*valueof)(bases&&...) noexcept = nullptr;
     };
 
-    template <typename base, typename... bases>
-    struct operate<$shorthand::operation_identity::$call, decltype(static_cast<void>(std::declval<base>()(std::declval<bases>()...))), base, bases...> final {
-      static bool const value = true;
+    template <typename base> struct operate<operation_identity::address,            decltype(static_cast<void>(&instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(&std::declval<base>())              valueof(base&& operand) noexcept(noexcept(&instanceof<base>()))              { return &std::forward<base>(operand);              } };
+    template <typename base> struct operate<operation_identity::complement,         decltype(static_cast<void>(~instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(~std::declval<base>())              valueof(base&& operand) noexcept(noexcept(~instanceof<base>()))              { return ~std::forward<base>(operand);              } };
+    template <typename base> struct operate<operation_identity::dereference,        decltype(static_cast<void>(*instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(*std::declval<base>())              valueof(base&& operand) noexcept(noexcept(*instanceof<base>()))              { return *std::forward<base>(operand);              } };
+    template <typename base> struct operate<operation_identity::member_access,      decltype(static_cast<void>(instanceof<base>().operator ->())), base> final { static bool const value = true; constexpr static decltype(std::declval<base>().operator ->()) valueof(base&& operand) noexcept(noexcept(instanceof<base>().operator ->())) { return std::forward<base>(operand).operator ->(); } };
+    template <typename base> struct operate<operation_identity::minus,              decltype(static_cast<void>(-instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(-std::declval<base>())              valueof(base&& operand) noexcept(noexcept(-instanceof<base>()))              { return -std::forward<base>(operand);              } };
+    template <typename base> struct operate<operation_identity::negate,             decltype(static_cast<void>(!instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(!std::declval<base>())              valueof(base&& operand) noexcept(noexcept(!instanceof<base>()))              { return !std::forward<base>(operand);              } };
+    template <typename base> struct operate<operation_identity::overloaded_address, decltype(static_cast<void>(instanceof<base>().operator &())),  base> final { static bool const value = true; constexpr static decltype(std::declval<base>().operator &())  valueof(base&& operand) noexcept(noexcept(instanceof<base>().operator &()))  { return std::forward<base>(operand).operator &();  } };
+    template <typename base> struct operate<operation_identity::plus,               decltype(static_cast<void>(+instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(+std::declval<base>())              valueof(base&& operand) noexcept(noexcept(+instanceof<base>()))              { return +std::forward<base>(operand);              } };
+    template <typename base> struct operate<operation_identity::post_decrement,     decltype(static_cast<void>(instanceof<base>()--)),             base> final { static bool const value = true; constexpr static decltype(std::declval<base>()--)             valueof(base&& operand) noexcept(noexcept(instanceof<base>()--))             { return std::forward<base>(operand)--;             } };
+    template <typename base> struct operate<operation_identity::post_increment,     decltype(static_cast<void>(instanceof<base>()++)),             base> final { static bool const value = true; constexpr static decltype(std::declval<base>()++)             valueof(base&& operand) noexcept(noexcept(instanceof<base>()++))             { return std::forward<base>(operand)++;             } };
+    template <typename base> struct operate<operation_identity::pre_decrement,      decltype(static_cast<void>(--instanceof<base>())),             base> final { static bool const value = true; constexpr static decltype(--std::declval<base>())             valueof(base&& operand) noexcept(noexcept(--instanceof<base>()))             { return --std::forward<base>(operand);             } };
+    template <typename base> struct operate<operation_identity::pre_increment,      decltype(static_cast<void>(++instanceof<base>())),             base> final { static bool const value = true; constexpr static decltype(++std::declval<base>())             valueof(base&& operand) noexcept(noexcept(++instanceof<base>()))             { return ++std::forward<base>(operand);             } };
+    template <typename base> struct operate<operation_identity::self,               void,                                                          base> final { static bool const value = true; constexpr static decltype(std::declval<base>())               valueof(base&& operand) noexcept                                             { return std::forward<base>(operand);               } };
 
-      constexpr static decltype(std::declval<base>()(std::declval<bases>()...)) valueof(base&& operand, bases&&... operands) noexcept(noexcept(std::declval<base>()(std::declval<bases>()...))) {
-        return std::forward<base>(operand)(std::forward<bases>(operands)...);
-      }
-    };
-
-    template <typename baseA, typename baseB, typename baseC>
-    struct operate<$shorthand::operation_identity::$ternary, decltype(static_cast<void>(std::declval<baseA>() ? std::declval<baseB>() : std::declval<baseC>())), baseA, baseB, baseC> final {
-      static bool const value = true;
-
-      constexpr static decltype(std::declval<baseA>() ? std::declval<baseB>() : std::declval<baseC>()) valueof(baseA&& operandA, baseB&& operandB, baseC&& operandC) noexcept(noexcept(std::declval<baseA>() ? std::declval<baseB>() : std::declval<baseC>())) {
-        return std::forward<baseA>(operandA) ? std::forward<baseB>(operandB) : std::forward<baseC>(operandC);
-      }
-    };
-
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$add,                   decltype(static_cast<void>(std::declval<baseA>()   + std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   + std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   + std::declval<baseB>())) { return (std::forward<baseA>(operandA)   + std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign,                decltype(static_cast<void>(std::declval<baseA>()   = std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   = std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   = std::declval<baseB>())) { return (std::forward<baseA>(operandA)   = std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_add,            decltype(static_cast<void>(std::declval<baseA>()  += std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  += std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  += std::declval<baseB>())) { return (std::forward<baseA>(operandA)  += std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_bitwise_and,    decltype(static_cast<void>(std::declval<baseA>()  &= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  &= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  &= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  &= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_bitwise_or,     decltype(static_cast<void>(std::declval<baseA>()  |= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  |= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  |= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  |= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_bitwise_xor,    decltype(static_cast<void>(std::declval<baseA>()  ^= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  ^= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  ^= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  ^= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_divide,         decltype(static_cast<void>(std::declval<baseA>()  /= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  /= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  /= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  /= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_left_shift,     decltype(static_cast<void>(std::declval<baseA>() <<= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>() <<= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>() <<= std::declval<baseB>())) { return (std::forward<baseA>(operandA) <<= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_modulo,         decltype(static_cast<void>(std::declval<baseA>()  %= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  %= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  %= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  %= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_multiply,       decltype(static_cast<void>(std::declval<baseA>()  *= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  *= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  *= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  *= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_right_shift,    decltype(static_cast<void>(std::declval<baseA>() >>= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>() >>= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>() >>= std::declval<baseB>())) { return (std::forward<baseA>(operandA) >>= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$assign_subtract,       decltype(static_cast<void>(std::declval<baseA>()  -= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  -= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  -= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  -= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$bitwise_and,           decltype(static_cast<void>(std::declval<baseA>()   & std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   & std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   & std::declval<baseB>())) { return (std::forward<baseA>(operandA)   & std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$bitwise_or,            decltype(static_cast<void>(std::declval<baseA>()   | std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   | std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   | std::declval<baseB>())) { return (std::forward<baseA>(operandA)   | std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$bitwise_xor,           decltype(static_cast<void>(std::declval<baseA>()   ^ std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   ^ std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   ^ std::declval<baseB>())) { return (std::forward<baseA>(operandA)   ^ std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$boolean_and,           decltype(static_cast<void>(std::declval<baseA>()  && std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  && std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  && std::declval<baseB>())) { return (std::forward<baseA>(operandA)  && std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$boolean_or,            decltype(static_cast<void>(std::declval<baseA>()  || std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  || std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  || std::declval<baseB>())) { return (std::forward<baseA>(operandA)  || std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$cast,                  decltype(static_cast<void>((baseB) std::declval<baseA>())),                   baseA, baseB> final { static bool const value = true; constexpr static decltype((baseB) std::declval<baseA>())                     valueof(baseA&& operand)                    noexcept(noexcept((baseB) std::declval<baseA>()))                   { return (baseB) std::forward<baseA>(operand);                              } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$comma,                 decltype(static_cast<void>(std::declval<baseA>()   , std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   , std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   , std::declval<baseB>())) { return (std::forward<baseA>(operandA)   , std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$divide,                decltype(static_cast<void>(std::declval<baseA>()   / std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   / std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   / std::declval<baseB>())) { return (std::forward<baseA>(operandA)   / std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$equals,                decltype(static_cast<void>(std::declval<baseA>()  == std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  == std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  == std::declval<baseB>())) { return (std::forward<baseA>(operandA)  == std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$equals_greater,        decltype(static_cast<void>(std::declval<baseA>()  >= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  >= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  >= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  >= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$equals_lesser,         decltype(static_cast<void>(std::declval<baseA>()  <= std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  <= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  <= std::declval<baseB>())) { return (std::forward<baseA>(operandA)  <= std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$greater,               decltype(static_cast<void>(std::declval<baseA>()   > std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   > std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   > std::declval<baseB>())) { return (std::forward<baseA>(operandA)   > std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$left_shift,            decltype(static_cast<void>(std::declval<baseA>()  << std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  << std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  << std::declval<baseB>())) { return (std::forward<baseA>(operandA)  << std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$lesser,                decltype(static_cast<void>(std::declval<baseA>()   < std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   < std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   < std::declval<baseB>())) { return (std::forward<baseA>(operandA)   < std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$member_pointer_access, decltype(static_cast<void>(std::declval<baseA>() ->* std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>() ->* std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>() ->* std::declval<baseB>())) { return (std::forward<baseA>(operandA) ->* std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$modulo,                decltype(static_cast<void>(std::declval<baseA>()   % std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   % std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   % std::declval<baseB>())) { return (std::forward<baseA>(operandA)   % std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$multiply,              decltype(static_cast<void>(std::declval<baseA>()   * std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   * std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   * std::declval<baseB>())) { return (std::forward<baseA>(operandA)   * std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$right_shift,           decltype(static_cast<void>(std::declval<baseA>()  >> std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  >> std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  >> std::declval<baseB>())) { return (std::forward<baseA>(operandA)  >> std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$subscript,             decltype(static_cast<void>(std::declval<baseA>()[std::declval<baseB>()])),    baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()[std::declval<baseB>()]))    valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()[std::declval<baseB>()]))    { return (std::forward<baseA>(operandA)[std::forward<baseB>(operandB)]);    } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$subtract,              decltype(static_cast<void>(std::declval<baseA>()   - std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   - std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()   - std::declval<baseB>())) { return (std::forward<baseA>(operandA)   - std::forward<baseB>(operandB)); } };
-    template <typename baseA, typename baseB> struct operate<$shorthand::operation_identity::$unequal,               decltype(static_cast<void>(std::declval<baseA>()  != std::declval<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  != std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>()  != std::declval<baseB>())) { return (std::forward<baseA>(operandA)  != std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::add,                   decltype(static_cast<void>(instanceof<baseA>()   + instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   + std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   + instanceof<baseB>())) { return (std::forward<baseA>(operandA)   + std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign,                decltype(static_cast<void>(instanceof<baseA>()   = instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   = std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   = instanceof<baseB>())) { return (std::forward<baseA>(operandA)   = std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_add,            decltype(static_cast<void>(instanceof<baseA>()  += instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  += std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  += instanceof<baseB>())) { return (std::forward<baseA>(operandA)  += std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_bitwise_and,    decltype(static_cast<void>(instanceof<baseA>()  &= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  &= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  &= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  &= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_bitwise_or,     decltype(static_cast<void>(instanceof<baseA>()  |= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  |= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  |= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  |= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_bitwise_xor,    decltype(static_cast<void>(instanceof<baseA>()  ^= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  ^= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  ^= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  ^= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_divide,         decltype(static_cast<void>(instanceof<baseA>()  /= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  /= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  /= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  /= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_left_shift,     decltype(static_cast<void>(instanceof<baseA>() <<= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>() <<= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() <<= instanceof<baseB>())) { return (std::forward<baseA>(operandA) <<= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_modulo,         decltype(static_cast<void>(instanceof<baseA>()  %= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  %= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  %= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  %= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_multiply,       decltype(static_cast<void>(instanceof<baseA>()  *= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  *= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  *= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  *= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_right_shift,    decltype(static_cast<void>(instanceof<baseA>() >>= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>() >>= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() >>= instanceof<baseB>())) { return (std::forward<baseA>(operandA) >>= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::assign_subtract,       decltype(static_cast<void>(instanceof<baseA>()  -= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  -= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  -= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  -= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::bitwise_and,           decltype(static_cast<void>(instanceof<baseA>()   & instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   & std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   & instanceof<baseB>())) { return (std::forward<baseA>(operandA)   & std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::bitwise_or,            decltype(static_cast<void>(instanceof<baseA>()   | instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   | std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   | instanceof<baseB>())) { return (std::forward<baseA>(operandA)   | std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::bitwise_xor,           decltype(static_cast<void>(instanceof<baseA>()   ^ instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   ^ std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   ^ instanceof<baseB>())) { return (std::forward<baseA>(operandA)   ^ std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::boolean_and,           decltype(static_cast<void>(instanceof<baseA>()  && instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  && std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  && instanceof<baseB>())) { return (std::forward<baseA>(operandA)  && std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::boolean_or,            decltype(static_cast<void>(instanceof<baseA>()  || instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  || std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  || instanceof<baseB>())) { return (std::forward<baseA>(operandA)  || std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::cast,                  decltype(static_cast<void>((baseB) instanceof<baseA>())),                 baseA, baseB> final { static bool const value = true; constexpr static decltype((baseB) std::declval<baseA>())                     valueof(baseA&& operand)                    noexcept(noexcept((baseB) instanceof<baseA>()))                 { return (baseB) std::forward<baseA>(operand);                              } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::comma,                 decltype(static_cast<void>(instanceof<baseA>()   , instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   , std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   , instanceof<baseB>())) { return (std::forward<baseA>(operandA)   , std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::divide,                decltype(static_cast<void>(instanceof<baseA>()   / instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   / std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   / instanceof<baseB>())) { return (std::forward<baseA>(operandA)   / std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::equals,                decltype(static_cast<void>(instanceof<baseA>()  == instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  == std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  == instanceof<baseB>())) { return (std::forward<baseA>(operandA)  == std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::equals_greater,        decltype(static_cast<void>(instanceof<baseA>()  >= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  >= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  >= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  >= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::equals_lesser,         decltype(static_cast<void>(instanceof<baseA>()  <= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  <= std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  <= instanceof<baseB>())) { return (std::forward<baseA>(operandA)  <= std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::greater,               decltype(static_cast<void>(instanceof<baseA>()   > instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   > std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   > instanceof<baseB>())) { return (std::forward<baseA>(operandA)   > std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::left_shift,            decltype(static_cast<void>(instanceof<baseA>()  << instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  << std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  << instanceof<baseB>())) { return (std::forward<baseA>(operandA)  << std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::lesser,                decltype(static_cast<void>(instanceof<baseA>()   < instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   < std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   < instanceof<baseB>())) { return (std::forward<baseA>(operandA)   < std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::member_pointer_access, decltype(static_cast<void>(instanceof<baseA>() ->* instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>() ->* std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() ->* instanceof<baseB>())) { return (std::forward<baseA>(operandA) ->* std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::modulo,                decltype(static_cast<void>(instanceof<baseA>()   % instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   % std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   % instanceof<baseB>())) { return (std::forward<baseA>(operandA)   % std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::multiply,              decltype(static_cast<void>(instanceof<baseA>()   * instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   * std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   * instanceof<baseB>())) { return (std::forward<baseA>(operandA)   * std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::right_shift,           decltype(static_cast<void>(instanceof<baseA>()  >> instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  >> std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  >> instanceof<baseB>())) { return (std::forward<baseA>(operandA)  >> std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::subscript,             decltype(static_cast<void>(instanceof<baseA>()[instanceof<baseB>()])),    baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()[std::declval<baseB>()]))    valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()[instanceof<baseB>()]))    { return (std::forward<baseA>(operandA)[std::forward<baseB>(operandB)]);    } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::subtract,              decltype(static_cast<void>(instanceof<baseA>()   - instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()   - std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   - instanceof<baseB>())) { return (std::forward<baseA>(operandA)   - std::forward<baseB>(operandB)); } };
+    template <typename baseA, typename baseB> struct operate<operation_identity::unequal,               decltype(static_cast<void>(instanceof<baseA>()  != instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((std::declval<baseA>()  != std::declval<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  != instanceof<baseB>())) { return (std::forward<baseA>(operandA)  != std::forward<baseB>(operandB)); } };
     #ifdef __cpp_impl_three_way_comparison
       template <typename baseA, typename baseB>
-      struct operate<$shorthand::operation_identity::$compare, decltype(static_cast<void>(std::declval<baseA>() <=> std::declval<baseB>())), baseA, baseB> final {
+      struct operate<operation_identity::compare, decltype(static_cast<void>(instanceof<baseA>() <=> instanceof<baseB>())), baseA, baseB> final {
         static bool const value = true;
 
-        constexpr static decltype(std::declval<baseA>() <=> std::declval<baseB>()) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(std::declval<baseA>() <=> std::declval<baseB>())) {
+        constexpr static decltype(std::declval<baseA>() <=> std::declval<baseB>()) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() <=> instanceof<baseB>())) {
           return (std::forward<baseA>(operandA) <=> std::forward<baseB>(operandB));
         }
       };
     #endif
 
-    template <typename base> struct operate<$shorthand::operation_identity::$address,        decltype(static_cast<void>(&const_cast<typename std::remove_reference<base>::type&>(static_cast<typename std::remove_reference<base>::type const&>(std::declval<base>())))), base> final { static bool const value = true; constexpr static decltype(&const_cast<typename std::remove_reference<base>::type&>(static_cast<typename std::remove_reference<base>::type const&>(std::declval<base>()))) valueof(base&& operand) noexcept(noexcept(&const_cast<typename std::remove_reference<base>::type&>(static_cast<typename std::remove_reference<base>::type const&>(std::declval<base>())))) { return &const_cast<typename std::remove_reference<base>::type&>(static_cast<typename std::remove_reference<base>::type const&>(std::forward<base>(operand))); } };
-    template <typename base> struct operate<$shorthand::operation_identity::$complement,     decltype(static_cast<void>(~std::declval<base>())),                                                                                                                          base> final { static bool const value = true; constexpr static decltype(~std::declval<base>())                                                                                                                          valueof(base&& operand) noexcept(noexcept(~std::declval<base>()))                                                                                                                          { return ~std::forward<base>(operand);                                                                                                                          } };
-    template <typename base> struct operate<$shorthand::operation_identity::$dereference,    decltype(static_cast<void>(*std::declval<base>())),                                                                                                                          base> final { static bool const value = true; constexpr static decltype(*std::declval<base>())                                                                                                                          valueof(base&& operand) noexcept(noexcept(*std::declval<base>()))                                                                                                                          { return *std::forward<base>(operand);                                                                                                                          } };
-    template <typename base> struct operate<$shorthand::operation_identity::$member_access,  decltype(static_cast<void>(std::declval<base>().operator ->())),                                                                                                             base> final { static bool const value = true; constexpr static decltype(std::declval<base>().operator ->())                                                                                                             valueof(base&& operand) noexcept(noexcept(std::declval<base>().operator ->()))                                                                                                             { return std::forward<base>(operand).operator ->();                                                                                                             } };
-    template <typename base> struct operate<$shorthand::operation_identity::$minus,          decltype(static_cast<void>(-std::declval<base>())),                                                                                                                          base> final { static bool const value = true; constexpr static decltype(-std::declval<base>())                                                                                                                          valueof(base&& operand) noexcept(noexcept(-std::declval<base>()))                                                                                                                          { return -std::forward<base>(operand);                                                                                                                          } };
-    template <typename base> struct operate<$shorthand::operation_identity::$negate,         decltype(static_cast<void>(!std::declval<base>())),                                                                                                                          base> final { static bool const value = true; constexpr static decltype(!std::declval<base>())                                                                                                                          valueof(base&& operand) noexcept(noexcept(!std::declval<base>()))                                                                                                                          { return !std::forward<base>(operand);                                                                                                                          } };
-    template <typename base> struct operate<$shorthand::operation_identity::$plus,           decltype(static_cast<void>(+std::declval<base>())),                                                                                                                          base> final { static bool const value = true; constexpr static decltype(+std::declval<base>())                                                                                                                          valueof(base&& operand) noexcept(noexcept(+std::declval<base>()))                                                                                                                          { return +std::forward<base>(operand);                                                                                                                          } };
-    template <typename base> struct operate<$shorthand::operation_identity::$post_decrement, decltype(static_cast<void>(std::declval<base>()--)),                                                                                                                         base> final { static bool const value = true; constexpr static decltype(std::declval<base>()--)                                                                                                                         valueof(base&& operand) noexcept(noexcept(std::declval<base>()--))                                                                                                                         { return std::forward<base>(operand)--;                                                                                                                         } };
-    template <typename base> struct operate<$shorthand::operation_identity::$post_increment, decltype(static_cast<void>(std::declval<base>()++)),                                                                                                                         base> final { static bool const value = true; constexpr static decltype(std::declval<base>()++)                                                                                                                         valueof(base&& operand) noexcept(noexcept(std::declval<base>()++))                                                                                                                         { return std::forward<base>(operand)++;                                                                                                                         } };
-    template <typename base> struct operate<$shorthand::operation_identity::$pre_decrement,  decltype(static_cast<void>(--std::declval<base>())),                                                                                                                         base> final { static bool const value = true; constexpr static decltype(--std::declval<base>())                                                                                                                         valueof(base&& operand) noexcept(noexcept(--std::declval<base>()))                                                                                                                         { return --std::forward<base>(operand);                                                                                                                         } };
-    template <typename base> struct operate<$shorthand::operation_identity::$pre_increment,  decltype(static_cast<void>(++std::declval<base>())),                                                                                                                         base> final { static bool const value = true; constexpr static decltype(++std::declval<base>())                                                                                                                         valueof(base&& operand) noexcept(noexcept(++std::declval<base>()))                                                                                                                         { return ++std::forward<base>(operand);                                                                                                                         } };
-    template <typename base> struct operate<$shorthand::operation_identity::$self,           void,                                                                                                                                                                        base> final { static bool const value = true; constexpr static decltype(std::declval<base>())                                                                                                                           valueof(base&& operand) noexcept                                                                                                                                                           { return std::forward<base>(operand);                                                                                                                           } };
+    template <typename baseA, typename baseB, typename baseC>
+    struct operate<operation_identity::ternary, decltype(static_cast<void>(instanceof<baseA>() ? instanceof<baseB>() : instanceof<baseC>())), baseA, baseB, baseC> final {
+      static bool const value = true;
+
+      constexpr static decltype(std::declval<baseA>() ? std::declval<baseB>() : std::declval<baseC>()) valueof(baseA&& operandA, baseB&& operandB, baseC&& operandC) noexcept(noexcept(instanceof<baseA>() ? instanceof<baseB>() : instanceof<baseC>())) {
+        return std::forward<baseA>(operandA) ? std::forward<baseB>(operandB) : std::forward<baseC>(operandC);
+      }
+    };
+
+    template <typename base, typename... bases> struct operate<operation_identity::call,      decltype(static_cast<void>(instanceof<base>()(instanceof<bases>()...))), base, bases...> final { static bool const value = true; constexpr static decltype(std::declval<base>()(std::declval<bases>()...)) valueof(base&& operand, bases&&... operands) noexcept(noexcept(instanceof<base>()(instanceof<bases>()...))) { return std::forward<base>(operand)(std::forward<bases>(operands)...); } };
+    template <typename base, typename... bases> struct operate<operation_identity::construct, decltype(static_cast<void>(base(instanceof<bases>()...))),               base, bases...> final { static bool const value = true; constexpr static base                                                     valueof(bases&&... operands)                 noexcept(noexcept(base(instanceof<bases>()...)))               { return base(std::forward<bases>(operands)...);                        } };
+
+    // ... ->> `$shorthand::evaluation` of `$shorthand::operation` on `$shorthand::operand`s (or `$shorthand::$operand`s themselves)
+    struct operation_value final {
+      public:
+        // ... ->>
+        enum class type : unsigned char {
+          decimal,
+          function,
+          integer,
+          method,
+          pointer,
+          property,
+          standard,
+          undefined
+        };
+
+      private:
+        // ... ->>
+        template <typename base>
+        struct allocation final {
+          constexpr static struct {
+            template <typename type>
+            constexpr void* operator =(type&&) const noexcept {
+              return NULL;
+            }
+          } value = {};
+        };
+
+        // ... ->>
+        struct qualifier final {
+          enum type : std::size_t {
+            pointer   = static_cast<std::size_t>(-1),
+            unbounded = static_cast<std::size_t>(-2)
+          };
+
+          // ...
+          template <type...>
+          struct collection final {
+            template <typename base>
+            struct apply final {
+              typedef base type;
+            };
+          };
+
+          template <type qualifier, type... qualifiers>
+          struct collection<qualifier, qualifiers...> final {
+            template <typename base>
+            struct apply final {
+              typedef typename collection<qualifiers...>::template apply<
+                typename std::conditional<qualifier == operation_value::qualifier::pointer,   base*,
+                typename std::conditional<qualifier == operation_value::qualifier::unbounded, base[],
+                  base[static_cast<std::size_t>(qualifier)]
+                >::type>::type
+              >::type type;
+            };
+
+            /* ... */
+            constexpr static type value[] = {qualifier, qualifiers...};
+          };
+
+          // ...
+          template <typename, class collection = qualifier::collection<> >
+          struct collection_from final {
+            typedef collection type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base&, collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers...> >::type type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base&&, collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers...> >::type type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base*, collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers..., qualifier::pointer> >::type type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base* const, collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers..., qualifier::pointer> >::type type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base* const volatile, collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers..., qualifier::pointer> >::type type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base* volatile, collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers..., qualifier::pointer> >::type type;
+          };
+
+          template <typename base, type... qualifiers>
+          struct collection_from<base[], collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers..., qualifier::unbounded> >::type type;
+          };
+
+          template <typename base, std::size_t capacity, type... qualifiers>
+          struct collection_from<base[capacity], collection<qualifiers...> > final {
+            typedef typename collection_from<base, collection<qualifiers..., static_cast<qualifier::type>(capacity)> >::type type;
+          };
+        };
+
+        // ... ->>
+        template <typename...>
+        struct variant final {
+          constexpr variant(...) noexcept {}
+        };
+
+        // ... ->>
+        struct value final {
+          friend struct operation_value;
+
+          private:
+            union {
+              unsigned char               initializer : 1; //
+              long double                 decimal;         // ->> Preserves floating-point          value
+              void                      (*function)();     // ->> Preserves (free) function pointer value
+              uintmax_t                   integer;         // ->> Preserves integer                 value
+              void                       *pointer;         // ->> Preserves object pointer          value
+              unsigned char $shorthand::* property;        // ->> Preserves data member pointer     value
+              #ifndef _MSC_VER                             // ->> Preserves function member pointer value
+                void ($shorthand::* method)();             //
+              #endif                                       //
+              variant<                                     // ->> Preserves (freestanding-implementation only) standard library container value --- TODO (Lapys) -> Consider possibly-attributed types like `std::va_list`?
+                std::allocator_arg_t, std::atomic_bool, std::atomic_char, std::atomic_flag, std::atomic_int, std::atomic_int_fast16_t, std::atomic_int_fast32_t, std::atomic_int_fast64_t, std::atomic_int_fast8_t, std::atomic_int_least16_t, std::atomic_int_least32_t, std::atomic_int_least64_t, std::atomic_int_least8_t, std::atomic_intmax_t, std::atomic_llong, std::atomic_long, std::atomic_ptrdiff_t, std::atomic_schar, std::atomic_short, std::atomic_size_t, std::atomic_uchar, std::atomic_uint, std::atomic_uint_fast16_t, std::atomic_uint_fast32_t, std::atomic_uint_fast64_t, std::atomic_uint_fast8_t, std::atomic_uint_least16_t, std::atomic_uint_least32_t, std::atomic_uint_least64_t, std::atomic_uint_least8_t, std::atomic_uintmax_t, std::atomic_ullong, std::atomic_ulong, std::atomic_ushort, std::atomic_wchar_t, std::atto,
+                std::bad_alloc, std::bad_array_new_length, std::bad_cast, std::bad_exception, std::bad_function_call, std::bad_typeid, std::bad_weak_ptr, std::bidirectional_iterator_tag,
+                std::centi,
+                std::deca, std::deci, std::div_t,
+                std::exa, std::exception, std::exception_ptr,
+                std::false_type, std::femto, std::forward_iterator_tag,
+                std::giga,
+                std::hecto,
+                std::input_iterator_tag,
+                std::kilo,
+                std::ldiv_t, std::lldiv_t,
+                std::mega, std::memory_order, std::micro, std::milli,
+                std::nano, std::nested_exception, std::new_handler, std::nothrow_t,
+                std::output_iterator_tag, std::owner_less<void>,
+                std::peta, std::pico, std::piecewise_construct_t,
+                std::random_access_iterator_tag,
+                std::tera, std::terminate_handler, std::true_type, std::type_info,
+                decltype(std::placeholders::_1), decltype(std::placeholders::_2),
+                #ifdef __cpp_aligned_new
+                  std::align_val_t,
+                #endif
+                #ifdef __cpp_char8_t
+                  std::atomic_char8_t,
+                #endif
+                #ifdef __cpp_lib_endian
+                  std::endian
+                #endif
+                #ifdef __cpp_lib_ranges
+                  std::dangling,
+                  std::from_range_t,
+                  std::subrange_kind,
+                #endif
+                #ifdef __cpp_lib_source_location
+                  std::source_location,
+                #endif
+                #ifdef __cpp_lib_three_way_comparison
+                  std::compare_three_way, std::compare_three_way_result,
+                  std::partial_ordering,
+                  std::strong_ordering,
+                  std::weak_ordering,
+                  #ifdef __cpp_lib_coroutine
+                    std::coroutine_handle<void>, std::coroutine_handle<std::noop_coroutine_promise>,
+                    std::noop_coroutine_handle, std::noop_coroutine_promise,
+                    std::suspend_always, std::suspend_never,
+                  #endif
+                #endif
+                #ifdef __cpp_unicode_characters
+                  std::atomic_char16_t, std::atomic_char32_t,
+                #endif
+                #if defined(INT16_MAX) && defined(INT16_MIN)
+                  std::atomic_int16_t,
+                #endif
+                #if defined(INT32_MAX) && defined(INT32_MIN)
+                  std::atomic_int32_t,
+                #endif
+                #if defined(INT64_MAX) && defined(INT64_MIN)
+                  std::atomic_int64_t,
+                #endif
+                #if defined(INT8_MAX)  && defined(INT8_MIN)
+                  std::atomic_int8_t,
+                #endif
+                #if defined(INTPTR_MAX) && defined(INTPTR_MIN)
+                  std::atomic_intptr_t,
+                #endif
+                #if defined(UINT16_MAX) && defined(UINT16_MIN)
+                  std::atomic_uint16_t,
+                #endif
+                #if defined(UINT32_MAX) && defined(UINT32_MIN)
+                  std::atomic_uint32_t,
+                #endif
+                #if defined(UINT64_MAX) && defined(UINT64_MIN)
+                  std::atomic_uint64_t,
+                #endif
+                #if defined(UINT8_MAX)  && defined(UINT8_MIN)
+                  std::atomic_uint8_t,
+                #endif
+                #if defined(UINTPTR_MAX) && defined(UINTPTR_MIN)
+                  std::atomic_uintptr_t,
+                #endif
+                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 201402L
+                  std::bit_and      <void>, // --> $bitwise_and
+                  std::bit_not      <>    , // --> $complement
+                  std::bit_or       <void>, // --> $bitwise_or
+                  std::bit_xor      <void>, // --> $bitwise_xor
+                  std::divides      <void>, // --> $divide
+                  std::equal_to     <void>, // --> $equals
+                  std::greater      <void>, // --> $greater
+                  std::greater_equal<void>, // --> $equals_greater
+                  std::less         <void>, // --> $lesser
+                  std::less_equal   <void>, // --> $equals_lesser
+                  std::logical_and  <void>, // --> $boolean_and
+                  std::logical_not  <void>, // --> $negate
+                  std::logical_or   <void>, // --> $boolean_or
+                  std::minus        <void>, // --> $subtract
+                  std::modulus      <void>, // --> $modulo
+                  std::multiplies   <void>, // --> $multiply
+                  std::negate       <void>, // --> $minus
+                  std::not_equal_to <void>, // --> $unequals
+                  std::plus         <void>, // --> $add
+                #endif
+                #if ((defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) < 201703L) && false == defined(__clang__)
+                  std::unexpected_handler,
+                #endif
+                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 201703L
+                  std::in_place_t,
+                #endif
+                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 202002L
+                  std::contiguous_iterator_tag,
+                  std::default_sentinel_t, std::destroying_delete_t,
+                  std::identity, // --> $self
+                  std::unreachable_sentinel_t,
+                #endif
+                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
+                  std::pointer_safety,
+                #endif
+                unsigned char
+              > standard;
+            };
+
+          public:
+            operation_value::type const type;
+
+            /* ... */
+            constexpr value() noexcept :
+              initializer(),
+              type       (type::undefined)
+            {}
+
+            template <typename type, typename std::enable_if<std::is_floating_point<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
+            constexpr value(type&& value) noexcept :
+              decimal(value),
+              type   (type::decimal)
+            {}
+
+            template <typename type, typename std::enable_if<std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
+            constexpr value(type&& value) noexcept :
+              function(reinterpret_cast<void (*)()>(value)),
+              type    (type::function)
+            {}
+
+            template <typename type, typename std::enable_if<std::is_enum<typename std::remove_reference<type>::type>::value || std::is_integral<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
+            constexpr value(type&& value) noexcept :
+              integer(+value),
+              type   (type::integer)
+            {}
+
+            template <typename type, typename std::enable_if<std::is_pointer<typename std::remove_reference<type>::type>::value || std::is_same<std::nullptr_t, typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
+            constexpr value(type&& value) noexcept :
+              pointer(const_cast<void*>(static_cast<void const volatile*>(value))),
+              type   (type::pointer)
+            {}
+
+            template <typename type, typename std::enable_if<std::is_member_pointer<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
+            constexpr value(type&& value) noexcept :
+              property(reinterpret_cast<unsigned char $shorthand::*>(value)),
+              type    (type::property)
+            {}
+
+            template <typename type, typename std::enable_if<operate<operation_identity::construct, void, decltype(value::standard), type&&>::value && false == (
+              std::is_enum                   <typename std::remove_reference<type>::type>                                               ::value ||
+              std::is_floating_point         <typename std::remove_reference<type>::type>                                               ::value ||
+              std::is_function               <typename std::remove_pointer<typename std::remove_reference<type>::type>::type>           ::value ||
+              std::is_integral               <typename std::remove_reference<type>::type>                                               ::value ||
+              std::is_pointer                <typename std::remove_reference<type>::type>                                               ::value ||
+              std::is_member_function_pointer<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>           ::value ||
+              std::is_member_pointer         <typename std::remove_reference<type>::type>                                               ::value ||
+              std::is_same                   <std::nullptr_t, typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value
+            ), std::nullptr_t>::type = nullptr>
+            constexpr value(type&& value) noexcept(noexcept(decltype(value::standard)(std::declval<type>()))) :
+              standard(std::forward<type>(value)),
+              type    (type::standard)
+            {}
+
+            #ifndef _MSC_VER
+              template <typename type, typename std::enable_if<std::is_member_function_pointer<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
+              constexpr value(type&& value) noexcept :
+                method(reinterpret_cast<void ($shorthand::*)()>(value)),
+                type  (type::method)
+              {}
+            #endif
+        };
+
+      /* ... */
+      private:
+        typename operation_value::qualifier::type const        qualifiers[12];     // ->> Type qualifier(s) of value evaluated from `$shorthand`; Presumed maximum of     12 to 256 type-qualifiers
+        typename operation_value::qualifier::type const *const extendedQualifiers; // ->>                                                         Extended maximum beyond 12 to 256 type-qualifiers
+        void                                            *const reference;          // ->> Reference to value evaluated from `$shorthand`; Preserves object representation
+
+      public:
+        operation_value::value const  value;     // ->> Representation   of value evaluated from `$shorthand`; Preserves value  representation
+        std::size_t            const  alignment; // ->> Byte offset      of value evaluated from `$shorthand`
+        std::size_t            const  size;      // ->> Byte size        of value evaluated from `$shorthand`
+        std::type_info         const &type;      // ->> Type information of value evaluated from `$shorthand`
+
+      /* ... */
+      private:
+        template <typename type, qualifier::type... baseQualifiers, typename std::enable_if<false != operate<operation_identity::construct, void, decltype(operation_value::value), type&&>::value, std::nullptr_t>::type = nullptr>
+        constexpr explicit operation_value(type&& value, void const volatile* const address, std::type_info const& typeInformation, std::size_t const size, std::size_t const alignment, qualifier::collection<baseQualifiers...> const, qualifier::type const extendedQualifiers[]) noexcept :
+          qualifiers        {baseQualifiers...},          // ->> Compile-time
+          extendedQualifiers(extendedQualifiers),         // ->> Possibly statically-allocated compile-time
+          reference         (const_cast<void*>(address)), // ->> Possibly compile-time address-of
+          value             (std::forward<type>(value)),  // ->> Possibly compile-time object (and copy-initialization)
+          alignment         (alignment),                  // ->> Compile-time
+          size              (size),                       // ->> Compile-time
+          type              (typeInformation)             // ->> Compile-time
+        {}
+
+        template <typename type, qualifier::type... baseQualifiers, typename std::enable_if<false == operate<operation_identity::construct, void, decltype(operation_value::value), type&&>::value, std::nullptr_t>::type = nullptr>
+        constexpr explicit operation_value(type&&, void const volatile* const address, std::type_info const& typeInformation, std::size_t const size, std::size_t const alignment, qualifier::collection<baseQualifiers...> const, qualifier::type const extendedQualifiers[]) noexcept :
+          qualifiers        {baseQualifiers...},          //
+          extendedQualifiers(extendedQualifiers),         //
+          reference         (const_cast<void*>(address)), //
+          value             (),                           // ->> Compile-time; See previous declaration of `operation_value(...)`
+          alignment         (alignment),                  //
+          size              (size),                       //
+          type              (typeInformation)             //
+        {}
+
+        template <typename type, qualifier::type... qualifiers, typename std::enable_if<sizeof...(qualifiers) == sizeof(decltype(operation_value::qualifiers)) / sizeof(qualifier::type), std::nullptr_t>::type = nullptr>
+        constexpr explicit operation_value(type&& value, void const volatile* const address, std::type_info const& typeInformation, std::size_t const size, std::size_t const alignment, qualifier::collection<qualifiers...> const) noexcept :
+          operation_value::operation_value(std::forward<type>(value), address, typeInformation, size, alignment, qualifier::collection<qualifiers...>{}, NULL)
+        {}
+
+        template <typename type, qualifier::type... qualifiers, typename std::enable_if<(sizeof...(qualifiers) < sizeof(decltype(operation_value::qualifiers)) / sizeof(qualifier::type)), std::nullptr_t>::type = nullptr>
+        constexpr explicit operation_value(type&& value, void const volatile* const address, std::type_info const& typeInformation, std::size_t const size, std::size_t const alignment, qualifier::collection<qualifiers...> const) noexcept :
+          operation_value::operation_value(std::forward<type>(value), address, typeInformation, size, alignment, qualifier::collection<qualifiers..., static_cast<qualifier::type>(0x0u)>{}, NULL)
+        {}
+
+        template <typename type, qualifier::type... qualifiers, typename std::enable_if<(sizeof...(qualifiers) > sizeof(decltype(operation_value::qualifiers)) / sizeof(qualifier::type)), std::nullptr_t>::type = nullptr>
+        constexpr explicit operation_value(type&& value, void const volatile* const address, std::type_info const& typeInformation, std::size_t const size, std::size_t const alignment, qualifier::collection<qualifiers...> const) noexcept :
+          operation_value::operation_value(std::forward<type>(value), address, typeInformation, size, alignment, qualifier::collection<static_cast<qualifier::type>(0x0u)>{}, qualifier::collection<qualifiers...>::value)
+        {}
+
+        // ... ->> `$shorthand::operand`s only
+        template <typename type, typename std::enable_if<false != (std::is_reference<type>::value || operate<operation_identity::construct, void, decltype(operation_value::value), type&&>::value), std::nullptr_t>::type = nullptr>
+        constexpr operation_value(operation_value (*const)(operation_value const[]), type&& value) noexcept :
+          operation_value::operation_value(std::forward<type>(value))
+        {}
+
+        template <typename type, typename std::enable_if<false == (std::is_reference<type>::value || operate<operation_identity::construct, void, decltype(operation_value::value), type&&>::value), std::nullptr_t>::type = nullptr>
+        constexpr operation_value(operation_value (*const)(operation_value const[]), type&& value) noexcept :
+          operation_value::operation_value(static_cast<type&&>(value))
+        {}
+
+      public:
+        template <typename type, typename std::enable_if<std::is_lvalue_reference<type>::value && false != operate<operation_identity::overloaded_address, void, type&&>::value, std::nullptr_t>::type = nullptr>
+        inline operation_value(type&& value) noexcept :
+          operation_value::operation_value(std::forward<type>(value), &const_cast<unsigned char&>(reinterpret_cast<unsigned char const volatile&>(value)), typeid(type), sizeof(type), alignof(type), typename qualifier::collection_from<typename std::remove_reference<type>::type>::type{})
+        {}
+
+        template <typename type, typename std::enable_if<std::is_lvalue_reference<type>::value && false == operate<operation_identity::overloaded_address, void, type&&>::value, std::nullptr_t>::type = nullptr>
+        constexpr operation_value(type&& value) noexcept :
+          operation_value::operation_value(std::forward<type>(value), &value, typeid(type), sizeof(type), alignof(type), typename qualifier::collection_from<typename std::remove_reference<type>::type>::type{})
+        {}
+
+        template <typename type, typename std::enable_if<std::is_rvalue_reference<type>::value, std::nullptr_t>::type = nullptr>
+        constexpr operation_value(type&& value) noexcept :
+          operation_value::operation_value(std::forward<type>(value), (typename std::remove_reference<type>::type&) value)
+        {}
+
+        template <typename type, typename std::enable_if<false == std::is_reference<type>::value && false != operate<operation_identity::construct, void, decltype(operation_value::value), type&&>::value, std::nullptr_t>::type = nullptr>
+        constexpr operation_value(type&& value) noexcept :
+          operation_value::operation_value(std::forward<type>(value), NULL, typeid(type), sizeof(type), alignof(type), typename qualifier::collection_from<typename std::remove_reference<type>::type>::type{})
+        {}
+
+        template <typename type, typename std::enable_if<false == std::is_reference<type>::value && false == operate<operation_identity::construct, void, decltype(operation_value::value), type&&>::value, std::nullptr_t>::type = nullptr>
+        constexpr operation_value(type&& value) noexcept :
+          operation_value::operation_value(std::forward<type>(value), (allocation<typename std::remove_cv<type>::type>::value = std::forward<type>(value)), typeid(type), sizeof(type), alignof(type), typename qualifier::collection_from<typename std::remove_reference<type>::type>::type{})
+        {}
+
+        /* ... */
+        // #ifdef __circle_lang__
+        // #else
+        //   template <typename type>
+        //   constexpr operator type() const noexcept {
+        //     typedef allocation<typename std::remove_cv<typename std::remove_reference<type>::type>::type> allocation;
+        //     return ...;
+        //   }
+        // #endif
+    };
 
   public:
     typedef $shorthand::operation_value evaluation;
@@ -199,11 +606,9 @@ struct $shorthand {
     /* ... */
     constexpr static $shorthand::evaluation (*$voidop)($shorthand::operand const[]) noexcept = nullptr;
 
-    template <$shorthand::operation_identity identity, unsigned char arity>
+    template <operation_identity identity, unsigned char arity>
     constexpr static $shorthand::evaluation $op($shorthand::operand const[]) noexcept(false) /* --> throw(std::runtime_error) */ {
-      return {};
-      // operate<$shorthand::self, void, int>::value
-      // operate<$shorthand::self, void, int>::valueof(42)
+      return {"Hello, World!"};
     }
 };
 
