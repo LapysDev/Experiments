@@ -1,12 +1,14 @@
 /* ...
     --- CITE ---
       #Lapys:
-        - Circle:                                             https://lapys.godbolt.org/z/fjWhrbYG9
-        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/75z9afshz
+        - Circle:                                             https://lapys.godbolt.org/z/WP8z71zaW
+        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/dMqdf6vvY
 */
 #include <type_traits>
 #include <utility>
-#include <version>
+#if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 202002L || (defined(__circle_lang__) || defined(__clang__) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__GNUC__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__NVCC__) || defined(__NVCOMPILER))
+# include <version>
+#endif
 
 /* ... ->> `union` class type zero-cost abstraction */
 template <typename...>
@@ -24,108 +26,95 @@ struct variant final {
       unfit     = 0u  // ->> Access violates strict aliasing
     };
 
-    // ... ->> Flag denoting boolean metafunction
-    enum class operation : unsigned char {
-      cast,
-      initialize
+    // ... ->> Boolean metafunction denoting the validity of casting a type
+    template <typename, typename baseA, typename baseB>
+    struct can_convert final {
+      static bool const value = std::is_void<typename std::remove_pointer<baseB>::type>::value && (
+        std::is_array  <typename std::remove_reference<baseA>::type>::value ||
+        std::is_pointer<typename std::remove_reference<baseA>::type>::value
+      );
     };
 
-    // ... ->> Boolean metafunction denoting the preference/ validity of possible operations
-    template <variant::operation, typename, typename...>
-    struct can final {
-      static bool const value = false;
+    template <typename baseA, typename baseB>
+    struct can_convert<decltype(static_cast<void>(static_cast<baseB>(std::declval<typename std::conditional<std::is_reference<baseA>::value, baseA, baseA&>::type>()))), baseA, baseB> final {
+      static bool const value = true;
     };
 
-    template <typename base, typename... bases>
-    struct can<operation::cast, base, bases...> final {
-      template <class, typename subbase>
+    // ... ->> Boolean metafunction denoting the validity of construction/ initializing a type
+    template <typename, typename base, typename... bases>
+    struct can_initialize final {
+      template <typename, typename, typename...>
       struct valueof final {
-        static bool const value = std::is_void<typename std::remove_pointer<subbase>::type>::value && (
-          std::is_array  <typename std::remove_reference<base>::type>::value ||
-          std::is_pointer<typename std::remove_reference<base>::type>::value
-        );
-      };
-
-      template <typename subbase>
-      struct valueof<decltype(static_cast<void>(static_cast<subbase>(std::declval<typename std::conditional<std::is_reference<base>::value, base, base&>::type>()))), subbase> final {
-        static bool const value = true;
-      };
-
-      /* ... */
-      static bool const value = valueof<void, bases...>::value;
-    };
-
-    template <typename base, typename... bases>
-    struct can<operation::initialize, base, bases...> final {
-      template <class, typename subbase = void, typename...>
-      struct valueof final {
-        static bool const value = std::is_void<typename std::remove_pointer<base>::type>::value && (
-          std::is_array  <typename std::remove_reference<subbase>::type>::value ||
-          std::is_pointer<typename std::remove_reference<subbase>::type>::value
-        );
+        static bool const value = false;
       };
 
       template <typename subbase, typename... subbases>
       struct valueof<decltype(static_cast<void>(
-        #if defined(__GNUC__) && false == (defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__NVCC__) || defined(__NVCOMPILER))
-          base(std::declval<typename std::conditional<std::is_void<subbase>::value, base, subbase>::type>(), std::declval<subbases>()...)
+        #if defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__NVCC__) || defined(__NVCOMPILER)
+          subbase{std::declval<subbases>()...}
         #else
-          base{std::declval<typename std::conditional<std::is_void<subbase>::value, base, subbase>::type>(), std::declval<subbases>()...}
+          subbase(std::declval<subbases>()...)
         #endif
       )), subbase, subbases...> final {
         static bool const value = true;
       };
 
       /* ... */
-      static bool const value = valueof<void, bases...>::value;
+      static bool const value = valueof<void, base, bases...>::value;
     };
 
-    // ... ->> Disambiguation type
-    struct trait final {};
+    template <typename baseA, typename baseB>
+    struct can_initialize<void, baseA, baseB> final {
+      template <typename, typename subbaseA, typename subbaseB>
+      struct valueof final {
+        static bool const value = std::is_void<typename std::remove_pointer<subbaseA>::type>::value && (
+          std::is_array  <typename std::remove_reference<subbaseB>::type>::value ||
+          std::is_pointer<typename std::remove_reference<subbaseB>::type>::value
+        );
+      };
+
+      template <typename subbaseA, typename subbaseB>
+      struct valueof<decltype(static_cast<void>(
+        subbaseA((subbaseA) std::declval<subbaseB>())
+      )), subbaseA, subbaseB> final {
+        static bool const value = true;
+      };
+
+      /* ... */
+      static bool const value = valueof<void, baseA, baseB>::value;
+    };
 
     // ... ->> Sum collection of types
     template <typename...>
     struct values final {
       // ... ->> See `enum variant<>::access`
-      template <variant::operation, typename...>
+      template <bool, typename...>
       struct evaluate final {
         static variant::access const value = access::unfit;
       };
 
-      // ... ->> Boolean denoting inclusion within a collection of values
+      // ... ->> Boolean denoting allowed & preferred member access in current type
       template <typename>
-      struct in final {
+      struct is_convertible final {
         static bool const value = false;
       };
 
-      // ... ->> Boolean denoting allowed and preferred member access in succeeding type
-      template <variant::operation, variant::access, typename...>
-      struct is_deferrable final {
+      // ... ->> Boolean denoting allowed & preferred member access in succeeding type
+      template <variant::access, typename>
+      struct is_deferred_convertible final {
         static bool const value = false;
       };
 
-      // ... ->> Boolean denoting allowed and preferred member access in current type
-      template <variant::operation, typename...>
-      struct is_evaluable final {
+      // ... ->> Boolean denoting allowed & preferred member initialization in succeeding type
+      template <variant::access, typename...>
+      struct is_deferred_initializable final {
         static bool const value = false;
       };
 
-      // ... ->> Unique collection of types
-      template <class, typename...>
-      struct set;
-
-      template <typename... elements>
-      struct set<values<elements...> > final {
-        typedef values<elements...> type;
-      };
-
-      template <typename... elements, typename base, typename... bases>
-      struct set<values<elements...>, base, bases...> final {
-        typedef typename std::conditional<
-          values<elements...>::template in<base>::value,
-          typename set<values<elements...>,       bases...>::type,
-          typename set<values<elements..., base>, bases...>::type
-        >::type type;
+      // ... ->> Boolean denoting allowed & preferred member initialization in current type
+      template <typename...>
+      struct is_initializable final {
+        static bool const value = false;
       };
 
       /* ... */
@@ -140,14 +129,14 @@ struct variant final {
     template <typename base, typename... bases>
     struct values<base, bases...> final {
       // ... ->> See `struct values<>::evaluate` -->
-      template <variant::operation operation, typename... subbases>
+      template <bool assertion, typename...>
       struct evaluate final {
-        static variant::access const value = can<operation, base, subbases...>::value ? access::inexact : access::unfit;
+        static variant::access const value = assertion ? access::inexact : access::unfit;
       };
 
-      template <variant::operation operation, typename subbase>
-      struct evaluate<operation, subbase> final {
-        static variant::access const value = can<operation, base, subbase>::value ?
+      template <bool assertion, typename subbase>
+      struct evaluate<assertion, subbase> final {
+        static variant::access const value = assertion ?
           // typeid(base) == typeid(subbase)
           std::is_same<
             typename std::remove_cv<typename std::remove_reference<base>   ::type>::type,
@@ -187,25 +176,40 @@ struct variant final {
         access::inexact : access::unfit;
       };
 
-      // ... ->> See `struct values<>::in`
+      // ... ->> See `struct values<>::is_convertible`
       template <typename subbase>
-      struct in final {
-        static bool const value = std::is_same<
-          typename std::remove_cv<typename std::remove_reference<base>   ::type>::type,
-          typename std::remove_cv<typename std::remove_reference<subbase>::type>::type
-        >::value || values<bases...>::template in<subbase>::value;
+      struct is_convertible final {
+        static bool const value = (
+          access::unfit != evaluate<can_convert<void, base, subbase>::value, subbase>::value ||
+          values<bases...>::template is_convertible<subbase>::value
+        );
       };
 
-      // ... ->> See `struct values<>::is_deferrable`
-      template <variant::operation operation, variant::access evaluation, typename... subbases>
-      struct is_deferrable final {
-        static bool const value = (evaluation < evaluate<operation, subbases...>::value) || values<bases...>::template is_deferrable<operation, evaluation, subbases...>::value;
+      // ... ->> See `struct values<>::is_deferred_convertible`
+      template <variant::access evaluation, typename subbase>
+      struct is_deferred_convertible final {
+        static bool const value = (
+          evaluation < evaluate<can_convert<void, base, subbase>::value, subbase>::value ||
+          values<bases...>::template is_deferred_convertible<evaluation, subbase>::value
+        );
       };
 
-      // ... ->> See `struct values<>::is_evaluable`
-      template <variant::operation operation, typename... subbases>
-      struct is_evaluable final {
-        static bool const value = access::unfit != evaluate<operation, subbases...>::value || values<bases...>::template is_evaluable<operation, subbases...>::value;
+      // ... ->> See `struct values<>::is_deferred_initializable`
+      template <variant::access evaluation, typename... subbases>
+      struct is_deferred_initializable final {
+        static bool const value = (
+          evaluation < evaluate<can_initialize<void, base, subbases...>::value, subbases...>::value ||
+          values<bases...>::template is_deferred_initializable<evaluation, subbases...>::value
+        );
+      };
+
+      // ... ->> See `struct values<>::is_initializable`
+      template <typename... subbases>
+      struct is_initializable final {
+        static bool const value = (
+          access::unfit != evaluate<can_initialize<void, base, subbases...>::value, subbases...>::value ||
+          values<bases...>::template is_initializable<subbases...>::value
+        );
       };
 
       // ... ->> Reference types not explicitly allowed as `union` member but supported in `variant` class
@@ -218,13 +222,13 @@ struct variant final {
 
         /* ... */
         template <typename type>
-        constexpr member(type&& argument) noexcept :
-          value((decltype(member::value)) std::forward<type>(argument))
+        constexpr member(type&& argument) noexcept(noexcept((base) std::declval<type>()) && noexcept(decltype(member::value)(std::declval<decltype(member::value)>()))) :
+          value(static_cast<decltype(member::value)>((base) std::forward<type>(argument)))
         {}
 
-        template <typename... types>
-        constexpr member(types&&... arguments) noexcept :
-          value(std::forward<types>(arguments)...)
+        template <typename type, typename... types>
+        constexpr member(type&& argument, types&&... arguments) noexcept(noexcept(base(std::declval<type>(), std::declval<types>()...))) :
+          value(std::forward<type>(argument), std::forward<types>(arguments)...)
         {}
       };
 
@@ -239,42 +243,48 @@ struct variant final {
         next()
       {}
 
-      template <typename... types>
-      constexpr values(types&&... arguments) noexcept :
-        values(variant::trait{}, std::forward<types>(arguments)...)
-      {}
+      template <typename... types, typename std::enable_if<false == is_initializable<types...>::value, std::nullptr_t>::type = nullptr>
+      constexpr values(types&&...) noexcept = delete;
 
-      template <typename... types>
-      constexpr values(typename std::enable_if<false == is_evaluable<operation::initialize, types...>::value, typename variant::trait>::type const, types&&...) noexcept = delete;
-
-      template <typename... types>
-      constexpr values(typename std::enable_if<is_evaluable<operation::initialize, types...>::value && false != is_deferrable<operation::initialize, evaluate<operation::initialize, types...>::value, types...>::value, typename variant::trait>::type const, types&&... arguments) noexcept :
+      template <typename... types, typename std::enable_if<is_initializable<types...>::value && false != is_deferred_initializable<evaluate<can_initialize<void, base, types...>::value, types...>::value, types...>::value, std::nullptr_t>::type = nullptr>
+      constexpr values(types&&... arguments) noexcept(noexcept(values<bases...>(std::declval<types>()...))) :
         next(std::forward<types>(arguments)...)
       {}
 
-      template <typename... types>
-      constexpr values(typename std::enable_if<is_evaluable<operation::initialize, types...>::value && false == is_deferrable<operation::initialize, evaluate<operation::initialize, types...>::value, types...>::value, typename variant::trait>::type const, types&&... arguments) noexcept :
+      template <typename... types, typename std::enable_if<is_initializable<types...>::value && false == is_deferred_initializable<evaluate<can_initialize<void, base, types...>::value, types...>::value, types...>::value, std::nullptr_t>::type = nullptr>
+      constexpr values(types&&... arguments) noexcept(noexcept(member(std::declval<types>()...))) :
         value(std::forward<types>(arguments)...)
       {}
 
       /* ... */
-      template <typename type, typename std::enable_if<false == is_evaluable<operation::cast, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<false == is_convertible<type>::value, std::nullptr_t>::type = nullptr>
       inline operator type&() const volatile noexcept = delete;
 
-      template <typename type, typename std::enable_if<is_evaluable<operation::cast, type>::value && false != is_deferrable<operation::cast, evaluate<operation::cast, type>::value, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_convertible<type>::value && false != is_deferred_convertible<evaluate<can_convert<void, base, type>::value, type>::value, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept {
         return (type&) this -> next;
       }
 
-      template <typename type, typename std::enable_if<is_evaluable<operation::cast, type>::value && false == is_deferrable<operation::cast, evaluate<operation::cast, type>::value, type>::value, std::nullptr_t>::type = nullptr>
+      template <typename type, typename std::enable_if<is_convertible<type>::value && false == is_deferred_convertible<evaluate<can_convert<void, base, type>::value, type>::value, type>::value, std::nullptr_t>::type = nullptr>
       constexpr operator type&() const volatile noexcept {
         return (type&) this -> value.value;
       }
+
+      #if false == (defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(_MSC_VER) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__NVCC__) || defined(__NVCOMPILER))
+        template <typename type, typename std::enable_if<is_convertible<type>::value && false != is_deferred_convertible<evaluate<can_convert<void, base, type>::value, type>::value, type>::value, std::nullptr_t>::type = nullptr>
+        constexpr operator type&() const noexcept {
+          return (type&) this -> next;
+        }
+
+        template <typename type, typename std::enable_if<is_convertible<type>::value && false == is_deferred_convertible<evaluate<can_convert<void, base, type>::value, type>::value, type>::value, std::nullptr_t>::type = nullptr>
+        constexpr operator type&() const noexcept {
+          return (type&) this -> value.value;
+        }
+      #endif
     };
 
   public:
-    template <typename... types>
-    constexpr variant(types&&...) noexcept {}
+    constexpr explicit variant() noexcept {}
 
     /* ... */
     #if __cpp_constexpr >= 201304L
@@ -300,11 +310,11 @@ struct variant final {
 template <typename base, typename... bases>
 struct variant<base, bases...> final {
   private:
-    typename variant<>::template values<>::template set<variant<>::template values<>, base, bases...>::type members;
+    variant<>::template values<base, bases...> members;
 
   public:
     template <typename... types>
-    constexpr variant(types&&... arguments) noexcept :
+    constexpr variant(types&&... arguments) noexcept(noexcept(decltype(variant::members)(std::declval<types>()...))) :
       members(std::forward<types>(arguments)...)
     {}
 
@@ -331,13 +341,13 @@ struct variant<base, bases...> final {
       }
     #else
       template <typename type>
-      constexpr operator type() const volatile noexcept {
+      constexpr operator type() const volatile noexcept(noexcept((type) std::declval<type&>())) {
         return (type) (type&) this -> members;
       }
 
       #if false == (defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(_MSC_VER) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__NVCC__) || defined(__NVCOMPILER))
         template <typename type>
-        constexpr operator type() const noexcept {
+        constexpr operator type() const noexcept(noexcept((type) std::declval<type&>())) {
           return (type) (type&) this -> members;
         }
       #endif
@@ -352,6 +362,7 @@ int main(int, char*[]) /* noexcept */ {
   auto                  unusable     = variant<int, double, void*>{};             // Uninitialized members with no provided way to construct them
   auto                  unassignable = variant<int&>              {*new int(42)}; // Initialized reference member, cannot be copy-assigned
   auto                  object       = variant<int, double, void*>{42.0};         // Active `double` member
+  constexpr static int  literal      = 42;                                        //
   auto                  empty        = variant<>                  {};             // No member(s)
   constexpr static auto constant     = variant<int, double                        // Compile-time support
     #ifndef __circle_lang__
@@ -360,8 +371,17 @@ int main(int, char*[]) /* noexcept */ {
   >{42};
 
   /* Reference member initialization */
+  #ifndef __circle_lang__
+    constexpr
+    #ifdef _MSC_VER
+      static
+    #endif
+  #endif
+  int &&constant_reference = variant<int&&, int const&>{static_cast<int const&>(literal)}.operator int&&();
+
   variant<int const&>{42};
   variant<int&&>     {42};
+  std::printf("[...]: %i" "\r\n", constant_reference);
 
   /* Access most similar member by type */
   #ifndef _MSC_VER

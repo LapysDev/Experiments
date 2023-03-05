@@ -1,14 +1,16 @@
 /* ...
     --- CITE ---
       #Lapys:
-        - Circle:                                             https://lapys.godbolt.org/z/oKdeP1cx5
-        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/ceavh8Gdq
+        - Circle:                                             https://lapys.godbolt.org/z/vrb37rPer
+        - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/7G6bof67G
 */
 #include <cstdio>
 #include <new>
 #include <type_traits>
 #include <utility>
-#include <version>
+#if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 202002L || (defined(__circle_lang__) || defined(__clang__) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__GNUC__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__NVCC__) || defined(__NVCOMPILER))
+# include <version>
+#endif
 
 /* ... */
 struct any final {
