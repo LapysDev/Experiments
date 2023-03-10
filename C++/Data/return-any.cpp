@@ -19,12 +19,12 @@ struct any final {
     struct addressof final {
       template <typename type, typename std::enable_if<std::is_same<typename std::remove_cv<typename std::remove_reference<base>::type>::type, typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
       constexpr static typename std::remove_reference<base>::type* value(type&& object) noexcept {
-        return const_cast<typename std::remove_reference<base>::type*>(&static_cast<type&>(std::forward<type>(object)));
+        return const_cast<typename std::remove_reference<base>::type*>(&const_cast<type&>(static_cast<type const&>(std::forward<type>(object))));
       }
     };
 
     template <typename base>
-    struct addressof<base, decltype(static_cast<void>(std::declval<base&>().operator &()))> final {
+    struct addressof<base, decltype(static_cast<void>(std::declval<base>().operator &()))> final {
       template <typename type, typename std::enable_if<std::is_same<typename std::remove_cv<typename std::remove_reference<base>::type>::type, typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
       inline static typename std::remove_reference<base>::type* value(type&& object) noexcept {
         return reinterpret_cast<typename std::remove_reference<base>::type*>(&reinterpret_cast<unsigned char const volatile&>(static_cast<type&>(std::forward<type>(object))));
