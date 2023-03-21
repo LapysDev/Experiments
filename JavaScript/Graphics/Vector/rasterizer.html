@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html charset=UTF-8 dir=ltr encoding=UTF-8 lang=en-US language=English>
+  <head>
+    <!-- Document Metadata -->
+    <meta charset="UTF-8"/>
+    <meta content="height=device-height, initial-scale=1.0, maximum-scale=1.0, minimal-ui, minimum-scale=1.0, user-scalable=no, width=device-width" name="viewport"/>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+
+    <!-- Document Stylesheet -->
+    <style media=all type=text/css>@charset "us-ascii";
+      /* <body> */
+      body {
+        background-color: #0F0F0F;
+        display         : table-row-group;
+        margin          : 0;
+        overflow        : hidden
+      }
+
+      /* <body>, <canvas>, <html> */
+      body, canvas, html {
+        height: 100%;
+        width : 100%
+      }
+
+      /* <canvas> */
+      canvas {
+        background-color      : #000000;
+        border                : 1px solid #F0F0F0;
+        box-sizing            : border-box;
+        display               : table-row;
+        margin                : auto;
+        -ms-interpolation-mode: nearest-neighbor;
+        image-rendering       : -webkit-crisp-edges;
+        image-rendering       : -moz-crisp-edges;
+        image-rendering       : crisp-edges;
+        image-rendering       : pixelated
+      }
+
+      /* <html> */
+      html {
+        display                 : table;
+        line-height             : 1.15;
+        zoom                    : 1.0;
+        -webkit-text-size-adjust: 100%
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id=canvas> </canvas>
+
+    <!-- Document Script -->
+    <script defer language=javascript type=text/javascript>
+      var context          = canvas.getContext("2d", {alpha: false, desynchronized: true});
+      var offscreenCanvas  = canvas;
+      var offscreenContext = context;
+
+      /* Constant, Enumeration */
+      var I = function(data) { return data }; // ->> Identity function/ matrix
+
+      var colors = {
+        black  : rgb(0.0, 0.0, 0.0),
+        blue   : rgb(0.0, 0.0, 1.0),
+        cyan   : rgb(0.0, 1.0, 1.0),
+        gray   : rgb(0.5, 0.5, 0.5),
+        green  : rgb(0.0, 1.0, 0.0),
+        lime   : rgb(0.0, 1.0, 0.0),
+        magenta: rgb(1.0, 0.0, 1.0),
+        orange : rgb(0.5, 0.0, 1.0),
+        red    : rgb(1.0, 0.0, 0.0),
+        violet : rgb(1.0, 0.0, 0.5),
+        white  : rgb(1.0, 1.0, 1.0),
+        yellow : rgb(1.0, 1.0, 0.0)
+      };
+
+      /* Function */
+      // [Draw] ...
+      function drawCircle(coordinates, size, ...data) {
+        drawEllipse(coordinates, new xy(size + coordinates.x, size + coordinates.y), ...data)
+      }
+
+      function drawEllipse(origin, target, ...data) {
+        if (origin.x > target.x || target.y > target.y) return;
+        var height = (int32_t) (target.y - origin.y) / 2;
+        var width  = (int32_t) (target.x - origin.x) / 2;
+
+        // ...
+        for (var axis = height * width, x = 0, y = height; x !== width && 0 !== y; ) {
+          drawPoint(new xy(origin.x + (width + x), origin.y + (height + y)), ...data); // ->> Bottom Right
+          drawPoint(new xy(origin.x + (width + x), origin.y + (height - y)), ...data); // ->> Top    Right
+          drawPoint(new xy(origin.x + (width - x), origin.y + (height + y)), ...data); // ->> Bottom Left
+          drawPoint(new xy(origin.x + (width - x), origin.y + (height - y)), ...data); // ->> Top    Left
+
+          // ... ->> Algorithm for bottom-right quadrant
+          if (axis > ((height * pow(x + 1, 2)) / width) + ((width * pow(y + 0, 2)) / height)) { ++x; continue }
+          if (axis > ((height * pow(x + 0, 2)) / width) + ((width * pow(y - 1, 2)) / height)) { --y; continue }
+          if (axis > ((height * pow(x + 1, 2)) / width) + ((width * pow(y - 1, 2)) / height)) { ++x; --y }
+        }
+      }
+
+      function drawGlyph(x, y, width, height, unit, font, ...data) /* TODO (Lapys) */ {}
+
+      function drawLine(origin, target, ...data) {
+        var x = origin.x, xDistance = abs(origin.x - target.x), xSlope = 0;
+        var y = origin.y, yDistance = abs(origin.y - target.y), ySlope = 0;
+
+        // ...
+        for (var slope = max(xDistance, yDistance); (origin.x == target.x || x != target.x) && (origin.y == target.y || y != target.y); (xSlope += xDistance), (ySlope += yDistance)) {
+          if (slope <= xSlope) { origin.x < target.x ? ++x : --x; xSlope -= slope }
+          if (slope <= ySlope) { origin.y < target.y ? ++y : --y; ySlope -= slope }
+
+          drawPoint(new xy(x, y), ...data)
+        }
+      }
+
+      function drawPoint(coordinates, color = colors.white, transform = I, filter = I) {
+        var color       = filter   (color);
+        var coordinates = transform(coordinates);
+
+        // ... ->> `…CanvasRenderingContext2d.prototype.putImage(…)` terribly non-performant compared to `…CanvasRenderingContext2d.prototype.fillRect(…)`
+        offscreenContext.fillStyle = "rgb(" + r(color) + ", " + g(color) + ", " + b(color) + ')';
+        offscreenContext.fillRect(coordinates.x, coordinates.y, 1, 1)
+      }
+
+      function drawRectangle(origin, target, ...data) {
+        if (origin.x > target.x || target.y > target.y)
+          return;
+
+        for (var x = target.x; origin.x !== --x; ) {
+          drawPoint(new xy(x, origin.y), ...data);
+          drawPoint(new xy(x, target.y), ...data)
+        }
+
+        for (var y = target.y; origin.y !== --y; ) {
+          drawPoint(new xy(origin.x, y), ...data);
+          drawPoint(new xy(target.x, y), ...data)
+        }
+      }
+
+      function drawSpline(degree, origin, ...data) {
+        var degree = (uint32_t) (degree);
+
+        switch (degree) {
+          case 0: drawPoint(origin,                      ...data); break;
+          case 1: drawLine (origin, (xy) (arguments[2]), ...data); break;
+
+          default: {
+            var anchor       = origin;
+            var controls     = [anchor, ...new Array(degree)];
+            var origin       = new xy();
+            var subcontrols  = new Array(degree + 1); // ->> Next set of control points
+            var target       = new xy();
+            var totalSamples = 50;
+
+            // ... --- TODO (Lapys)
+            for (var index = degree; index; --index)
+            controls[index] = (xy) (arguments[index + 1]);
+
+            for (var currentSamples = totalSamples; currentSamples--; ) {
+              var slope;
+              var x, xDistance, xSlope;
+              var y, yDistance, ySlope;
+            }
+
+            // for (uint_least16_t currentSamples = totalSamples; currentSamples--; ) {
+            //   for (uint_least8_t iterator = degree; iterator--; ) {
+            //     xSubcontrol[iterator] = xControl[iterator];
+            //     ySubcontrol[iterator] = yControl[iterator];
+            //   }
+
+            //   for (uint_least8_t subdegree = degree; --subdegree; )
+            //   for (uint_least8_t iterator = 0u; iterator != subdegree; ++iterator) {
+            //     uint_least16_t totalLength;
+
+            //     // ...
+            //     xTarget = xSubcontrol[iterator + 1u];
+            //     yTarget = ySubcontrol[iterator + 1u];
+            //     xOrigin = xSubcontrol[iterator + 0u];
+            //     yOrigin = ySubcontrol[iterator + 0u];
+
+            //     xSlope = 0u;
+            //     ySlope = 0u;
+            //     xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+            //     yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+            //     x = xOrigin;
+            //     y = yOrigin;
+
+            //     totalLength = xDistance + yDistance;
+            //     slope = xDistance > yDistance ? xDistance : yDistance;
+
+            //     // ...
+            //     for (uint_least16_t currentLength = totalLength; (x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget); ) {
+            //       if (slope <= xSlope) { --currentLength; xSlope -= slope; xOrigin < xTarget ? ++x : --x; }
+            //       if (slope <= ySlope) { --currentLength; ySlope -= slope; yOrigin < yTarget ? ++y : --y; }
+
+            //       xSlope += xDistance;
+            //       ySlope += yDistance;
+            //       if (static_cast<float>(currentLength) / static_cast<float>(totalLength) <= static_cast<float>(currentSamples) / static_cast<float>(totalSamples)) {
+            //         xSubcontrol[iterator] = x;
+            //         ySubcontrol[iterator] = y;
+            //         break;
+            //       }
+            //     }
+            //   }
+
+            //   // ...
+            //   xTarget = xAnchor;
+            //   yTarget = yAnchor;
+            //   xOrigin = x;
+            //   yOrigin = y;
+
+            //   xSlope = 0u;
+            //   ySlope = 0u;
+            //   xAnchor = x;
+            //   yAnchor = y;
+            //   xDistance = xOrigin < xTarget ? xTarget - xOrigin : xOrigin - xTarget;
+            //   yDistance = yOrigin < yTarget ? yTarget - yOrigin : yOrigin - yTarget;
+
+            //   slope = xDistance > yDistance ? xDistance : yDistance;
+
+            //   // ...
+            //   while ((x != xTarget || xOrigin == xTarget) && (y != yTarget || yOrigin == yTarget)) {
+            //     if (slope <= xSlope) { xSlope -= slope; xOrigin < xTarget ? ++x : --x; }
+            //     if (slope <= ySlope) { ySlope -= slope; yOrigin < yTarget ? ++y : --y; }
+
+            //     xSlope += xDistance;
+            //     ySlope += yDistance;
+            //     Graphics::putPixel(&function, values, *xControl, *yControl, x, y, color);
+            //   }
+            // }
+          } break
+        }
+      }
+
+      function drawSquare(coordinates, size, ...data) {
+        drawRectangle(coordinates, new xy(size + coordinates.x, size + coordinates.y), ...data)
+      }
+
+      // [Filter] ...
+      function bokehBlur   (spread,    filter = I) /* TODO (Lapys) */ { return null }
+      function boxBlur     (spread,    filter = I) /* TODO (Lapys) */ { return null }
+      function brightness  (intensity, filter = I) /* TODO (Lapys) */ { return null }
+      function contrast    (intensity, filter = I) /* TODO (Lapys) */ { return null }
+      function grayscale   (intensity, filter = I) /* TODO (Lapys) */ { return null }
+      function guassianBlur(spread,    filter = I) /* TODO (Lapys) */ { return null }
+      function hueRotate   (angle,     filter = I) /* TODO (Lapys) */ { return null }
+      function invert      (intensity, filter = I) /* TODO (Lapys) */ { return null }
+      function opacity     (intensity, filter = I) /* TODO (Lapys) */ { return null }
+      function saturate    (intensity, filter = I) /* TODO (Lapys) */ { return null }
+      function sepia       (intensity, filter = I) /* TODO (Lapys) */ { return null }
+
+      // [Transform] ...
+      function rotate(angle, anchor, transform = I) /* TODO (Lapys) */ { return null }
+      function scale (size,  transform = I)         /* TODO (Lapys) */ { return null }
+      function skew  (data,  transform = I)         /* TODO (Lapys) */ { return null }
+
+      function translate(offset, transform = I) {
+        return function(coordinates) {
+          var coordinates = transform(coordinates);
+          return new xy(coordinates.x + offset.x, coordinates.y + offset.y)
+        }
+      }
+
+      // [Utility] ... ->> Optimized for 32-bit (signed) integers only unless otherwise specified
+      function abs(integer) {
+        var mask = ~(integer >>> 31) + 1;
+        return (integer ^ mask) - mask
+      }
+
+      function b(color) {
+        return (color >>> 0x00) & 0xFF
+      }
+
+      function g(color) {
+        return (color >>> 0x08) & 0xFF
+      }
+
+      function int32_t(number) /* ->> Treated as a C-style cast, whereas it is a truncation function */ {
+        return number | 0
+      }
+
+      function max(integerA, integerB) {
+        var difference = integerA - integerB;
+        return integerA - (difference * (difference >>> 31))
+      }
+
+      function pow(base, exponent) /* ->> `exponent` is a positive integer */ {
+        for (var base = base, product = 1; ; base *= base) {
+          if (exponent & 1 /* --> exponent % 2 */) product *= base;
+          exponent >>>= 1; // --> exponent / 2
+          if (0 === exponent) return product
+        }
+      }
+
+      function r(color) {
+        return (color >>> 0x10) & 0xFF
+      }
+
+      function rgb(red, green, blue) /* ->> Specified for floating-point channels between `+0.0` and `1.0` */ {
+        return (((int32_t) (blue * 0xFF)) << 0x00) | (((int32_t) (green * 0xFF)) << 0x08) | (((int32_t) (red * 0xFF)) << 0x10)
+      }
+
+      function uint32_t(number) /* ->> See `int32_t(…)` */ {
+        return number >>> 0
+      }
+
+      function xy(x, y) {
+        if (this instanceof xy) {
+          if (x instanceof xy) { this.x = x.x; this.y = x.y }
+          else { this.x = (int32_t) (x); this.y = (int32_t) (y) }
+
+          return // --> this
+        }
+
+        return new xy(x, y)
+      }
+        xy.prototype = {x: 0, y: 0};
+
+        Object.defineProperty(xy.prototype, "height", {get: function() { return this.y }, set: function(size) { this.y = size }});
+        Object.defineProperty(xy.prototype, "width",  {get: function() { return this.x }, set: function(size) { this.x = size }});
+
+      // ...
+      function render() {
+        drawCircle   (xy(145, 20), 750 - 20,      colors.blue);
+        drawEllipse  (xy(20,  20), xy(1000, 750), colors.red);
+        drawRectangle(xy(20,  20), xy(1000, 750), colors.green);
+        drawSquare   (xy(145, 20), 750 - 20,      colors.cyan);
+        drawLine     (xy(20,  20), xy(1000, 750), colors.magenta);
+
+        context.drawImage(offscreenContext.canvas, 0, 0)
+      }
+
+      function resize() {
+        var size  = innerHeight < innerWidth ? innerHeight : innerWidth; // --> window . …
+        var style = canvas.style;
+        var zoom  = devicePixelRatio;
+
+        // ...
+        for (var node = canvas; 0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType; node = node.parentNode)
+        zoom *= getComputedStyle(node).getPropertyValue("zoom");
+
+        canvas .height                = size * zoom;
+        canvas .width                 = size * zoom;
+        context.imageSmoothingEnabled = false;
+        context.imageSmoothingQuality = "low";
+        style  .height                = size + "px";
+        style  .width                 = size + "px";
+
+        if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function") {
+          offscreenCanvas  = canvas.ownerDocument.createElement("canvas").transferControlToOffscreen();
+          offscreenContext = offscreenCanvas.getContext("2d");
+
+          offscreenCanvas .height                = canvas.height;
+          offscreenCanvas .width                 = canvas.width;
+          offscreenContext.imageSmoothingEnabled = false;
+          offscreenContext.imageSmoothingQuality = "low"
+        }
+
+        // ...
+        render()
+      }
+
+      /* ... */
+      canvas  .onresize           = function() { resize() };
+      document.onreadystatechange = function() { if (document.readyState === "complete") resize() };
+      window  .onresize           = function() { resize() };
+
+      for (var node = document.firstChild; null !== node; node = node.nextSibling)
+      if (0x1 /* --> Node.ELEMENT_NODE */ === node.nodeType) { node.onresize = resize; break }
+    </script>
+  </body>
+</html>
