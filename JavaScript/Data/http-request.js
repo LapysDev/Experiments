@@ -64,7 +64,7 @@ void function(request, requestType) {
     if (null === text) text = "";
     else text = "<pre>" + text.replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</pre>";
 
-    document.write("<div>[" + requestType + "]: Request sent" + text + "</div>")
+    document.write("<div>[" + requestType + "]: Request sent " + text + "</div>")
   }
 
   function onloadstart(event) {
