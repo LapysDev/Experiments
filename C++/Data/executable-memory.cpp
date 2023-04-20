@@ -24,6 +24,7 @@ int main(int, char*[]) /* noexcept */ {
   #if defined(__NT__) || defined(__TOS_WIN__) || defined(_WIN16) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN32_WCE) || defined(_WIN64) || defined(__WINDOWS__)
     std::memcpy(&function, &static_cast<LPVOID const&>(::VirtualAlloc(NULL, sizeof(code) / sizeof(unsigned char), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)), sizeof(LPVOID));
     if (NULL == reinterpret_cast<void*>(function)) { std::puts("..."); return EXIT_FAILURE; }
+    ::FlushInstructionCache(...);
   #else
     std::memcpy(&function, &static_cast<void* const&>(::mmap(NULL, sizeof(code) / sizeof(unsigned char), PROT_EXEC | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L)), sizeof(void*));
     if (MAP_FAILED == reinterpret_cast<void*>(function)) { std::puts("..."); return EXIT_FAILURE; }

@@ -767,7 +767,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     };
 
     /* ... */
-    ::SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
+    (void) ::SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
 
     // ...
     HMODULE const normaliz = ::LoadLibraryExW(L"normaliz" ".dll", static_cast<HANDLE>(NULL), 0x00u);
