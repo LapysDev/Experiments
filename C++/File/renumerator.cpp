@@ -40,13 +40,8 @@
 #include <stdint.h> // --> uintptr_t ->> may not be defined
 #include <typeinfo> // --> typeid(...)
 
-#include <csignal>
-
 /* Main */
 int main(int count, char* arguments[]) /* noexcept */ {
-  struct program { static void exit(int const) { std::fputs("\r\n" "SEGBRUH" "\r\n", stderr); std::exit(EXIT_FAILURE); } };
-  std::signal(SIGSEGV, &program::exit);
-
   static struct renumerator_arena /* final */ {
     struct /* final */ {
       unsigned char      chunk[128u * 1024u]; // ->> 128 kilobytes
