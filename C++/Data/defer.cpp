@@ -41,7 +41,7 @@
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  defer std::puts("defer");
+  defer       std::puts("defer");
   finally(42) std::puts("finally");
 
   std::puts("main()");

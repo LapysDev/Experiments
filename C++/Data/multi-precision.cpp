@@ -186,8 +186,6 @@ struct bignum {
 
           // ...
           if (count <= precapacity) {
-            std::size_t next = 0u == allocation::table.capacity ? sizeof(typename allocation::storage) : allocation::table.capacity;
-
             // ... ->> Destruct `::dynamic` and excess `::automatic` elements in order
             for (subbase *iterator = dynamic.value + dynamic.length; iterator != dynamic.value; )
             (/* --> std::launder(...) */ --iterator) -> ~subbase();
@@ -207,24 +205,24 @@ struct bignum {
             }
 
             // ... ->> Cache `::dynamic` `storage` into the `allocation::table`
-            if (NULL != dynamic.value) {
+            if (0u != dynamic.capacity) {
+              std::size_t next = allocation::table.capacity;
+
+              // ...
               for (unsigned char *iterator = reinterpret_cast<unsigned char*>(dynamic.value) + dynamic.capacity; iterator != reinterpret_cast<unsigned char*>(dynamic.value); )
               *--iterator = 0x00u; // --> std::memset(dynamic.value, 0x00, dynamic.capacity);
 
               for (std::size_t rate = 1u; ; ++next) // --> next >= allocation::table.capacity
-              if (0u == next % sizeof(typename allocation::storage)) {
-                if (next <= ULONG_MAX - (allocation::table.capacity / rate)) {
-                  next += allocation::table.capacity / rate;
-                  break;
-                }
-
+              for (; 0u == next % sizeof(typename allocation::storage); rate *= 2u) {
                 if (0u == allocation::table.capacity / rate) {
                   next += next <= ULONG_MAX - sizeof(typename allocation::storage) ? sizeof(typename allocation::storage) : 0u;
                   break;
                 }
 
-                rate *= 2u;
-                continue;
+                if (next <= ULONG_MAX - (allocation::table.capacity / rate)) {
+                  next += allocation::table.capacity / rate;
+                  break;
+                }
               }
 
               // ... ->> Find unused `storage` (ie: `NULL == ::value`) to cache into
@@ -264,8 +262,8 @@ struct bignum {
                   typename allocation::storage *const value    = reinterpret_cast<typename allocation::storage*>(allocation -> value);
 
                   // ...
-                  for (std::size_t index = 0u; index != allocation::table.size; ++index) {
-                    if (index == offset) {
+                  for (std::size_t index = allocation::table.size; index; ) {
+                    if (--index == offset) {
                       allocation             = ::new (value + index) typename allocation::storage();
                       allocation -> capacity = allocation::table.capacity;
                       allocation -> value    = reinterpret_cast<subbase*>(allocation::table.allocations);
@@ -285,12 +283,12 @@ struct bignum {
                 }
 
                 // ... ->> Re-purpose the `::dynamic` `storage` as the `allocation::table` instead
-                else if (NULL == allocation::table.allocations) {
+                else if (0u == allocation::table.capacity and 0u == allocation::table.size) {
                   allocation                    = NULL;
                   allocation::table.allocations = reinterpret_cast<typename table::storage*>(dynamic.value);
                   allocation::table.capacity    = dynamic.capacity;
 
-                  dynamic.value = NULL;
+                  dynamic.value = NULL; // ->> passed to `std::free(...)` due to `NULL == allocation`
                 }
 
                 // ... ->> Grow the `allocation::table` to add `::dynamic` `storage` to it
@@ -347,17 +345,18 @@ struct bignum {
                 std::size_t const capacity = dynamic.capacity;
                 subbase    *const value    = dynamic.value;
 
-                // ...
+                // ... ->> Re-initialize `::dynamic` elements into unused `storage`
                 for (std::size_t index = 0u; index != dynamic.length; ++index)
                   (void) ::new (suballocation -> value + index) subbase(*(/* --> std::launder(...) */ dynamic.value + index));
 
                 for (subbase *subiterator = dynamic.value + dynamic.length; subiterator != dynamic.value; )
                   (/* --> std::launder(...) */ --subiterator) -> ~subbase();
 
+                // ...
                 dynamic.capacity = suballocation -> capacity;
                 dynamic.value    = suballocation -> value;
 
-                suballocation -> capacity = capacity; // Zero-out if not null
+                suballocation -> capacity = capacity;
                 suballocation -> value    = value;
 
                 // ...
@@ -369,7 +368,7 @@ struct bignum {
             if (allocation::table.capacity > count * sizeof(subbase) and 0u == allocation::table.size) {
               std::size_t capacity = allocation::table.capacity;
 
-              // ... ->>
+              // ... ->> PENDING/ TOOD
               for ()
 
               dynamic.capacity = allocation::table.capacity;
