@@ -1,152 +1,251 @@
-#include <cfloat>  // --> LDBL_MAX
-#include <ciso646> //
-#include <climits> // --> UINTMAX_MAX
-#include <cstddef> // --> std::size_t
-#include <cstdio>  //
-#include <cstdlib> // --> std::calloc(...), std::free(...), std::malloc(...), std::realloc(...)
-#include <new>     // --> new
+#include <cfloat>   // --> LDBL_MAX
+#include <ciso646>  //
+#include <climits>  // --> CHAR_BIT, UINTMAX_MAX
+#include <cstddef>  // --> std::size_t
+#include <cstdio>   //
+#include <cstdlib>  // --> std::calloc(...), std::free(...), std::malloc(...), std::realloc(...)
+#include <new>      // --> new
+#include <stdint.h> // --> uintmax_t
+#ifdef __cpp_lib_endian // --> 201907L
+# include <bit> // --> std::endian
+#endif
 #if __cplusplus >= 201103L or defined _MSVC_LANG // --> +201402L
-# include <type_traits> // --> std::is_trivial
+# include <type_traits> // --> std::is_enum, std::is_function, std::is_trivial
 #endif
 
 /* ... */
 struct bignum /* final */ {
   public:
-    typedef unsigned char    digit;     // ->> Component part of `::denominator` and `::numerator`; Must be an integer type
-    typedef struct operation operation; // ->> Sequence of iterable continuous functions that more precisely compute `bignum`
+    typedef unsigned char digit; // ->> Component part of `::denominator` and `::numerator` `array`s; must be an integer type
+    struct operation;            // ->> Sequence of iterable continuous functions that more precisely compute `bignum`
 
   private:
-    // ... ->> Removes qualifiers from specified type
-    template <typename base>
-    struct baseof /* final */ {
-      typedef base type;
-    };
+    struct allocation;                // ->> Dynamically-allocated memory management interface for `array::dynamic` elements
+    struct byte_iterator;             // ->> Common interface for object address converted to byte addresses (allows for optimal byte traversal); see `bytesof(...)`
+    enum   sfinaeptr_t { sfinaeptr }; // ->> Dummy/ extension type used for selective overloading/ specialization for evaluating possible compile-time constraints and expressions
 
+    template <typename, std::size_t = 1u>                      struct array;                  // ->> Variable-length collection of contiguous `base` objects (such as `digit`s or `operation::state`s)
+    template <typename>                                        struct baseof;                 // ->> Removes qualifiers from specified type -- to allow `array`s handle their `elements` generically
+    template <std::size_t = 128u / (CHAR_BIT * sizeof(digit))> struct biguint;                // ->> `::denominator` and `::numerator` types
+    template <typename>                                        struct is_bless_constructible; // ->> Evaluates if type can be completely and correctly constructed using a "blessed" type; see `struct is_blessed<>` definition
+    template <typename>                                        struct is_bless_decomposable;  // ->> Evaluates if type can be correctly decomposed (via bitwise manipulation for integers or other means) by a "blessed" type; see `struct is_blessed<>` definition
+    template <typename>                                        struct is_blessed;             // ->> Determines the object address provenance of the specified type
+    template <typename>                                        struct is_byte;                // ->> Evaluates if type is a byte type -- to help determine its "blessedness"; see `struct is_blessed<>` definition
+    template <typename>                                        struct is_enum;                // ->> Evaluates if type is an enumeration type -- to help determine its triviality; see `struct is_trivial<>` definition
+    template <typename>                                        struct is_function;            // ->> Evaluates if type is a function type
+    template <typename>                                        struct is_integer;             // ->> Evaluates if type is (based on) an integer type -- to help determine its "blessedness"; see `struct is_bless_constructible<>` or `struct is_bless_decomposable<>` definitions
+    template <typename>                                        struct is_trivial;             // ->> Determines the triviality of constructing/ destructing the specified type -- to allow `array`s optimally read/ write their `elements`
+
+  /* ... */
+  private:
+    template <typename base> struct baseof                      /* final */ { typedef base type; };
     template <typename base> struct baseof<base&>               /* final */ { typedef typename baseof<base>::type type; };
     template <typename base> struct baseof<base const>          /* final */ { typedef typename baseof<base>::type type; };
     template <typename base> struct baseof<base const volatile> /* final */ { typedef typename baseof<base>::type type; };
     template <typename base> struct baseof<base       volatile> /* final */ { typedef typename baseof<base>::type type; };
-
     #ifdef __cpp_rvalue_references // --> 200610L
-      template <typename base>
-      struct baseof<base&&> /* final */ {
-        typedef typename baseof<base>::type type;
-      };
+      template <typename base> struct baseof<base&&> /* final */ { typedef typename baseof<base>::type type; };
     #endif
 
-    // ... ->> Determines the object address provenance of the specified type
-    template <typename base>
-    struct is_blessed /* final */ {
-      private:
-        template <typename, unsigned char = 0x00u>
-        struct valueof /* final */ {
-          static bool const value = false;
+    // ...
+    struct byte_iterator {
+      protected:
+        struct byte_proxy /* final */ : public byte_iterator {
+          constexpr inline byte_proxy&   operator ++()          /* noexcept */ { switch (this -> type) { case 0x1u: ++*(this -> valueB); break; case 0x2u: ++*(this -> valueC); break; default: ++*(this -> valueA); break; } return *this; }
+          constexpr inline byte_proxy&   operator --()          /* noexcept */ { switch (this -> type) { case 0x1u: --*(this -> valueB); break; case 0x2u: --*(this -> valueC); break; default: --*(this -> valueA); break; } return *this; }
+          constexpr inline unsigned char operator ++(int const) /* noexcept */ { switch (this -> type) { case 0x1u: return (*(this -> valueB))++; case 0x2u: return (*(this -> valueC))++; } return (*(this -> valueA))++; }
+          constexpr inline unsigned char operator --(int const) /* noexcept */ { switch (this -> type) { case 0x1u: return (*(this -> valueB))--; case 0x2u: return (*(this -> valueC))--; } return (*(this -> valueA))--; }
+
+          constexpr inline byte_proxy& operator =  (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) =   value; break; case 0x2u: *(this -> valueC) =  value; break; default: *(this -> valueA) =   value; break; } return *this; }
+          constexpr inline byte_proxy& operator += (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) +=  value; break; case 0x2u: *(this -> valueC) += value; break; default: *(this -> valueA) +=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator -= (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) -=  value; break; case 0x2u: *(this -> valueC) -= value; break; default: *(this -> valueA) -=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator *= (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) *=  value; break; case 0x2u: *(this -> valueC) *= value; break; default: *(this -> valueA) *=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator /= (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) /=  value; break; case 0x2u: *(this -> valueC) /= value; break; default: *(this -> valueA) /=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator &= (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) &=  value; break; case 0x2u: *(this -> valueC) &= value; break; default: *(this -> valueA) &=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator |= (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) |=  value; break; case 0x2u: *(this -> valueC) |= value; break; default: *(this -> valueA) |=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator ^= (unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) ^=  value; break; case 0x2u: *(this -> valueC) ^= value; break; default: *(this -> valueA) ^=  value; break; } return *this; }
+          constexpr inline byte_proxy& operator <<=(unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) <<= value; break; case 0x2u: *(this -> valueC) <<=value; break; default: *(this -> valueA) <<= value; break; } return *this; }
+          constexpr inline byte_proxy& operator >>=(unsigned char const value) /* noexcept */ { switch (this -> type) { case 0x1u: *(this -> valueB) >>= value; break; case 0x2u: *(this -> valueC) >>=value; break; default: *(this -> valueA) >>= value; break; } return *this; }
+
+          constexpr inline operator unsigned char() const /* noexcept */ { switch (this -> type) { case 0x1u: return *(this -> valueB); case 0x2u: return *(this -> valueC); } return *(this -> valueA); }
         };
 
-        template <unsigned char sfinae> struct valueof<char,          sfinae> /* final */ { static bool const value = true; };
-        template <unsigned char sfinae> struct valueof<unsigned char, sfinae> /* final */ { static bool const value = true; };
+        /* ... */
+        union {
+          unsigned char *valueA;
+          char          *valueB;
+          #ifdef __cpp_lib_byte // --> 201603L
+            std::byte *valueC;
+          #else
+            unsigned char *valueC;
+          #endif
+        };
+        unsigned char const type;
 
-        #ifdef __cpp_lib_byte // --> 201811L
-          template <unsigned char sfinae>
-          struct valueof<std::byte, sfinae> /* final */ {
-            static bool const value = true;
-          };
+      public:
+        constexpr inline byte_iterator(char          const volatile value[]) /* noexcept */ : valueB                            (const_cast<char*>         (value)),  type(0x1u) {}
+        constexpr inline byte_iterator(unsigned char const volatile value[]) /* noexcept */ : valueA                            (const_cast<unsigned char*>(value)),  type(0x0u) {}
+        constexpr inline byte_iterator(void const volatile* const   value)   /* noexcept */ : valueA(static_cast<unsigned char*>(const_cast<void*>         (value))), type(0x0u) {}
+        #ifdef __cpp_lib_byte // --> 201603L
+          constexpr inline byte_iterator(std::byte const volatile value[]) /* noexcept */ : valueC(const_cast<std::byte*>(value)), type(0x2u) {}
+        #endif
+
+        /* ... */
+        constexpr inline byte_proxy     operator * () const    /*   noexcept */ { switch (this -> type) { case 0x1u: return this -> valueB; case 0x2u: return this -> valueC; } return this -> valueA; }
+        constexpr inline byte_iterator& operator ++()          /* & noexcept */ { switch (this -> type) { case 0x1u: ++(this -> valueB); break; case 0x2u: ++(this -> valueC); break; default: ++(this -> valueA); break; } return *this; }
+        constexpr inline byte_iterator& operator --()          /* & noexcept */ { switch (this -> type) { case 0x1u: --(this -> valueB); break; case 0x2u: --(this -> valueC); break; default: --(this -> valueA); break; } return *this; }
+        constexpr inline byte_iterator  operator ++(int const) /* & noexcept */ { return byte_iterator(this -> operator ++()).operator --(); }
+        constexpr inline byte_iterator  operator --(int const) /* & noexcept */ { return byte_iterator(this -> operator --()).operator ++(); }
+    };
+
+    // ...
+    template <typename base>
+    struct is_bless_constructible /* final */ {
+      static bool const value = is_integer<base>::value;
+    };
+
+    // ...
+    template <typename base>
+    struct is_bless_decomposable /* final */ {
+      static bool const value = is_integer<base>::value;
+    };
+
+    // ...
+    template <typename base>
+    struct is_blessed /* final */ {
+      static bool const value = is_byte<base>::value;
+    };
+
+    // ...
+    template <typename base>
+    struct is_byte /* final */ {
+      private:
+        template <typename base, sfinaeptr_t = sfinaeptr> struct valueof                                       /* final */ { static bool const value = false; };
+        template <sfinaeptr_t sfinae>                     struct valueof<char          const volatile, sfinae> /* final */ { static bool const value = true;  };
+        template <sfinaeptr_t sfinae>                     struct valueof<unsigned char const volatile, sfinae> /* final */ { static bool const value = true;  };
+        #ifdef __cpp_lib_byte // --> 201603L
+          template <sfinaeptr_t sfinae> struct valueof<std::byte const volatile, sfinae> /* final */ { static bool const value = true; };
         #endif
 
       public:
-        static bool const value = valueof<typename baseof<base>::value>::value;
+        static bool const value = valueof<base const volatile>::value;
     };
 
-    // ... ->> Determines the triviality of constructing/ destructing the specified type
+    // ...
+    template <typename base>
+    struct is_enum /* final */  {
+      #if __cplusplus >= 201402L or defined _MSVC_LANG // --> +201402L
+        static bool const value = std::is_enum<base>::value;
+      #else
+        private:
+          template <class type> static bool const (&is_class(sfinaeptr_t const, bool const (*const)[sizeof static_cast<int type::*>(NULL)] = NULL) /* noexcept */)[true  + 1u];
+          template <class>      static bool const (&is_class(...)                                                                                  /* noexcept */)[false + 1u];
+
+          template <typename type> static bool const (&is_integer_constant(sfinaeptr_t const, bool const (*const)[static_cast<type>(1u)] = NULL) /* noexcept */)[true  + 1u];
+          template <typename>      static bool const (&is_integer_constant(...)                                                                  /* noexcept */)[false + 1u];
+
+        public:
+          static bool const value = sizeof(bool const[false + 1u]) == sizeof is_class<base>(sfinaeptr) and sizeof(bool const[true + 1u]) == sizeof is_integer_constant<base>(sfinaeptr);
+      #endif
+    };
+
+    // ...
+    #if __cplusplus >= 201103L or defined _MSVC_LANG // --> +201402L
+      template <typename base>
+      struct is_function /* final */ {
+        static bool const value = std::is_function<base>::value;
+      };
+    #else
+      template <typename base>
+      struct is_function /* final */ {
+        private:
+          template <typename, typename>
+          struct valueof /* final */ {
+            template <typename> static bool const (&valueof(...) /* noexcept */)[false + 1u];
+          };
+
+          template <typename subbase>
+          struct valueof<subbase, subbase> /* final */ {
+            template <typename type> static bool const (&valueof(sfinaeptr_t const, type) /* noexcept */)[false + 1u];
+            template <typename>      static bool const (&valueof(...)                     /* noexcept */)[true  + 1u];
+          };
+
+        public:
+          static bool const value = sizeof(bool const[true + 1u]) == sizeof valueof<base, base const volatile>::template value<base>(sfinaeptr);
+      };
+    #endif
+
+    // ...
+    #if __cplusplus >= 201103L or defined _MSVC_LANG // --> +201402L
+      template <typename base>
+      struct is_integer /* final */ {
+        static bool const value = is_enum<base>::value or std::is_integer<base>::value;
+      };
+    #else
+      template <typename base>
+      struct is_integer /* final */ {
+        private:
+          template <typename subbase, sfinaeptr_t = sfinaeptr> struct valueof                                        /* final */ { static bool const value = is_enum<subbase>::value; };
+          template <sfinaeptr_t sfinae>                        struct valueof<bool           const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<char           const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<int            const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<long           const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<short          const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<signed char    const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<unsigned char  const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<unsigned int   const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<unsigned long  const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<unsigned short const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          template <sfinaeptr_t sfinae>                        struct valueof<wchar_t        const volatile, sfinae> /* final */ { static bool const value = true;                    };
+          #ifdef __cpp_char8_t // --> 201811L
+            template <sfinaeptr_t sfinae> struct valueof<char8_t const volatile, sfinae> /* final */ { static bool const value = true; };
+          #endif
+          #ifdef __cpp_lib_byte // --> 201603L
+            template <sfinaeptr_t sfinae> struct valueof<std::byte const volatile, sfinae> /* final */ { static bool const value = true; };
+          #endif
+          #ifdef __cpp_unicode_characters // --> 200704L
+            template <sfinaeptr_t sfinae> struct valueof<char16_t const volatile, sfinae> /* final */ { static bool const value = true; };
+            template <sfinaeptr_t sfinae> struct valueof<char32_t const volatile, sfinae> /* final */ { static bool const value = true; };
+          #endif
+
+        public:
+          static bool const value = valueof<base const volatile>::value;
+      };
+    #endif
+
+    // ...
     template <typename base>
     struct is_trivial /* final */ {
       #if __cplusplus >= 201103L or defined _MSVC_LANG // --> +201402L
         static bool const value = std::is_trivially_constructible<base>::value and std::is_trivially_destructible<base>::value;
       #elif defined __clang__ or defined __GNUC__ or defined _MSC_VER
-        #undef __has_trivial_copy
-        #undef __has_trivial_destructor
         #ifdef __clang__
         # pragma clang diagnostic push
         # pragma clang diagnostic ignored "-Wdeprecated-builtins"
         #endif
+        #undef __has_trivial_copy
+        #undef __has_trivial_destructor
 
-        static bool const value = __has_trivial_constructor(base) and __has_trivial_destructor(base); // ->> Subject to `-Wclass-memaccess`
+        static bool const value = __has_trivial_copy(base) and __has_trivial_destructor(base);
 
         #ifdef __clang__
         # pragma clang diagnostic pop
         #endif
       #else
         private:
-          // ... ->> Compiler-extended integer types explicitly not acknowledged; See `is_enum` internals
-          template <typename subbase, unsigned char sfinae = 0x00u>
+          template <typename subbase, unsigned char = 0x00u>
           struct valueof /* final */  {
-            private:
-              template <typename subsubbase>
-              struct is_enum /* final */  {
-                private:
-                  template <typename type>
-                  static bool const (&valueof(unsigned char const, bool const (*const)[static_cast<type>(1u)] = NULL) /* noexcept */)[true + 1u];
-
-                  template <typename>
-                  static bool const (&valueof(...) /* noexcept */)[false + 1u];
-
-                public:
-                  static bool const value = sizeof(valueof(sfinae)) == sizeof(bool const (&)[true + 1u]);
-              };
-
-              // ...
-              template <typename subsubbase, typename = subsubbase const>
-              struct is_function /* final */  {
-                static bool const value = false;
-              };
-
-              template <typename subsubbase>
-              struct is_function<subsubbase, subsubbase> /* final */ {
-                static bool const value = true;
-              };
-
-            public:
-              static bool const value = is_enum<subbase>::value or is_function<subbase>::value;
+            static bool const value = is_bless_constructible<subbase>::value or is_function<subbase>::value;
           };
 
-          template <unsigned char sfinae> struct valueof<bool,           sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<char,           sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<double,         sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<float,          sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<long double,    sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<signed char,    sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<signed int,     sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<signed long,    sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<signed short,   sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<unsigned char,  sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<unsigned int,   sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<unsigned long,  sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<unsigned short, sfinae> /* final */ { static bool const value = true; };
-          template <unsigned char sfinae> struct valueof<wchar_t,        sfinae> /* final */ { static bool const value = true; };
+          template <unsigned char sfinae> struct valueof<double,      sfinae> /* final */ { static bool const value = true; };
+          template <unsigned char sfinae> struct valueof<float,       sfinae> /* final */ { static bool const value = true; };
+          template <unsigned char sfinae> struct valueof<long double, sfinae> /* final */ { static bool const value = true; };
 
           template <typename subbase, unsigned char sfinae>
           struct valueof<subbase*, sfinae> /* final */ {
             static bool const value = true;
           };
-
-          #ifdef __cpp_char8_t // --> 201811L
-            template <unsigned char sfinae>
-            struct valueof<char8_t, sfinae> /* final */ {
-              static bool const value = true;
-            };
-          #endif
-
-          #ifdef __cpp_lib_byte // --> 201811L
-            template <unsigned char sfinae>
-            struct valueof<std::byte, sfinae> /* final */ {
-              static bool const value = true;
-            };
-          #endif
-
-          #ifdef __cpp_unicode_characters // --> 200704L
-            template <unsigned char sfinae> struct valueof<char16_t, sfinae> /* final */ { static bool const value = true; };
-            template <unsigned char sfinae> struct valueof<char32_t, sfinae> /* final */ { static bool const value = true; };
-          #endif
 
         public:
           static bool const value = valueof<typename baseof<base>::type>::value;
@@ -165,15 +264,9 @@ struct bignum /* final */ {
       };
     #endif
 
-    /* ... */
-    struct allocation;                                                         // ->> Dynamically-allocated memory management interface for `array::dynamic` elements
-                                                                               //
-    template <typename, std::size_t = 1u>                      struct array;   // ->> Variable-length collection of contiguous `base` objects (such as `digit`s or `operation::state`s)
-    template <std::size_t = 128u / (CHAR_BIT * sizeof(digit))> struct biguint; // ->> `::denominator` and `::numerator` types
-
   /* ... */
   private:
-    static digit const radix = 10u; // ->> Must not be zero; Higher numeral systems are more computation and memory efficient
+    static digit const radix = 10u; // ->> Higher numeral systems are more computation and memory efficient; Must not be zero
 
   public:
     static bignum const EULER;
@@ -184,8 +277,72 @@ struct bignum /* final */ {
     static bignum const ZERO;
 
     /* ... */
+    // ... ->> Constant-optimized value-assignment (or value-initialization) intended for `array` `::dynamic` `elements`
+    template <typename typeA, typename typeB, typename typeC>
+    constexpr inline static typeB* assign(typeB address[], typeC const& value, bool const (*const)[
+      is_blessed<typeA>::value and
+      is_blessed<typeB>::value and
+      sizeof(typeA) == sizeof(typeB)
+    ] = NULL) /* noexcept(...) */ {
+      *address = value;
+      return address;
+    }
+
+    template <typename typeA, typename typeB, typename typeC>
+    constexpr inline static typeB* assign(typeB address[], typeC const& value, bool const (*const)[
+      is_bless_constructible<typeA>::value and not is_blessed<typeA>::value and
+      is_blessed            <typeB>::value and
+      is_bless_decomposable <typeC>::value and
+      0u == sizeof(typeA) % sizeof(typeB)
+    ] = NULL) /* noexcept(...) */ {
+      std::size_t const width = CHAR_BIT * sizeof(typeB);                 // --> 8zu
+      std::size_t const all   = (((1u << (width - 1u)) - 1u) << 1u) + 1u; // --> UCHAR_MAX
+
+      // ... ->> Copy every `sizeof typeB` byte segment from `value` into `address` little-endian-wise
+      if (
+        #ifdef __cpp_lib_endian // --> 201907L
+          std::endian::native == std::endian::little
+        #elif defined __alpha or defined __alpha__ or defined __alpha_ev4__ or defined __alpha_ev5__ or defined __alpha_ev6__ or defined __amd64 or defined __amd64__ or defined __ARMEL__ or defined __bfin__ or defined __BFIN__ or defined __i386 or defined __i386__ or defined __i386__ or defined __i486__ or defined __i486__ or defined __i586__ or defined __i586__ or defined __i686__ or defined __i686__ or defined __I86__ or defined __I86__ or defined __ia64 or defined __ia64__ or defined __IA64__ or defined __INTEL__ or defined __itanium__ or defined __MIPSEL or defined __MIPSEL__ or defined __THUMBEL__ or defined __THW_INTEL__ or defined __x86_64 or defined __x86_64__ or defined _IA64 or defined _M_ALPHA or defined _M_AMD64 or defined _M_IA64 or defined _M_IX86 or defined _M_IX86 or defined _M_X64 or defined _MIPSEL or defined _X86_ or defined bfin or defined BFIN or defined i386 or ((defined __aarch64__ or defined __AARCH64EL__ or defined __arm64 or defined __arm__ or defined __ARM_ARCH or defined __ARM_ARCH_4__ or defined __ARM_ARCH_4T__ or defined __ARM_ARCH_5TE__ or defined __ARM_ARCH_5TEJ__ or defined __ARM_ARCH_6K__ or defined __ARM_ARCH_6KZ__ or defined __ARM_ARCH_6T2__ or defined __ARM_ARCH_6Z__ or defined __ARM_ARCH_7__ or defined __ARM_ARCH_7A__ or defined __ARM_ARCH_7M__ or defined __ARM_ARCH_7R__ or defined __TARGET_ARCH_ARM or defined __TARGET_ARCH_THUMB or defined __thumb__ or defined _M_ARM or defined _M_ARM64) and (defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64 or defined WIN32))
+          true
+        #else
+          false
+        #endif
+      ) {
+        for (std::size_t index = sizeof(typeA); index--; )
+        address[index] = (value >> (width * index)) & all;
+      }
+
+      // ... ->> Copy every `sizeof typeB` byte segment from `value` into `address` big-endian-wise
+      else if (
+        #ifdef __cpp_lib_endian // --> 201907L
+          std::endian::native == std::endian::big
+        #elif defined __370__ or defined __AARCH64EB__ or defined __ARMEB__ or defined __hppa or defined __HPPA11__ or defined __HPPA20__ or defined __hppa__ or defined __HPPA__ or defined __hpux or defined __m68k__ or defined __mc68000 or defined __mc68000__ or defined __mc68010 or defined __mc68010__ or defined __mc68020 or defined __mc68020__ or defined __mc68030 or defined __mc68030__ or defined __mc68040 or defined __mc68040__ or defined __mc68060 or defined __mc68060__ or defined __MIPSEB or defined __MIPSEB__ or defined __PA7100__ or defined __PA8000__ or defined __powerpc or defined __powerpc64__ or defined __powerpc__ or defined __POWERPC__ or defined __ppc or defined __ppc601__ or defined __ppc603__ or defined __ppc604__ or defined __ppc604__ or defined __ppc64__ or defined __PPC64__ or defined __ppc__ or defined __PPC__ or defined __PPCBROADWAY__ or defined __PPCGECKO__ or defined __RISC2_0__ or defined __s390__ or defined __s390x__ or defined __sparc or defined __sparc__ or defined __sparc_v8__ or defined __sparc_v9__ or defined __sparcv8 or defined __sparcv9 or defined __SYSC_ZARCH__ or defined __THUMBEB__ or defined __THW_370__ or defined __THW_RS6000 or defined _ARCH_601 or defined _ARCH_603 or defined _ARCH_PPC or defined _ARCH_PPC64 or defined _ARCH_PWR or defined _ARCH_PWR2 or defined _IBMR2 or defined _M_PPC or defined _MIPSEB defined _PA_RISC1_0 or defined _PA_RISC1_1 or defined _PA_RISC2_0 or defined _POWER or defined _XENON or defined M68000 or defined mc68000 or defined mc68010 or defined mc68020 or defined mc68030 or defined mc68040 or defined mc68060
+          true
+        #else
+          false
+        #endif
+      ) {
+        for (std::size_t index = sizeof(typeA); index--; )
+        address[index] = (value >> (width * (sizeof(typeA) - index - 1u))) & all;
+      }
+
+      // ... --> std::memcpy(address, &value, sizeof value);
+      else
+        *(typeA*) address = value;
+
+      // ...
+      return address;
+    }
+
+    template <typename typeA, typename typeB, typename typeC>
+    constexpr inline static typeB* assign(typeB address[], typeC const& value, bool const (*const)[not is_bless_constructible<typeA>::value] = NULL) /* noexcept(...) */ {
+      *(typeA*) address = value;
+      return address;
+    }
+
+    // ... ->> Prove existing valid object at `address`
     template <typename type>
-    /* constexpr */ inline static type* bless(type* const address) /* noexcept */ {
+    constexpr inline static type* bless(type* const address) /* noexcept */ {
       #ifdef __cpp_lib_launder // --> 201606L
         return std::launder(address);
       #else
@@ -193,37 +350,36 @@ struct bignum /* final */ {
       #endif
     }
 
-    // ...
-    /* constexpr */ inline static char*                bytesof(char*                const address) /* noexcept */ { return address; }
-    /* constexpr */ inline static char const*          bytesof(char const*          const address) /* noexcept */ { return address; }
-    /* constexpr */ inline static char const volatile* bytesof(char const volatile* const address) /* noexcept */ { return address; }
-    /* constexpr */ inline static char       volatile* bytesof(char       volatile* const address) /* noexcept */ { return address; }
+    // ... Decomposes `address` to a byte address
+    constexpr inline static char*                         bytesof(char                         address[]) /* noexcept */ { return address; }
+    constexpr inline static char const*                   bytesof(char const                   address[]) /* noexcept */ { return address; }
+    constexpr inline static char const volatile*          bytesof(char const volatile          address[]) /* noexcept */ { return address; }
+    constexpr inline static char       volatile*          bytesof(char       volatile          address[]) /* noexcept */ { return address; }
+    constexpr inline static unsigned char*                bytesof(unsigned char                address[]) /* noexcept */ { return address; }
+    constexpr inline static unsigned char const*          bytesof(unsigned char const          address[]) /* noexcept */ { return address; }
+    constexpr inline static unsigned char const volatile* bytesof(unsigned char const volatile address[]) /* noexcept */ { return address; }
+    constexpr inline static unsigned char       volatile* bytesof(unsigned char       volatile address[]) /* noexcept */ { return address; }
 
-    /* constexpr */ inline static unsigned char*                bytesof(unsigned char*                const address) /* noexcept */ { return address; }
-    /* constexpr */ inline static unsigned char const*          bytesof(unsigned char const*          const address) /* noexcept */ { return address; }
-    /* constexpr */ inline static unsigned char const volatile* bytesof(unsigned char const volatile* const address) /* noexcept */ { return address; }
-    /* constexpr */ inline static unsigned char       volatile* bytesof(unsigned char       volatile* const address) /* noexcept */ { return address; }
-
-    template <typename type> inline static unsigned char*                bytesof(type*                const address) /* noexcept */ { return reinterpret_cast<unsigned char*>               (address); }
-    template <typename type> inline static unsigned char const*          bytesof(type const*          const address) /* noexcept */ { return reinterpret_cast<unsigned char const*>         (address); }
-    template <typename type> inline static unsigned char const volatile* bytesof(type const volatile* const address) /* noexcept */ { return reinterpret_cast<unsigned char const volatile*>(address); }
-    template <typename type> inline static unsigned char       volatile* bytesof(type       volatile* const address) /* noexcept */ { return reinterpret_cast<unsigned char       volatile*>(address); }
+    inline static unsigned char*                bytesof(void*                const address) /* noexcept */ { return static_cast<unsigned char*>               (address); }
+    inline static unsigned char const*          bytesof(void const*          const address) /* noexcept */ { return static_cast<unsigned char const*>         (address); }
+    inline static unsigned char const volatile* bytesof(void const volatile* const address) /* noexcept */ { return static_cast<unsigned char const volatile*>(address); }
+    inline static unsigned char       volatile* bytesof(void       volatile* const address) /* noexcept */ { return static_cast<unsigned char       volatile*>(address); }
 
     #ifdef __cpp_lib_byte // --> 201603L
-      /* constexpr */ inline static std::byte*                bytesof(std::byte*                const address) /* noexcept */ { return address; }
-      /* constexpr */ inline static std::byte const*          bytesof(std::byte const*          const address) /* noexcept */ { return address; }
-      /* constexpr */ inline static std::byte const volatile* bytesof(std::byte const volatile* const address) /* noexcept */ { return address; }
-      /* constexpr */ inline static std::byte       volatile* bytesof(std::byte       volatile* const address) /* noexcept */ { return address; }
+      constexpr inline static std::byte*                bytesof(std::byte                address[]) /* noexcept */ { return address; }
+      constexpr inline static std::byte const*          bytesof(std::byte const          address[]) /* noexcept */ { return address; }
+      constexpr inline static std::byte const volatile* bytesof(std::byte const volatile address[]) /* noexcept */ { return address; }
+      constexpr inline static std::byte       volatile* bytesof(std::byte       volatile address[]) /* noexcept */ { return address; }
     #endif
 
-    // ...
+    // ... ->> Constant-optimized value-initialization intended for `array` `::dynamic` `elements`
     template <typename typeA, typename typeB, typename typeC>
-    /* constexpr */ inline static typeB* instantiate(typeB* const address, typeC const& value, bool const (*const)[is_blessed<typeA>::value] = NULL) /* noexcept(...) */ {
-      return static_cast<void>(*(typeA*) address = value), address;
+    constexpr inline static typeB* instantiate(typeB* const address, typeC const& value, bool const (*const)[is_bless_constructible<typeA>::value] = NULL) /* noexcept(...) */ {
+      return assign<typeA>(address, value);
     }
 
     template <typename typeA, typename typeB, typename typeC>
-    inline static typeB* instantiate(typeB* const address, typeC const& value, bool const (*const)[not is_blessed<typeA>::value] = NULL) /* noexcept(...) */ {
+    inline static typeB* instantiate(typeB* const address, typeC const& value, bool const (*const)[not is_bless_constructible<typeA>::value] = NULL) /* noexcept(...) */ {
       return ::new (address) typeA(value);
     }
 
@@ -231,23 +387,17 @@ struct bignum /* final */ {
   private:
     struct allocation {
       template <typename base>
-      struct storage {
-        union { subbase *value, *allocations; };
+      struct storage /* final */ {
+        union { base *value, *allocations; };
         std::size_t capacity;                // ->> Maximum byte size of storage referenced by `value` (or `allocations`)
         union { std::size_t length, size; }; // ->> Number of existing `subbase` objects contiguously referenced by `allocations` (or `value`)
       };
 
-      /* ... */
+      /* ... ->> Caches unused allocations */
       static struct value /* final */ : public storage<storage<void> > {
-        static std::size_t const rate = 2u; // ->> Growth rate of `::capacity` --> rate != 0u
+        static std::size_t const rate = 2u; // ->> Growth rate of `::capacity`; Must not be zero (and ideally not one, either)
 
         /* ... */
-        /* constexpr */ inline value() /* noexcept */ :
-          allocations(NULL),
-          size       (0u)
-        {}
-
-        // ...
         inline ~value() /* noexcept */ {
           for (storage<void> *iterator = this -> allocations + this -> size; iterator != this -> allocations; ) {
             storage<void> *const storage = bless(--iterator);
@@ -273,8 +423,34 @@ struct bignum /* final */ {
 
       /* ... */
       private:
+        template <typename> struct addressof  /* final */ {}; // ->> Flag for accessing the storage address of `elements`
+        template <typename> struct iteratorof /* final */ {}; // ->> Flag for accessing the objects of `elements`
+        template <typename> struct valueof    /* final */ {}; // ->> Flag for accessing the containers of `elements`
+
+        // ... ->> Aliases `::automatic` `element` type
+        template <typename subbase, bool = is_bless_constructible<subbase>::value or is_trivial<subbase>::value>
+        struct automaticof /* final */ {
+          typedef subbase type[1];
+        };
+
+        template <typename subbase>
+        struct automaticof<subbase, true> /* final */ {
+          typedef unsigned char type[sizeof(subbase)];
+        };
+
+        // ... ->> Aliases `::dynamic` `element` type
+        template <typename subbase, bool = is_bless_constructible<subbase>::value>
+        struct dynamicof /* final */ {
+          typedef subbase type;
+        };
+
+        template <typename subbase>
+        struct dynamicof<subbase, true> /* final */ {
+          typedef unsigned char type; // --> unsigned char[sizeof subbase]
+        };
+
         // ... ->> Aliases base `element` type
-        template <typename subbase = base>
+        template <typename subbase>
         struct elementof /* final */ {
           typedef typename baseof<subbase>::type type;
         };
@@ -282,19 +458,8 @@ struct bignum /* final */ {
         template <typename subbase>
         struct elementof<subbase&> /* final */ {
           typedef struct element /* final */ {
-            private:
-              subbase &value;
-
-            public:
-              template <typename type>
-              /* constexpr */ inline element(type& reference) /* noexcept */ :
-                reference(static_cast<subbase&>(reference))
-              {}
-
-              // ...
-              /* constexpr */ inline operator subbase&() const /* noexcept */ {
-                return this -> value;
-              }
+            subbase &value;
+            constexpr inline operator subbase&() const /* noexcept */ { return this -> value; }
           } type;
         };
 
@@ -302,70 +467,186 @@ struct bignum /* final */ {
           template <typename subbase>
           struct elementof<subbase&&> /* final */ {
             typedef struct element /* final */ {
-              private:
-                subbase &&value;
-
-              public:
-                template <typename type>
-                /* constexpr */ inline element(type&& reference) /* noexcept */ :
-                  value((subbase&&) static_cast<type&&>(reference))
-                {}
-
-                // ...
-                /* constexpr */ inline operator subbase&&() const /* noexcept */ {
-                  return static_cast<subbase&&>(this -> value);
-                }
+              subbase &&value;
+              constexpr inline operator subbase&&() const /* noexcept */ { return static_cast<subbase&&>(this -> value); }
             } type;
           };
         #endif
 
-      protected: using allocation::storage;
-      public: typedef typename elementof<base>::type element;
+      protected:
+        using allocation::storage;
 
-      /* ... ->> C++11 and forward explicitly separate `::automatic` and `::dynamic` `elements` as different members */
       public:
-        struct elements /* final */ {
-          private:
-            union {
-              /* alignas(subbase) */ unsigned char automatic[sizeof(element)];
-              storage<element>                     dynamic;
-            };
+        typedef typename elementof<base>::type element;
 
-            element *value;
+        typedef typename automaticof<element>::type automatic;
+        typedef typename dynamicof  <element>::type dynamic;
 
-          public:
-            /* constexpr */ inline elements() /* noexcept */ :
-              automatic(),
-              value    (NULL)
-            {}
+      /* ... */
+      #if __cplusplus >= 201103L or defined _MSVC_LANG // --> +201402L
+        public:
+          struct elements /* final */ {
+            private:
+              template <bool boolean, bool... booleans> struct boolean_and          final { static bool const value = boolean and boolean_and<booleans...>::value; };
+              template <bool boolean>                   struct boolean_and<boolean> final { static bool const value = boolean; };
 
-            template <typename type>
-            /* constexpr */ inline elements(type const& element) /* noexcept(...) */ :
-              automatic(),
-              value    (instantiate<element>(this -> automatic, element))
-            {}
-        } elements[prelength + 1u];
+              // ...
+              template <std::size_t...>                            struct index_sequence                    final { typedef index_sequence<>                                             type; };
+              template <std::size_t index, std::size_t... indexes> struct index_sequence<index, indexes...> final { typedef typename index_sequence<index - 1u, index, indexes...>::type type; };
+              template <std::size_t... indexes>                    struct index_sequence<0u,    indexes...> final { typedef index_sequence<0u, indexes...>                               type; };
+
+              /* ... */
+              struct automatic final { alignas(array::element) array::automatic automatic; } automatic   [prelength];
+              struct element   final { array::element                          *value;     } subautomatic[prelength];
+              storage<array::dynamic>                                                        dynamic;
+
+              /* ... */
+              template <std::size_t... indexesA, std::size_t... indexesB, typename... types>
+              constexpr elements(index_sequence<indexesA...> const, index_sequence<0u, indexesB...> const, bool const (*const)[is_trivial<typename array::element>::value], types&&... values) noexcept(boolean_and<true, noexcept(array::element(static_cast<types&&>(values)))...>::value) :
+                automatic   {static_cast<types&&>(values)...},
+                subautomatic{this -> automatic[indexesA].automatic..., (static_cast<void>(indexesB), static_cast<typename array::element*>(NULL))...},
+                dynamic     {NULL, 0u, 0u}
+              {}
+
+              template <std::size_t... indexesA, std::size_t... indexesB, typename... types>
+              constexpr elements(index_sequence<indexesA...> const, index_sequence<0u, indexesB...> const, bool const (*const)[not is_trivial<typename array::element>::value], types&&... values) noexcept(boolean_and<true, noexcept(array::element(static_cast<types&&>(values)))...>::value) :
+                automatic   {},
+                subautomatic{instantiate<typename array::element>(this -> automatic[indexesA].automatic, static_cast<types&&>(values))..., (static_cast<void>(indexesB), static_cast<typename array::element*>(NULL))...},
+                dynamic     {NULL, 0u, 0u}
+              {}
+
+            public:
+              template <typename... types>
+              constexpr elements(types&&... values) noexcept(boolean_and<true, noexcept(array::element(static_cast<types&&>(values)))...>::value) :
+                elements::elements(
+                  index_sequence<sizeof...(types)>::type{},
+                  index_sequence<(prelength >= sizeof...(types)) ? (prelength - sizeof...(types)) + 1u : 0u>::type{},
+                  static_cast<bool const (*)[true]>(NULL),
+                  static_cast<types&&>(values)...
+                )
+              { static_assert(prelength >= sizeof...(values), "Too many elements to automatically initialize `array` with"); }
+          } elements;
+
+        private:
+          typedef typename elements::automatic *automatic_address;  // ->> Pointer inter-convertible with `array::automatic`
+          typedef typename elements::element   *automatic_iterator; // ->> Pointer inter-convertible with `array::element*`
+          typedef dynamic                      *dynamic_address, *dynamic_iterator;
+
+          /* ... */
+          constexpr friend elements::automatic (&operator ->*(array const* const array, addressof <automatic> const) noexcept)[prelength] { return array -> elements.automatic; }
+          constexpr friend elements::element   (&operator ->*(array const* const array, iteratorof<automatic> const) noexcept)[prelength] { return array -> elements.subautomatic; }
+          constexpr friend storage<dynamic>&     operator ->*(array const* const array, valueof   <dynamic>   const) noexcept             { return const_cast<storage<dynamic>&>(array -> elements.dynamic); }
+      #else
+        private:
+          union elements {
+            private:
+              union {
+                /* alignas(element) */ array::automatic automatic;
+                storage<array::dynamic>                 dynamic;
+              };
+
+              array::element *value;
+
+            public:
+              inline elements() throw() : automatic(), value(NULL) {}
+
+              template <typename type> inline elements(type&       value, bool const (*const)[    is_trivial<type>::value] = NULL) throw()          : automatic(), value(instantiate<typename array::element>(this -> automatic, value)) {}
+              template <typename type> inline elements(type const& value, bool const (*const)[    is_trivial<type>::value] = NULL) throw()          : automatic(), value(instantiate<typename array::element>(this -> automatic, value)) {}
+              template <typename type> inline elements(type&       value, bool const (*const)[not is_trivial<type>::value] = NULL) /* throw(...) */ : automatic(), value(instantiate<typename array::element>(this -> automatic, value)) {}
+              template <typename type> inline elements(type const& value, bool const (*const)[not is_trivial<type>::value] = NULL) /* throw(...) */ : automatic(), value(instantiate<typename array::element>(this -> automatic, value)) {}
+          };
+
+        public:
+          elements elements[prelength];
+
+        /* ... */
+        private:
+          typedef union elements *automatic_address, *automatic_iterator;
+          typedef dynamic        *dynamic_address,   *dynamic_iterator;
+
+          /* ... */
+          friend inline union elements  (&operator ->*(array const* const array, addressof <automatic> const) throw())[prelength] { return array -> elements; }
+          friend inline union elements  (&operator ->*(array const* const array, iteratorof<automatic> const) throw())[prelength] { return array -> elements; }
+          friend inline storage<dynamic>& operator ->*(array const* const array, valueof   <dynamic>   const) throw()             { return const_cast<storage<dynamic>&>(array -> elements[array -> precapacity].dynamic); }
+      #endif
+      private:
+        constexpr inline friend dynamic_address  operator ->*(array const* const array, addressof <dynamic>   const)  /* noexcept */ { return array ->* valueof<dynamic>().value; }
+        constexpr inline friend dynamic_iterator operator ->*(array const* const array, iteratorof<dynamic>   const)  /* noexcept */ { return array ->* valueof<dynamic>().value; }
+        constexpr inline friend void             operator ->*(array const* const,       valueof   <automatic> const); /* noexcept */
 
       /* ... */
       public:
-        inline ~array() /* noexcept(...) */ {
-          (void) this -> reserve(0u);
-        }
+        // ... --- WARN (Lapys) ->> If destructor is not defined, then `::reserve(0u)` should be called at least once immediately before destruction
+        #if defined _MSVC_LANG
+        # if _MSVC_LANG >= 202002L
+            constexpr ~array() noexcept(noexcept(this -> reserve(0u))) { (void) this -> reserve(0u); }
+        # endif
+        #elif __cplusplus >= 202002L
+          constexpr ~array() noexcept(noexcept(this -> reserve(0u))) { (void) this -> reserve(0u); }
+        #elif not defined __cpp_constexpr // --> 200704L
+          inline ~array() /* noexcept(...) */ { (void) this -> reserve(0u); }
+        #endif
 
       /* ... */
       protected:
-        /* constexpr */ inline element* at(std::size_t const index) const /* noexcept */ {
-          return index >= this -> precapacity ? index >= this -> elements[this -> precapacity].dynamic.capacity / sizeof(element) ? NULL : bless(this -> elements[this -> precapacity].dynamic + (index - this -> precapacity)) : this -> elements[index].value;
+        constexpr inline element* at(std::size_t const index) const /* noexcept */ {
+          return index < this -> precapacity ? this ->* iteratorof<automatic>()[index].value : index - this -> precapacity < this ->* valueof<dynamic>().capacity / sizeof(element) ? bless(this ->* iteratorof<dynamic>() + (index - this -> precapacity)) : NULL;
+        }
+
+        // ... --- TODO (Lapys)
+        static? destruct();
+
+        // ...
+        template <typename type>
+        constexpr inline element* set(std::size_t const index, type& value) /* noexcept */ {
+          if (index < this -> precapacity) {
+            this ->* iteratorof<automatic>()[index].value = instantiate<element>(this ->* addressof<automatic>()[index].automatic, value);
+            return this ->* iteratorof<automatic>()[index].value;
+          }
+
+          if (index - this -> precapacity < this ->* valueof<dynamic>().capacity / sizeof(element))
+          return instantiate<element>(this ->* iteratorof<dynamic>() + (index - this -> precapacity), value);
+
+          return NULL;
+        }
+
+        template <typename type>
+        constexpr inline element* set(std::size_t const index, type const& value) /* noexcept */ {
+          if (index < this -> precapacity) {
+            this ->* iteratorof<automatic>()[index].value = instantiate<element>(this ->* addressof<automatic>()[index].automatic, value);
+            return this ->* iteratorof<automatic>()[index].value;
+          }
+
+          if (index - this -> precapacity < this ->* valueof<dynamic>().capacity / sizeof(element))
+          return instantiate<element>(this ->* iteratorof<dynamic>() + (index - this -> precapacity), value);
+
+          return NULL;
         }
 
       public:
         template <typename type>
-        /* constexpr */ bool add(type const& value) /* noexcept(...) */ {
-          std::size_t const capacity = this -> capacityof();
-          std::size_t const length   = this -> lengthof();
+        constexpr inline bool add(type& value) /* noexcept(...) */ {
+          std::size_t const length = this -> lengthof();
 
           // ...
-          if (capacity <= length) {
+          if (length >= this -> capacityof()) {
+            if (not this -> reserve(length + 1u))
+            return false;
+          }
+
+          (void) instantiate<element>(this -> at(length), value);
+          this -> resize(length + 1u);
+
+          // ...
+          return true;
+        }
+
+        template <typename type>
+        constexpr inline bool add(type const& value) /* noexcept(...) */ {
+          std::size_t const length = this -> lengthof();
+
+          // ...
+          if (length >= this -> capacityof()) {
             if (not this -> reserve(length + 1u))
             return false;
           }
@@ -378,12 +659,28 @@ struct bignum /* final */ {
         }
 
         // ...
-        /* constexpr */ inline std::size_t capacityof() const /* noexcept */ {
-          return this -> precapacity + (this -> elements[this -> precapacity].dynamic.capacity / sizeof(element));
+        constexpr inline std::size_t capacityof() const /* noexcept */ {
+          return this -> precapacity + (this ->* valueof<dynamicof>().capacity / sizeof(element));
         }
 
         // ...
-        /* constexpr */ inline std::size_t lengthof() const /* noexcept */ {
+        constexpr inline void empty() /* noexcept(...) */ {
+          if (this -> lengthof())
+            (void) this -> reserve(0u);
+
+          this -> resize(0u);
+        }
+    };
+};
+
+struct bignum /* final */ {
+  private:
+    template <typename base, std::size_t prelength>
+    struct array : public allocation /* --> using allocation::storage */ {
+      /* ... */
+      public:
+        // ...
+        constexpr inline std::size_t lengthof() const /* noexcept */ {
           std::size_t length = this -> elements[this -> precapacity].dynamic.length;
 
           // ... ->> Not simply `::dynamic.length + ::precapacity`
@@ -396,15 +693,7 @@ struct bignum /* final */ {
         }
 
         // ...
-        /* constexpr */ inline void empty() /* noexcept(...) */ {
-          if (this -> lengthof())
-            (void) this -> reserve(0u);
-
-          this -> resize(0u);
-        }
-
-        // ...
-        /* constexpr */ inline void pop() /* noexcept(...) */ {
+        constexpr inline void pop() /* noexcept(...) */ {
           std::size_t const length = this -> lengthof();
 
           // ...
@@ -536,7 +825,7 @@ struct bignum /* final */ {
                 }
 
                 // ...
-                allocated:
+                allocated:;
               }
 
               // ... ->> Store `::dynamic` `storage` in `allocation::table`
@@ -673,7 +962,7 @@ struct bignum /* final */ {
         }
 
         // ...
-        /* constexpr */ inline void resize(std::size_t const count) /* noexcept */ {
+        constexpr inline std::size_t resize(std::size_t const count) /* noexcept */ {
           // ... ->> Resize `::automatic` "length" and `::dynamic` `length`
           if (count > this -> precapacity)
             this -> elements[this -> precapacity].dynamic.length = count - this -> precapacity;
@@ -690,98 +979,68 @@ struct bignum /* final */ {
             if (NULL == (--iterator) -> value)
             iterator -> value = bless(reinterpret_cast<element*>(iterator -> automatic));
           }
+
+          // ...
+          return count;
         }
 
         // ...
         template <typename type, std::size_t capacity>
         array& operator =(array<type, capacity> const& array) /* noexcept(...) */ {
-          storage<element> &dynamic = this -> elements[this -> precapacity].dynamic;
-          std::size_t const length  = array.lengthof();
+          if (reinterpret_cast<unsigned char const*>(this) != &reinterpret_cast<unsigned char const&>(array)) {
+            storage<element> &dynamic = this -> elements[this -> precapacity].dynamic;
+            std::size_t const length  = array.lengthof();
 
-          // ...
-          if (length > this -> capacityof() or this -> reserve(length)) {
-            // ... ->> Destruct all `::automatic` and `::dynamic` elements
-            for (element *iterator = dynamic.value + dynamic.length; iterator != dynamic.value; )
-              bless(--iterator) -> ~element();
+            // ... ->> Copy-assign/ value-initialize all elements using `array`
+            if (length <= this -> capacityof() or this -> reserve(length)) {
+              for (std::size_t index = 0u, subindex = this -> lengthof(); index != length; ++index)
+                index < subindex ? (void) *(this -> at(index)) = *array.at(index) : this -> set(index, *array.at(index));
 
-            for (struct elements *iterator = this -> elements + this -> precapacity; iterator != this -> elements; ) {
-              if (NULL != --iterator -> value)
-              iterator -> value -> ~element();
-            }
-
-            // ... ->> Scrub pending storage
-            dynamic.length = length > this -> precapacity ? length - this -> precapacity : 0u;
-
-            for (unsigned char *iterator = bytesof(dynamic.value + dynamic.length); iterator != bytesof(dynamic.value); )
-              *--iterator = 0x00u; // --> std::memset(dynamic.value, 0x00, dynamic.length * sizeof element);
-
-            for (struct elements *iterator = this -> elements + this -> precapacity; iterator != this -> elements; ) {
-              (--iterator) -> value = NULL;
-
-              for (unsigned char *subiterator = iterator -> automatic + sizeof(element); subiterator != iterator -> automatic; )
-              *--subiterator = 0x00u; // --> std::memset(iterator -> automatic, 0x00, sizeof element);
-            }
-
-            // ... ->> Value-initialize all elements using `array`
-            for (std::size_t index = 0u; index != length; ++index) {
-              if (index < this -> precapacity) {
-                this -> elements[index].value = instantiate<element>(this -> elements[index].automatic, *array.at(index));
-                continue;
-              }
-
-              (void) instantiate<element>(this -> elements[this -> precapacity].dynamic.value + (index - this -> precapacity), *array.at(index));
+              this -> resize(length);
             }
           }
 
           return *this;
         }
 
-        /* constexpr */ inline base& operator [](std::size_t const index) const /* noexcept */ {
-          return *(index < this -> capacityof() and index < this -> lengthof() ? this -> at(index) : NULL);
+        constexpr inline base& operator [](std::size_t const index) const /* noexcept */ {
+          return *(this -> at(index));
         }
     };
 
     // ...
     template <std::size_t precapacity>
     struct biguint /* final */ : public array<digit, precapacity> {
-      /* constexpr */ inline biguint(uintmax_t integer) /* noexcept */ :
+      constexpr inline biguint(uintmax_t integer = 0u) /* noexcept */ :
         array<digit, precapacity>::array()
       {
+        if (0u == integer)
+        return;
+
         if (radix != 1u) {
           std::size_t rank = 0u == integer;
 
           // ...
           for (uintmax_t value = integer; value; value /= radix)
-            ++rank;
+          ++rank;
 
-          if (this -> reserve(rank))
-          for (this -> resize(rank); rank--; integer /= radix) {
-            if (rank < this -> precapacity) {
-              this -> elements[rank].value = instantiate<element>(this -> elements[rank].automatic, integer % radix);
-              continue;
-            }
-
-            (void) instantiate<element>(this -> elements[this -> precapacity].dynamic.value + (rank - this -> precapacity), integer % radix);
+          if (this -> reserve(rank)) {
+            for (this -> resize(rank); rank--; integer /= radix)
+            this -> set(rank, integer % radix);
           }
         }
 
         else if (this -> reserve(integer)) {
           this -> resize(integer);
 
-          while (integer--) {
-            if (integer < this -> precapacity) {
-              this -> elements[integer].value = instantiate<element>(this -> elements[integer].automatic, 0u);
-              continue;
-            }
-
-            (void) instantiate<element>(this -> elements[this -> precapacity].dynamic.value + (integer - this -> precapacity), 0u);
-          }
+          while (integer--)
+            this -> set(integer, 0u);
         }
       }
 
       // ...
       template <std::size_t capacity>
-      /* constexpr */ inline biguint(biguint<capacity> const& integer) /* noexcept */ :
+      constexpr inline biguint(biguint<capacity> const& integer) /* noexcept */ :
         array<digit, precapacity>::array()
       { (void) this -> template array<digit, precapacity>::operator =(integer); }
 
@@ -793,6 +1052,9 @@ struct bignum /* final */ {
         std::size_t subrank = integer.lengthof();
 
         // ...
+        if (reinterpret_cast<unsigned char const*>(this) == &reinterpret_cast<unsigned char const&>(integer))
+          return this -> doubly();
+
         if (rank < subrank) {
           std::size_t index = subrank;
 
@@ -806,36 +1068,29 @@ struct bignum /* final */ {
           rank = subrank;
         }
 
-        while (subrank) {
-          digit const subdigit = integer[--subrank];
+        while (rank) {
+          digit const subdigit = subrank ? integer[--subrank] : 0u;
 
           // ...
-          if (this -> operator [](--rank) > radix - subdigit - 1u) {
+          if (carry + this -> operator [](--rank) > radix - subdigit - 1u) {
             this -> operator [](rank) -= radix - subdigit - carry;
             carry                      = true;
           }
 
           else {
-            this -> operator [](rank) += subdigit;
+            this -> operator [](rank) += subdigit + carry;
             carry                      = false;
           }
         }
 
         if (carry) {
-          if (0u == rank) {
-            if (not this -> shift(1u))
-              return false;
+          if (not this -> shift(1u))
+            return false;
 
-            for (rank = this -> lengthof(); --rank; )
-              this -> operator [](rank - 0u) = this -> operator [](rank - 1u);
+          for (rank = this -> lengthof(); --rank; )
+            this -> operator [](rank - 0u) = this -> operator [](rank - 1u);
 
-            this -> operator [](0u) = 0u;
-          }
-
-          while (rank and this -> operator [](rank) == radix - 1u)
-            this -> operator [](rank--) = 0u;
-
-          // if (0u == rank) {}
+          this -> operator [](0u) = 1u;
         }
 
         // ...
@@ -843,12 +1098,12 @@ struct bignum /* final */ {
       }
 
       // ...
-      /* constexpr */ inline signed char compare(biguint const& integer) const /* noexcept */ {
-        return this -> greater(integer) ? +1 : this -> lesser(integer) ? : -1 : 0;
+      constexpr inline signed char compare(biguint const& integer) const /* noexcept */ {
+        return this -> greater(integer) ? +1 : this -> lesser(integer) ? -1 : 0;
       }
 
       // ...
-      /* constexpr */ inline void decrement() /* noexcept */ {
+      constexpr inline void decrement() /* noexcept */ {
         if (radix != 1u) {
           std::size_t const length = this -> lengthof();
           std::size_t       rank   = length;
@@ -876,11 +1131,57 @@ struct bignum /* final */ {
         this -> pop();
       }
 
-      // ...
-      void divide();
+      // ... --- TODO (Lapys)
+      void divide() /* noexcept */;
 
       // ...
-      /* constexpr */ inline bool equals(biguint const& integer) const /* noexcept */ {
+      bool doubly() /* noexcept */ {
+        std::size_t rank = this -> lengthof();
+
+        // ...
+        if (radix != 1u) {
+          bool carry = false;
+
+          // ...
+          while (rank) {
+            digit const digit = this -> operator [](--rank);
+
+            // ...
+            if (carry + digit > radix - digit - 1u) {
+              this -> operator [](rank) -= radix - digit - carry;
+              carry                      = true;
+            }
+
+            else {
+              this -> operator [](rank) += digit + carry;
+              carry                      = false;
+            }
+          }
+
+          if (carry) {
+            if (not this -> shift(1u))
+              return false;
+
+            for (rank = this -> lengthof(); --rank; )
+              this -> operator [](rank - 0u) = this -> operator [](rank - 1u);
+
+            this -> operator [](0u) = 1u;
+          }
+        }
+
+        else {
+          if (not this -> reserve(rank * 2u))
+            return false;
+
+          this -> resize(rank * 2u);
+
+          for (std::size_t count = rank; count--; )
+            this -> set(count + rank, 0u);
+        }
+      }
+
+      // ...
+      constexpr inline bool equals(biguint const& integer) const /* noexcept */ {
         std::size_t rank = this -> lengthof();
 
         // ...
@@ -896,11 +1197,11 @@ struct bignum /* final */ {
         return true;
       }
 
-      // ...
-      bool exponentiate();
+      // ... --- TODO (Lapys)
+      bool exponentiate() /* noexcept */;
 
       // ...
-      /* constexpr */ inline bool greater(biguint const& integer) const /* noexcept */ {
+      constexpr inline bool greater(biguint const& integer) const /* noexcept */ {
         std::size_t const rank    = this -> lengthof();
         std::size_t const subrank = integer.lengthof();
 
@@ -915,7 +1216,7 @@ struct bignum /* final */ {
       }
 
       // ...
-      /* constexpr */ inline bool increment() /* noexcept */ {
+      constexpr inline bool increment() /* noexcept */ {
         if (radix != 1u) {
           std::size_t const length = this -> lengthof();
           std::size_t       rank   = length;
@@ -945,7 +1246,7 @@ struct bignum /* final */ {
       }
 
       // ...
-      /* constexpr */ inline bool lesser(biguint const& integer) const /* noexcept */ {
+      constexpr inline bool lesser(biguint const& integer) const /* noexcept */ {
         std::size_t const rank    = this -> lengthof();
         std::size_t const subrank = integer.lengthof();
 
@@ -959,12 +1260,55 @@ struct bignum /* final */ {
         return rank < subrank;
       }
 
-      // ...
-      bool modulo();
+      // ... --- TODO (Lapys)
+      bool modulo() /* noexcept */;
 
       // ...
       template <std::size_t capacity>
-      bool multiply(biguint<capacity> const&);
+      bool multiply(biguint<capacity> const& integer) /* noexcept */ {
+        std::size_t rank    = this -> lengthof();
+        std::size_t subrank = integer.lengthof();
+
+        // ... ->> Commutate `integer` and `this` to simplify the algorithm
+        if (rank < subrank) {
+          biguint<capacity> value = 0u;
+
+          // ...
+          if (not value.reserve(subrank))
+            return false;
+
+          value.resize(subrank);
+
+          while (subrank--)
+            value.set(subrank, integer.at(subrank));
+
+          if (not value.multiply(*this))
+            return false;
+
+          subrank = value.lengthof();
+
+          if (not this -> reserve(subrank))
+            return false;
+
+          this -> resize(subrank);
+
+          while (subrank--)
+            this -> set(subrank, integer.at(subrank));
+        }
+
+        // ...
+        // while (subrank) {
+        //   std::size_t length     = rank;
+        //   digit const multiplier = integer[--subrank];
+
+        //   // ...
+        //   while (length)
+        //     UINTMAX_MAX * UINTMAX_MAX
+        //     this -> operator [](--length)
+        // }
+
+        return true;
+      }
 
       // ...
       inline bool shift(std::size_t const count) /* noexcept */ {
@@ -976,23 +1320,17 @@ struct bignum /* final */ {
 
         this -> resize(count + rank);
 
-        for (std::size_t index = count + rank; index-- != rank; ) {
-          if (index < this -> precapacity) {
-            this -> elements[index].value = instantiate<element>(this -> elements[index].automatic, 0u);
-            continue;
-          }
-
-          (void) instantiate<element>(this -> elements[this -> precapacity].dynamic + (index - this -> precapacity), 0u);
-        }
+        for (std::size_t index = count + rank; index-- != rank; )
+          this -> set(index, 0u);
 
         return true;
       }
 
       // ...
-      void subtract();
+      void subtract() /* noexcept */;
 
       // ...
-      /* constexpr */ inline void unshift(std::size_t const count) /* noexcept */ {
+      constexpr inline void unshift(std::size_t const count) /* noexcept */ {
         std::size_t const rank = this -> lengthof();
 
         // ...
@@ -1006,7 +1344,7 @@ struct bignum /* final */ {
       }
 
       // ...
-      /* constexpr */ inline void zero() /* noexcept */ {
+      constexpr inline void zero() /* noexcept */ {
         this -> empty();
       }
     };
@@ -1020,10 +1358,16 @@ struct bignum /* final */ {
       struct : public array<state, 0u> {} states;
 
       /* ... */
-      inline operation(bool (&function)(bignum&, state[]), std::size_t const arity) /* noexcept */ :
+      constexpr inline operation(bool (&function)(bignum&, state[]), std::size_t const arity) /* noexcept */ :
         function(function),
         states  ()
-      { (void) this -> states.grow(arity, 0u); }
+      {
+        if (not this -> states.reserve(arity))
+        return;
+
+        for (std::size_t index = this -> states.resize(arity); index; )
+        this -> states.set(--index, 0u);
+      }
     };
 
   /* ... */
@@ -1102,7 +1446,7 @@ struct bignum /* final */ {
     static void nan() /* noexcept(...) ->> Depends if `NaN` is signaling or not */;
 
     // ...
-    /* constexpr */ inline static long double truncate(long double const number) /* noexcept */ {
+    constexpr inline static long double truncate(long double const number) /* noexcept */ {
       if (UINTMAX_MAX < number) {
         long double truncation = 1.00L;
 
@@ -1178,16 +1522,18 @@ struct bignum /* final */ {
 
       // ...
       if (reinterpret_cast<unsigned char*>(this) == &reinterpret_cast<unsigned char const&>(bignum::PI)) {
-        this -> denominator = 78256779u;
-        this -> numerator   = 245850922u;
+        // atan2f(1, 1) * 4
+        // this -> denominator = 78256779u;
+        // this -> numerator   = 245850922u;
 
         return;
       }
 
       // ...
       if (reinterpret_cast<unsigned char*>(this) == &reinterpret_cast<unsigned char const&>(bignum::TAU)) {
-        this -> denominator = 78256779u;
-        this -> numerator   = 491701844u;
+        // PI * 2
+        // this -> denominator = 78256779u;
+        // this -> numerator   = 491701844u;
 
         return;
       }
@@ -1198,7 +1544,7 @@ struct bignum /* final */ {
     }
 
     // ...
-    /* constexpr */ inline bignum(long double number) /* noexcept */ :
+    constexpr inline bignum(long double number) /* noexcept */ :
       denominator(),
       numerator  (),
       operations (),
@@ -1264,7 +1610,7 @@ struct bignum /* final */ {
     }
 
     // ...
-    /* constexpr */ inline bignum(bignum const& number) /* noexcept */ :
+    constexpr inline bignum(bignum const& number) /* noexcept */ :
       denominator(number.denominator),
       numerator  (number.numerator),
       operations (),

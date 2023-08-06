@@ -1,3 +1,5 @@
+// --> C:\LapysDev\miscellaneous\cataloger.exe C:\Users\oluwa\OneDrive\Lapys\Catalog\schedule.dat C:\Users\oluwa\OneDrive\Lapys\Catalog
+// --> cataloger C:\Users\oluwa\OneDrive\Lapys\Catalog\schedule.dat C:\Users\oluwa\OneDrive\Lapys\Catalog
 #include <ciso646> // --> and, not, or
 #include <climits> // --> CHAR_BIT
 #include <cstddef> // --> std::size_t
@@ -44,20 +46,20 @@ int main(int count, char* arguments[]) /* noexcept */ {
     0u
   ) * sizeof(unsigned char);
 
-  char             *userCatalogPath                   = NULL;                                                                        //
-  std::size_t       userCatalogDirectoryLength        = 0u;                                                                          //
-  bool              userCatalogDirectoryExtended      = false;                                                                       // ->> `userCatalogDirectory` has been automatically delimited
-  char             *userCatalogDirectory              = NULL;                                                                        //
-  std::time_t       currentTime                       = static_cast<std::time_t>(-1);                                                //
-  double            catalogTimeSpan                   = 0.0;                                                                         // --> std::difftime(currentTime, catalogRecentTime)
-  double const      catalogTimeRange                  = 86400.00;                                                                    // ->> Observed time (in seconds) passed between `catalogTimes`; currently set to one single day
-  std::time_t       catalogRecentTime                 = static_cast<std::time_t>(-1);                                                // --> std::mktime(&catalogRecentDate)
-  bool              catalogRecentDateDeserialized     = false;                                                                       //
-  unsigned char     catalogRecentDateBuffer[timeSize] = {0};                                                                         // ->> Ideally zero-initialized
-  std::tm           catalogRecentDate                 = {};                                                                          // ->> Datetime stored in `catalogFile`
-  bool const        catalogPathSpecified              = count > 1;                                                                   //
-  char const *const catalogPath                       = catalogPathSpecified ? arguments[1] : std::tmpnam(static_cast<char*>(NULL)); //
-  std::FILE        *catalogFile                       = NULL;                                                                        //
+  char              *userCatalogPath                   = NULL;                                                                        //
+  std::size_t        userCatalogDirectoryLength        = 0u;                                                                          //
+  bool               userCatalogDirectoryExtended      = false;                                                                       // ->> `userCatalogDirectory` has been automatically delimited
+  char              *userCatalogDirectory              = NULL;                                                                        //
+  std::time_t        currentTime                       = static_cast<std::time_t>(-1);                                                //
+  double             catalogTimeSpan                   = 0.0;                                                                         // --> std::difftime(currentTime, catalogRecentTime)
+  double /* const */ catalogTimeRange                  = 86400.00;                                                                    // ->> Observed time (in seconds) passed between `catalogTimes`; currently set to one single day
+  std::time_t        catalogRecentTime                 = static_cast<std::time_t>(-1);                                                // --> std::mktime(&catalogRecentDate)
+  bool               catalogRecentDateDeserialized     = false;                                                                       //
+  unsigned char      catalogRecentDateBuffer[timeSize] = {0};                                                                         // ->> Ideally zero-initialized
+  std::tm            catalogRecentDate                 = {};                                                                          // ->> Datetime stored in `catalogFile`
+  bool const         catalogPathSpecified              = count > 1;                                                                   //
+  char const *const  catalogPath                       = catalogPathSpecified ? arguments[1] : std::tmpnam(static_cast<char*>(NULL)); //
+  std::FILE         *catalogFile                       = NULL;                                                                        //
 
   // ... ->> Track the specified directory which to create user catalogs
   if (count > 2) {
@@ -245,7 +247,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
   #endif
 
-  while (true) {
+  for (; ; ) {
     // ... ->> Check the time between `catalogReccentTime` and `currentTime`
     currentTime = std::time(static_cast<std::time_t*>(NULL)); // ->> Redundant call for one single iteration
 
@@ -344,7 +346,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
         // ...
         if (NULL == command) {
-          command = ::new (std::nothrow) char[userCatalogDirectoryLength + 14u + 24u + 1u];
+          command = ::new (std::nothrow) char[userCatalogDirectoryLength + 14u + 23u + 1u];
 
           if (NULL != command) {
             command[0]  = '%';
@@ -363,23 +365,22 @@ int main(int count, char* arguments[]) /* noexcept */ {
             command[13] = 'p';
             command[14] = 'a';
             command[15] = 'd';
-            command[16] = 'd';
-            command[17] = '.';
-            command[18] = 'e';
-            command[19] = 'x';
-            command[20] = 'e';
-            command[21] = ' ';
-            command[22] = '"';
+            command[16] = '.';
+            command[17] = 'e';
+            command[18] = 'x';
+            command[19] = 'e';
+            command[20] = ' ';
+            command[21] = '"';
 
-            command[userCatalogDirectoryLength + 14u + 23u + 0u] = '"';
-            command[userCatalogDirectoryLength + 14u + 23u + 1u] = '\0';
+            command[userCatalogDirectoryLength + 14u + 22u + 0u] = '"';
+            command[userCatalogDirectoryLength + 14u + 22u + 1u] = '\0';
           }
         }
 
         if (NULL != command)
         for (std::size_t index = userCatalogDirectoryLength + 14u; index; ) {
           --index;
-          (command + 23)[index] = userCatalogPath[index];
+          (command + 22)[index] = userCatalogPath[index];
         }
 
         (void) std::system(command);

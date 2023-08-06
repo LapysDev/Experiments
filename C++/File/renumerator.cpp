@@ -1358,7 +1358,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
             // ...
             #if defined(__SUNPRO_C) || defined(__SUNPRO_CC)
-              // ... --> std::sprintf(executableFilePathLength, "/proc/%li/path/a.out", static_cast<long>(::getpid())) >= 0
+              // ... --> std::sprintf(executableFilePath, "/proc/%li/path/a.out", static_cast<long>(::getpid())) >= 0
               for (char *destination = executableFilePath, *source = const_cast<char*>("/proc/"); ; ++destination, ++source) {
                 if ('\0' == *source) {
                   pid_t const id = ::getpid();

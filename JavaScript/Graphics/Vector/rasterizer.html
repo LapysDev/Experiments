@@ -196,7 +196,7 @@
           font = stream.slice(0, streamLength)
         }
 
-        // ... ->> Assumed big-endian
+        // TOOD ... ->> Assumed big-endian
         var entrySelector             = (uint16) (1);
         var rangeShift                = (uint16) (1);
         var scalableSplineFontVersion = (uint32) ((font[0] << (8 * 3)) | (font[1] << (8 * 2)) | (font[2] << (8 * 1)) | (font[3] << (8 * 0)));
