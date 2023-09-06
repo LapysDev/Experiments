@@ -314,11 +314,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       // ... ->> Create a new user catalog, and open it within a new Windows Notepad instance
-      userCatalogPath[userCatalogDirectoryLength + 0u]  = "0123456789"[(catalogRecentDate.tm_mday / 10) % 10];
-      userCatalogPath[userCatalogDirectoryLength + 1u]  = "0123456789"[(catalogRecentDate.tm_mday / 1)  % 10];
+      userCatalogPath[userCatalogDirectoryLength + 0u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 10) % 10];
+      userCatalogPath[userCatalogDirectoryLength + 1u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 1)  % 10];
       userCatalogPath[userCatalogDirectoryLength + 2u]  = '-';
-      userCatalogPath[userCatalogDirectoryLength + 3u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 10) % 10];
-      userCatalogPath[userCatalogDirectoryLength + 4u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 1)  % 10];
+      userCatalogPath[userCatalogDirectoryLength + 3u]  = "0123456789"[(catalogRecentDate.tm_mday / 10) % 10];
+      userCatalogPath[userCatalogDirectoryLength + 4u]  = "0123456789"[(catalogRecentDate.tm_mday / 1)  % 10];
       userCatalogPath[userCatalogDirectoryLength + 5u]  = '-';
       userCatalogPath[userCatalogDirectoryLength + 6u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 1000) % 10];
       userCatalogPath[userCatalogDirectoryLength + 7u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 100)  % 10];
