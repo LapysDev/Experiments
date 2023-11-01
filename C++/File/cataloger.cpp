@@ -50,7 +50,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
   bool          catalogRecordDateDeserialized                                                        = false;                                                                                    //
   std::tm       catalogRecordDate                                                                    = {};                                                                                       // ->> Deserialized `std::tm` representation of `cataloger::timestamp` from `catalogRecordFile`
   char          catalogPathBuffer[2u /* --> "./" */ + 14u /* --> catalogPath */ + 1u /* --> '\0' */] = "./";                                                                                     //
-  char        (&catalogDirectoryPathBuffer)[]                                                        = reinterpret_cast<char (&)[]>(catalogPathBuffer);                                          //
 
   // ... ->> Acquire `catalogDirectoryPath` and `catalogRecordPath` paths
   if (NULL == catalogRecordPath) {
@@ -62,26 +61,26 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   catalogDirectoryPath = count > 1 and NULL != arguments[1] ? arguments[1] : catalogPathBuffer /* --> "./" */;
 
-  for (char *iterator = catalogRecordPath; ; ++iterator)
-  if ('\0' == *iterator) {
-    // ... ->> Remove all directory components except the temporary unique file name
-    while (catalogRecordPath != iterator--)
-    if (
-      *iterator == '/'
-      #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-        or *iterator == '\\'
-      #endif
-    ) {
-      for (char *subiterator = catalogRecordPath; '\0' != *iterator; ++subiterator)
-      *subiterator = *++iterator;
+  if (catalogRecordPath == catalogRecordPathBuffer) {
+    // ... ->> Remove all `catalogRecordPath` directory components except the temporary unique file name
+    for (char *iterator = catalogRecordPath; ; ++iterator)
+    if ('\0' == *iterator) {
+      while (catalogRecordPath != iterator--)
+      if (
+        *iterator == '/'
+        #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+          or *iterator == '\\'
+        #endif
+      ) {
+        for (char *subiterator = catalogRecordPath; '\0' != *iterator; ++subiterator)
+        *subiterator = *++iterator;
+
+        break;
+      }
 
       break;
     }
 
-    break;
-  }
-
-  if (catalogRecordPath == catalogRecordPathBuffer) {
     // ... ->> Append `".json"` extension substring to `catalogRecordPath` e.g. `"name"` and `"name.jso"` will be extended to `"name.json"`
     for (char *iterator = catalogRecordPath; ; ++iterator)
     if ('\0' == *iterator or iterator - catalogRecordPath == sizeof catalogRecordPathBuffer / sizeof(char)) {
@@ -107,6 +106,9 @@ int main(int count, char* arguments[]) /* noexcept */ {
       break;
     }
 
+    std::printf("[directory]: \"%s\"" "\r\n", catalogDirectoryPath);
+    std::printf("[record]: \"%s\"" "\r\n\n", catalogRecordPath);
+
     // ... ->> Prepend `catalogDirectoryPath` to `catalogRecordPath`
     for (char *iterator = catalogRecordPath; ; ++iterator)
     if ('\0' == *iterator) {
@@ -116,11 +118,32 @@ int main(int count, char* arguments[]) /* noexcept */ {
       for (char *subiterator = catalogDirectoryPath; ; ++subiterator)
       if ('\0' == *subiterator) {
         std::size_t const catalogRecordPathLength    = iterator    - catalogRecordPath;
-        std::size_t const catalogDirectoryPathLength = subiterator - catalogDirectoryPath;
+        std::size_t       catalogDirectoryPathLength = subiterator - catalogDirectoryPath;
+        bool              catalogDirectoryDelimited  = false;
 
         // ...
-        if (catalogDirectoryPathLength < catalogRecordPathMaximumLength - catalogRecordPathLength) {
-          std::puts("A");
+        while (not catalogDirectoryDelimited and catalogDirectoryPath != subiterator)
+        switch (*--subiterator) {
+          #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+            case '\\':
+          #endif
+          case '/': catalogDirectoryDelimited = true; break;
+          case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: continue; // --> 0x1680 || 0x180E || 0x2000 || 0x2001 || 0x2002 || 0x2003 || 0x2004 || 0x2005 || 0x2006 || 0x2007 || 0x2008 || 0x2009 || 0x200A || 0x200B || 0x202F || 0x205F || 0x3000 || 0xFEFF
+          default: subiterator = catalogDirectoryPath;
+        }
+
+        subiterator = catalogDirectoryPath + catalogDirectoryPathLength;
+
+        // ...
+        if (catalogDirectoryPathLength /*+ not catalogDirectoryDelimited*/ < catalogRecordPathMaximumLength - catalogRecordPathLength) {
+          for (++iterator; catalogRecordPath != iterator--; )
+          iterator[catalogDirectoryPathLength /*+ not catalogDirectoryDelimited*/] = *iterator;
+
+          // if (not catalogDirectoryDelimited)
+          //   iterator[catalogDirectoryPathLength] = '/';
+
+          for (iterator = catalogRecordPath + catalogDirectoryPathLength; catalogDirectoryPath != subiterator; --subiterator)
+          *--iterator = *--subiterator;
         }
 
         else {
@@ -219,6 +242,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     }
   }
 
+  // ... ->> Normalize `catalogDirectoryPath` and `catalogRecordPath`
   #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
     // ... ->> Canonicalize slashes to Windows backslash separators
     for (char *const paths[] = {catalogDirectoryPath, catalogRecordPath}, *const *iterator = paths + (sizeof paths / sizeof(char*)); iterator-- != paths; ) {
@@ -233,7 +257,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   static_cast<void>(arguments);
   static_cast<void>(catalogDirectoryPath);
-  static_cast<void>(catalogDirectoryPathBuffer);
   static_cast<void>(catalogPath);
   static_cast<void>(catalogPathBuffer);
   static_cast<void>(catalogRecordDate);
