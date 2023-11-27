@@ -1076,6 +1076,20 @@
                 default: return false
               }
 
+              switch ("" === name ? "::" + (str) (attribute) : name) {
+                case "::display":
+                case "::height" :
+                case "::layout" :
+                case "::left"   :
+                case "::margin" : case "::margin::bottom" : case "::margin::left"  : case "::margin::right": case "::margin::top":
+                case "::maximum": case "::maximum::height": case "::maximum::width":
+                case "::minimum": case "::minimum::height": case "::minimum::width":
+                case "::padding": case "::padding::bottom": case "::padding::left" : case "::padding::right": case "::padding::top":
+                case "::top"    :
+                case "::width"  :
+                  element.updateComputedBounds()
+              }
+
               return true
             }
           };
@@ -1200,7 +1214,7 @@
               delete this.transitionType
             }, Style.prototype);
 
-        function Element() /* TOOD (Lapys) -> Incoming `::bounds` rework */ {
+        function Element() {
           var style = new Style();
 
           // …
@@ -1209,7 +1223,6 @@
           this.computedStyle    = style;
           this.eventListeners   = {able: array(), active: array(), activeEnd: array(), activeStart: array(), add: array(), click: array(), doubleClick: array(), drag: array(), dragEnd: array(), dragStart: array(), focus: array(), focusEnd: array(), focusStart: array(), hover: array(), hoverEnd: array(), hoverStart: array(), key: array(), keyEnd: array(), keyStart: array(), mouse: array(), mouseEnd: array(), mouseStart: array(), pointer: array(), pointerEnd: array(), pointerStart: array(), remove: array(), renderEnd: array(), renderStart: array(), rerooted: array(), resize: array(), resizeEnd: array(), resizeStart: array(), select: array(), touch: array(), touchEnd: array(), touchStart: array(), transition: array(), transitionEnd: array(), transitionStart: array()};
           this.style            = style;
-          this.transitionBounds = bounds;
           this.transitionLength = Element.prototype.transitionLength;
           this.transitionStyle  = style;
 
@@ -1246,7 +1259,6 @@
             source          : null,                                                                    // ->> Relevant to linked `Image` sub-instances
             style           : Style.prototype,                                                         //
             title           : null,                                                                    //
-            transitionBounds: rect(),                                                                  //
             transitionLength: 0.0,                                                                     // ->> Seconds remaining for an `Events.TRANSITION` animation to elapse
             transitionStyle : Style.prototype,                                                         // ->> `Style` an `Events.TRANSITION` trigger is animated from
             value           : null,                                                                    // ->> Data for `Button`, pixmap for `Image`, typographic content for `Text`, e.t.c.
@@ -1323,14 +1335,6 @@
               return this.computedBounds
             },
 
-            getComputedHeight: function getComputedHeight() {
-              return this.getComputedBounds().height
-            },
-
-            getComputedLeft: function getComputedLeft() {
-              return this.getComputedBounds().left
-            },
-
             getComputedStyle: function getComputedStyle(transitioning) {
               var computedStyle   = this.computedStyle;
               var transitionStyle = this.transitionStyle;
@@ -1343,57 +1347,62 @@
 
                 // …
                 if (this.transitionLength < transitionLength - transitionDelay) {
-                  var delta = computedStyle.getAttribute(this, "transition", "type")(this.transitionLength / transitionDuration, 0.0, 0.0, 0.0, 0.0);
+                  var delta = computedStyle.getAttribute(this, "transition", "type")(this.transitionLength / transitionDuration, 1.0, 1.0, 1.0, 1.0);
                   var style = new TransitionStyle();
 
                   // …
-                  style.background.anchor   = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "anchor"),      Styles.PSEUDO, delta);
-                  style.background.image    = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "image"),       Styles.PSEUDO, delta);
-                  style.background.repeat.x = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "repeat", 'x'), Styles.PSEUDO, delta);
-                  style.background.repeat.y = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "repeat", 'y'), Styles.PSEUDO, delta);
-                  style.background.style    = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "style"),       Styles.PSEUDO, delta);
-                  style.border.type         = Styles.TRANSITION(computedStyle.getAttribute(this, "border",     "type"),        Styles.PSEUDO, delta);
-                  style.display             = Styles.TRANSITION(computedStyle.getAttribute(this, "display"),                   Styles.PSEUDO, delta);
-                  style.filter.url          = Styles.TRANSITION(computedStyle.getAttribute(this, "filter", "url"),             Styles.PSEUDO, delta);
-                  style.font.family         = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "family"),          Styles.PSEUDO, delta);
-                  style.font.kerning        = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "kerning"),         Styles.PSEUDO, delta);
-                  style.font.variantCaps    = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "variantCaps"),     Styles.PSEUDO, delta);
-                  style.font.weight         = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "weight"),          Styles.PSEUDO, delta);
-                  style.layout              = Styles.TRANSITION(computedStyle.getAttribute(this, "layout"),                    Styles.PSEUDO, delta);
+                  style.backgroundAnchor  = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "anchor"),      Styles.PSEUDO, delta);
+                  style.backgroundImage   = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "image"),       Styles.PSEUDO, delta);
+                  style.backgroundRepeatX = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "repeat", 'x'), Styles.PSEUDO, delta);
+                  style.backgroundRepeatY = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "repeat", 'y'), Styles.PSEUDO, delta);
+                  style.backgroundStyle   = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "style"),       Styles.PSEUDO, delta);
+                  style.borderStyle       = Styles.TRANSITION(computedStyle.getAttribute(this, "border",     "style"),       Styles.PSEUDO, delta);
+                  style.display           = Styles.TRANSITION(computedStyle.getAttribute(this, "display"),                   Styles.PSEUDO, delta);
+                  style.filterURL         = Styles.TRANSITION(computedStyle.getAttribute(this, "filter", "url"),             Styles.PSEUDO, delta);
+                  style.fontFamily        = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "family"),          Styles.PSEUDO, delta);
+                  style.fontKerning       = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "kerning"),         Styles.PSEUDO, delta);
+                  style.fontStyle         = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "style"),           Styles.PSEUDO, delta);
+                  style.fontVariantCaps   = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "variantCaps"),     Styles.PSEUDO, delta);
+                  style.fontWeight        = Styles.TRANSITION(computedStyle.getAttribute(this, "font",   "weight"),          Styles.PSEUDO, delta);
+                  style.layout            = Styles.TRANSITION(computedStyle.getAttribute(this, "layout"),                    Styles.PSEUDO, delta);
 
-                  style.background.color     = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "color"),            computedStyle.getAttribute(this, "transition", "style", "background", "color")            ? transitionStyle.getAttribute(this, "background", "color")            : Styles.PSEUDO, delta);
-                  style.background.offset.x  = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "offset", 'x'),      computedStyle.getAttribute(this, "transition", "style", "background", "offset", 'x')      ? transitionStyle.getAttribute(this, "background", "offset", 'x')      : Styles.PSEUDO, delta);
-                  style.background.offset.y  = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "offset", 'y'),      computedStyle.getAttribute(this, "transition", "style", "background", "offset", 'y')      ? transitionStyle.getAttribute(this, "background", "offset", 'y')      : Styles.PSEUDO, delta);
-                  style.border.color         = Styles.TRANSITION(computedStyle.getAttribute(this, "border",     "color"),            computedStyle.getAttribute(this, "transition", "style", "border",     "color")            ? transitionStyle.getAttribute(this, "border",     "color")            : Styles.PSEUDO, delta);
-                  style.border.size          = Styles.TRANSITION(computedStyle.getAttribute(this, "border",     "size"),             computedStyle.getAttribute(this, "transition", "style", "border",     "size")             ? transitionStyle.getAttribute(this, "border",     "size")             : Styles.PSEUDO, delta);
-                  style.filter.blur          = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "blur"),             computedStyle.getAttribute(this, "transition", "style", "filter",     "blur")             ? transitionStyle.getAttribute(this, "filter",     "blur")             : Styles.PSEUDO, delta);
-                  style.filter.brightness    = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "brightness"),       computedStyle.getAttribute(this, "transition", "style", "filter",     "brightness")       ? transitionStyle.getAttribute(this, "filter",     "brightness")       : Styles.PSEUDO, delta);
-                  style.filter.contrast      = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "contrast"),         computedStyle.getAttribute(this, "transition", "style", "filter",     "contrast")         ? transitionStyle.getAttribute(this, "filter",     "contrast")         : Styles.PSEUDO, delta);
-                  style.filter.grayscale     = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "grayscale"),        computedStyle.getAttribute(this, "transition", "style", "filter",     "grayscale")        ? transitionStyle.getAttribute(this, "filter",     "grayscale")        : Styles.PSEUDO, delta);
-                  style.filter.hueRotation   = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "hueRotation"),      computedStyle.getAttribute(this, "transition", "style", "filter",     "hueRotation")      ? transitionStyle.getAttribute(this, "filter",     "hueRotation")      : Styles.PSEUDO, delta);
-                  style.filter.invert        = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "invert"),           computedStyle.getAttribute(this, "transition", "style", "filter",     "invert")           ? transitionStyle.getAttribute(this, "filter",     "invert")           : Styles.PSEUDO, delta);
-                  style.filter.saturate      = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "saturate"),         computedStyle.getAttribute(this, "transition", "style", "filter",     "saturate")         ? transitionStyle.getAttribute(this, "filter",     "saturate")         : Styles.PSEUDO, delta);
-                  style.filter.sepia         = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "sepia"),            computedStyle.getAttribute(this, "transition", "style", "filter",     "sepia")            ? transitionStyle.getAttribute(this, "filter",     "sepia")            : Styles.PSEUDO, delta);
-                  style.filter.shadow.color  = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "shadow", "color"),  computedStyle.getAttribute(this, "transition", "style", "filter",     "shadow", "color")  ? transitionStyle.getAttribute(this, "filter",     "shadow", "color")  : Styles.PSEUDO, delta);
-                  style.filter.shadow.radius = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "shadow", "radius"), computedStyle.getAttribute(this, "transition", "style", "filter",     "shadow", "radius") ? transitionStyle.getAttribute(this, "filter",     "shadow", "radius") : Styles.PSEUDO, delta);
-                  style.filter.shadow.x      = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "shadow", 'x'),      computedStyle.getAttribute(this, "transition", "style", "filter",     "shadow", 'x')      ? transitionStyle.getAttribute(this, "filter",     "shadow", 'x')      : Styles.PSEUDO, delta);
-                  style.filter.shadow.y      = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "shadow", 'y'),      computedStyle.getAttribute(this, "transition", "style", "filter",     "shadow", 'y')      ? transitionStyle.getAttribute(this, "filter",     "shadow", 'y')      : Styles.PSEUDO, delta);
-                  style.font.color           = Styles.TRANSITION(computedStyle.getAttribute(this, "font",       "color"),            computedStyle.getAttribute(this, "transition", "style", "font",       "color")            ? transitionStyle.getAttribute(this, "font",       "color")            : Styles.PSEUDO, delta);
-                  style.font.size            = Styles.TRANSITION(computedStyle.getAttribute(this, "font",       "size"),             computedStyle.getAttribute(this, "transition", "style", "font",       "size")             ? transitionStyle.getAttribute(this, "font",       "size")             : Styles.PSEUDO, delta);
-                  style.font.stretch         = Styles.TRANSITION(computedStyle.getAttribute(this, "font",       "stretch"),          computedStyle.getAttribute(this, "transition", "style", "font",       "stretch")          ? transitionStyle.getAttribute(this, "font",       "stretch")          : Styles.PSEUDO, delta);
-                  style.margin.bottom        = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "bottom"),           computedStyle.getAttribute(this, "transition", "style", "margin",     "bottom")           ? transitionStyle.getAttribute(this, "margin",     "bottom")           : Styles.PSEUDO, delta);
-                  style.margin.left          = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "left"),             computedStyle.getAttribute(this, "transition", "style", "margin",     "left")             ? transitionStyle.getAttribute(this, "margin",     "left")             : Styles.PSEUDO, delta);
-                  style.margin.right         = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "right"),            computedStyle.getAttribute(this, "transition", "style", "margin",     "right")            ? transitionStyle.getAttribute(this, "margin",     "right")            : Styles.PSEUDO, delta);
-                  style.margin.top           = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "top"),              computedStyle.getAttribute(this, "transition", "style", "margin",     "top")              ? transitionStyle.getAttribute(this, "margin",     "top")              : Styles.PSEUDO, delta);
-                  style.opacity              = Styles.TRANSITION(computedStyle.getAttribute(this, "opacity"),                        computedStyle.getAttribute(this, "transition", "style", "opacity")                        ? transitionStyle.getAttribute(this, "opacity")                        : Styles.PSEUDO, delta);
-                  style.padding.bottom       = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "bottom"),           computedStyle.getAttribute(this, "transition", "style", "padding",    "bottom")           ? transitionStyle.getAttribute(this, "padding",    "bottom")           : Styles.PSEUDO, delta);
-                  style.padding.left         = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "left"),             computedStyle.getAttribute(this, "transition", "style", "padding",    "left")             ? transitionStyle.getAttribute(this, "padding",    "left")             : Styles.PSEUDO, delta);
-                  style.padding.right        = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "right"),            computedStyle.getAttribute(this, "transition", "style", "padding",    "right")            ? transitionStyle.getAttribute(this, "padding",    "right")            : Styles.PSEUDO, delta);
-                  style.padding.top          = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "top"),              computedStyle.getAttribute(this, "transition", "style", "padding",    "top")              ? transitionStyle.getAttribute(this, "padding",    "top")              : Styles.PSEUDO, delta);
-                  style.shadow.color         = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     "color"),            computedStyle.getAttribute(this, "transition", "style", "shadow",     "color")            ? transitionStyle.getAttribute(this, "shadow",     "color")            : Styles.PSEUDO, delta);
-                  style.shadow.radius        = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     "radius"),           computedStyle.getAttribute(this, "transition", "style", "shadow",     "radius")           ? transitionStyle.getAttribute(this, "shadow",     "radius")           : Styles.PSEUDO, delta);
-                  style.shadow.x             = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     'x'),                computedStyle.getAttribute(this, "transition", "style", "shadow",     'x')                ? transitionStyle.getAttribute(this, "shadow",     'x')                : Styles.PSEUDO, delta);
-                  style.shadow.y             = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     'y'),                computedStyle.getAttribute(this, "transition", "style", "shadow",     'y')                ? transitionStyle.getAttribute(this, "shadow",     'y')                : Styles.PSEUDO, delta);
+                  style.backgroundColor   = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "color"),       computedStyle.getAttribute(this, "transition", "style", "background", "color")       ? transitionStyle.getAttribute(this, "background", "color")            : Styles.PSEUDO, delta);
+                  style.backgroundOffsetX = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "offset", 'x'), computedStyle.getAttribute(this, "transition", "style", "background", "offset", 'x') ? transitionStyle.getAttribute(this, "background", "offset", 'x')      : Styles.PSEUDO, delta);
+                  style.backgroundOffsetY = Styles.TRANSITION(computedStyle.getAttribute(this, "background", "offset", 'y'), computedStyle.getAttribute(this, "transition", "style", "background", "offset", 'y') ? transitionStyle.getAttribute(this, "background", "offset", 'y')      : Styles.PSEUDO, delta);
+                  style.borderColor       = Styles.TRANSITION(computedStyle.getAttribute(this, "border",     "color"),       computedStyle.getAttribute(this, "transition", "style", "border",     "color")       ? transitionStyle.getAttribute(this, "border",     "color")            : Styles.PSEUDO, delta);
+                  style.borderSize        = Styles.TRANSITION(computedStyle.getAttribute(this, "border",     "size"),        computedStyle.getAttribute(this, "transition", "style", "border",     "size")        ? transitionStyle.getAttribute(this, "border",     "size")             : Styles.PSEUDO, delta);
+                  style.filterBlur        = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "blur"),        computedStyle.getAttribute(this, "transition", "style", "filter",     "blur")        ? transitionStyle.getAttribute(this, "filter",     "blur")             : Styles.PSEUDO, delta);
+                  style.filterBrightness  = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "brightness"),  computedStyle.getAttribute(this, "transition", "style", "filter",     "brightness")  ? transitionStyle.getAttribute(this, "filter",     "brightness")       : Styles.PSEUDO, delta);
+                  style.filterContrast    = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "contrast"),    computedStyle.getAttribute(this, "transition", "style", "filter",     "contrast")    ? transitionStyle.getAttribute(this, "filter",     "contrast")         : Styles.PSEUDO, delta);
+                  style.filterGrayscale   = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "grayscale"),   computedStyle.getAttribute(this, "transition", "style", "filter",     "grayscale")   ? transitionStyle.getAttribute(this, "filter",     "grayscale")        : Styles.PSEUDO, delta);
+                  style.filterHueRotation = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "hueRotation"), computedStyle.getAttribute(this, "transition", "style", "filter",     "hueRotation") ? transitionStyle.getAttribute(this, "filter",     "hueRotation")      : Styles.PSEUDO, delta);
+                  style.filterInvert      = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "invert"),      computedStyle.getAttribute(this, "transition", "style", "filter",     "invert")      ? transitionStyle.getAttribute(this, "filter",     "invert")           : Styles.PSEUDO, delta);
+                  style.filterSaturate    = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "saturate"),    computedStyle.getAttribute(this, "transition", "style", "filter",     "saturate")    ? transitionStyle.getAttribute(this, "filter",     "saturate")         : Styles.PSEUDO, delta);
+                  style.filterSepia       = Styles.TRANSITION(computedStyle.getAttribute(this, "filter",     "sepia"),       computedStyle.getAttribute(this, "transition", "style", "filter",     "sepia")       ? transitionStyle.getAttribute(this, "filter",     "sepia")            : Styles.PSEUDO, delta);
+                  style.fontColor         = Styles.TRANSITION(computedStyle.getAttribute(this, "font",       "color"),       computedStyle.getAttribute(this, "transition", "style", "font",       "color")       ? transitionStyle.getAttribute(this, "font",       "color")            : Styles.PSEUDO, delta);
+                  style.fontSize          = Styles.TRANSITION(computedStyle.getAttribute(this, "font",       "size"),        computedStyle.getAttribute(this, "transition", "style", "font",       "size")        ? transitionStyle.getAttribute(this, "font",       "size")             : Styles.PSEUDO, delta);
+                  style.fontStretch       = Styles.TRANSITION(computedStyle.getAttribute(this, "font",       "stretch"),     computedStyle.getAttribute(this, "transition", "style", "font",       "stretch")     ? transitionStyle.getAttribute(this, "font",       "stretch")          : Styles.PSEUDO, delta);
+                  style.height            = Styles.TRANSITION(computedStyle.getAttribute(this, "height"),                    computedStyle.getAttribute(this, "transition", "height")                             ? transitionStyle.getAttribute(this, "height")                         : Styles.PSEUDO, delta);
+                  style.left              = Styles.TRANSITION(computedStyle.getAttribute(this, "left"),                      computedStyle.getAttribute(this, "transition", "left")                               ? transitionStyle.getAttribute(this, "left")                           : Styles.PSEUDO, delta);
+                  style.marginBottom      = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "bottom"),      computedStyle.getAttribute(this, "transition", "style", "margin",     "bottom")      ? transitionStyle.getAttribute(this, "margin",     "bottom")           : Styles.PSEUDO, delta);
+                  style.marginLeft        = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "left"),        computedStyle.getAttribute(this, "transition", "style", "margin",     "left")        ? transitionStyle.getAttribute(this, "margin",     "left")             : Styles.PSEUDO, delta);
+                  style.marginRight       = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "right"),       computedStyle.getAttribute(this, "transition", "style", "margin",     "right")       ? transitionStyle.getAttribute(this, "margin",     "right")            : Styles.PSEUDO, delta);
+                  style.marginTop         = Styles.TRANSITION(computedStyle.getAttribute(this, "margin",     "top"),         computedStyle.getAttribute(this, "transition", "style", "margin",     "top")         ? transitionStyle.getAttribute(this, "margin",     "top")              : Styles.PSEUDO, delta);
+                  style.maximumHeight     = Styles.TRANSITION(computedStyle.getAttribute(this, "maximum", "height"),         computedStyle.getAttribute(this, "transition", "maximum", "height")                  ? transitionStyle.getAttribute(this, "maximum", "height")              : Styles.PSEUDO, delta);
+                  style.maximumWidth      = Styles.TRANSITION(computedStyle.getAttribute(this, "maximum", "width"),          computedStyle.getAttribute(this, "transition", "maximum", "width")                   ? transitionStyle.getAttribute(this, "maximum", "width")               : Styles.PSEUDO, delta);
+                  style.minimumHeight     = Styles.TRANSITION(computedStyle.getAttribute(this, "minimum", "height"),         computedStyle.getAttribute(this, "transition", "minimum", "height")                  ? transitionStyle.getAttribute(this, "minimum", "height")              : Styles.PSEUDO, delta);
+                  style.minimumWidth      = Styles.TRANSITION(computedStyle.getAttribute(this, "minimum", "width"),          computedStyle.getAttribute(this, "transition", "minimum", "width")                   ? transitionStyle.getAttribute(this, "minimum", "width")               : Styles.PSEUDO, delta);
+                  style.opacity           = Styles.TRANSITION(computedStyle.getAttribute(this, "opacity"),                   computedStyle.getAttribute(this, "transition", "style", "opacity")                   ? transitionStyle.getAttribute(this, "opacity")                        : Styles.PSEUDO, delta);
+                  style.paddingBottom     = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "bottom"),      computedStyle.getAttribute(this, "transition", "style", "padding",    "bottom")      ? transitionStyle.getAttribute(this, "padding",    "bottom")           : Styles.PSEUDO, delta);
+                  style.paddingLeft       = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "left"),        computedStyle.getAttribute(this, "transition", "style", "padding",    "left")        ? transitionStyle.getAttribute(this, "padding",    "left")             : Styles.PSEUDO, delta);
+                  style.paddingRight      = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "right"),       computedStyle.getAttribute(this, "transition", "style", "padding",    "right")       ? transitionStyle.getAttribute(this, "padding",    "right")            : Styles.PSEUDO, delta);
+                  style.paddingTop        = Styles.TRANSITION(computedStyle.getAttribute(this, "padding",    "top"),         computedStyle.getAttribute(this, "transition", "style", "padding",    "top")         ? transitionStyle.getAttribute(this, "padding",    "top")              : Styles.PSEUDO, delta);
+                  style.shadowColor       = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     "color"),       computedStyle.getAttribute(this, "transition", "style", "shadow",     "color")       ? transitionStyle.getAttribute(this, "shadow",     "color")            : Styles.PSEUDO, delta);
+                  style.shadowRadius      = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     "radius"),      computedStyle.getAttribute(this, "transition", "style", "shadow",     "radius")      ? transitionStyle.getAttribute(this, "shadow",     "radius")           : Styles.PSEUDO, delta);
+                  style.shadowX           = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     'x'),           computedStyle.getAttribute(this, "transition", "style", "shadow",     'x')           ? transitionStyle.getAttribute(this, "shadow",     'x')                : Styles.PSEUDO, delta);
+                  style.shadowY           = Styles.TRANSITION(computedStyle.getAttribute(this, "shadow",     'y'),           computedStyle.getAttribute(this, "transition", "style", "shadow",     'y')           ? transitionStyle.getAttribute(this, "shadow",     'y')                : Styles.PSEUDO, delta);
+                  style.top               = Styles.TRANSITION(computedStyle.getAttribute(this, "top"),                       computedStyle.getAttribute(this, "transition", "top")                                ? transitionStyle.getAttribute(this, "top")                            : Styles.PSEUDO, delta);
+                  style.width             = Styles.TRANSITION(computedStyle.getAttribute(this, "width"),                     computedStyle.getAttribute(this, "transition", "width")                              ? transitionStyle.getAttribute(this, "width")                          : Styles.PSEUDO, delta);
 
                   switch (Styles.AUTO)           { case style.font.size.a:    case style.font.size.b:    style.font.size.b    = style.font.size.a }
                   switch (Styles.CONDENSED)      { case style.font.stretch.a: case style.font.stretch.b: style.font.stretch.b = style.font.stretch.a }
@@ -1407,14 +1416,6 @@
               }
 
               return computedStyle
-            },
-
-            getComputedTop: function getComputedTop() {
-              return this.getComputedBounds().top
-            },
-
-            getComputedWidth: function getComputedWidth() {
-              return this.getComputedBounds().width
             },
 
             getEventListenersByType: function getEventListenersByType(types) {
@@ -1504,16 +1505,8 @@
               return listeners
             },
 
-            getHeight: function getHeight() {
-              return this.bounds.height
-            },
-
             getImmediateTransitionState: function getImmediateTransitionState() {
               return 0.0 === this.transitionLength || this.computedStyle === this.transitionStyle ? Events.TRANSITION_END : Events.TRANSITION
-            },
-
-            getLeft: function getLeft() {
-              return this.bounds.left
             },
 
             getSource: function getSource() {
@@ -1537,16 +1530,8 @@
               return null === this.title ? null : (str) (this.title)
             },
 
-            getTop: function getTop() {
-              return this.bounds.top
-            },
-
             getTransitionState: function getTransitionState() {
               return Events.TRANSITION_END === this.getImmediateTransitionState() ? Events.TRANSITION_END : this.transitionLength === this.computedStyle.getAttribute(this, "transition", "delay") + this.computedStyle.getAttribute(this, "transition", "duration") ? Events.TRANSITION_START : Events.TRANSITION
-            },
-
-            getWidth: function getWidth() {
-              return this.bounds.width
             },
 
             key: function key(key) {
@@ -1667,106 +1652,57 @@
               if (null !== element) element.dispatchEventListeners(Events.ADD,    this)
             },
 
-            updateComputedBounds: function updateComputedBounds(propagate /* --> ::parent.children */) {
-              /* TODO (Lapys) -> Update parent, sibling, and adjacently affected `Element` `::computedBounds` */
+            updateComputedBounds: function updateComputedBounds() {
               /* NOTE (Lapys) ->
-                ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-                │   (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧                                                                                       margin.top                                                                                                             │
-                │             ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐              │
-                │             │                                                                                     border.size {Styles.OUTER}                                                                                    │              │
-                │             │                                                                                    (* (no affected on layout) *)                                                                                  │              │
-                │             │                              ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗                             │              │
-                │             │                              ║                                              border.size {Styles.INNER}, padding.top                                                 ║                             │              │
-                │             │                              ║                                          ┌───────────────────────────────────────────────┐                                           ║                             │              │
-                │ margin.left │ border.size {Styles.OUTER}   ║ border.size {Styles.INNER}, padding.left │  bounds  (* (affected by children bounds) *)  │ border.size {Styles.INNER}, padding.right ║  border.size {Styles.OUTER} │ margin.right │
-                │             │ (* (no affect on layout) *)  ║                                          └───────────────────────────────────────────────┘                                           ║ (* (no affect on layout) *) │              │
-                │             │                              ║                                             border.size {Styles.INNER}, padding.bottom                                               ║                             │              │
-                │             │                              ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝                             │              │
-                │             │                                                                                     border.size {Styles.OUTER}                                                                                    │              │
-                │             │                                                                                    (* (no affected on layout) *)                                                                                  │              │
-                │             └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘              │
-                │                                                                                                        margin.bottom                                                                                                           │
-                └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+                ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+                │   (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧                                                                                       marginTop                                                                                                        │
+                │            ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐             │
+                │            │                                                                                      borderSize {Styles.OUTER}                                                                                │             │
+                │            │                                                                                    (* (no affected on layout) *)                                                                              │             │
+                │            │                              ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗                             │             │
+                │            │                              ║                                              borderSize {Styles.INNER}, paddingTop                                               ║                             │             │
+                │            │                              ║                                        ┌───────────────────────────────────────────────┐                                         ║                             │             │
+                │ marginLeft │  borderSize {Styles.OUTER}   ║ borderSize {Styles.INNER}, paddingLeft │  bounds  (* (affected by children bounds) *)  │ borderSize {Styles.INNER}, paddingRight ║  borderSize {Styles.OUTER}  │ marginRight │
+                │            │ (* (no affect on layout) *)  ║                                        └───────────────────────────────────────────────┘                                         ║ (* (no affect on layout) *) │             │
+                │            │                              ║                                             borderSize {Styles.INNER}, paddingBottom                                             ║                             │             │
+                │            │                              ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝                             │             │
+                │            │                                                                                      borderSize {Styles.OUTER}                                                                                │             │
+                │            │                                                                                    (* (no affected on layout) *)                                                                              │             │
+                │            └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘             │
+                │                                                                                                        marginBottom                                                                                                      │
+                └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
               */
-              var style        = this.getComputedStyle();
-              var styleDisplay = style.getAttribute(this, "display");
-              var styles       = array();
+              console.log("resizing `Element` instance")
+              /* --- TODO ---
+                @Lapys: Update parent, sibling, and adjacently affected `Element` `::computedBounds`
 
-              // …
-              for (var element = this; null !== element; element = element.parent)
-              if (Styles.NONE === (element !== this ? styleDisplay : styles[styles.push(element.getComputedStyle()) - 1].getAttribute(element, "display"))) {
-                this.computedBounds = {height: 0, left: 0, top: 0, width: 0};
-                return
-              }
-
-              /* … */
-              var bounds             = this.bounds;
-              var computedBounds     = this.computedBounds;
-              var parent             = this.parent;
-              var styleMarginBottom  = style.getAttribute(this, "margin", "bottom");
-              var styleMarginLeft    = style.getAttribute(this, "margin", "left");
-              var styleMarginRight   = style.getAttribute(this, "margin", "right");
-              var styleMarginTop     = style.getAttribute(this, "margin", "top");
-              var styleLayout        = style.getAttribute(this, "layout");
-              var stylePaddingBottom = style.getAttribute(this, "padding", "bottom");
-              var stylePaddingLeft   = style.getAttribute(this, "padding", "left");
-              var stylePaddingRight  = style.getAttribute(this, "padding", "right");
-              var stylePaddingTop    = style.getAttribute(this, "padding", "top");
-
-              // …
-              function getIndependentHeight(element) { return Styles.AUTO === element.bounds.naturalHeight || Styles.AUTO !== element.bounds.height ? element.bounds.height : element.bounds.naturalHeight }
-              function getIndependentWidth (element) { return Styles.AUTO === element.bounds.naturalWidth  || Styles.AUTO !== element.bounds.width  ? element.bounds.width  : element.bounds.naturalWidth }
-
-              Styles.INLINE === parent.getComputedStyle().getAttribute(parent, "display")
-              // if not same, update siblings
-
-              // …
-              computedBounds.height = getIndependentHeight(this);
-              computedBounds.left   = Styles.RELATIVE === styleLayout ? 0 : bounds.left;
-              computedBounds.top    = Styles.RELATIVE === styleLayout ? 0 : bounds.top;
-              computedBounds.width  = getIndependentWidth(this);
-
-              if (Styles.RELATIVE === styleLayout) {
-                for (var depth = 0, element = parent; Styles.AUTO === computedBounds.height && null !== element && Styles.RELATIVE === styles[depth].getAttribute(element, "layout"); ++depth, element = element.parent)
-                computedBounds.height = getIndependentHeight(element);
-
-                for (var depth = 0, element = parent; Styles.AUTO === computedBounds.width && null !== element && Styles.RELATIVE === styles[depth].getAttribute(element, "layout"); ++depth, element = element.parent)
-                computedBounds.width = getIndependentWidth(element)
-              }
-
-              // computedBounds.height = Styles.AUTO !== computedBounds.height ? computedBounds.height : 0;
-              // null !== parent ? getIndependentWidth(parent)
-              // computedBounds.width  = Styles.AUTO !== computedBounds.width  ? computedBounds.width  : Styles.BLOCK === styleDisplay && Styles.RELATIVE === styleLayout ? Graphics.RENDER_WIDTH : 0;
-
-              if (null !== parent) {
-                var siblings = parent.children;
-
-                // …
-                for (var index = siblings.length; index; )
-                if (this === siblings[--index]) {
-                  break
+                ::naturalHeight, --> Styles.AUTO; px(…)
+                ::naturalWidth,  --> Styles.AUTO; px(…)
+                ::style {
+                  display      : Styles.BLOCK,    --> Styles.BLOCK, Styles.INLINE, Styles.NONE
+                  height       : Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  layout       : Styles.RELATIVE, --> Styles.ABSOLUTE, Styles.FIXED, Styles.RELATIVE
+                  left         : Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  marginBottom : px(0),           --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  marginLeft   : px(0),           --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  marginRight  : px(0),           --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  marginTop    : px(0),           --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  maximumHeight: Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  maximumWidth : Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  minimumHeight: Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  minimumWidth : Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  paddingBottom: px (0),          --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  paddingLeft  : px (0),          --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  paddingRight : px (0),          --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  paddingTop   : px (0),          --> cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  top          : Styles.AUTO,     --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
+                  width        : Styles.AUTO      --> Styles.AUTO; cm(…), inch(…), mm(…), pc(…), pt(…), px(…), rel(…)
                 }
-              }
-
-              // …
-              // --> ::style {
-              //   border : {size, type: Styles.INNER | Styles.OUTER}},
-              //   margin : {bottom, left, right, top},
-              //   padding: {bottom, left, right, top}
-              // }
+              */
             },
 
             updateComputedStyle: function updateComputedStyle(style) {
               this.computedStyle = style
-            },
-
-            setHeight: function setHeight(height) {
-              this.bounds.height = Styles.AUTO === height || height instanceof px.constructor || height instanceof rel.constructor ? height : typeof height === "number" ? (float) (height) : this.getHeight();
-              this.updateComputedBounds()
-            },
-
-            setLeft: function setLeft(left) {
-              this.bounds.left = Styles.AUTO === left || left instanceof px.constructor || left instanceof rel.constructor ? left : typeof left === "number" ? (float) (left) : this.getLeft();
             },
 
             setSource: function setSource(source) {
@@ -1825,14 +1761,6 @@
 
             setTitle: function setTitle(title) {
               this.title = null === title ? null : (str) (title)
-            },
-
-            setTop: function setTop(top) {
-              this.bounds.top = Styles.AUTO === top || top instanceof px.constructor || top instanceof rel.constructor ? top : typeof top === "number" ? (float) (top) : this.getTop()
-            },
-
-            setWidth: function setWidth(width) {
-              this.bounds.width = Styles.AUTO === width || width instanceof px.constructor || width instanceof rel.constructor ? width : typeof width === "number" ? (float) (width) : this.getWidth()
             },
 
             unfocus: function unfocus() {
