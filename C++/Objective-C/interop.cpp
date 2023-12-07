@@ -4,12 +4,12 @@
 # include <Carbon/Carbon.h>
 
 /* ... */
-static id (&msg)         (id, SEL)            = (id (&)(id, SEL))            ::objc_msgSend;
-static id (&msg_class)   (Class, SEL)         = (id (&)(Class, SEL))         ::objc_msgSend;
-static id (&msg_classChr)(Class, SEL, char[]) = (id (&)(Class, SEL, char[])) ::objc_msgSend;
-static id (&msg_id)      (id, SEL, id)        = (id (&)(id, SEL, id))        ::objc_msgSend;
-static id (&msg_int)     (id, SEL, int)       = (id (&)(id, SEL, int))       ::objc_msgSend;
-static id (&msg_ptr)     (id, SEL, void*)     = (id (&)(id, SEL, void*))     ::objc_msgSend;
+static id (&msg)         (id, SEL)                  = (id (&)(id, SEL))                  ::objc_msgSend;
+static id (&msg_class)   (Class, SEL)               = (id (&)(Class, SEL))               ::objc_msgSend;
+static id (&msg_classChr)(Class, SEL, char const[]) = (id (&)(Class, SEL, char const[])) ::objc_msgSend;
+static id (&msg_id)      (id, SEL, id)              = (id (&)(id, SEL, id))              ::objc_msgSend;
+static id (&msg_int)     (id, SEL, int)             = (id (&)(id, SEL, int))             ::objc_msgSend;
+static id (&msg_ptr)     (id, SEL, void*)           = (id (&)(id, SEL, void*))           ::objc_msgSend;
 
 // poor man's bindings!
 enum NSApplicationActivationPolicy {
@@ -34,14 +34,14 @@ enum NSWindowStyleMask {
 int main(int count, char* arguments[]) /* noexcept */ {
   // id application = [NSApplication sharedApplication];
   id     const application = ::msg_class(::objc_getClass("NSApplication"), ::sel_getUid("sharedApplication"));
-  CGRect const bounds      = {0, 0, 600, 500};
+  CGRect const bounds      = {{0, 0}, {600, 500}};
 
   // [application setActivationPolicy:NSApplicationActivationPolicyRegular];
   ::msg_int(application, ::sel_getUid("setActivationPolicy:"), ::NSApplicationActivationPolicyRegular);
 
   // id window = [[NSWindow alloc] initWithContentRect:bounds styleMask:NSWindowStyleMaskClosable|NSWindowStyleMaskResizable|NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
   id const window = ((id (&)(id, SEL, CGRect, int, int, int)) ::objc_msgSend)(::msg_class(::objc_getClass("NSWindow"), ::sel_getUid("alloc")), ::sel_getUid("initWithContentRect:styleMask:backing:defer:"), bounds, ::NSWindowStyleMaskClosable | ::NSWindowStyleMaskResizable | ::NSWindowStyleMaskTitled, ::NSBackingStoreBuffered, false);
-  ::msg_id(window, ::sel_getUid("setTitle:"), ::msg_classChr(::objc_getClass("NSString"), ::sel_getUid("stringWithUTF8String:"), "Objective-C++ Application"));
+  ::msg_id(window, ::sel_getUid("setTitle:"), ::msg_classChr(::objc_getClass("NSString"), ::sel_getUid("stringWithUTF8String:"), "Hello, World!"));
 
   // [window makeKeyAndOrderFront:nil];
   ::msg_ptr(window, ::sel_getUid("makeKeyAndOrderFront:"), nil);
