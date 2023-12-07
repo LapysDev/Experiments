@@ -64,7 +64,7 @@
         };
 
         var Elements = (ElementStateList => ({
-          // … ->> Tracks `Element` instances that are active, disabled, dragged, focused, hovered, required, selected, …, or have no parents (ranked in order of priority)
+          // … ->> Tracks `Element` instances that are active, disabled, dragged, focused, hovered, required, selected, …, or have no `::parent` (ranked in order of priority)
           ACTIVATED: new ElementStateList(0x04),
           DISABLED : new ElementStateList(0x20),
           DRAGGED  : new ElementStateList(0x02),
@@ -73,7 +73,7 @@
           REQUIRED : new ElementStateList(0x40),
           ROOT     : new ElementStateList(0x00),
           SELECTED : new ElementStateList(0x10)
-        }))(struct(function ElementStateList(id) { this.valueOf = () => id }, array()));
+        }))(struct(function ElementStateList(id) { this.valueOf = function() /* => */ { return id } }, array()));
 
         var Events = {
           // … ->> Various events relevant to `Element` instances (ranked in order of priority)
@@ -102,7 +102,7 @@
           CLICK_RATE: 1.0 / 3.0,
           KEYS      : array(),
           POINTER   : xy(0.0, 0.0),
-          POINTS    : array( /* --> …, Events.pointer, … */ )
+          POINTS    : array( /* --> …, Events.POINTER, … */ )
         };
 
         var Graphics = {
@@ -134,7 +134,7 @@
           LOG_2_EULER : 1.442695040888963,         //
           LOG_10_10   : 1.000000000000000,         // --> log¹⁰(10)
           LOG_10_EULER: 0.434294481903251,         //
-          PHI         : 1.618033988749894,         // ->> Golden Ratio --> φ= (1 + √5) ÷ 2
+          PHI         : 1.618033988749894,         // ->> Golden Ratio --> φ = (1 + √5) ÷ 2
           PI          : 245850922.0 / 78256779.0,  // ->> Archimedes’ constant
           SQRT_2      : 665857.0    / 470832.0,    // ->> Pythagoras’ constant
           SQRT_3      : 97.0        / 56.0,        // ->> Theodorus’  constant
@@ -144,7 +144,7 @@
 
         var Styles = {
           // … ->> Special attributes for `PseudoStyle` and `TransitionStyle` instances respectively
-          PSEUDO    : new function PSEUDO() {},
+          PSEUDO    : new function PSEUDO() { return PSEUDO },
           TRANSITION: struct(function TRANSITION(attributeA, attributeB, delta) { if (false === this instanceof TRANSITION) return new TRANSITION(attributeA, attributeB, delta); this.a = attributeA; this.b = Styles.PSEUDO !== attributeA ? attributeB : attributeA; this.delta = delta }, {a: null, b: null, delta: 0.0}),
 
           // … ->> Generic attributes for `Style` instances
@@ -1076,7 +1076,7 @@
                 default: return false
               }
 
-              switch ("" === name ? "::" + (str) (attribute) : name) {
+              switch (name + "::" + attribute) {
                 case "::display":
                 case "::height" :
                 case "::layout" :
@@ -1688,58 +1688,14 @@
                 │                                                                                                       marginBottom                                                                                                      │
                 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
               */
-              var depth = 0;
+              for (var element = this; null !== element; element = element.parent) {
+                var elementStyle = element.getComputedStyle();
 
-              // …
-              for (var element = this; null !== element; element = element.parent)
-              ++depth;
-
-              for (var element = this, subdepth = 0; depth; ) {
-                if (depth !== ++subdepth) { element = element.parent; continue }
-
-                var elementParent       = element.parent;
-                var elementStyle        = element.getComputedStyle();
-                var elementStyleDisplay = elementStyle.getAttribute(element, "display");
-
-                // …
-                switch (elementStyleDisplay) {
-                  case Styles.NONE: {
-                    for (var elements = array(list(element)); elements.length; elements.shift()) {
-                      var subelements = elements[0];
-
-                      for (var index = subelements.length; index; ) {
-                        var element         = subelements[--index];
-                        var elementChildren = element.children;
-
-                        // …
-                        element.computedBounds = rect();
-
-                        if (elementChildren.length)
-                        elements.push(elementChildren)
-                      }
-                    }
-                  } return;
-
-                  case Styles.BLOCK: {
-                    var containerHeight    = null !== elementParent ? elementParent.computedBounds.height : Graphics.RENDER_HEIGHT;
-                    var containerWidth     = null !== elementParent ? elementParent.computedBounds.width  : Graphics.RENDER_WIDTH;
-                    var elementStyleHeight = elementStyle.getAttribute(element, "height");
-                    var elementStyleWidth  = elementStyle.getAttribute(element, "width");
-                    var elementHeight      = px(Styles.AUTO !== elementStyleHeight ? px(elementStyleHeight) * (elementStyleHeight instanceof rel.constructor ? containerHeight : 1.0) : Styles.AUTO !== element.naturalHeight ? element.naturalHeight : 0);
-                    var elementWidth       = px(Styles.AUTO !== elementStyleWidth  ? px(elementStyleWidth)  * (elementStyleWidth  instanceof rel.constructor ? containerWidth  : 1.0) : Styles.AUTO !== element.naturalWidth  ? element.naturalWidth  : containerWidth);
-
-                    // … --- TODO (Lapys) -> Get height and left-top position
-                  } break;
-
-                  case Styles.INLINE:
-                }
-
-                depth   -= 1;
-                element  = this;
-                subdepth = 0
+                void elementStyle
+                // if fatter/ thinner, adjust siblings
               }
 
-              console.log("resizing `Element` instance")
+              console.log("resizing `Element` instance", element.computedBounds)
               /* --- TODO ---
                 @Lapys: Update parents and successive sibling `Element` `::computedBounds`
 

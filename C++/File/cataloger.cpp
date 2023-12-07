@@ -1,4 +1,3 @@
-// --> C:\LapysDev\miscellaneous\cataloger.exe C:\Users\oluwa\OneDrive\Lapys\Catalog C:\Users\oluwa\OneDrive\Lapys\Catalog\schedule.dat
 // --> cataloger C:\Users\oluwa\OneDrive\Lapys\Catalog C:\Users\oluwa\OneDrive\Lapys\Catalog\schedule.dat
 #include <ciso646> // --> and, not, or
 #include <climits> // --> CHAR_BIT
@@ -16,7 +15,7 @@
 # include <stdlib.h>
 #endif
 
-/* Main --> cataloger [file_for_timekeeping] [folder_for_cataloging] */
+/* Main --> cataloger [folder_for_cataloging] [file_for_timekeeping] */
 int main(int count, char* arguments[]) /* noexcept */ {
   struct cataloger {
     // ... ->> A more consistent `std::tm` binary format
@@ -39,19 +38,22 @@ int main(int count, char* arguments[]) /* noexcept */ {
     char *catalogPath;          // ->> Path to current catalog file
   };
 
-  std::time_t   currentTime                                                                          = static_cast<std::time_t>(-1);                                                             //
-  double const  catalogRecordTimeRange                                                               = 86400.00;                                                                                 // ->> Observed seconds elapsed between `catalogRecordTime` and `currentTime`; Currently set to approximately one single day
-  double        catalogRecordTimeSpan                                                                = 0.0;                                                                                      // --> std::difftime(catalogRecordTime, currentTime)
-  std::time_t   catalogRecordTime                                                                    = static_cast<std::time_t>(-1);                                                             // ->> Deserialized seconds representation of `cataloger::timestamp` from `catalogRecordFile`
-  char          catalogRecordPathBuffer[L_tmpnam + 5u /* --> ".json" */]                             = {'\0'};                                                                                   //
-  char         *catalogRecordPath                                                                    = count > 2 and NULL != arguments[2] ? arguments[2] : std::tmpnam(catalogRecordPathBuffer); //
-  std::FILE    *catalogRecordFile                                                                    = NULL;                                                                                     // ->> File which records a possibly existing `cataloger::timestamp` used to create new catalog files
-  unsigned char catalogRecordDateBuffer[sizeof(cataloger::timestamp)]                                = {0};                                                                                      // ->> Ideally zero-initialized
-  bool          catalogRecordDateDeserialized                                                        = false;                                                                                    //
-  std::tm       catalogRecordDate                                                                    = {};                                                                                       // ->> Deserialized `std::tm` representation of `cataloger::timestamp` from `catalogRecordFile`
-  char          catalogPathBuffer[2u /* --> "./" */ + 14u /* --> catalogPath */ + 1u /* --> '\0' */] = "./";                                                                                     //
+  std::time_t   currentTime                                                                          = static_cast<std::time_t>(-1); //
+  double const  catalogRecordTimeRange                                                               = 86400.00;                     // ->> Observed seconds elapsed between `catalogRecordTime` and `currentTime`; Currently set to approximately one single day
+  double        catalogRecordTimeSpan                                                                = 0.0;                          // --> std::difftime(catalogRecordTime, currentTime)
+  std::time_t   catalogRecordTime                                                                    = static_cast<std::time_t>(-1); // ->> Deserialized seconds representation of `cataloger::timestamp` from `catalogRecordFile`
+  char          catalogRecordPathBuffer[L_tmpnam + 5u /* --> ".json" */]                             = {'\0'};                       //
+  char         *catalogRecordPath                                                                    = NULL;                         //
+  std::FILE    *catalogRecordFile                                                                    = NULL;                         // ->> File which records a possibly existing `cataloger::timestamp` used to create new catalog files
+  unsigned char catalogRecordDateBuffer[sizeof(cataloger::timestamp)]                                = {0};                          // ->> Ideally zero-initialized
+  bool          catalogRecordDateDeserialized                                                        = false;                        //
+  std::tm       catalogRecordDate                                                                    = {};                           // ->> Deserialized `std::tm` representation of `cataloger::timestamp` from `catalogRecordFile`
+  char          catalogPathBuffer[2u /* --> "./" */ + 14u /* --> catalogPath */ + 1u /* --> '\0' */] = "./";                         //
 
   // ... ->> Acquire `catalogDirectoryPath` and `catalogRecordPath` paths
+  catalogDirectoryPath = count > 1 and NULL != arguments[1] ? arguments[1] : catalogPathBuffer /* --> "./" */;
+  catalogRecordPath    = count > 2 and NULL != arguments[2] ? arguments[2] : std::tmpnam(catalogRecordPathBuffer);
+
   if (NULL == catalogRecordPath) {
     if (EOF != std::fputs("catalog: " "Unable to determine file path for catalog record", stderr))
     (void) std::fflush(stderr);
@@ -59,9 +61,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     return EXIT_FAILURE;
   }
 
-  catalogDirectoryPath = count > 1 and NULL != arguments[1] ? arguments[1] : catalogPathBuffer /* --> "./" */;
-
-  if (catalogRecordPath == catalogRecordPathBuffer) {
+  if (catalogRecordPathBuffer /* --> std::tmpnam(...) */ == catalogRecordPath) {
     // ... ->> Remove all `catalogRecordPath` directory components except the temporary unique file name
     for (char *iterator = catalogRecordPath; ; ++iterator)
     if ('\0' == *iterator) {

@@ -1,0 +1,21 @@
+<head prefix=lapys:https://www.lapys.dev/>
+  <script language=javascript src=https://www.gstatic.com/charts/loader.js type=text/javascript> </script>
+</head>
+
+<body>
+  <div id=render> </div>
+  <script language=javascript type=text/javascript>
+    google.charts.load("current", {"language": "en", "packages": ["corechart"]});
+    google.charts.setOnLoadCallback(function drawChart() {
+      var chart = new google.visualization.PieChart(render);
+      var data  = new google.visualization.DataTable();
+
+      // …
+      data.addColumn("string", "Element");
+      data.addColumn("number", "Percentage");
+      data.addRows([["Nitrogen", 0.78], ["Oxygen", 0.21], ["Other", 0.01]]);
+
+      chart.draw(data, {"is3D": true, "legend": "left", "title": "Atmospheric Composition"})
+    })
+  </script>
+</body>
