@@ -61,6 +61,9 @@ int main(int count, char* arguments[]) /* noexcept */ {
     return EXIT_FAILURE;
   }
 
+  std::printf("[directory]: \"%s\"" "\r\n", catalogDirectoryPath);
+  std::printf("[record]   : \"%s\"" "\r\n", catalogRecordPath);
+
   if (catalogRecordPathBuffer /* --> std::tmpnam(...) */ == catalogRecordPath) {
     // ... ->> Remove all `catalogRecordPath` directory components except the temporary unique file name
     for (char *iterator = catalogRecordPath; ; ++iterator)
@@ -107,7 +110,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     }
 
     std::printf("[directory]: \"%s\"" "\r\n", catalogDirectoryPath);
-    std::printf("[record]: \"%s\"" "\r\n\n", catalogRecordPath);
+    std::printf("[record]   : \"%s\"" "\r\n", catalogRecordPath);
 
     // ... ->> Prepend `catalogDirectoryPath` to `catalogRecordPath`
     for (char *iterator = catalogRecordPath; ; ++iterator)
@@ -253,7 +256,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   // ... ->> Access/ create `catalogRecordFile` from `catalogRecordPath`
   std::printf("[directory]: \"%s\"" "\r\n", catalogDirectoryPath);
-  std::printf("[record]: \"%s\"" "\r\n", catalogRecordPath);
+  std::printf("[record]   : \"%s\"" "\r\n", catalogRecordPath);
 
   static_cast<void>(arguments);
   static_cast<void>(catalogDirectoryPath);

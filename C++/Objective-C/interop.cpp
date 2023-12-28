@@ -30,7 +30,7 @@ enum NSWindowStyleMask {
   NSWindowStyleMaskResizable      = 0x08
 };
 
-/* Main ->> Minimal Pure C code to create a window in Cocoa (Adapted to work on ARM64) --- CITE (Lapys) -> https://stackoverflow.com/a/59596600/834108 */
+/* Main ->> Minimal Pure C code to create a window in Cocoa (Adapted to work on ARM64) --- CITE (Lapys) -> https://developer.apple.com/documentation/objectivec/objective-c_runtime?language=objc, https://stackoverflow.com/a/59596600/834108 */
 int main(int count, char* arguments[]) /* noexcept */ {
   // id application = [NSApplication sharedApplication];
   id     const application = ::msg_class(::objc_getClass("NSApplication"), ::sel_getUid("sharedApplication"));

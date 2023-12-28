@@ -1,18 +1,14 @@
-/* ... ->> See `struct $shorthand::operation_value::variant`
+/* ...
     --- CITE ---
       #Lapys:
         - Circle:                                             https://lapys.godbolt.org/z/qMn1qd43e
         - Clang, GNU, Intel, Microsoft Visual Studio, NVIDIA: https://lapys.godbolt.org/z/r3METo98K
-
-    --- TODO ---
-      #Lapys:
-        - Optimize integral-only operations ie: `(($1 + $2) + $3) + $4` to `($1 + $2) + ($3 + $4)`, making them independent
-        - Pre-compute constant operations
 */
 #include <atomic>      // --> std::atomic_bool, std::atomic_char, std::atomic_char16_t, std::atomic_char32_t, std::atomic_char8_t, std::atomic_flag, std::atomic_int, std::atomic_int16_t, std::atomic_int32_t, std::atomic_int64_t, std::atomic_int8_t, std::atomic_int_fast16_t, std::atomic_int_fast32_t, std::atomic_int_fast64_t, std::atomic_int_fast8_t, std::atomic_int_least16_t, std::atomic_int_least32_t, std::atomic_int_least64_t, std::atomic_int_least8_t, std::atomic_intmax_t, std::atomic_intptr_t, std::atomic_llong, std::atomic_long, std::atomic_ptrdiff_t, std::atomic_schar, std::atomic_short, std::atomic_size_t, std::atomic_uchar, std::atomic_uint, std::atomic_uint16_t, std::atomic_uint32_t, std::atomic_uint64_t, std::atomic_uint8_t, std::atomic_uint_fast16_t, std::atomic_uint_fast32_t, std::atomic_uint_fast64_t, std::atomic_uint_fast8_t, std::atomic_uint_least16_t, std::atomic_uint_least32_t, std::atomic_uint_least64_t, std::atomic_uint_least8_t, std::atomic_uintmax_t, std::atomic_uintptr_t, std::atomic_ullong, std::atomic_ulong, std::atomic_ushort, std::atomic_wchar_t, std::memory_order
+#include <ciso646>     // --> and, or, not
 #include <climits>     //
 #include <cstdarg>     // --> std::va_list
-#include <cstddef>     // --> std::byte, std::max_align_t, std::nullptr_t
+#include <cstddef>     // --> offsetof, std::byte, std::max_align_t, std::nullptr_t
 #include <cstdlib>     // --> std::div_t, std::ldiv_t, std::lldiv_t
 #include <exception>   // --> std::bad_exception, std::exception, std::exception_ptr, std::nested_exception, std::terminate_handler, std::unexpected_handler
 #include <functional>  // --> std::bad_function_call, std::bit_and<void>, std::bit_not<>, std::bit_or<void>, std::bit_xor<void>, std::divides<void>, std::equal_to<void>, std::greater<void>, std::greater_equal<void>, std::identity, std::less<void>, std::less_equal<void>, std::logical_and<void>, std::logical_not<void>, std::logical_or<void>, std::minus<void>, std::modulus<void>, std::multiplies<void>, std::negate<void>, std::not_equal_to<void>, std::plus<void>, decltype(std::placeholders::_1), decltype(std::placeholders::_2)
@@ -21,20 +17,23 @@
 #include <new>         // --> std::align_val_t, std::bad_alloc, std::bad_array_new_length, std::destroying_delete_t, std::new_handler, std::nothrow_t
 #include <ratio>       // --> std::atto, std::centi, std::deca, std::deci, std::exa, std::femto, std::giga, std::hecto, std::kilo, std::mega, std::micro, std::milli, std::nano, std::peta, std::pico, std::tera, std::yocto, std::yotta, std::zepto, std::zetta
 #include <stdint.h>    //
-#include <type_traits> // --> std::false_type, std::true_type, std::void_t
+#include <type_traits> // --> std::false_type, std::is_trivially_destructible, std::true_type, std::void_t
 #include <typeinfo>    // --> std::bad_cast, std::bad_typeid, std::type_info
 #include <utility>     // --> std::in_place_t, std::piecewise_construct_t
-#if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 202002L || (defined(__circle_lang__) || defined(__clang__) || defined(__CUDACC_VER_BUILD__) || defined(__CUDACC_VER_MAJOR__) || defined(__CUDACC_VER_MINOR__) || defined(__GNUC__) || defined(__ICC) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__NVCC__) || defined(__NVCOMPILER))
+#if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L or (defined __circle_lang__ or defined __clang__ or defined __CUDACC_VER_BUILD__ or defined __CUDACC_VER_MAJOR__ or defined __CUDACC_VER_MINOR__ or defined __GNUC__ or defined __ICC or defined __INTEL_COMPILER or defined __INTEL_LLVM_COMPILER or defined __NVCC__ or defined __NVCOMPILER)
 # include <version>
 #endif
 #ifdef __cpp_lib_endian
 # include <bit> // --> std::endian
 #endif
 #ifdef __cpp_lib_three_way_comparison
-# include <compare> // --> std::compare_three_way, std::compare_three_way_result, std::partial_ordering, std::strong_ordering, std::weak_ordering
+# include <compare> // --> std::compare_three_way, std::partial_ordering, std::strong_ordering, std::weak_ordering
 # ifdef __cpp_lib_coroutine
-#   include <coroutine> // --> std::coroutine_handle<void>, std::coroutine_handle<std::noop_coroutine_promise>, std::noop_coroutine_handle, std::noop_coroutine_promise, std::suspend_always, std::suspend_never
+#   include <coroutine> // --> std::coroutine_handle<void>, std::noop_coroutine_handle, std::noop_coroutine_promise, std::suspend_always, std::suspend_never
 # endif
+#endif
+#ifdef __cpp_lib_print
+# include <print> // --> std::vprint_unicode, std::vprint_nonunicode
 #endif
 #ifdef __cpp_lib_ranges
 # include <ranges> // --> std::dangling, std::from_range_t, std::subrange_kind
@@ -42,793 +41,1021 @@
 #ifdef __cpp_lib_source_location
 # include <source_location> // --> std::source_location
 #endif
+#ifdef __cpp_lib_spanstream
+# include <spanstream> // --> std::ispanstream, std::ospanstream, std::spanbuf, std::spanstream, std::wispanstream, std::wospanstream, std::wspanbuf, std::wspanstream
+#endif
+#ifdef __cpp_lib_stacktrace
+# include <stacktrace> // --> std::stacktrace, std::stacktrace_entry
+#endif
+#if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L // --> __cpp_lib_format
+# include <format> // --> std::format_args, std::wformat_args
+#endif
+#if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) > 202002L // --> __cpp_lib_expected
+# include <expected> // --> std::unexpect_t
+# include <stdfloat> // --> std::bfloat16_t, std::float128_t, std::float16_t, std::float32_t, std::float64_t
+#endif
 
-/* ... ->> Functor expression, coerce-able to a free function */
-struct $shorthand {
+/* ... */
+#define sfinaeptr nullptr
+
+typedef union null_t  &null;
+typedef std::nullptr_t sfinaeptr_t;
+
+// ... --> forward_cast<T>(T{}), instanceof<T>()
+template <typename type> constexpr type&& forward_cast(type&  object) noexcept { return static_cast<type&&>(object); }
+template <typename type> constexpr type&& forward_cast(type&& object) noexcept { return static_cast<type&&>(object); }
+
+template <typename type> constexpr type instanceof() noexcept;
+
+// ... --> conditional
+template <bool, typename = null, typename = null>
+struct conditional;
+
+template <>                               struct conditional<true>                final {};
+template <typename base>                  struct conditional<false, base>         final {};
+template <typename baseA, typename baseB> struct conditional<false, baseA, baseB> final { typedef baseB type; };
+template <typename baseA, typename baseB> struct conditional<true,  baseA, baseB> final { typedef baseA type; };
+
+// ... --> at<N, Ts...>
+template <std::size_t index, typename...>
+struct at final {
+  typedef null type;
+
+  // ...
+  template <typename... types>
+  constexpr static typename conditional<(index > sizeof...(types)), sfinaeptr_t>::type value(types&&...) noexcept {
+    static_assert(index <= sizeof...(types) + 1u, "Too few arguments passed to function");
+    return sfinaeptr;
+  }
+
+  template <typename type, typename... types> constexpr static typename conditional<(0u == index and index <= sizeof...(types) + 1u), typename at<index, type&&, types&&...>::type>::type value(type&& argument, types&&...)  noexcept { return forward_cast<type>(argument); }
+  template <typename type, typename... types> constexpr static typename conditional<(0u != index and index <= sizeof...(types) + 1u), typename at<index, type&&, types&&...>::type>::type value(type&&, types&&... arguments) noexcept { return at<index - 1u>::value(forward_cast<types>(arguments)...); }
+};
+
+template                    <typename base, typename... bases> struct at<0u,    base, bases...> final { typedef base                                    type; };
+template <std::size_t index, typename base, typename... bases> struct at<index, base, bases...> final { typedef typename at<index - 1u, bases...>::type type; };
+
+// ... --> is_union<T>
+template <class base>
+struct is_union final {
   private:
-    // ... ->> Metafunction for evaluating operation validity without implicit rvalue-reference-qualification unlike `std::declval<...>()`
-    template <typename type>
-    constexpr static type instanceof() noexcept;
-
-    // ... ->> Constants denoting the number of `$shorthand::operand`s in an `$shorthand::operation`
-    enum class operation_arity : unsigned char {
-      nullary  = 0u,
-      unary    = 1u,
-      binary   = 2u,
-      ternary  = 3u,
-      variadic = static_cast<unsigned char>(-1)
-    };
-
-    // ... ->> Metafunctions denoting C++ operators; used as type-agnostic `$shorthand::operation`s, which are un-preferably type-erased
-    struct operation_information final {
-      // ... -> Fallback metafunction
-      struct nop {
-        constexpr static bool   value               = false;
-        constexpr static void (*valueof)() noexcept = nullptr;
-      };
-
-      template <typename = void, typename...> struct add                   final : public nop {};
-      template <typename = void, typename...> struct address               final : public nop {};
-      template <typename = void, typename...> struct assign                final : public nop {};
-      template <typename = void, typename...> struct assign_add            final : public nop {};
-      template <typename = void, typename...> struct assign_bitwise_and    final : public nop {};
-      template <typename = void, typename...> struct assign_bitwise_or     final : public nop {};
-      template <typename = void, typename...> struct assign_bitwise_xor    final : public nop {};
-      template <typename = void, typename...> struct assign_divide         final : public nop {};
-      template <typename = void, typename...> struct assign_left_shift     final : public nop {};
-      template <typename = void, typename...> struct assign_modulo         final : public nop {};
-      template <typename = void, typename...> struct assign_multiply       final : public nop {};
-      template <typename = void, typename...> struct assign_right_shift    final : public nop {};
-      template <typename = void, typename...> struct assign_subtract       final : public nop {};
-      template <typename = void, typename...> struct bitwise_and           final : public nop {};
-      template <typename = void, typename...> struct bitwise_or            final : public nop {};
-      template <typename = void, typename...> struct bitwise_xor           final : public nop {};
-      template <typename = void, typename...> struct boolean_and           final : public nop {};
-      template <typename = void, typename...> struct boolean_or            final : public nop {};
-      template <typename = void, typename...> struct call                  final : public nop {};
-      template <typename = void, typename...> struct cast                  final : public nop {};
-      template <typename = void, typename...> struct comma                 final : public nop {};
-      template <typename = void, typename...> struct compare               final : public nop {};
-      template <typename = void, typename...> struct complement            final : public nop {};
-      template <typename = void, typename...> struct construct             final : public nop {};
-      template <typename = void, typename...> struct dereference           final : public nop {};
-      template <typename = void, typename...> struct destruct              final : public nop {};
-      template <typename = void, typename...> struct divide                final : public nop {};
-      template <typename = void, typename...> struct equals                final : public nop {};
-      template <typename = void, typename...> struct equals_greater        final : public nop {};
-      template <typename = void, typename...> struct equals_lesser         final : public nop {};
-      template <typename = void, typename...> struct greater               final : public nop {};
-      template <typename = void, typename...> struct initialize            final : public nop {};
-      template <typename = void, typename...> struct left_shift            final : public nop {};
-      template <typename = void, typename...> struct lesser                final : public nop {};
-      template <typename = void, typename...> struct member_access         final : public nop {};
-      template <typename = void, typename...> struct member_pointer_access final : public nop {};
-      template <typename = void, typename...> struct minus                 final : public nop {};
-      template <typename = void, typename...> struct modulo                final : public nop {};
-      template <typename = void, typename...> struct multiply              final : public nop {};
-      template <typename = void, typename...> struct negate                final : public nop {};
-      template <typename = void, typename...> struct overloaded_address    final : public nop {};
-      template <typename = void, typename...> struct plus                  final : public nop {};
-      template <typename = void, typename...> struct post_decrement        final : public nop {};
-      template <typename = void, typename...> struct post_increment        final : public nop {};
-      template <typename = void, typename...> struct pre_decrement         final : public nop {};
-      template <typename = void, typename...> struct pre_increment         final : public nop {};
-      template <typename = void, typename...> struct right_shift           final : public nop {};
-      template <typename = void, typename...> struct self                  final : public nop {};
-      template <typename = void, typename...> struct subscript             final : public nop {};
-      template <typename = void, typename...> struct subtract              final : public nop {};
-      template <typename = void, typename...> struct ternary               final : public nop {};
-      template <typename = void, typename...> struct unequal               final : public nop {};
-
-      // ...
-      template <typename base> struct address           <decltype(static_cast<void>(&instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(&instanceof<base>())              valueof(base&& operand) noexcept(noexcept(&instanceof<base>()))              { return &static_cast<base>(std::forward<base>(operand));              } };
-      template <typename base> struct complement        <decltype(static_cast<void>(~instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(~instanceof<base>())              valueof(base&& operand) noexcept(noexcept(~instanceof<base>()))              { return ~static_cast<base>(std::forward<base>(operand));              } };
-      template <typename base> struct dereference       <decltype(static_cast<void>(*instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(*instanceof<base>())              valueof(base&& operand) noexcept(noexcept(*instanceof<base>()))              { return *static_cast<base>(std::forward<base>(operand));              } };
-      template <typename base> struct destruct          <decltype(static_cast<void>(instanceof<base>().~base())),       base> final { static bool const value = true; constexpr static decltype(instanceof<base>().~base())       valueof(base&& operand) noexcept(noexcept(instanceof<base>().~base()))       { return static_cast<base>(std::forward<base>(operand)).~base();       } };
-      template <typename base> struct member_access     <decltype(static_cast<void>(instanceof<base>().operator ->())), base> final { static bool const value = true; constexpr static decltype(instanceof<base>().operator ->()) valueof(base&& operand) noexcept(noexcept(instanceof<base>().operator ->())) { return static_cast<base>(std::forward<base>(operand)).operator ->(); } };
-      template <typename base> struct minus             <decltype(static_cast<void>(-instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(-instanceof<base>())              valueof(base&& operand) noexcept(noexcept(-instanceof<base>()))              { return -static_cast<base>(std::forward<base>(operand));              } };
-      template <typename base> struct negate            <decltype(static_cast<void>(!instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(!instanceof<base>())              valueof(base&& operand) noexcept(noexcept(!instanceof<base>()))              { return !static_cast<base>(std::forward<base>(operand));              } };
-      template <typename base> struct overloaded_address<decltype(static_cast<void>(instanceof<base>().operator &())),  base> final { static bool const value = true; constexpr static decltype(instanceof<base>().operator &())  valueof(base&& operand) noexcept(noexcept(instanceof<base>().operator &()))  { return static_cast<base>(std::forward<base>(operand)).operator &();  } };
-      template <typename base> struct plus              <decltype(static_cast<void>(+instanceof<base>())),              base> final { static bool const value = true; constexpr static decltype(+instanceof<base>())              valueof(base&& operand) noexcept(noexcept(+instanceof<base>()))              { return +static_cast<base>(std::forward<base>(operand));              } };
-      template <typename base> struct post_decrement    <decltype(static_cast<void>(instanceof<base>()--)),             base> final { static bool const value = true; constexpr static decltype(instanceof<base>()--)             valueof(base&& operand) noexcept(noexcept(instanceof<base>()--))             { return static_cast<base>(std::forward<base>(operand))--;             } };
-      template <typename base> struct post_increment    <decltype(static_cast<void>(instanceof<base>()++)),             base> final { static bool const value = true; constexpr static decltype(instanceof<base>()++)             valueof(base&& operand) noexcept(noexcept(instanceof<base>()++))             { return static_cast<base>(std::forward<base>(operand))++;             } };
-      template <typename base> struct pre_decrement     <decltype(static_cast<void>(--instanceof<base>())),             base> final { static bool const value = true; constexpr static decltype(--instanceof<base>())             valueof(base&& operand) noexcept(noexcept(--instanceof<base>()))             { return --static_cast<base>(std::forward<base>(operand));             } };
-      template <typename base> struct pre_increment     <decltype(static_cast<void>(++instanceof<base>())),             base> final { static bool const value = true; constexpr static decltype(++instanceof<base>())             valueof(base&& operand) noexcept(noexcept(++instanceof<base>()))             { return ++static_cast<base>(std::forward<base>(operand));             } };
-      template <typename base> struct self              <void,                                                          base> final { static bool const value = true; constexpr static decltype(instanceof<base>())               valueof(base&& operand) noexcept                                             { return static_cast<base>(std::forward<base>(operand));               } };
-
-      template <typename baseA, typename baseB> struct add                  <decltype(static_cast<void>(instanceof<baseA>()   + instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   + instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   + instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   + static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign               <decltype(static_cast<void>(instanceof<baseA>()   = instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   = instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   = instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   = static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_add           <decltype(static_cast<void>(instanceof<baseA>()  += instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  += instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  += instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  += static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_bitwise_and   <decltype(static_cast<void>(instanceof<baseA>()  &= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  &= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  &= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  &= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_bitwise_or    <decltype(static_cast<void>(instanceof<baseA>()  |= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  |= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  |= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  |= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_bitwise_xor   <decltype(static_cast<void>(instanceof<baseA>()  ^= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  ^= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  ^= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  ^= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_divide        <decltype(static_cast<void>(instanceof<baseA>()  /= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  /= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  /= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  /= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_left_shift    <decltype(static_cast<void>(instanceof<baseA>() <<= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>() <<= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() <<= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA)) <<= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_modulo        <decltype(static_cast<void>(instanceof<baseA>()  %= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  %= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  %= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  %= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_multiply      <decltype(static_cast<void>(instanceof<baseA>()  *= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  *= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  *= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  *= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_right_shift   <decltype(static_cast<void>(instanceof<baseA>() >>= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>() >>= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() >>= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA)) >>= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct assign_subtract      <decltype(static_cast<void>(instanceof<baseA>()  -= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  -= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  -= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  -= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct bitwise_and          <decltype(static_cast<void>(instanceof<baseA>()   & instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   & instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   & instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   & static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct bitwise_or           <decltype(static_cast<void>(instanceof<baseA>()   | instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   | instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   | instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   | static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct bitwise_xor          <decltype(static_cast<void>(instanceof<baseA>()   ^ instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   ^ instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   ^ instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   ^ static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct boolean_and          <decltype(static_cast<void>(instanceof<baseA>()  && instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  && instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  && instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  && static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct boolean_or           <decltype(static_cast<void>(instanceof<baseA>()  || instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  || instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  || instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  || static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct cast                 <decltype(static_cast<void>((baseB) instanceof<baseA>())),                 baseA, baseB> final { static bool const value = true; constexpr static decltype((baseB) instanceof<baseA>())                   valueof(baseA&& operand)                    noexcept(noexcept((baseB) instanceof<baseA>()))                 { return (baseB) static_cast<baseA>(std::forward<baseA>(operand));                                                  } };
-      template <typename baseA, typename baseB> struct comma                <decltype(static_cast<void>(instanceof<baseA>()   , instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   , instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   , instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   , static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct divide               <decltype(static_cast<void>(instanceof<baseA>()   / instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   / instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   / instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   / static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct equals               <decltype(static_cast<void>(instanceof<baseA>()  == instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  == instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  == instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  == static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct equals_greater       <decltype(static_cast<void>(instanceof<baseA>()  >= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  >= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  >= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  >= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct equals_lesser        <decltype(static_cast<void>(instanceof<baseA>()  <= instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  <= instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  <= instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  <= static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct greater              <decltype(static_cast<void>(instanceof<baseA>()   > instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   > instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   > instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   > static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct left_shift           <decltype(static_cast<void>(instanceof<baseA>()  << instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  << instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  << instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  << static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct lesser               <decltype(static_cast<void>(instanceof<baseA>()   < instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   < instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   < instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   < static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct member_pointer_access<decltype(static_cast<void>(instanceof<baseA>() ->* instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>() ->* instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() ->* instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA)) ->* static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct modulo               <decltype(static_cast<void>(instanceof<baseA>()   % instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   % instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   % instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   % static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct multiply             <decltype(static_cast<void>(instanceof<baseA>()   * instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   * instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   * instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   * static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct right_shift          <decltype(static_cast<void>(instanceof<baseA>()  >> instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  >> instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  >> instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  >> static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct subscript            <decltype(static_cast<void>(instanceof<baseA>()[instanceof<baseB>()])),    baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()[instanceof<baseB>()]))    valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()[instanceof<baseB>()]))    { return (static_cast<baseA>(std::forward<baseA>(operandA))[static_cast<baseB>(std::forward<baseB>(operandB))]);    } };
-      template <typename baseA, typename baseB> struct subtract             <decltype(static_cast<void>(instanceof<baseA>()   - instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()   - instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()   - instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))   - static_cast<baseB>(std::forward<baseB>(operandB))); } };
-      template <typename baseA, typename baseB> struct unequal              <decltype(static_cast<void>(instanceof<baseA>()  != instanceof<baseB>())), baseA, baseB> final { static bool const value = true; constexpr static decltype((instanceof<baseA>()  != instanceof<baseB>())) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>()  != instanceof<baseB>())) { return (static_cast<baseA>(std::forward<baseA>(operandA))  != static_cast<baseB>(std::forward<baseB>(operandB))); } };
-
-      #ifdef __cpp_impl_three_way_comparison
-        template <typename baseA, typename baseB>
-        struct compare<decltype(static_cast<void>(instanceof<baseA>() <=> instanceof<baseB>())), baseA, baseB> final {
-          static bool const value = true;
-
-          constexpr static decltype(instanceof<baseA>() <=> instanceof<baseB>()) valueof(baseA&& operandA, baseB&& operandB) noexcept(noexcept(instanceof<baseA>() <=> instanceof<baseB>())) {
-            return (static_cast<baseA>(std::forward<baseA>(operandA)) <=> static_cast<baseB>(std::forward<baseB>(operandB)));
-          }
-        };
-      #endif
-
-      template <typename baseA, typename baseB, typename baseC>
-      struct ternary<decltype(static_cast<void>(instanceof<baseA>() ? instanceof<baseB>() : instanceof<baseC>())), baseA, baseB, baseC> final {
-        static bool const value = true;
-
-        constexpr static decltype(instanceof<baseA>() ? instanceof<baseB>() : instanceof<baseC>()) valueof(baseA&& operandA, baseB&& operandB, baseC&& operandC) noexcept(noexcept(instanceof<baseA>() ? instanceof<baseB>() : instanceof<baseC>())) {
-          return static_cast<baseA>(std::forward<baseA>(operandA)) ? static_cast<baseB>(std::forward<baseB>(operandB)) : static_cast<baseC>(std::forward<baseC>(operandC));
-        }
-      };
-
-      template <typename base, typename... bases> struct call      <decltype(static_cast<void>(instanceof<base>()(instanceof<bases>()...))), base, bases...> final { static bool const value = true; constexpr static decltype(instanceof<base>()(instanceof<bases>()...)) valueof(base&& operand, bases&&... operands) noexcept(noexcept(instanceof<base>()(instanceof<bases>()...))) { return static_cast<base>(std::forward<base>(operand))(static_cast<base>(std::forward<bases>(operands))...); } };
-      template <typename base, typename... bases> struct construct <decltype(static_cast<void>(base(instanceof<bases>()...))),               base, bases...> final { static bool const value = true; constexpr static base                                                 valueof(bases&&... operands)                 noexcept(noexcept(base(instanceof<bases>()...)))               { return base(static_cast<base>(std::forward<bases>(operands))...);                                           } };
-      template <typename base, typename... bases> struct initialize<decltype(static_cast<void>(base{instanceof<bases>()...})),               base, bases...> final { static bool const value = true; constexpr static base                                                 valueof(bases&&... operands)                 noexcept(noexcept(base{instanceof<bases>()...}))               { return {static_cast<base>(std::forward<bases>(operands))...};                                               } };
-    };
-
-    // ... ->> `$shorthand::evaluation` of `$shorthand::operation` on `$shorthand::operand`s (or `$shorthand::$operand`s themselves)
-    struct operation_value final {
-      friend struct $shorthand;
-
-      public:
-        // ... ->> Flags denoting types optimized for constant evaluation from `$shorthand::operation_value` values
-        enum class type : unsigned char {
-          undefined = 0x0u, // ->> Unsupported for constant evaluation
-          decimal, function, integer, method, pointer, property, standard
-        };
-
-      private:
-        // ... ->> Statically-allocated object for persisting the `type::undefined` return values of `$shorthand::evaluation`
-        template <typename base>
-        struct allocation final {
-          static struct type final {
-            private:
-              base value;
-
-            public:
-              template <typename type>
-              void* operator =(type&&) const noexcept {
-                std::puts("bruh");
-                return NULL;
-              }
-          } value;
-        };
-
-        // ...
-        struct qualifier final {
-          // ... ->> Constants denoting type qualifiers (known array bound qualifiers are `std::size_t` representations of `enum type`)
-          enum type : std::size_t {
-            pointer   = static_cast<std::size_t>(-1),
-            unbounded = static_cast<std::size_t>(-2)
-          };
-
-          // ... ->> Ordered list of type qualifiers (array bound, const-volatile, pointer, reference, ...)
-          template <type...>
-          struct collection final {
-            // ... ->> Apply type qualifications onto specified `base`
-            template <typename base>
-            struct apply final {
-              typedef base type;
-            };
-          };
-
-          template <type qualifier, type... qualifiers>
-          struct collection<qualifier, qualifiers...> final {
-            // ... ->> See `struct collection<>::apply`
-            template <typename base>
-            struct apply final {
-              typedef typename collection<qualifiers...>::template apply<
-                typename std::conditional<qualifier == operation_value::qualifier::pointer,   base*,
-                typename std::conditional<qualifier == operation_value::qualifier::unbounded, base[],
-                  base[static_cast<std::size_t>(qualifier)]
-                >::type>::type
-              >::type type;
-            };
-
-            /* ... */
-            constexpr static type value[] = {qualifier, qualifiers...};
-          };
-
-          // ...
-          template <typename baseType, class baseCollection = qualifier::collection<> >
-          struct collection_information {
-            typedef baseType       base;
-            typedef baseCollection collection;
-          };
-
-          template <typename base, type... qualifiers>                       struct collection_information<base&,                collection<qualifiers...> > : public collection_information<base, collection<qualifiers...> >                                         {};
-          template <typename base, type... qualifiers>                       struct collection_information<base&&,               collection<qualifiers...> > : public collection_information<base, collection<qualifiers...> >                                         {};
-          template <typename base, type... qualifiers>                       struct collection_information<base*,                collection<qualifiers...> > : public collection_information<base, collection<qualifiers..., qualifier::pointer> >                     {};
-          template <typename base, type... qualifiers>                       struct collection_information<base* const,          collection<qualifiers...> > : public collection_information<base, collection<qualifiers..., qualifier::pointer> >                     {};
-          template <typename base, type... qualifiers>                       struct collection_information<base* const volatile, collection<qualifiers...> > : public collection_information<base, collection<qualifiers..., qualifier::pointer> >                     {};
-          template <typename base, type... qualifiers>                       struct collection_information<base* volatile,       collection<qualifiers...> > : public collection_information<base, collection<qualifiers..., qualifier::pointer> >                     {};
-          template <typename base, type... qualifiers>                       struct collection_information<base[],               collection<qualifiers...> > : public collection_information<base, collection<qualifiers..., qualifier::unbounded> >                   {};
-          template <typename base, std::size_t capacity, type... qualifiers> struct collection_information<base[capacity],       collection<qualifiers...> > : public collection_information<base, collection<qualifiers..., static_cast<qualifier::type>(capacity)> > {};
-        };
-
-        // ...
-        template <typename base>
-        struct type_information final {};
-
-        // ... ->> `union` class (zero-cost) abstraction with generic members
-        template <typename... bases>
-        struct variant final {
-          template <typename>
-          struct is_convertible final {
-            static bool const value = false;
-          };
-
-          // ...
-          template <typename = void>
-          struct is_explicitly_destructible final {
-            static bool const value = false;
-          };
-
-          // ...
-          template <typename>
-          struct is_initializable final {
-            static bool const value = false;
-          };
-
-          /* ... */
-          template <typename type>
-          constexpr variant(type&&) noexcept {}
-        };
-
-        template <typename base, typename... bases>
-        struct variant<base, bases...> final {
-          template <typename = void>
-          struct is_explicitly_destructible final {
-            static bool const value = operation_information::destruct<void, base>::value && false == std::is_trivially_destructible<base>::value;
-          };
-
-          // ...
-          template <typename subbase>
-          struct is_convertible final {
-            static bool const value = false == is_explicitly_destructible<>::value && (
-              operation_information::cast<void, base&, subbase>::value ||
-              variant<bases...>::template is_convertible  <subbase>::value
-            );
-          };
-
-          // ...
-          template <typename subbase>
-          struct is_initializable final {
-            static bool const value = false == is_explicitly_destructible<>::value && (
-              operation_information::construct<void, typename std::conditional<std::is_reference<base>::value, base const volatile&, base>::type, subbase>::value ||
-              variant<bases...>::template is_initializable<subbase>::value
-            );
-          };
-
-          // ... --- TODO (Lapys) -> Standard members must all be copy-constructed
-          template <typename subbase>
-          struct nonmember final {
-            template <typename type, typename std::enable_if<std::is_same<subbase, typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
-            constexpr nonmember(type&&) noexcept = delete;
-          };
-
-          // ...
-          template <typename subbase, typename = void>
-          struct member {
-            typename std::conditional<std::is_lvalue_reference<base>::value, typename std::remove_reference<base>::type const volatile&,
-            typename std::conditional<std::is_rvalue_reference<base>::value, typename std::remove_reference<base>::type const volatile&&,
-              typename std::conditional<is_explicitly_destructible<>::value, nonmember, base>::type
-            >::type>::type value;
-
-            /* ... */
-            template <typename type>
-            constexpr member(type&& value) noexcept(noexcept(decltype(member::value)(std::declval<type>()))) :
-              value(std::forward<type>(value))
-            {}
-          };
-
-          template <typename subbase>
-          struct member<subbase, typename std::enable_if<operation_information::construct<void, subbase, subbase>::value, void>::type> final : public member<subbase, std::nullptr_t> {
-            template <typename type>
-            constexpr member(type&& value) noexcept(noexcept((decltype(member::value)) std::declval<type>()) && noexcept(decltype(member::value)(instanceof<decltype(member::value)>()))) :
-              member<subbase, std::nullptr_t>::member((decltype(member::value)) std::forward<type>(value))
-            {}
-          };
-
-          /* ... */
-          union {
-            variant<bases...> next;
-            member <base>     value;
-          };
-
-          /* ... */
-          template <typename type, typename std::enable_if<is_initializable<type&&>::value && false != operation_information::construct<void, base, type&&>::value, std::nullptr_t>::type = nullptr>
-          constexpr variant(type&& value) noexcept(noexcept(member<base>(std::declval<type>()))) :
-            value(std::forward<type>(value))
-          {}
-
-          template <typename type, typename std::enable_if<is_initializable<type&&>::value && false == operation_information::construct<void, base, type&&>::value, std::nullptr_t>::type = nullptr>
-          constexpr variant(type&& value) noexcept(noexcept(variant<bases...>(std::declval<type>()))) :
-            next(std::forward<type>(value))
-          {}
-
-          /* ... */
-          template <typename type, typename std::enable_if<is_convertible<type&&>::value && false != operation_information::cast<void, base, type&>::value, std::nullptr_t>::type = nullptr>
-          constexpr operator type&() const noexcept {
-            return (type&) this -> value.value;
-          }
-
-          template <typename type, typename std::enable_if<is_convertible<type&&>::value && false == operation_information::cast<void, base, type&>::value, std::nullptr_t>::type = nullptr>
-          constexpr operator type&() const noexcept {
-            return (type&) this -> next;
-          }
-        };
-
-        // ... ->> Constant-evaluated representation of `$shorthand::operation_value` values
-        struct value final {
-          friend struct operation_value;
-
-          private:
-            union {
-              unsigned char               initializer : 1; //
-              long double                 decimal;         // ->> Preserves floating-point          value
-              void                      (*function)();     // ->> Preserves (free) function pointer value
-              uintmax_t                   integer;         // ->> Preserves integer                 value
-              void         ($shorthand::* method)();       // ->> Preserves function member pointer value
-              void                       *pointer;         // ->> Preserves object pointer          value
-              unsigned char $shorthand::* property;        // ->> Preserves data member pointer     value
-              variant<                                     // ->> Preserves (freestanding-implementation only) standard library container value --- TODO (Lapys) -> Consider possibly-attributed types like `std::va_list`?
-                std::allocator_arg_t, std::atomic_bool, std::atomic_char, std::atomic_flag, std::atomic_int, std::atomic_int_fast16_t, std::atomic_int_fast32_t, std::atomic_int_fast64_t, std::atomic_int_fast8_t, std::atomic_int_least16_t, std::atomic_int_least32_t, std::atomic_int_least64_t, std::atomic_int_least8_t, std::atomic_intmax_t, std::atomic_llong, std::atomic_long, std::atomic_ptrdiff_t, std::atomic_schar, std::atomic_short, std::atomic_size_t, std::atomic_uchar, std::atomic_uint, std::atomic_uint_fast16_t, std::atomic_uint_fast32_t, std::atomic_uint_fast64_t, std::atomic_uint_fast8_t, std::atomic_uint_least16_t, std::atomic_uint_least32_t, std::atomic_uint_least64_t, std::atomic_uint_least8_t, std::atomic_uintmax_t, std::atomic_ullong, std::atomic_ulong, std::atomic_ushort, std::atomic_wchar_t, std::atto,
-                std::bad_alloc, std::bad_array_new_length, std::bad_cast, std::bad_exception, std::bad_function_call, std::bad_typeid, std::bad_weak_ptr, std::bidirectional_iterator_tag,
-                std::centi,
-                std::deca, std::deci, std::div_t,
-                std::exa, std::exception, std::exception_ptr,
-                std::false_type, std::femto, std::forward_iterator_tag,
-                std::giga,
-                std::hecto,
-                std::input_iterator_tag,
-                std::kilo,
-                std::ldiv_t, std::lldiv_t,
-                std::max_align_t, std::mega, std::memory_order, std::micro, std::milli,
-                std::nano, std::nested_exception, std::new_handler, std::nothrow_t, std::nullptr_t,
-                std::output_iterator_tag, std::owner_less<void>,
-                std::peta, std::pico, std::piecewise_construct_t,
-                std::random_access_iterator_tag,
-                std::tera, std::terminate_handler, std::true_type, std::type_info const&,
-                std::va_list*, std::va_list const*, std::va_list const volatile*, std::va_list volatile*,
-                decltype(std::placeholders::_1), decltype(std::placeholders::_2),
-                #ifdef __cpp_aligned_new
-                  std::align_val_t,
-                #endif
-                #ifdef __cpp_char8_t
-                  std::atomic_char8_t,
-                #endif
-                #ifdef __cpp_lib_byte
-                  std::byte,
-                #endif
-                #ifdef __cpp_lib_endian
-                  std::endian,
-                #endif
-                #ifdef __cpp_lib_ranges
-                  std::dangling,
-                  std::from_range_t,
-                  std::subrange_kind,
-                #endif
-                #ifdef __cpp_lib_source_location
-                  std::source_location,
-                #endif
-                #ifdef __cpp_lib_three_way_comparison
-                  std::compare_three_way, std::compare_three_way_result,
-                  std::partial_ordering,
-                  std::strong_ordering,
-                  std::weak_ordering,
-                  #ifdef __cpp_lib_coroutine
-                    std::coroutine_handle<void>, std::coroutine_handle<std::noop_coroutine_promise>,
-                    std::noop_coroutine_handle, std::noop_coroutine_promise,
-                    std::suspend_always, std::suspend_never,
-                  #endif
-                #endif
-                #ifdef __cpp_unicode_characters
-                  std::atomic_char16_t, std::atomic_char32_t,
-                #endif
-                #if defined(INT16_MAX) && defined(INT16_MIN)
-                  std::atomic_int16_t,
-                #endif
-                #if defined(INT32_MAX) && defined(INT32_MIN)
-                  std::atomic_int32_t,
-                #endif
-                #if defined(INT64_MAX) && defined(INT64_MIN)
-                  std::atomic_int64_t,
-                #endif
-                #if defined(INT8_MAX)  && defined(INT8_MIN)
-                  std::atomic_int8_t,
-                #endif
-                #if defined(INTPTR_MAX) && defined(INTPTR_MIN)
-                  std::atomic_intptr_t,
-                #endif
-                #if defined(UINT16_MAX) && defined(UINT16_MIN)
-                  std::atomic_uint16_t,
-                #endif
-                #if defined(UINT32_MAX) && defined(UINT32_MIN)
-                  std::atomic_uint32_t,
-                #endif
-                #if defined(UINT64_MAX) && defined(UINT64_MIN)
-                  std::atomic_uint64_t,
-                #endif
-                #if defined(UINT8_MAX)  && defined(UINT8_MIN)
-                  std::atomic_uint8_t,
-                #endif
-                #if defined(UINTPTR_MAX) && defined(UINTPTR_MIN)
-                  std::atomic_uintptr_t,
-                #endif
-                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 201402L
-                  std::bit_and      <void>, // --> $bitwise_and
-                  std::bit_not      <>    , // --> $complement
-                  std::bit_or       <void>, // --> $bitwise_or
-                  std::bit_xor      <void>, // --> $bitwise_xor
-                  std::divides      <void>, // --> $divide
-                  std::equal_to     <void>, // --> $equals
-                  std::greater      <void>, // --> $greater
-                  std::greater_equal<void>, // --> $equals_greater
-                  std::less         <void>, // --> $lesser
-                  std::less_equal   <void>, // --> $equals_lesser
-                  std::logical_and  <void>, // --> $boolean_and
-                  std::logical_not  <void>, // --> $negate
-                  std::logical_or   <void>, // --> $boolean_or
-                  std::minus        <void>, // --> $subtract
-                  std::modulus      <void>, // --> $modulo
-                  std::multiplies   <void>, // --> $multiply
-                  std::negate       <void>, // --> $minus
-                  std::not_equal_to <void>, // --> $unequals
-                  std::plus         <void>, // --> $add
-                #endif
-                #if ((defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) < 201703L) && false == defined(__clang__)
-                  std::unexpected_handler,
-                #endif
-                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 201703L
-                  std::in_place_t,
-                #endif
-                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) >= 202002L
-                  std::contiguous_iterator_tag,
-                  std::default_sentinel_t, std::destroying_delete_t,
-                  std::identity, // --> $self
-                  std::unreachable_sentinel_t,
-                #endif
-                #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
-                  std::pointer_safety,
-                #endif
-                unsigned char
-              > standard;
-            };
-
-          public:
-            operation_value::type const type;
-
-            /* ... */
-            constexpr value() noexcept :
-              initializer(),
-              type       (operation_value::type::undefined)
-            {}
-
-            template <typename type, typename std::enable_if<std::is_floating_point<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
-            constexpr value(type&& value) noexcept :
-              decimal(value),
-              type   (operation_value::type::decimal)
-            {}
-
-            template <typename type, typename std::enable_if<std::is_function<typename std::remove_pointer<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
-            constexpr value(type&& value) noexcept :
-              function((void (*)()) value),
-              type    (operation_value::type::function)
-            {}
-
-            template <typename type, typename std::enable_if<std::is_enum<typename std::remove_reference<type>::type>::value || std::is_integral<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
-            constexpr value(type&& value) noexcept :
-              integer(+value),
-              type   (operation_value::type::integer)
-            {}
-
-            template <typename type, typename std::enable_if<std::is_pointer<typename std::remove_reference<type>::type>::value || std::is_same<decltype(nullptr), typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value, std::nullptr_t>::type = nullptr>
-            constexpr value(type&& value) noexcept :
-              pointer(const_cast<void*>(static_cast<void const volatile*>(value))),
-              type   (operation_value::type::pointer)
-            {}
-
-            template <typename type, typename std::enable_if<std::is_member_pointer<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
-            constexpr value(type&& value) noexcept :
-              property((unsigned char $shorthand::*) value),
-              type    (operation_value::type::property)
-            {}
-
-            template <typename type, typename std::enable_if<operation_information::construct<void, decltype(value::standard), type&&>::value && false == (
-              std::is_enum                   <typename std::remove_reference<type>::type>                                               ::value ||
-              std::is_floating_point         <typename std::remove_reference<type>::type>                                               ::value ||
-              std::is_function               <typename std::remove_pointer<typename std::remove_reference<type>::type>::type>           ::value ||
-              std::is_integral               <typename std::remove_reference<type>::type>                                               ::value ||
-              std::is_pointer                <typename std::remove_reference<type>::type>                                               ::value ||
-              std::is_member_function_pointer<typename std::remove_reference<type>::type>                                               ::value ||
-              std::is_member_pointer         <typename std::remove_reference<type>::type>                                               ::value ||
-              std::is_same                   <std::nullptr_t, typename std::remove_cv<typename std::remove_reference<type>::type>::type>::value
-            ), std::nullptr_t>::type = nullptr>
-            constexpr value(type&& value) noexcept(noexcept(decltype(value::standard)(std::declval<type>()))) :
-              standard(std::forward<type>(value)),
-              type    (operation_value::type::standard)
-            {}
-
-            #ifndef _MSC_VER
-              template <typename type, typename std::enable_if<std::is_member_function_pointer<typename std::remove_reference<type>::type>::value, std::nullptr_t>::type = nullptr>
-              constexpr value(type&& value) noexcept :
-                method((void ($shorthand::*)()) value),
-                type  (operation_value::type::method)
-              {}
-            #endif
-        };
-
-      /* ... */
-      private:
-        std::type_info const                                  &baseType;           // ->> Base type information of value evaluated from `$shorthand`
-        typename operation_value::qualifier::type const        qualifiers[12];     // ->> Type qualifier(s) of value evaluated from `$shorthand`; Presumed maximum of     12 to 256 type-qualifiers
-        typename operation_value::qualifier::type const *const extendedQualifiers; // ->>                                                         Extended maximum beyond 12 to 256 type-qualifiers
-        void                                            *const reference;          // ->> Reference to value evaluated from `$shorthand`; Preserves object representation
-
-      public:
-        operation_value::value const  value;     // ->> Representation   of value evaluated from `$shorthand`; Preserves value  representation
-        std::size_t            const  alignment; // ->> Byte offset      of value evaluated from `$shorthand`
-        std::size_t            const  size;      // ->> Byte size        of value evaluated from `$shorthand`
-        std::type_info         const &type;      // ->> Type information of value evaluated from `$shorthand`
-
-      /* ... */
-      private:
-        constexpr explicit operation_value() noexcept = delete;
-
-        template <typename type, typename base, qualifier::type... baseQualifiers, typename std::enable_if<false != operation_information::construct<void, decltype(operation_value::value), type&&>::value, std::nullptr_t>::type = nullptr>
-        constexpr explicit operation_value(type&& value, void const volatile* const address, type_information<base> const, qualifier::collection<baseQualifiers...> const, qualifier::type const extendedQualifiers[]) noexcept(noexcept(decltype(operation_value::value)(std::declval<type>()))) :
-          baseType          (typeid(base)),               // ->> Compile-time
-          qualifiers        {baseQualifiers...},          // ->> Compile-time
-          extendedQualifiers(extendedQualifiers),         // ->> Possibly statically-allocated compile-time
-          reference         (const_cast<void*>(address)), // ->> Possibly compile-time address-of
-          value             (std::forward<type>(value)),  // ->> Possibly compile-time object (and copy-initialization)
-          alignment         (alignof(type)),              // ->> Compile-time
-          size              (sizeof (type)),              // ->> Compile-time
-          type              (typeid (type))               // ->> Compile-time
-        {}
-
-        template <typename type, typename base, qualifier::type... baseQualifiers, typename std::enable_if<false == operation_information::construct<void, decltype(operation_value::value), type&&>::value, std::nullptr_t>::type = nullptr>
-        constexpr explicit operation_value(type&&, void const volatile* const address, type_information<base> const, qualifier::collection<baseQualifiers...> const, qualifier::type const extendedQualifiers[]) noexcept :
-          baseType          (typeid(base)),               //
-          qualifiers        {baseQualifiers...},          //
-          extendedQualifiers(extendedQualifiers),         //
-          reference         (const_cast<void*>(address)), //
-          value             (),                           // ->> Compile-time; See previous declaration of `operation_value(...)`
-          alignment         (alignof(type)),              //
-          size              (sizeof (type)),              //
-          type              (typeid (type))               //
-        {}
-
-        template <typename type, typename base = type, qualifier::type... qualifiers, typename std::enable_if<sizeof...(qualifiers) == sizeof(decltype(operation_value::qualifiers)) / sizeof(qualifier::type), std::nullptr_t>::type = nullptr>
-        constexpr explicit operation_value(type&& value, void const volatile* const address, type_information<base> const, qualifier::collection<qualifiers...> const) noexcept(noexcept(operation_value(std::declval<type>(), NULL, type_information<base>{}, {}, NULL))) :
-          operation_value::operation_value(std::forward<type>(value), address, type_information<base>{}, qualifier::collection<qualifiers...>{}, NULL)
-        {}
-
-        template <typename type, typename base = type, qualifier::type... qualifiers, typename std::enable_if<(sizeof...(qualifiers) < sizeof(decltype(operation_value::qualifiers)) / sizeof(qualifier::type)), std::nullptr_t>::type = nullptr>
-        constexpr explicit operation_value(type&& value, void const volatile* const address, type_information<base> const, qualifier::collection<qualifiers...> const) noexcept(noexcept(operation_value(std::declval<type>(), NULL, type_information<base>{}, {}, NULL))) :
-          operation_value::operation_value(std::forward<type>(value), address, type_information<base>{}, qualifier::collection<qualifiers..., static_cast<qualifier::type>(0x0u)>{}, NULL)
-        {}
-
-        template <typename type, typename base = type, qualifier::type... qualifiers, typename std::enable_if<(sizeof...(qualifiers) > sizeof(decltype(operation_value::qualifiers)) / sizeof(qualifier::type)), std::nullptr_t>::type = nullptr>
-        constexpr explicit operation_value(type&& value, void const volatile* const address, type_information<base> const, qualifier::collection<qualifiers...> const) noexcept(noexcept(operation_value(std::declval<type>(), NULL, type_information<base>{}, {}, NULL))) :
-          operation_value::operation_value(std::forward<type>(value), address, type_information<base>{}, qualifier::collection<static_cast<qualifier::type>(0x0u)>{}, qualifier::collection<qualifiers...>::value)
-        {}
-
-        // ... ->> `$shorthand::operand`s only
-        template <typename type, typename std::enable_if<false != (
-          std::is_reference<type>::value ||
-          operation_information::construct<void, decltype(operation_value::value), type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr operation_value(operation_value (*const)(operation_value const[]), type&& value) noexcept(noexcept(operation_value(std::declval<type>()))) :
-          operation_value::operation_value(std::forward<type>(value))
-        {}
-
-        template <typename type, typename std::enable_if<false == (
-          std::is_reference<type>::value ||
-          operation_information::construct<void, decltype(operation_value::value), type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr operation_value(operation_value (*const)(operation_value const[]), type&& value) noexcept(noexcept(operation_value(instanceof<type&&>()))) :
-          operation_value::operation_value(static_cast<type&&>(value))
-        {}
-
-      public:
-        template <typename type, typename std::enable_if<(
-          std::is_lvalue_reference<type>::value &&
-          false != operation_information::overloaded_address<void, type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        inline operation_value(type&& value) noexcept(noexcept(operation_value(std::declval<type>(), NULL, {}, {}))) :
-          operation_value::operation_value(
-            std::forward<type>(value),
-            &const_cast<unsigned char&>(reinterpret_cast<unsigned char const volatile&>(value)),
-            type_information<typename qualifier::collection_information<type>::base>{},
-            typename qualifier::collection_information<type>::collection{}
-          )
-        {}
-
-        template <typename type, typename std::enable_if<(
-          std::is_lvalue_reference<type>::value &&
-          false == operation_information::overloaded_address<void, type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr operation_value(type&& value) noexcept(noexcept(operation_value(std::declval<type>(), NULL, {}, {}))) :
-          operation_value::operation_value(
-            std::forward<type>(value),
-            &value,
-            type_information<typename qualifier::collection_information<type>::base>{},
-            typename qualifier::collection_information<type>::collection{}
-          )
-        {}
-
-        template <typename type, typename std::enable_if<(
-          std::is_rvalue_reference<type>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr operation_value(type&& value) noexcept(noexcept(operation_value(instanceof<typename std::remove_reference<type>::type&>()))) :
-          operation_value::operation_value((typename std::remove_reference<type>::type&) value)
-        {}
-
-        template <typename type, typename std::enable_if<(
-          false == std::is_reference<type>::value &&
-          false != operation_information::construct<void, decltype(operation_value::value), type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr operation_value(type&& value) noexcept(noexcept(operation_value(std::declval<type>(), NULL, {}, {}))) :
-          operation_value::operation_value(
-            std::forward<type>(value),
-            NULL,
-            type_information<typename qualifier::collection_information<type>::base>{},
-            typename qualifier::collection_information<type>::collection{}
-          )
-        {}
-
-        template <typename type, typename std::enable_if<(
-          false == std::is_reference<type>::value                                                             &&
-          false == operation_information::construct<void, decltype(operation_value::value),    type&&>::value &&
-          false != operation_information::construct<void, typename std::remove_cv<type>::type, type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr /* inline */ operation_value(type&& value) noexcept(noexcept(operation_value(std::declval<type>(), NULL, {}, {}))) :
-          operation_value::operation_value(
-            std::forward<type>(value),
-            (allocation<typename std::remove_cv<type>::type>::value = std::forward<type>(value)),
-            type_information<typename qualifier::collection_information<type>::base>{},
-            typename qualifier::collection_information<type>::collection{}
-          )
-        {}
-
-        template <typename type, typename std::enable_if<(
-          false == std::is_reference<type>::value                                                             &&
-          false == operation_information::construct<void, decltype(operation_value::value),    type&&>::value &&
-          false == operation_information::construct<void, typename std::remove_cv<type>::type, type&&>::value
-        ), std::nullptr_t>::type = nullptr>
-        constexpr operation_value(type&&) noexcept = delete;
-
-        /* ... */
-        // #ifdef __circle_lang__
-        // #else
-        //   template <typename type>
-        //   constexpr operator type() const noexcept {
-        //     typedef allocation<typename std::remove_cv<typename std::remove_reference<type>::type>::type> allocation;
-        //     return ...;
-        //   }
-        // #endif
-    };
+    template <typename type> constexpr static bool const (&valueof(sfinaeptr_t const, unsigned char type::* const = NULL) noexcept)[true  + 1u];
+    template <typename>      constexpr static bool const (&valueof(...)                                                   noexcept)[false + 1u];
 
   public:
-    typedef $shorthand::operation_value evaluation;
-    typedef $shorthand::operation_value operand;
+    static bool const value =
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201103L
+        std::is_union<base>::value or
+      #elif defined __circle_lang__ or defined __clang__ or defined __CUDACC_VER_BUILD__ or defined __CUDACC_VER_MAJOR__ or defined __CUDACC_VER_MINOR__ or defined __NVCC__ or defined __NVCOMPILER or defined __GNUC__ or defined __ICC or defined __INTEL_COMPILER or defined __INTEL_LLVM_COMPILER or defined __llvm__
+      # ifdef __has_builtin
+      #   if __has_builtin(__is_union)
+            __is_union(base) or
+      #   endif
+      # endif
+      #elif defined _MSC_VER
+        __is_union(base) or
+      #endif
+    sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
+};
 
-    // ... ->> Type-erased function without generic or template template function parameters available ie: `auto (*)(auto&&...)`
-    typedef $shorthand::evaluation (*operation)($shorthand::operand const[]);
+// ... --> is_class<T>
+template <class base>
+struct is_class final {
+  static bool const value =
+    #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201103L
+      std::is_class<base>::value or
+    #elif defined __circle_lang__ or defined __clang__ or defined __CUDACC_VER_BUILD__ or defined __CUDACC_VER_MAJOR__ or defined __CUDACC_VER_MINOR__ or defined __NVCC__ or defined __NVCOMPILER or defined __GNUC__ or defined __ICC or defined __INTEL_COMPILER or defined __INTEL_LLVM_COMPILER or defined __llvm__
+    # ifdef __has_builtin
+    #   if __has_builtin(__is_class)
+          __is_class(base) or
+    #   endif
+    # endif
+    #elif defined _MSC_VER
+      __is_class(base) or
+    #endif
+  is_union<base>::value;
+};
 
+// ... --> is_const<T>
+template <typename>      struct is_const             final { static bool const value = false; };
+template <typename base> struct is_const<base const> final { static bool const value = true; };
+
+// ... --> is_decimal<T>
+template <typename> struct is_decimal              final { static bool const value = false; };
+template <>         struct is_decimal<double>      final { static bool const value = true; };
+template <>         struct is_decimal<float>       final { static bool const value = true; };
+template <>         struct is_decimal<long double> final { static bool const value = true; };
+
+// ... --> is_integer<T>
+template <typename> struct is_integer                     final { static bool const value = false; };
+template <>         struct is_integer<int>                final { static bool const value = true; };
+template <>         struct is_integer<long>               final { static bool const value = true; };
+template <>         struct is_integer<long long>          final { static bool const value = true; };
+template <>         struct is_integer<short>              final { static bool const value = true; };
+template <>         struct is_integer<signed char>        final { static bool const value = true; };
+template <>         struct is_integer<unsigned char>      final { static bool const value = true; };
+template <>         struct is_integer<unsigned int>       final { static bool const value = true; };
+template <>         struct is_integer<unsigned long>      final { static bool const value = true; };
+template <>         struct is_integer<unsigned long long> final { static bool const value = true; };
+template <>         struct is_integer<unsigned short>     final { static bool const value = true; };
+
+// ... --> is_lvalue_reference<T>
+template <typename>      struct is_lvalue_reference        final { static bool const value = false; };
+template <typename base> struct is_lvalue_reference<base&> final { static bool const value = true; };
+
+// ... --> is_member_pointer<T>
+template <typename>                    struct is_member_pointer                                final { static bool const value = false; };
+template <typename baseA, class baseB> struct is_member_pointer<baseA baseB::*>                final { static bool const value = true; };
+template <typename baseA, class baseB> struct is_member_pointer<baseA baseB::* const>          final { static bool const value = true; };
+template <typename baseA, class baseB> struct is_member_pointer<baseA baseB::* const volatile> final { static bool const value = true; };
+template <typename baseA, class baseB> struct is_member_pointer<baseA baseB::*       volatile> final { static bool const value = true; };
+
+// ... --> is_null<T>
+template <typename> struct is_null       final { static bool const value = false; };
+template <>         struct is_null<null> final { static bool const value = true; };
+
+// ... --> is_pointer<T>
+template <typename>      struct is_pointer                       final { static bool const value = false; };
+template <typename base> struct is_pointer<base*>                final { static bool const value = true; };
+template <typename base> struct is_pointer<base* const>          final { static bool const value = true; };
+template <typename base> struct is_pointer<base* const volatile> final { static bool const value = true; };
+template <typename base> struct is_pointer<base*       volatile> final { static bool const value = true; };
+
+// ... --> is_rvalue_reference<T>
+template <typename>      struct is_rvalue_reference         final { static bool const value = false; };
+template <typename base> struct is_rvalue_reference<base&&> final { static bool const value = true; };
+
+// ... --> is_reference<T>
+template <typename base>
+struct is_reference final {
+  static bool const value = is_lvalue_reference<base>::value or is_rvalue_reference<base>::value;
+};
+
+// ... --> is_same<T, U>
+template <typename baseA, typename baseB> struct is_same             final { static bool const value = false; };
+template <typename base>                  struct is_same<base, base> final { static bool const value = true;  };
+
+// ... --> is_enum<T>
+template <typename base>
+struct is_enum final {
   private:
-    typedef $shorthand::evaluation (*$void)($shorthand::operand const[]); // ->> Disambiguation trait type; used for SFINAE/ specializations
+    template <typename type> constexpr static bool (&valueof(sfinaeptr_t const, bool const (*const)[+static_cast<type>(static_cast<unsigned long long>(1u))] = NULL) noexcept)[true  + 1u];
+    template <typename>      constexpr static bool (&valueof(...)                                                                                                    noexcept)[false + 1u];
 
-    /* ... */
-    constexpr static $shorthand::evaluation (*$voidop)($shorthand::operand const[]) noexcept = nullptr;
+  public:
+    static bool const value =
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201103L
+        std::is_enum<base>::value or
+      #elif defined __circle_lang__ or defined __clang__ or defined __CUDACC_VER_BUILD__ or defined __CUDACC_VER_MAJOR__ or defined __CUDACC_VER_MINOR__ or defined __NVCC__ or defined __NVCOMPILER or defined __GNUC__ or defined __ICC or defined __INTEL_COMPILER or defined __INTEL_LLVM_COMPILER or defined __llvm__
+      # ifdef __has_builtin
+      #   if __has_builtin(__is_enum)
+            __is_enum(base) or
+      #   endif
+      # endif
+      #elif defined _MSC_VER
+        __is_enum(base) or
+      #endif
+    (not is_class<base>::value and not is_integer<base>::value and not is_same<base, std::nullptr_t>::value and sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr));
+};
 
-    public: template <class information, unsigned char arity>
-    static $shorthand::evaluation $op($shorthand::operand const[]) noexcept(false) /* --> throw(std::runtime_error) */ {
-      return {[]{}};
-      // return {42};
+// ... --> is_void<T>
+template <typename> struct is_void                      final { static bool const value = false; };
+template <>         struct is_void<void>                final { static bool const value = true; };
+template <>         struct is_void<void const>          final { static bool const value = true; };
+template <>         struct is_void<void const volatile> final { static bool const value = true; };
+template <>         struct is_void<void       volatile> final { static bool const value = true; };
+
+// ... --> is_volatile<T>
+template <typename>      struct is_volatile                final { static bool const value = false; };
+template <typename base> struct is_volatile<base volatile> final { static bool const value = true; };
+
+// ... --> is_function<T>
+template <typename base>
+struct is_function final {
+  static bool const value = not is_const<base const>::value and not is_reference<base>::value and not is_volatile<base volatile>::value;
+};
+
+// ... --> max<Ns...>
+template <std::size_t size, std::size_t...>                           struct max                         final { static std::size_t const value = size; };
+template <std::size_t sizeA, std::size_t sizeB, std::size_t... sizes> struct max<sizeA, sizeB, sizes...> final { static std::size_t const value = max<(sizeA > sizeB ? sizeA : sizeB), sizes...>::value; };
+
+// ... --> remove_const<T>
+template <typename base> struct remove_const             final { typedef base type; };
+template <typename base> struct remove_const<base const> final { typedef base type; };
+
+// ... --> remove_lvalue_reference<T>
+template <typename base> struct remove_lvalue_reference        final { typedef base type; };
+template <typename base> struct remove_lvalue_reference<base&> final { typedef base type; };
+
+// ... --> remove_pointer<T>
+template <typename base> struct remove_pointer                       final { typedef base type; };
+template <typename base> struct remove_pointer<base*>                final { typedef base type; };
+template <typename base> struct remove_pointer<base* const>          final { typedef base type; };
+template <typename base> struct remove_pointer<base* const volatile> final { typedef base type; };
+template <typename base> struct remove_pointer<base*       volatile> final { typedef base type; };
+
+// ... --> remove_rvalue_reference<T>
+template <typename base> struct remove_rvalue_reference         final { typedef base type; };
+template <typename base> struct remove_rvalue_reference<base&&> final { typedef base type; };
+
+// ... --> remove_volatile<T>
+template <typename base> struct remove_volatile                final { typedef base type; };
+template <typename base> struct remove_volatile<base volatile> final { typedef base type; };
+
+// ... --> remove_cv<T>, remove_qualifiers<T>, remove_reference<T>
+template <typename base> struct remove_reference  final { typedef typename remove_lvalue_reference<typename remove_rvalue_reference<base>::type>::type type; };
+template <typename base> struct remove_cv         final { typedef typename remove_const           <typename remove_volatile        <base>::type>::type type; };
+template <typename base> struct remove_qualifiers final { typedef typename remove_cv              <typename remove_reference       <base>::type>::type type; };
+
+/* Shorthand */
+enum $$ : unsigned char {
+  $c = 0x01u, // ->> Constant: Allows compile-time evaluation of constructed `$n` shorthands
+  $o = 0x02u, // ->> Object  : Allows constructor elision e.g.: `$1(...) == $n<1u>(...)`
+
+  $co = static_cast<$$>(static_cast<unsigned char>($c) | static_cast<unsigned char>($o)),
+  $oc = static_cast<$$>(static_cast<unsigned char>($o) | static_cast<unsigned char>($c))
+};
+
+struct $op final {
+  enum $$ : unsigned char {
+    add, address, assign, assign_add, assign_bitwise_and, assign_bitwise_or, assign_bitwise_xor, assign_divide, assign_left_shift, assign_modulo, assign_multiply, assign_right_shift, assign_subtract,
+    bitwise_and, bitwise_or, bitwise_xor, boolean_and, boolean_or,
+    call, cast, comma, compare, complement, construct,
+    dereference, destruct, divide,
+    equals, equals_greater, equals_lesser,
+    greater,
+    initialize,
+    left_shift, lesser,
+    member_access, member_pointer_access, minus, modulo, multiply,
+    negate,
+    overloaded_address,
+    plus, post_decrement, post_increment, pre_decrement, pre_increment,
+    right_shift,
+    self, subscript, subtract,
+    ternary,
+    unequal
+  };
+};
+
+// ...
+template <$op::$$, class...>
+struct $lambda final {};
+
+// ... ->> Index
+template <std::size_t arity, $$ state = $o, bool /* $$c */ = static_cast<bool>(static_cast<unsigned char>(state) & static_cast<unsigned char>($c)), bool /* $$o */ = static_cast<bool>(static_cast<unsigned char>(state) & static_cast<unsigned char>($o))>
+struct $n /* final */ {
+  template <std::size_t, $$, bool, bool>
+  friend struct $n;
+
+  protected:
+    template <typename>
+    struct cast;
+
+    template <typename base, typename... bases> struct cast<base (bases...)      noexcept> { static std::size_t const adicity = sizeof...(bases); constexpr static base value(bases... arguments)      noexcept { return static_cast<base>($n{}.operator ()(static_cast<bases>(arguments)...)); } };
+    template <typename base, typename... bases> struct cast<base (bases..., ...) noexcept> { static std::size_t const adicity = sizeof...(bases); constexpr static base value(bases... arguments, ...) noexcept { return static_cast<base>($n{}.operator ()(static_cast<bases>(arguments)...)); } };
+
+    #ifdef __cpp_noexcept_function_type
+      template <typename base, typename... bases> struct cast<base (bases...)>      : public cast<base (bases...)      noexcept> {};
+      template <typename base, typename... bases> struct cast<base (bases..., ...)> : public cast<base (bases..., ...) noexcept> {};
+    #endif
+
+    // ...
+    template <class>                                                struct is_shorthand                                        final { static bool const value = false; };
+    template <$op::$$ operation, class... operands>                 struct is_shorthand<$lambda<operation, operands...> >      final { static bool const value = true; };
+    template <std::size_t subarity, $$ substate, bool... substates> struct is_shorthand<$n<subarity, substate, substates...> > final { static bool const value = true; };
+
+  public:
+    template <typename... types>
+    constexpr typename conditional<0u == arity or sizeof...(types) != sizeof...(types), void>::type operator ()(types&&...) const volatile noexcept {
+      return static_cast<void>(sfinaeptr);
+    }
+
+    template <typename... types>
+    constexpr typename conditional<(arity > sizeof...(types)), sfinaeptr_t>::type operator ()(types&&...) const volatile noexcept {
+      static_assert(arity <= sizeof...(types) + 1u, "Too few arguments passed to shorthand");
+      return sfinaeptr;
+    }
+
+    template <typename type, typename... types>
+    constexpr typename conditional<(arity == 1u and arity <= sizeof...(types) + 1u), type&&>::type operator ()(type&& argument, types&&...) const volatile noexcept {
+      return forward_cast<type>(argument);
+    }
+
+    template <typename type, typename... types>
+    constexpr typename conditional<(arity > 1u and arity <= sizeof...(types) + 1u), typename at<arity - 1u, type&&, types&&...>::type>::type operator ()(type&&, types&&... arguments) const volatile noexcept {
+      return $n<arity - 1u>{}.operator ()(forward_cast<types>(arguments)...);
+    }
+
+    // ...
+    template <typename type>
+    constexpr operator type() const noexcept {
+      static_assert(is_function<typename remove_pointer<typename remove_qualifiers<type>::type>::type>::value, "Expected conversion from shorthand to function type");
+      static_assert((arity <= $n<arity>::template cast<typename remove_pointer<typename remove_qualifiers<type>::type>::type>::adicity), "Can not convert shorthand to given function type");
+
+      return $n<arity>::template cast<typename remove_pointer<typename remove_qualifiers<type>::type>::type>::value;
     }
 };
-  template <typename base>
-  typename $shorthand::operation_value::allocation<base>::type $shorthand::operation_value::allocation<base>::value = {};
 
-#include <cstdio>
-int main() { $shorthand::$op<void, 0u>(NULL); }
+template <std::size_t arity, $$ state, bool $$c>
+struct $n<arity, state, $$c, true /* --> $$o */> /* final */ : public $n<arity, state, $$c, false> {
+  using $n<arity, state, $$c, false>::is_shorthand;
 
-// /* Main */
-// #include <cstdio>
+  protected:
+    enum enumeration : unsigned long long {};
 
-// // ...
-// template <intmax_t value>
-// struct $int : public $s<value> {
-//   constexpr static $void (*$fused_multiply_add)($operand const (&&operands)[], ) noexcept(false) {
-//     return $voidop;
-//   }
+    union standard {
+      enum type : unsigned char {
+        align_val_t, allocator_arg_t, atomic_bool, atomic_char, atomic_char16_t, atomic_char32_t, atomic_char8_t, atomic_flag, atomic_int, atomic_llong, atomic_long, atomic_schar, atomic_short, atomic_uchar, atomic_uint, atomic_ullong, atomic_ulong, atomic_ushort, atomic_wchar_t, atto,
+        bad_alloc, bad_array_new_length, bad_cast, bad_exception, bad_function_call, bad_typeid, bad_weak_ptr, bfloat16_t, bidirectional_iterator_tag, bit_and, bit_not, bit_or, bit_xor, byte,
+        centi, compare_three_way, contiguous_iterator_tag, coroutine_handle,
+        dangling, deca, deci, default_sentinel_t, divides, destroying_delete_t, div_t,
+        endian, equal_to, exa, exception, exception_ptr,
+        false_type, femto, float128_t, float16_t, float32_t, float64_t, forward_iterator_tag, from_range_t,
+        giga, greater, greater_equal,
+        hecto,
+        identity, in_place_t, input_iterator_tag,
+        kilo,
+        ldiv_t, less, less_equal, lldiv_t, logical_and, logical_not, logical_or,
+        max_align_t, mega, memory_order, micro, milli, minus, modulus, multiplies,
+        nano, negate, nested_exception, new_terminate_unexpected_handler, noop_coroutine_handle, noop_coroutine_promise, not_equal_to, nothrow_t, nullptr_t,
+        output_iterator_tag, owner_less,
+        partial_ordering, peta, pico, piecewise_construct_t, placeholders_1, placeholders_2, plus, pointer_safety,
+        random_access_iterator_tag,
+        tera, true_type, type_info,
+        source_location, strong_ordering, subrange_kind, suspend_always, suspend_never,
+        unexpected_handler, unreachable_sentinel_t,
+        va_list,
+        weak_ordering
+      };
+    };
 
-//   template <class... $shorthands>
-//   constexpr $expression<$int::$fused_multiply_add, $<>, $<>, $<> > fused_multiply_add($shorthands&&... operands) const volatile noexcept(noexcept(...)) {
-//     return {*this, std::forward<$shorthands>(operands)...};
-//   }
-// };
+    enum type : unsigned char {
+      decimal,
+      enumeration,
+      function,
+      integer,
+      member,
+      null,
+      pointer,
+      reference,
+      shorthand, standard,
+      undefined
+    };
 
-// (int) $int<a>{}.fused_multiply_add($s<b>{}, $s<c>{})
+    struct undefined final {
+      private:
+        struct layout final {
+          unsigned char value[max<sizeof(enum enumeration), sizeof(long double), sizeof(sfinaeptr_t $n::*), sizeof(unsigned long long), sizeof(void (*)(...)), sizeof(void*)>::value];
+          void         *address;
+        };
 
-// // ...
-// int main(int, char*[]) /* noexcept */ {
-//   /* Function call */
-//   $0(static_cast<void*>(NULL), 1, 2.0);                               // --> void
-//   std::printf("[]: %p" "\r\n", $1(static_cast<void*>(NULL), 1, 2.0)); // --> void*&&
-//   std::printf("[]: %i" "\r\n", $2(static_cast<void*>(NULL), 1, 2.0)); // --> int  &&
-//   std::printf("[]: %f" "\r\n", $3(static_cast<void*>(NULL), 1, 2.0)); // --> float&&
-//   std::puts("...");
+        #ifdef offsetof
+          static std::size_t const padding = offsetof(layout, address) - (0u /* --> offsetof(layout, value) */ + sizeof layout::value);
+        #else
+          static std::size_t const padding = 0u;
+        #endif
 
-//   /* Function cast */
-//   typedef int (function)(int, ...); // ->> Variadics supported, but the optional arguments get ignored
+      public:
+        alignas(void*) unsigned char value[sizeof layout::value - padding - (sizeof layout::address >= sizeof layout::value - padding ? sizeof layout::value - padding - 1u : sizeof layout::address)];
+        void                        *address;
+    };
 
-//   #if defined(__circle_lang__) || defined(__clang__)                                                  //
-//     std::printf("[]: %i"    "\r\n", static_cast<function*>($1)(3));                                   // --> int&&
-//     std::printf("[]: %4.5s" "\r\n", static_cast<function*>($1) == (function*) $1 ? "true" : "false"); // ->> Conversion operator call
-//   #else                                                                                               //
-//     std::printf("[]: %i"    "\r\n", $1.operator function*()(3));                                      // --> int&&
-//     std::printf("[]: %i"    "\r\n", $1.operator function&()(3));                                      // --> int&&
-//     std::printf("[]: %4.5s" "\r\n", $1.operator function*() == (function*) $1 ? "true" : "false");    // ->> Conversion operator call
-//     std::printf("[]: %4.5s" "\r\n", $1.operator function&() == (function&) $1 ? "true" : "false");    // ->> Wary of cast-to-reference
-//   #endif                                                                                              //
-//   std::puts("...");
+    struct value final {
+      union {
+        long double        const decimal;
+        enum enumeration   const enumeration;
+        void             (*const function)(...) noexcept;
+        unsigned long long const integer;
+        sfinaeptr_t $n::  *const member;
+        sfinaeptr_t        const null;
+        void              *const pointer;
+        unsigned char     *const reference;
+        struct undefined   const undefined;
 
-//   /* Constructor as function call */
-//   std::printf("[]: %i" "\r\n", static_cast<int>($<1u>{}    (4.0f))); // ->> Constructor (call), then function call
-//   std::printf("[]: %i" "\r\n", static_cast<int>($<1u>      (4.0f))); // ->> Undefined behavior a la `*(int*) (void*) &(float&&{...})`
-//   std::printf("[]: %i" "\r\n", static_cast<int>($<1u, int> (4.0f))); // ->> Defined   behavior a la `(int)  float&&{...}` via `private` `int`  member access
-//   std::printf("[]: %i" "\r\n", static_cast<int>($<1u, int&>(4.0f))); // ->> Undefined behavior a la `(int&) float&&{...}` via `private` `int&` member access
-//   std::puts("...");
+        // ...
+        std::allocator_arg_t                                                       const std_allocator_arg_t;
+        std::atomic_bool                                                           const std_atomic_bool;
+        std::atomic_char                                                           const std_atomic_char;
+        std::atomic_flag                                                          *const std_atomic_flag;
+        std::atomic_int                                                            const std_atomic_int;
+        std::atomic_llong                                                          const std_atomic_llong;
+        std::atomic_long                                                           const std_atomic_long;
+        std::atomic_schar                                                          const std_atomic_schar;
+        std::atomic_short                                                          const std_atomic_short;
+        std::atomic_uchar                                                          const std_atomic_uchar;
+        std::atomic_uint                                                           const std_atomic_uint;
+        std::atomic_ullong                                                         const std_atomic_ullong;
+        std::atomic_ulong                                                          const std_atomic_ulong;
+        std::atomic_ushort                                                         const std_atomic_ushort;
+        std::atomic_wchar_t                                                        const std_atomic_wchar_t;
+        std::atto                                                                  const std_atto;
+        std::bidirectional_iterator_tag                                            const std_bidirectional_iterator_tag;
+        std::centi                                                                 const std_centi;
+        std::deca                                                                  const std_deca;
+        std::deci                                                                  const std_deci;
+        std::div_t                                                                 const std_div_t;
+        std::exa                                                                   const std_exa;
+        std::false_type                                                            const std_false_type;
+        std::femto                                                                 const std_femto;
+        std::forward_iterator_tag                                                  const std_forward_iterator_tag;
+        std::giga                                                                  const std_giga;
+        std::hecto                                                                 const std_hecto;
+        std::input_iterator_tag                                                    const std_input_iterator_tag;
+        std::kilo                                                                  const std_kilo;
+        std::ldiv_t                                                                const std_ldiv_t;
+        std::lldiv_t                                                               const std_lldiv_t;
+        std::max_align_t                                                           const std_max_align_t;
+        std::mega                                                                  const std_mega;
+        std::memory_order                                                          const std_memory_order;
+        std::micro                                                                 const std_micro;
+        std::milli                                                                 const std_milli;
+        std::nano                                                                  const std_nano;
+        std::new_handler /* --> std::terminate_handler, std::unexpected_handler */ const std_new_terminate_unexpected_handler;
+        std::nothrow_t                                                             const std_nothrow_t;
+        std::nullptr_t                                                             const std_nullptr_t;
+        std::output_iterator_tag                                                   const std_output_iterator_tag;
+        std::owner_less<void>                                                      const std_owner_less;
+        std::peta                                                                  const std_peta;
+        std::pico                                                                  const std_pico;
+        std::piecewise_construct_t                                                 const std_piecewise_construct_t;
+        decltype(std::placeholders::_1)                                            const std_placeholders_1;
+        decltype(std::placeholders::_2)                                            const std_placeholders_2;
+        std::random_access_iterator_tag                                            const std_random_access_iterator_tag;
+        std::tera                                                                  const std_tera;
+        std::true_type                                                             const std_true_type;
+        std::type_info const                                                      *const std_type_info;
+        std::va_list                                                              *const std_va_list;
+        #ifdef __cpp_aligned_new
+          std::align_val_t const std_align_val_t;
+        #endif
+        #ifdef __cpp_char8_t
+          std::atomic_char8_t const std_atomic_char8_t;
+        #endif
+        #ifdef __cpp_lib_byte
+          std::byte const std_byte;
+        #endif
+        #ifdef __cpp_lib_endian
+          std::endian const std_endian;
+        #endif
+        #ifdef __cpp_lib_ranges
+          std::ranges::dangling      const std_dangling;
+          std::ranges::subrange_kind const std_subrange_kind;
+        #endif
+        #ifdef __cpp_lib_source_location
+          std::source_location const std_source_location;
+        #endif
+        #ifdef __cpp_lib_three_way_comparison
+          std::compare_three_way const std_compare_three_way;
+          std::partial_ordering  const std_partial_ordering;
+          std::strong_ordering   const std_strong_ordering;
+          std::weak_ordering     const std_weak_ordering;
+          #ifdef __cpp_lib_coroutine
+            std::coroutine_handle<void> const std_coroutine_handle;
+            std::noop_coroutine_handle  const std_noop_coroutine_handle;
+            std::noop_coroutine_promise const std_noop_coroutine_promise;
+            std::suspend_always         const std_suspend_always;
+            std::suspend_never          const std_suspend_never;
+          #endif
+        #endif
+        #ifdef __cpp_unicode_characters
+          std::atomic_char16_t const std_atomic_char16_t;
+          std::atomic_char32_t const std_atomic_char32_t;
+        #endif
+        #if defined INT16_MAX and defined INT16_MIN
+          std::atomic_int16_t const std_atomic_int16_t;
+        #endif
+        #if defined INT32_MAX and defined INT32_MIN
+          std::atomic_int32_t const std_atomic_int32_t;
+        #endif
+        #if defined INT64_MAX and defined INT64_MIN
+          std::atomic_int64_t const std_atomic_int64_t;
+        #endif
+        #if defined INT8_MAX  and defined INT8_MIN
+          std::atomic_int8_t const std_atomic_int8_t;
+        #endif
+        #if defined INTPTR_MAX and defined INTPTR_MIN
+          std::atomic_intptr_t const std_atomic_intptr_t;
+        #endif
+        #if defined UINT16_MAX and defined UINT16_MIN
+          std::atomic_uint16_t const std_atomic_uint16_t;
+        #endif
+        #if defined UINT32_MAX and defined UINT32_MIN
+          std::atomic_uint32_t const std_atomic_uint32_t;
+        #endif
+        #if defined UINT64_MAX and defined UINT64_MIN
+          std::atomic_uint64_t const std_atomic_uint64_t;
+        #endif
+        #if defined UINT8_MAX  and defined UINT8_MIN
+          std::atomic_uint8_t const std_atomic_uint8_t;
+        #endif
+        #if defined UINTPTR_MAX and defined UINTPTR_MIN
+          std::atomic_uintptr_t const std_atomic_uintptr_t;
+        #endif
+        #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201402L
+          std::bit_and      <void> const std_bit_and;
+          std::bit_not      <>     const std_bit_not;
+          std::bit_or       <void> const std_bit_or;
+          std::bit_xor      <void> const std_bit_xor;
+          std::divides      <void> const std_divides;
+          std::equal_to     <void> const std_equal_to;
+          std::greater      <void> const std_greater;
+          std::greater_equal<void> const std_greater_equal;
+          std::less         <void> const std_less;
+          std::less_equal   <void> const std_less_equal;
+          std::logical_and  <void> const std_logical_and;
+          std::logical_not  <void> const std_logical_not;
+          std::logical_or   <void> const std_logical_or;
+          std::minus        <void> const std_minus;
+          std::modulus      <void> const std_modulus;
+          std::multiplies   <void> const std_multiplies;
+          std::negate       <void> const std_negate;
+          std::not_equal_to <void> const std_not_equal_to;
+          std::plus         <void> const std_plus;
+        #endif
+        #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L
+          std::in_place_t const std_in_place_t;
+        #endif
+        #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L
+          std::contiguous_iterator_tag const std_contiguous_iterator_tag;
+          std::default_sentinel_t      const std_default_sentinel_t;
+          std::destroying_delete_t     const std_destroying_delete_t;
+          std::identity                const std_identity;
+          std::unreachable_sentinel_t  const std_unreachable_sentinel_t;
+        #endif
+        #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
+          std::pointer_safety const std_pointer_safety;
+        #endif
+        #if defined __STDCPP_BFLOAT16_T__
+          std::bfloat16_t const std_bfloat16_t;
+        #endif
+        #if defined __STDCPP_FLOAT16_T__
+          std::float16_t const std_float16_t;
+        #endif
+        #if defined __STDCPP_FLOAT32_T__
+          std::float32_t const std_float32_t;
+        #endif
+        #if defined __STDCPP_FLOAT64_T__
+          std::float64_t const std_float64_t;
+        #endif
+        #if defined __STDCPP_FLOAT128_T__
+          std::float128_t const std_float128_t;
+        #endif
 
-//   /* Constants */
-//   std::printf("[]: %llu" "\r\n",                                    ($u<5uLL>{})()); // --> unsigned int
-//   std::printf("[]: %lli" "\r\n", static_cast<signed long long (*)()>($s<-5LL>{})()); // --> signed   int
-//   std::puts("...");
+        alignas(std::bad_alloc)            unsigned char const std_bad_alloc           [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_alloc)];
+        alignas(std::bad_array_new_length) unsigned char const std_bad_array_new_length[static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_array_new_length)];
+        alignas(std::bad_cast)             unsigned char const std_bad_cast            [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_cast)];
+        alignas(std::bad_exception)        unsigned char const std_bad_exception       [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_exception)];
+        alignas(std::bad_function_call)    unsigned char const std_bad_function_call   [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_function_call)];
+        alignas(std::bad_typeid)           unsigned char const std_bad_typeid          [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_typeid)];
+        alignas(std::bad_weak_ptr)         unsigned char const std_bad_weak_ptr        [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::bad_weak_ptr)];
+        alignas(std::exception)            unsigned char const std_exception           [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::exception)];
+        alignas(std::exception_ptr)        unsigned char const std_exception_ptr       [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::exception_ptr)];
+        alignas(std::nested_exception)     unsigned char const std_nested_exception    [static_cast<unsigned char>(state) & static_cast<unsigned char>($c) ? 1u : sizeof(std::nested_exception)];
+      };
+      std::type_info const *const metadata;
+      enum $n::type         const type;
 
-//   /* Function expression */
-//   // std::printf("[]: %zu" "\r\n", sizeof($expression<$comma, $expression<$self, $<1u> >,        $expression<$self, $<2u> >, $void>));
-//   // std::printf("[]: %zu" "\r\n", sizeof($expression<$comma, $expression<$self, $object<int> >, $expression<$self, $<2u> >, $void>));
-//   // std::printf("[]: %1.1s" "\r\n", std::puts&($1)("6"));
-//   std::puts("...");
+      // ...
+      template <std::size_t subarity, $$ substate, bool $$$c>
+      constexpr value($$ value::* const, $n<subarity, substate, $$$c, false> const&) noexcept :
+        null(sfinaeptr),
+        metadata(NULL),
+        type($n::null)
+      { static_assert(0u == sizeof($n<subarity, substate, $$$c, false>), "Shorthand can not accept arguments"); }
 
-//   /* Expression */
-//   // std::puts&($1), std::printf&($1, $2)
-//   // std::bsearch(&static_cast<int const&>(42), {1, 2, 3, 4, 5}, 5u, sizeof(int), [](void const* a, void const* b) { return *(int*) a < *(int*) b ? -1 : *(int*) a > *(int*) b ? +1 : 0; });
-//   // std::bsearch(&static_cast<int const&>(42), {1, 2, 3, 4, 5}, 5u, sizeof(int), *$as<int*>($1) < *$as<int*>($2) ? -1 : *$as<int*>($1) > *$as<int*>($2) ? +1 : 0);
+      template <std::size_t subarity, $$ substate, bool $$$c>
+      constexpr value($$ value::* const, $n<subarity, substate, $$$c, true> const& shorthand) noexcept(true) :
+        value::value(shorthand.value)
+      {}
 
-//   /* ... */
-//   return EXIT_SUCCESS;
-// }
+      constexpr value(long double        const value::* const, long double                                                                const  value)   noexcept                                                                                                          : decimal                              (value),                metadata(NULL /* --> &typeid(long double) */),                                                                           type($n::decimal)                                                                {}
+      constexpr value(unsigned long long const value::* const, unsigned long long                                                         const  value)   noexcept                                                                                                          : integer                              (value),                metadata(NULL /* --> &typeid(unsigned long long) */),                                                                    type($n::integer)                                                                {}
+      constexpr value(void*              const value::* const, void const volatile*                                                       const  value)   noexcept                                                                                                          : pointer            (const_cast<void*>(value)),               metadata(NULL /* --> &typeid(void*) */),                                                                                 type($n::pointer)                                                                {}
+      constexpr value(union standard     const value::* const, decltype(std::placeholders::_1)                                            const  value)   noexcept(noexcept(decltype(std::placeholders::_1)(instanceof<decltype(std::placeholders::_1)>())))                : std_placeholders_1                   (value),                metadata(NULL /* --> &typeid(decltype(std::placeholders::_1)) */),                                                       type(static_cast<enum $n::type>($n::standard::placeholders_1))                   {}
+      constexpr value(union standard     const value::* const, decltype(std::placeholders::_2)                                            const  value)   noexcept(noexcept(decltype(std::placeholders::_2)(instanceof<decltype(std::placeholders::_2)>())))                : std_placeholders_2                   (value),                metadata(NULL /* --> &typeid(decltype(std::placeholders::_2)) */),                                                       type(static_cast<enum $n::type>($n::standard::placeholders_2))                   {}
+      constexpr value(union standard     const value::* const, std::allocator_arg_t                                                       const  value)   noexcept(noexcept(std::allocator_arg_t           (instanceof<std::allocator_arg_t>           ())))                : std_allocator_arg_t                  (value),                metadata(NULL /* --> &typeid(std::allocator_arg_t) */),                                                                  type(static_cast<enum $n::type>($n::standard::allocator_arg_t))                  {}
+      constexpr value(union standard     const value::* const, std::atomic_bool                                                           const& value)   noexcept(noexcept(std::atomic_bool               (instanceof<std::atomic_bool const&>        ().load())))         : std_atomic_bool                      (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_bool) */),                                                                      type(static_cast<enum $n::type>($n::standard::atomic_bool))                      {}
+      constexpr value(union standard     const value::* const, std::atomic_char                                                           const& value)   noexcept(noexcept(std::atomic_char               (instanceof<std::atomic_char const&>        ().load())))         : std_atomic_char                      (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_char) */),                                                                      type(static_cast<enum $n::type>($n::standard::atomic_char))                      {}
+      constexpr value(union standard     const value::* const, std::atomic_flag&                                                                 value)   noexcept                                                                                                          : std_atomic_flag                      (&value),               metadata(NULL /* --> &typeid(std::atomic_flag&) */),                                                                     type(static_cast<enum $n::type>($n::standard::atomic_flag))                      {}
+      constexpr value(union standard     const value::* const, std::atomic_int                                                            const& value)   noexcept(noexcept(std::atomic_int                (instanceof<std::atomic_int     const&>     ().load())))         : std_atomic_int                       (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_int) */),                                                                       type(static_cast<enum $n::type>($n::standard::atomic_int))                       {}
+      constexpr value(union standard     const value::* const, std::atomic_llong                                                          const& value)   noexcept(noexcept(std::atomic_llong              (instanceof<std::atomic_llong   const&>     ().load())))         : std_atomic_llong                     (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_llong) */),                                                                     type(static_cast<enum $n::type>($n::standard::atomic_llong))                     {}
+      constexpr value(union standard     const value::* const, std::atomic_long                                                           const& value)   noexcept(noexcept(std::atomic_long               (instanceof<std::atomic_long    const&>     ().load())))         : std_atomic_long                      (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_long) */),                                                                      type(static_cast<enum $n::type>($n::standard::atomic_long))                      {}
+      constexpr value(union standard     const value::* const, std::atomic_schar                                                          const& value)   noexcept(noexcept(std::atomic_schar              (instanceof<std::atomic_schar   const&>     ().load())))         : std_atomic_schar                     (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_schar) */),                                                                     type(static_cast<enum $n::type>($n::standard::atomic_schar))                     {}
+      constexpr value(union standard     const value::* const, std::atomic_short                                                          const& value)   noexcept(noexcept(std::atomic_short              (instanceof<std::atomic_short   const&>     ().load())))         : std_atomic_short                     (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_short) */),                                                                     type(static_cast<enum $n::type>($n::standard::atomic_short))                     {}
+      constexpr value(union standard     const value::* const, std::atomic_uchar                                                          const& value)   noexcept(noexcept(std::atomic_uchar              (instanceof<std::atomic_uchar   const&>     ().load())))         : std_atomic_uchar                     (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_uchar) */),                                                                     type(static_cast<enum $n::type>($n::standard::atomic_uchar))                     {}
+      constexpr value(union standard     const value::* const, std::atomic_uint                                                           const& value)   noexcept(noexcept(std::atomic_uint               (instanceof<std::atomic_uint    const&>     ().load())))         : std_atomic_uint                      (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_uint) */),                                                                      type(static_cast<enum $n::type>($n::standard::atomic_uint))                      {}
+      constexpr value(union standard     const value::* const, std::atomic_ullong                                                         const& value)   noexcept(noexcept(std::atomic_ullong             (instanceof<std::atomic_ullong  const&>     ().load())))         : std_atomic_ullong                    (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_ullong) */),                                                                    type(static_cast<enum $n::type>($n::standard::atomic_ullong))                    {}
+      constexpr value(union standard     const value::* const, std::atomic_ulong                                                          const& value)   noexcept(noexcept(std::atomic_ulong              (instanceof<std::atomic_ulong   const&>     ().load())))         : std_atomic_ulong                     (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_ulong) */),                                                                     type(static_cast<enum $n::type>($n::standard::atomic_ulong))                     {}
+      constexpr value(union standard     const value::* const, std::atomic_ushort                                                         const& value)   noexcept(noexcept(std::atomic_ushort             (instanceof<std::atomic_ushort  const&>     ().load())))         : std_atomic_ushort                    (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_ushort) */),                                                                    type(static_cast<enum $n::type>($n::standard::atomic_ushort))                    {}
+      constexpr value(union standard     const value::* const, std::atomic_wchar_t                                                        const& value)   noexcept(noexcept(std::atomic_wchar_t            (instanceof<std::atomic_wchar_t const&>     ().load())))         : std_atomic_wchar_t                   (value.load        ()), metadata(NULL /* --> &typeid(std::atomic_wchar_t) */),                                                                   type(static_cast<enum $n::type>($n::standard::atomic_wchar_t))                   {}
+      constexpr value(union standard     const value::* const, std::atto                                                                  const  value)   noexcept(noexcept(std::atto                      (instanceof<std::atto>                      ())))                : std_atto                             (value),                metadata(NULL /* --> &typeid(std::atto) */),                                                                             type(static_cast<enum $n::type>($n::standard::atto))                             {}
+      constexpr value(union standard     const value::* const, std::bidirectional_iterator_tag                                            const  value)   noexcept(noexcept(std::bidirectional_iterator_tag(instanceof<std::bidirectional_iterator_tag>())))                : std_bidirectional_iterator_tag       (value),                metadata(NULL /* --> &typeid(std::bidirectional_iterator_tag) */),                                                       type(static_cast<enum $n::type>($n::standard::bidirectional_iterator_tag))       {}
+      constexpr value(union standard     const value::* const, std::centi                                                                 const  value)   noexcept(noexcept(std::centi                     (instanceof<std::centi>                     ())))                : std_centi                            (value),                metadata(NULL /* --> &typeid(std::centi) */),                                                                            type(static_cast<enum $n::type>($n::standard::centi))                            {}
+      constexpr value(union standard     const value::* const, std::deca                                                                  const  value)   noexcept(noexcept(std::deca                      (instanceof<std::deca>                      ())))                : std_deca                             (value),                metadata(NULL /* --> &typeid(std::deca) */),                                                                             type(static_cast<enum $n::type>($n::standard::deca))                             {}
+      constexpr value(union standard     const value::* const, std::deci                                                                  const  value)   noexcept(noexcept(std::deci                      (instanceof<std::deci>                      ())))                : std_deci                             (value),                metadata(NULL /* --> &typeid(std::deci) */),                                                                             type(static_cast<enum $n::type>($n::standard::deci))                             {}
+      constexpr value(union standard     const value::* const, std::div_t                                                                 const  value)   noexcept(noexcept(std::div_t                     (instanceof<std::div_t>                     ())))                : std_div_t                            (value),                metadata(NULL /* --> &typeid(std::div_t) */),                                                                            type(static_cast<enum $n::type>($n::standard::div_t))                            {}
+      constexpr value(union standard     const value::* const, std::exa                                                                   const  value)   noexcept(noexcept(std::exa                       (instanceof<std::exa>                       ())))                : std_exa                              (value),                metadata(NULL /* --> &typeid(std::exa) */),                                                                              type(static_cast<enum $n::type>($n::standard::exa))                              {}
+      constexpr value(union standard     const value::* const, std::false_type                                                            const  value)   noexcept(noexcept(std::false_type                (instanceof<std::false_type>                ())))                : std_false_type                       (value),                metadata(NULL /* --> &typeid(std::false_type) */),                                                                       type(static_cast<enum $n::type>($n::standard::false_type))                       {}
+      constexpr value(union standard     const value::* const, std::femto                                                                 const  value)   noexcept(noexcept(std::femto                     (instanceof<std::femto>                     ())))                : std_femto                            (value),                metadata(NULL /* --> &typeid(std::femto) */),                                                                            type(static_cast<enum $n::type>($n::standard::femto))                            {}
+      constexpr value(union standard     const value::* const, std::forward_iterator_tag                                                  const  value)   noexcept(noexcept(std::forward_iterator_tag      (instanceof<std::forward_iterator_tag>      ())))                : std_forward_iterator_tag             (value),                metadata(NULL /* --> &typeid(std::forward_iterator_tag) */),                                                             type(static_cast<enum $n::type>($n::standard::forward_iterator_tag))             {}
+      constexpr value(union standard     const value::* const, std::giga                                                                  const  value)   noexcept(noexcept(std::giga                      (instanceof<std::giga>                      ())))                : std_giga                             (value),                metadata(NULL /* --> &typeid(std::giga) */),                                                                             type(static_cast<enum $n::type>($n::standard::giga))                             {}
+      constexpr value(union standard     const value::* const, std::hecto                                                                 const  value)   noexcept(noexcept(std::hecto                     (instanceof<std::hecto>                     ())))                : std_hecto                            (value),                metadata(NULL /* --> &typeid(std::hecto) */),                                                                            type(static_cast<enum $n::type>($n::standard::hecto))                            {}
+      constexpr value(union standard     const value::* const, std::input_iterator_tag                                                    const  value)   noexcept(noexcept(std::input_iterator_tag        (instanceof<std::input_iterator_tag>        ())))                : std_input_iterator_tag               (value),                metadata(NULL /* --> &typeid(std::input_iterator_tag) */),                                                               type(static_cast<enum $n::type>($n::standard::input_iterator_tag))               {}
+      constexpr value(union standard     const value::* const, std::kilo                                                                  const  value)   noexcept(noexcept(std::kilo                      (instanceof<std::kilo>                      ())))                : std_kilo                             (value),                metadata(NULL /* --> &typeid(std::kilo) */),                                                                             type(static_cast<enum $n::type>($n::standard::kilo))                             {}
+      constexpr value(union standard     const value::* const, std::ldiv_t                                                                const  value)   noexcept(noexcept(std::ldiv_t                    (instanceof<std::ldiv_t>                    ())))                : std_ldiv_t                           (value),                metadata(NULL /* --> &typeid(std::ldiv_t) */),                                                                           type(static_cast<enum $n::type>($n::standard::ldiv_t))                           {}
+      constexpr value(union standard     const value::* const, std::lldiv_t                                                               const  value)   noexcept(noexcept(std::lldiv_t                   (instanceof<std::lldiv_t>                   ())))                : std_lldiv_t                          (value),                metadata(NULL /* --> &typeid(std::lldiv_t) */),                                                                          type(static_cast<enum $n::type>($n::standard::lldiv_t))                          {}
+      constexpr value(union standard     const value::* const, std::max_align_t                                                           const  value)   noexcept(noexcept(std::max_align_t               (instanceof<std::max_align_t>               ())))                : std_max_align_t                      (value),                metadata(NULL /* --> &typeid(std::max_align_t) */),                                                                      type(static_cast<enum $n::type>($n::standard::max_align_t))                      {}
+      constexpr value(union standard     const value::* const, std::mega                                                                  const  value)   noexcept(noexcept(std::mega                      (instanceof<std::mega>                      ())))                : std_mega                             (value),                metadata(NULL /* --> &typeid(std::mega) */),                                                                             type(static_cast<enum $n::type>($n::standard::mega))                             {}
+      constexpr value(union standard     const value::* const, std::memory_order                                                          const  value)   noexcept(noexcept(std::memory_order              (instanceof<std::memory_order>              ())))                : std_memory_order                     (value),                metadata(NULL /* --> &typeid(std::memory_order) */),                                                                     type(static_cast<enum $n::type>($n::standard::memory_order))                     {}
+      constexpr value(union standard     const value::* const, std::micro                                                                 const  value)   noexcept(noexcept(std::micro                     (instanceof<std::micro>                     ())))                : std_micro                            (value),                metadata(NULL /* --> &typeid(std::micro) */),                                                                            type(static_cast<enum $n::type>($n::standard::micro))                            {}
+      constexpr value(union standard     const value::* const, std::milli                                                                 const  value)   noexcept(noexcept(std::milli                     (instanceof<std::milli>                     ())))                : std_milli                            (value),                metadata(NULL /* --> &typeid(std::milli) */),                                                                            type(static_cast<enum $n::type>($n::standard::milli))                            {}
+      constexpr value(union standard     const value::* const, std::nano                                                                  const  value)   noexcept(noexcept(std::nano                      (instanceof<std::nano>                      ())))                : std_nano                             (value),                metadata(NULL /* --> &typeid(std::nano) */),                                                                             type(static_cast<enum $n::type>($n::standard::nano))                             {}
+      constexpr value(union standard     const value::* const, std::new_handler /* --> std::terminate_handler, std::unexpected_handler */ const  value)   noexcept(noexcept(std::new_handler               (instanceof<std::terminate_handler>         ())))                : std_new_terminate_unexpected_handler (value),                metadata(NULL /* --> &typeid(std::new_handler) | &typeid(std::terminate_handler) | &typeid(std::unexpected_handler) */), type(static_cast<enum $n::type>($n::standard::new_terminate_unexpected_handler)) {}
+      constexpr value(union standard     const value::* const, std::nothrow_t                                                             const  value)   noexcept(noexcept(std::nothrow_t                 (instanceof<std::nothrow_t>                 ())))                : std_nothrow_t                        (value),                metadata(NULL /* --> &typeid(std::nothrow_t) */),                                                                        type(static_cast<enum $n::type>($n::standard::nothrow_t))                        {}
+      constexpr value(union standard     const value::* const, std::nullptr_t                                                             const)          noexcept(noexcept(std::nullptr_t                 (nullptr)))                                                      : std_nullptr_t                        (nullptr),              metadata(NULL /* --> &typeid(std::nullptr_t) */),                                                                        type(static_cast<enum $n::type>($n::standard::nullptr_t))                        {}
+      constexpr value(union standard     const value::* const, std::output_iterator_tag                                                   const  value)   noexcept(noexcept(std::output_iterator_tag       (instanceof<std::output_iterator_tag>       ())))                : std_output_iterator_tag              (value),                metadata(NULL /* --> &typeid(std::output_iterator_tag) */),                                                              type(static_cast<enum $n::type>($n::standard::output_iterator_tag))              {}
+      constexpr value(union standard     const value::* const, std::owner_less<void>                                                      const  value)   noexcept(noexcept(std::owner_less<void>          (instanceof<std::owner_less<void> >         ())))                : std_owner_less                       (value),                metadata(NULL /* --> &typeid(std::owner_less<void>) */),                                                                 type(static_cast<enum $n::type>($n::standard::owner_less))                       {}
+      constexpr value(union standard     const value::* const, std::peta                                                                  const  value)   noexcept(noexcept(std::peta                      (instanceof<std::peta>                      ())))                : std_peta                             (value),                metadata(NULL /* --> &typeid(std::peta) */),                                                                             type(static_cast<enum $n::type>($n::standard::peta))                             {}
+      constexpr value(union standard     const value::* const, std::pico                                                                  const  value)   noexcept(noexcept(std::pico                      (instanceof<std::pico>                      ())))                : std_pico                             (value),                metadata(NULL /* --> &typeid(std::pico) */),                                                                             type(static_cast<enum $n::type>($n::standard::pico))                             {}
+      constexpr value(union standard     const value::* const, std::piecewise_construct_t                                                 const  value)   noexcept(noexcept(std::piecewise_construct_t     (instanceof<std::piecewise_construct_t>     ())))                : std_piecewise_construct_t            (value),                metadata(NULL /* --> &typeid(std::piecewise_construct_t) */),                                                            type(static_cast<enum $n::type>($n::standard::piecewise_construct_t))            {}
+      constexpr value(union standard     const value::* const, std::random_access_iterator_tag                                            const  value)   noexcept(noexcept(std::random_access_iterator_tag(instanceof<std::random_access_iterator_tag>())))                : std_random_access_iterator_tag       (value),                metadata(NULL /* --> &typeid(std::random_access_iterator_tag) */),                                                       type(static_cast<enum $n::type>($n::standard::random_access_iterator_tag))       {}
+      constexpr value(union standard     const value::* const, std::tera                                                                  const  value)   noexcept(noexcept(std::tera                      (instanceof<std::tera>                      ())))                : std_tera                             (value),                metadata(NULL /* --> &typeid(std::tera) */),                                                                             type(static_cast<enum $n::type>($n::standard::tera))                             {}
+      constexpr value(union standard     const value::* const, std::true_type                                                             const  value)   noexcept(noexcept(std::true_type                 (instanceof<std::true_type>                 ())))                : std_true_type                        (value),                metadata(NULL /* --> &typeid(std::true_type) */),                                                                        type(static_cast<enum $n::type>($n::standard::true_type))                        {}
+      constexpr value(union standard     const value::* const, std::type_info                                                             const& value)   noexcept                                                                                                          : std_type_info                       (&value),                metadata(NULL /* --> &typeid(std::type_info) */),                                                                        type(static_cast<enum $n::type>($n::standard::type_info))                        {}
+      constexpr value(union standard     const value::* const, std::va_list                                                                      value[]) noexcept                                                                                                          : std_va_list                          (value),                metadata(NULL /* --> &typeid(std::va_list*) */),                                                                         type(static_cast<enum $n::type>($n::standard::va_list))                          {}
+      constexpr value(union standard     const value::* const, std::va_list const                                                                value[]) noexcept                                                                                                          : std_va_list(const_cast<std::va_list*>(value)),               metadata(NULL /* --> &typeid(std::va_list*) */),                                                                         type(static_cast<enum $n::type>($n::standard::va_list))                          {}
+      constexpr value(union standard     const value::* const, std::va_list const volatile*                                                const value)   noexcept                                                                                                          : std_va_list(const_cast<std::va_list*>(value)),               metadata(NULL /* --> &typeid(std::va_list*) */),                                                                         type(static_cast<enum $n::type>($n::standard::va_list))                          {}
+      constexpr value(union standard     const value::* const, std::va_list       volatile*                                                const value)   noexcept                                                                                                          : std_va_list(const_cast<std::va_list*>(value)),               metadata(NULL /* --> &typeid(std::va_list*) */),                                                                         type(static_cast<enum $n::type>($n::standard::va_list))                          {}
+      #ifdef __cpp_aligned_new
+        constexpr value(union standard const value::* const, std::align_val_t const value) noexcept(noexcept(std::align_val_t(instanceof<std::align_val_t>()))) : std_align_val_t(value), metadata(NULL /* --> &typeid(std::align_val_t) */), type(static_cast<enum $n::type>($n::standard::align_val_t)) {}
+      #endif
+      #ifdef __cpp_char8_t
+        constexpr value(union standard const value::* const, std::atomic_char8_t const& value) noexcept(noexcept(std::atomic_char8_t(instanceof<std::atomic_char8_t const&>().load()))) : std_atomic_char8_t(value.load()), metadata(NULL /* --> &typeid(std::atomic_char8_t) */), type(static_cast<enum $n::type>($n::standard::atomic_char8_t)) {}
+      #endif
+      #ifdef __cpp_lib_byte
+        constexpr value(union standard const value::* const, std::byte const value) noexcept(noexcept(std::byte(instanceof<std::byte>()))) : std_byte(value), metadata(NULL /* --> &typeid(std::byte) */), type(static_cast<enum $n::type>($n::standard::byte)) {}
+      #endif
+      #ifdef __cpp_lib_endian
+        constexpr value(union standard const value::* const, std::endian const value) noexcept(noexcept(std::endian(instanceof<std::endian>()))) : std_endian(value), metadata(NULL /* --> &typeid(std::endian) */), type(static_cast<enum $n::type>($n::standard::endian)) {}
+      #endif
+      #ifdef __cpp_lib_ranges
+        constexpr value(union standard const value::* const, std::ranges::dangling      const value) noexcept(noexcept(std::ranges::dangling     (instanceof<std::ranges::dangling>     ()))) : std_dangling     (value), metadata(NULL /* --> &typeid(std::ranges::dangling) */),      type(static_cast<enum $n::type>($n::standard::dangling))      {}
+        constexpr value(union standard const value::* const, std::ranges::subrange_kind const value) noexcept(noexcept(std::ranges::subrange_kind(instanceof<std::ranges::subrange_kind>()))) : std_subrange_kind(value), metadata(NULL /* --> &typeid(std::ranges::subrange_kind) */), type(static_cast<enum $n::type>($n::standard::subrange_kind)) {}
+      #endif
+      #ifdef __cpp_lib_source_location
+        constexpr value(union standard const value::* const, std::source_location const value) noexcept(noexcept(std::source_location(instanceof<std::source_location>()))) : std_source_location(value), metadata(NULL /* --> &typeid(std::source_location) */), type(static_cast<enum $n::type>($n::standard::source_location)) {}
+      #endif
+      #ifdef __cpp_lib_three_way_comparison
+        constexpr value(union standard const value::* const, std::compare_three_way const value) noexcept(noexcept(std::compare_three_way(instanceof<std::compare_three_way>()))) : std_compare_three_way(value), metadata(NULL /* --> &typeid(std::compare_three_way) */), type(static_cast<enum $n::type>($n::standard::compare_three_way)) {}
+        constexpr value(union standard const value::* const, std::partial_ordering  const value) noexcept(noexcept(std::partial_ordering (instanceof<std::partial_ordering> ()))) : std_partial_ordering (value), metadata(NULL /* --> &typeid(std::partial_ordering) */),  type(static_cast<enum $n::type>($n::standard::partial_ordering))  {}
+        constexpr value(union standard const value::* const, std::strong_ordering   const value) noexcept(noexcept(std::strong_ordering  (instanceof<std::strong_ordering>  ()))) : std_strong_ordering  (value), metadata(NULL /* --> &typeid(std::strong_ordering) */),   type(static_cast<enum $n::type>($n::standard::strong_ordering))   {}
+        constexpr value(union standard const value::* const, std::weak_ordering     const value) noexcept(noexcept(std::weak_ordering    (instanceof<std::weak_ordering>    ()))) : std_weak_ordering    (value), metadata(NULL /* --> &typeid(std::weak_ordering) */),     type(static_cast<enum $n::type>($n::standard::weak_ordering))     {}
+        #ifdef __cpp_lib_coroutine
+          constexpr value(union standard const value::* const, std::coroutine_handle<void> const value) noexcept(noexcept(std::coroutine_handle<void>(instanceof<std::coroutine_handle<void> >()))) : std_coroutine_handle      (value), metadata(NULL /* --> &typeid(std::coroutine_handle) */),       type(static_cast<enum $n::type>($n::standard::coroutine_handle))       {}
+          constexpr value(union standard const value::* const, std::noop_coroutine_handle  const value) noexcept(noexcept(std::noop_coroutine_handle (instanceof<std::noop_coroutine_handle>  ()))) : std_noop_coroutine_handle (value), metadata(NULL /* --> &typeid(std::noop_coroutine_handle) */),  type(static_cast<enum $n::type>($n::standard::noop_coroutine_handle))  {}
+          constexpr value(union standard const value::* const, std::noop_coroutine_promise const value) noexcept(noexcept(std::noop_coroutine_promise(instanceof<std::noop_coroutine_promise> ()))) : std_noop_coroutine_promise(value), metadata(NULL /* --> &typeid(std::noop_coroutine_promise) */), type(static_cast<enum $n::type>($n::standard::noop_coroutine_promise)) {}
+          constexpr value(union standard const value::* const, std::suspend_always         const value) noexcept(noexcept(std::suspend_always        (instanceof<std::suspend_always>         ()))) : std_suspend_always        (value), metadata(NULL /* --> &typeid(std::suspend_always) */),         type(static_cast<enum $n::type>($n::standard::suspend_always))         {}
+          constexpr value(union standard const value::* const, std::suspend_never          const value) noexcept(noexcept(std::suspend_never         (instanceof<std::suspend_never>          ()))) : std_suspend_never         (value), metadata(NULL /* --> &typeid(std::suspend_never) */),          type(static_cast<enum $n::type>($n::standard::suspend_never))          {}
+        #endif
+      #endif
+      #ifdef __cpp_unicode_characters
+        constexpr value(union standard const value::* const, std::atomic_char16_t const& value) noexcept(noexcept(std::atomic_char16_t(instanceof<std::atomic_char16_t const&>().load()))) : std_atomic_char16_t(value.load()), metadata(NULL /* --> &typeid(std::atomic_char16_t) */), type(static_cast<enum $n::type>($n::standard::atomic_char16_t)) {}
+        constexpr value(union standard const value::* const, std::atomic_char32_t const& value) noexcept(noexcept(std::atomic_char32_t(instanceof<std::atomic_char32_t const&>().load()))) : std_atomic_char32_t(value.load()), metadata(NULL /* --> &typeid(std::atomic_char32_t) */), type(static_cast<enum $n::type>($n::standard::atomic_char32_t)) {}
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201402L
+        constexpr value(union standard const value::* const, std::bit_and      <void> const value) noexcept(noexcept(std::bit_and      <void>(instanceof<std::bit_and      <void> >()))) : std_bit_and      (value), metadata(NULL /* --> &typeid(std::bit_and      <void>) */), type(static_cast<enum $n::type>($n::standard::bit_and))       {}
+        constexpr value(union standard const value::* const, std::bit_not      <>     const value) noexcept(noexcept(std::bit_not      <>    (instanceof<std::bit_not      <> >    ()))) : std_bit_not      (value), metadata(NULL /* --> &typeid(std::bit_not      <>) */),     type(static_cast<enum $n::type>($n::standard::bit_not))       {}
+        constexpr value(union standard const value::* const, std::bit_or       <void> const value) noexcept(noexcept(std::bit_or       <void>(instanceof<std::bit_or       <void> >()))) : std_bit_or       (value), metadata(NULL /* --> &typeid(std::bit_or       <void>) */), type(static_cast<enum $n::type>($n::standard::bit_or))        {}
+        constexpr value(union standard const value::* const, std::bit_xor      <void> const value) noexcept(noexcept(std::bit_xor      <void>(instanceof<std::bit_xor      <void> >()))) : std_bit_xor      (value), metadata(NULL /* --> &typeid(std::bit_xor      <void>) */), type(static_cast<enum $n::type>($n::standard::bit_xor))       {}
+        constexpr value(union standard const value::* const, std::divides      <void> const value) noexcept(noexcept(std::divides      <void>(instanceof<std::divides      <void> >()))) : std_divides      (value), metadata(NULL /* --> &typeid(std::divides      <void>) */), type(static_cast<enum $n::type>($n::standard::divides))       {}
+        constexpr value(union standard const value::* const, std::equal_to     <void> const value) noexcept(noexcept(std::equal_to     <void>(instanceof<std::equal_to     <void> >()))) : std_equal_to     (value), metadata(NULL /* --> &typeid(std::equal_to     <void>) */), type(static_cast<enum $n::type>($n::standard::equal_to))      {}
+        constexpr value(union standard const value::* const, std::greater      <void> const value) noexcept(noexcept(std::greater      <void>(instanceof<std::greater      <void> >()))) : std_greater      (value), metadata(NULL /* --> &typeid(std::greater      <void>) */), type(static_cast<enum $n::type>($n::standard::greater))       {}
+        constexpr value(union standard const value::* const, std::greater_equal<void> const value) noexcept(noexcept(std::greater_equal<void>(instanceof<std::greater_equal<void> >()))) : std_greater_equal(value), metadata(NULL /* --> &typeid(std::greater_equal<void>) */), type(static_cast<enum $n::type>($n::standard::greater_equal)) {}
+        constexpr value(union standard const value::* const, std::less         <void> const value) noexcept(noexcept(std::less         <void>(instanceof<std::less         <void> >()))) : std_less         (value), metadata(NULL /* --> &typeid(std::less         <void>) */), type(static_cast<enum $n::type>($n::standard::less))          {}
+        constexpr value(union standard const value::* const, std::less_equal   <void> const value) noexcept(noexcept(std::less_equal   <void>(instanceof<std::less_equal   <void> >()))) : std_less_equal   (value), metadata(NULL /* --> &typeid(std::less_equal   <void>) */), type(static_cast<enum $n::type>($n::standard::less_equal))    {}
+        constexpr value(union standard const value::* const, std::logical_and  <void> const value) noexcept(noexcept(std::logical_and  <void>(instanceof<std::logical_and  <void> >()))) : std_logical_and  (value), metadata(NULL /* --> &typeid(std::logical_and  <void>) */), type(static_cast<enum $n::type>($n::standard::logical_and))   {}
+        constexpr value(union standard const value::* const, std::logical_not  <void> const value) noexcept(noexcept(std::logical_not  <void>(instanceof<std::logical_not  <void> >()))) : std_logical_not  (value), metadata(NULL /* --> &typeid(std::logical_not  <void>) */), type(static_cast<enum $n::type>($n::standard::logical_not))   {}
+        constexpr value(union standard const value::* const, std::logical_or   <void> const value) noexcept(noexcept(std::logical_or   <void>(instanceof<std::logical_or   <void> >()))) : std_logical_or   (value), metadata(NULL /* --> &typeid(std::logical_or   <void>) */), type(static_cast<enum $n::type>($n::standard::logical_or))    {}
+        constexpr value(union standard const value::* const, std::minus        <void> const value) noexcept(noexcept(std::minus        <void>(instanceof<std::minus        <void> >()))) : std_minus        (value), metadata(NULL /* --> &typeid(std::minus        <void>) */), type(static_cast<enum $n::type>($n::standard::minus))         {}
+        constexpr value(union standard const value::* const, std::modulus      <void> const value) noexcept(noexcept(std::modulus      <void>(instanceof<std::modulus      <void> >()))) : std_modulus      (value), metadata(NULL /* --> &typeid(std::modulus      <void>) */), type(static_cast<enum $n::type>($n::standard::modulus))       {}
+        constexpr value(union standard const value::* const, std::multiplies   <void> const value) noexcept(noexcept(std::multiplies   <void>(instanceof<std::multiplies   <void> >()))) : std_multiplies   (value), metadata(NULL /* --> &typeid(std::multiplies   <void>) */), type(static_cast<enum $n::type>($n::standard::multiplies))    {}
+        constexpr value(union standard const value::* const, std::negate       <void> const value) noexcept(noexcept(std::negate       <void>(instanceof<std::negate       <void> >()))) : std_negate       (value), metadata(NULL /* --> &typeid(std::negate       <void>) */), type(static_cast<enum $n::type>($n::standard::negate))        {}
+        constexpr value(union standard const value::* const, std::not_equal_to <void> const value) noexcept(noexcept(std::not_equal_to <void>(instanceof<std::not_equal_to <void> >()))) : std_not_equal_to (value), metadata(NULL /* --> &typeid(std::not_equal_to <void>) */), type(static_cast<enum $n::type>($n::standard::not_equal_to))  {}
+        constexpr value(union standard const value::* const, std::plus         <void> const value) noexcept(noexcept(std::plus         <void>(instanceof<std::plus         <void> >()))) : std_plus         (value), metadata(NULL /* --> &typeid(std::plus         <void>) */), type(static_cast<enum $n::type>($n::standard::plus))          {}
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L
+        constexpr value(union standard const value::* const, std::in_place_t const value) noexcept(noexcept(std::in_place_t(instanceof<std::in_place_t>()))) : std_in_place_t(value), metadata(NULL /* --> &typeid(std::in_place_t) */), type(static_cast<enum $n::type>($n::standard::in_place_t)) {}
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L
+        constexpr value(union standard const value::* const, std::contiguous_iterator_tag const value) noexcept(noexcept(std::contiguous_iterator_tag(instanceof<std::contiguous_iterator_tag>()))) : std_contiguous_iterator_tag(value), metadata(NULL /* --> &typeid(std::contiguous_iterator_tag) */), type(static_cast<enum $n::type>($n::standard::contiguous_iterator_tag)) {}
+        constexpr value(union standard const value::* const, std::default_sentinel_t      const value) noexcept(noexcept(std::default_sentinel_t     (instanceof<std::default_sentinel_t>     ()))) : std_default_sentinel_t     (value), metadata(NULL /* --> &typeid(std::default_sentinel_t) */),      type(static_cast<enum $n::type>($n::standard::default_sentinel_t))      {}
+        constexpr value(union standard const value::* const, std::destroying_delete_t     const value) noexcept(noexcept(std::destroying_delete_t    (instanceof<std::destroying_delete_t>    ()))) : std_destroying_delete_t    (value), metadata(NULL /* --> &typeid(std::destroying_delete_t) */),     type(static_cast<enum $n::type>($n::standard::destroying_delete_t))     {}
+        constexpr value(union standard const value::* const, std::identity                const value) noexcept(noexcept(std::identity               (instanceof<std::identity>               ()))) : std_identity               (value), metadata(NULL /* --> &typeid(std::identity) */),                type(static_cast<enum $n::type>($n::standard::identity))                {}
+        constexpr value(union standard const value::* const, std::unreachable_sentinel_t  const value) noexcept(noexcept(std::unreachable_sentinel_t (instanceof<std::unreachable_sentinel_t> ()))) : std_unreachable_sentinel_t (value), metadata(NULL /* --> &typeid(std::unreachable_sentinel_t)  */), type(static_cast<enum $n::type>($n::standard::unreachable_sentinel_t))  {}
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
+        constexpr value(union standard const value::* const, std::pointer_safety const value) noexcept(noexcept(std::pointer_safety(instanceof<std::pointer_safety>()))) : std_pointer_safety(value), metadata(NULL /* --> &typeid(std::pointer_safety) */), type(static_cast<enum $n::type>($n::standard::pointer_safety)) {}
+      #endif
+      #if defined __STDCPP_BFLOAT16_T__
+        constexpr value(union standard const value::* const, std::bfloat16_t const value) noexcept(noexcept(std::bfloat16_t(instanceof<std::bfloat16_t>()))) : std_bfloat16_t(value), metadata(NULL /* --> &typeid(std::bfloat16_t) */), type(static_cast<enum $n::type>($n::standard::bfloat16_t)) {}
+      #endif
+      #if defined __STDCPP_FLOAT16_T__
+        constexpr value(union standard const value::* const, std::float16_t const value) noexcept(noexcept(std::float16_t(instanceof<std::float16_t>()))) : std_float16_t(value), metadata(NULL /* --> &typeid(std::float16_t) */), type(static_cast<enum $n::type>($n::standard::float16_t)) {}
+      #endif
+      #if defined __STDCPP_FLOAT32_T__
+        constexpr value(union standard const value::* const, std::float32_t const value) noexcept(noexcept(std::float32_t(instanceof<std::float32_t>()))) : std_float32_t(value), metadata(NULL /* --> &typeid(std::float32_t) */), type(static_cast<enum $n::type>($n::standard::float32_t)) {}
+      #endif
+      #if defined __STDCPP_FLOAT64_T__
+        constexpr value(union standard const value::* const, std::float64_t const value) noexcept(noexcept(std::float64_t(instanceof<std::float64_t>()))) : std_float64_t(value), metadata(NULL /* --> &typeid(std::float64_t) */), type(static_cast<enum $n::type>($n::standard::float64_t)) {}
+      #endif
+      #if defined __STDCPP_FLOAT128_T__
+        constexpr value(union standard const value::* const, std::float128_t const value) noexcept(noexcept(std::float128_t(instanceof<std::float128_t>()))) : std_float128_t(value), metadata(NULL /* --> &typeid(std::float128_t) */), type(static_cast<enum $n::type>($n::standard::float128_t)) {}
+      #endif
+
+      inline value(union standard const value::* const, std::bad_alloc            const& value) noexcept(noexcept(std::bad_alloc           (instanceof<std::bad_alloc            const&>()))) : std_bad_alloc           {0x00u}, metadata(&typeid(std::bad_alloc)),            type(static_cast<enum $n::type>(standard::bad_alloc))            { (void) ::new (this -> bad_alloc)            std::bad_alloc           (value); }
+      inline value(union standard const value::* const, std::bad_array_new_length const& value) noexcept(noexcept(std::bad_array_new_length(instanceof<std::bad_array_new_length const&>()))) : std_bad_array_new_length{0x00u}, metadata(&typeid(std::bad_array_new_length)), type(static_cast<enum $n::type>(standard::bad_array_new_length)) { (void) ::new (this -> bad_array_new_length) std::bad_array_new_length(value); }
+      inline value(union standard const value::* const, std::bad_exception        const& value) noexcept(noexcept(std::bad_exception       (instanceof<std::bad_exception        const&>()))) : std_bad_exception       {0x00u}, metadata(&typeid(std::bad_exception)),        type(static_cast<enum $n::type>(standard::bad_exception))        { (void) ::new (this -> bad_exception)        std::bad_exception       (value); }
+      inline value(union standard const value::* const, std::bad_function_call    const& value) noexcept(noexcept(std::bad_function_call   (instanceof<std::bad_function_call    const&>()))) : std_bad_function_call   {0x00u}, metadata(&typeid(std::bad_function_call)),    type(static_cast<enum $n::type>(standard::bad_function_call))    { (void) ::new (this -> bad_function_call)    std::bad_function_call   (value); }
+      inline value(union standard const value::* const, std::bad_typeid           const& value) noexcept(noexcept(std::bad_typeid          (instanceof<std::bad_typeid           const&>()))) : std_bad_typeid          {0x00u}, metadata(&typeid(std::bad_typeid)),           type(static_cast<enum $n::type>(standard::bad_typeid))           { (void) ::new (this -> bad_typeid)           std::bad_typeid          (value); }
+      inline value(union standard const value::* const, std::bad_weak_ptr         const& value) noexcept(noexcept(std::bad_weak_ptr        (instanceof<std::bad_weak_ptr         const&>()))) : std_bad_weak_ptr        {0x00u}, metadata(&typeid(std::bad_weak_ptr)),         type(static_cast<enum $n::type>(standard::bad_weak_ptr))         { (void) ::new (this -> bad_weak_ptr)         std::bad_weak_ptr        (value); }
+      inline value(union standard const value::* const, std::exception            const& value) noexcept(noexcept(std::exception           (instanceof<std::exception            const&>()))) : std_exception           {0x00u}, metadata(&typeid(std::exception)),            type(static_cast<enum $n::type>(standard::exception))            { (void) ::new (this -> exception)            std::exception           (value); }
+      inline value(union standard const value::* const, std::exception_ptr        const  value) noexcept(noexcept(std::exception_ptr       (instanceof<std::exception_ptr>              ()))) : std_exception_ptr       {0x00u}, metadata(&typeid(std::exception_ptr)),        type(static_cast<enum $n::type>(standard::exception_ptr))        { (void) ::new (this -> exception_ptr)        std::exception_ptr       (value); }
+      inline value(union standard const value::* const, std::nested_exception     const& value) noexcept(noexcept(std::nested_exception    (instanceof<std::nested_exception     const&>()))) : std_nested_exception    {0x00u}, metadata(&typeid(std::nested_exception)),     type(static_cast<enum $n::type>(standard::nested_exception))     { (void) ::new (this -> nested_exception)     std::nested_exception    (value); }
+
+      template <typename type>                    constexpr value(enum enumeration  const value::* const,       type           const value)                 noexcept : enumeration(static_cast<enum enumeration>(value)),                                                metadata(&typeid(type)),                       type($n::enumeration) {}
+      template <typename type>                    constexpr value(sfinaeptr_t       const value::* const,       type&&)                                     noexcept : null       (sfinaeptr),                                                                           metadata(NULL /* --> &typeid(sfinaeptr_t) */), type($n::null)        { static_assert(0u == arity, "Shorthand can not accept arguments or too few arguments passed to shorthand"); }
+      template <typename type>                    inline    value(unsigned char*    const value::* const,       type&                value)                 noexcept : reference  (const_cast<unsigned char*>(&reinterpret_cast<unsigned char const volatile&>(value))), metadata(&typeid(type)),                       type($n::reference)   {}
+      template <typename typeA, class typeB>      inline    value(sfinaeptr_t $n::* const value::* const,       typeA typeB::* const value)                 noexcept : member     (reinterpret_cast<sfinaeptr_t $n::*>                                        (value)),  metadata(&typeid(typeA typeB::*)),             type($n::member)      {}
+      template <typename type, typename... types> inline    value(void            (*const value::* const)(...), type         (*const value)(types...))      noexcept : function   (reinterpret_cast<void (*)(...) noexcept>                                   (value)),  metadata(&typeid(type (types...))),            type($n::function)    {}
+      template <typename type, typename... types> inline    value(void            (*const value::* const)(...), type         (*const value)(types..., ...)) noexcept : function   (reinterpret_cast<void (*)(...) noexcept>                                   (value)),  metadata(&typeid(type (types..., ...))),       type($n::function)    {}
+
+      template <typename type>
+      inline value(struct undefined const value::* const, type&& value) noexcept(noexcept(typename remove_reference<type>::type(instanceof<type&&>()))) :
+        undefined{{0x00u}, ::new (const_cast<unsigned char*>(this -> undefined.value + (alignof(type) > alignof(unsigned char[sizeof undefined::value / sizeof(unsigned char)]) ? alignof(type) - alignof(unsigned char[sizeof undefined::value / sizeof(unsigned char)]) : 0u))) typename remove_reference<type>::type(forward_cast<type>(value))},
+        metadata (&typeid(type)),
+        type     ($n::undefined)
+      {}
+    };
+
+    template <typename base, typename subbase = typename remove_qualifiers<base>::type, type = (
+      $n::template is_shorthand<subbase>                               ::value ? $n::shorthand   :
+      is_function              <typename remove_pointer<subbase>::type>::value ? $n::function    :
+      is_lvalue_reference      <base>                                  ::value ? $n::reference   :
+      is_decimal               <subbase>                               ::value ? $n::decimal     :
+      is_enum                  <subbase>                               ::value ? $n::enumeration :
+      is_integer               <subbase>                               ::value ? $n::integer     :
+      is_member_pointer        <subbase>                               ::value ? $n::member      :
+      is_pointer               <subbase>                               ::value ? $n::pointer     :
+
+      is_same<subbase, decltype(std::placeholders::_1)>                                           ::value or
+      is_same<subbase, decltype(std::placeholders::_2)>                                           ::value or
+      is_same<subbase, std::allocator_arg_t>                                                      ::value or
+      is_same<subbase, std::atomic_bool>                                                          ::value or
+      is_same<subbase, std::atomic_char>                                                          ::value or
+      is_same<subbase, std::atomic_flag>                                                          ::value or
+      is_same<subbase, std::atomic_int>                                                           ::value or
+      is_same<subbase, std::atomic_llong>                                                         ::value or
+      is_same<subbase, std::atomic_long>                                                          ::value or
+      is_same<subbase, std::atomic_schar>                                                         ::value or
+      is_same<subbase, std::atomic_short>                                                         ::value or
+      is_same<subbase, std::atomic_uchar>                                                         ::value or
+      is_same<subbase, std::atomic_uint>                                                          ::value or
+      is_same<subbase, std::atomic_ullong>                                                        ::value or
+      is_same<subbase, std::atomic_ulong>                                                         ::value or
+      is_same<subbase, std::atomic_ushort>                                                        ::value or
+      is_same<subbase, std::atomic_wchar_t>                                                       ::value or
+      is_same<subbase, std::atto>                                                                 ::value or
+      is_same<subbase, std::bidirectional_iterator_tag>                                           ::value or
+      is_same<subbase, std::centi>                                                                ::value or
+      is_same<subbase, std::deca>                                                                 ::value or
+      is_same<subbase, std::deci>                                                                 ::value or
+      is_same<subbase, std::div_t>                                                                ::value or
+      is_same<subbase, std::exa>                                                                  ::value or
+      is_same<subbase, std::false_type>                                                           ::value or
+      is_same<subbase, std::femto>                                                                ::value or
+      is_same<subbase, std::forward_iterator_tag>                                                 ::value or
+      is_same<subbase, std::giga>                                                                 ::value or
+      is_same<subbase, std::hecto>                                                                ::value or
+      is_same<subbase, std::input_iterator_tag>                                                   ::value or
+      is_same<subbase, std::kilo>                                                                 ::value or
+      is_same<subbase, std::ldiv_t>                                                               ::value or
+      is_same<subbase, std::lldiv_t>                                                              ::value or
+      is_same<subbase, std::max_align_t>                                                          ::value or
+      is_same<subbase, std::mega>                                                                 ::value or
+      is_same<subbase, std::memory_order>                                                         ::value or
+      is_same<subbase, std::micro>                                                                ::value or
+      is_same<subbase, std::milli>                                                                ::value or
+      is_same<subbase, std::nano>                                                                 ::value or
+      is_same<subbase, std::new_handler /* --> std::terminate_handler, std::unexpected_handler */>::value or
+      is_same<subbase, std::nothrow_t>                                                            ::value or
+      is_same<subbase, std::nullptr_t>                                                            ::value or
+      is_same<subbase, std::output_iterator_tag>                                                  ::value or
+      is_same<subbase, std::owner_less<void> >                                                    ::value or
+      is_same<subbase, std::peta>                                                                 ::value or
+      is_same<subbase, std::pico>                                                                 ::value or
+      is_same<subbase, std::piecewise_construct_t>                                                ::value or
+      is_same<subbase, std::random_access_iterator_tag>                                           ::value or
+      is_same<subbase, std::tera>                                                                 ::value or
+      is_same<subbase, std::true_type>                                                            ::value or
+      is_same<subbase, std::type_info>                                                            ::value or
+      #ifdef __cpp_aligned_new
+        is_same<subbase, std::align_val_t>::value or
+      #endif
+      #ifdef __cpp_char8_t
+        is_same<subbase, std::atomic_char8_t>::value or
+      #endif
+      #ifdef __cpp_lib_byte
+        is_same<subbase, std::byte>::value or
+      #endif
+      #ifdef __cpp_lib_endian
+        is_same<subbase, std::endian>::value or
+      #endif
+      #ifdef __cpp_lib_ranges
+        is_same<subbase, std::ranges::dangling>     ::value or
+        is_same<subbase, std::ranges::subrange_kind>::value or
+      #endif
+      #ifdef __cpp_lib_source_location
+        is_same<subbase, std::source_location>::value or
+      #endif
+      #ifdef __cpp_lib_three_way_comparison
+        is_same<subbase, std::compare_three_way>::value or
+        is_same<subbase, std::partial_ordering> ::value or
+        is_same<subbase, std::strong_ordering>  ::value or
+        is_same<subbase, std::weak_ordering>    ::value or
+        #ifdef __cpp_lib_coroutine
+          is_same<subbase, std::coroutine_handle<void> >::value or
+          is_same<subbase, std::noop_coroutine_handle>  ::value or
+          is_same<subbase, std::noop_coroutine_promise> ::value or
+          is_same<subbase, std::suspend_always>         ::value or
+          is_same<subbase, std::suspend_never>          ::value or
+        #endif
+      #endif
+      #ifdef __cpp_unicode_characters
+        is_same<subbase, std::atomic_char16_t>::value or
+        is_same<subbase, std::atomic_char32_t>::value or
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201402L
+        is_same<subbase, std::bit_and      <void> >::value or
+        is_same<subbase, std::bit_not      <> >    ::value or
+        is_same<subbase, std::bit_or       <void> >::value or
+        is_same<subbase, std::bit_xor      <void> >::value or
+        is_same<subbase, std::divides      <void> >::value or
+        is_same<subbase, std::equal_to     <void> >::value or
+        is_same<subbase, std::greater      <void> >::value or
+        is_same<subbase, std::greater_equal<void> >::value or
+        is_same<subbase, std::less         <void> >::value or
+        is_same<subbase, std::less_equal   <void> >::value or
+        is_same<subbase, std::logical_and  <void> >::value or
+        is_same<subbase, std::logical_not  <void> >::value or
+        is_same<subbase, std::logical_or   <void> >::value or
+        is_same<subbase, std::minus        <void> >::value or
+        is_same<subbase, std::modulus      <void> >::value or
+        is_same<subbase, std::multiplies   <void> >::value or
+        is_same<subbase, std::negate       <void> >::value or
+        is_same<subbase, std::not_equal_to <void> >::value or
+        is_same<subbase, std::plus         <void> >::value or
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L
+        is_same<subbase, std::in_place_t>::value or
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L
+        is_same<subbase, std::contiguous_iterator_tag>::value or
+        is_same<subbase, std::default_sentinel_t>     ::value or
+        is_same<subbase, std::destroying_delete_t>    ::value or
+        is_same<subbase, std::identity>               ::value or
+        is_same<subbase, std::unreachable_sentinel_t> ::value or
+      #endif
+      #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
+        is_same<subbase, std::pointer_safety>::value or
+      #endif
+      #if defined __STDCPP_BFLOAT16_T__
+        is_same<subbase, std::bfloat16_t>::value or
+      #endif
+      #if defined __STDCPP_FLOAT16_T__
+        is_same<subbase, std::float16_t>::value or
+      #endif
+      #if defined __STDCPP_FLOAT32_T__
+        is_same<subbase, std::float32_t>::value or
+      #endif
+      #if defined __STDCPP_FLOAT64_T__
+        is_same<subbase, std::float64_t>::value or
+      #endif
+      #if defined __STDCPP_FLOAT128_T__
+        is_same<subbase, std::float128_t>::value or
+      #endif
+      /* --> is_same<subbase, std::va_list [const volatile]*>::value or */
+      (0u == (static_cast<unsigned char>(state) & static_cast<unsigned char>($c)) and (
+        is_same<subbase, std::bad_alloc>           ::value or
+        is_same<subbase, std::bad_array_new_length>::value or
+        is_same<subbase, std::bad_cast>            ::value or
+        is_same<subbase, std::bad_exception>       ::value or
+        is_same<subbase, std::bad_function_call>   ::value or
+        is_same<subbase, std::bad_typeid>          ::value or
+        is_same<subbase, std::bad_weak_ptr>        ::value or
+        is_same<subbase, std::exception>           ::value or
+        is_same<subbase, std::exception_ptr>       ::value or
+        is_same<subbase, std::nested_exception>    ::value
+      )) ? $n::standard :
+
+      (std::is_trivially_destructible<subbase>::value)                    and
+      (is_rvalue_reference<base>::value or not is_reference<base>::value) and
+      (alignof(typename conditional<is_function<subbase>::value or is_void<subbase>::value, subbase*, subbase>::type) <= alignof(unsigned char[sizeof undefined::value / sizeof(unsigned char)])
+        ? sizeof undefined::value >= sizeof(typename conditional<is_function<subbase>::value or is_void<subbase>::value, subbase*, subbase>::type) and 0u == alignof(unsigned char[sizeof undefined::value / sizeof(unsigned char)]) % alignof(typename conditional<is_function<subbase>::value or is_void<subbase>::value, subbase*, subbase>::type)
+        : sizeof undefined::value >= sizeof(typename conditional<is_function<subbase>::value or is_void<subbase>::value, subbase*, subbase>::type) + (alignof(typename conditional<is_function<subbase>::value or is_void<subbase>::value, subbase*, subbase>::type) - alignof(unsigned char[sizeof undefined::value / sizeof(unsigned char)]))
+      ) ? $n::undefined :
+
+      $n::null
+    )> struct valueof;
+
+    template <typename base, typename subbase> struct valueof<base, subbase, decimal>     final { constexpr static long double        const value::* type() noexcept       { return &value::decimal; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, enumeration> final { constexpr static enum enumeration   const value::* type() noexcept       { return &value::enumeration; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, function>    final { constexpr static void             (*const value::* type() noexcept)(...) { return &value::function; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, integer>     final { constexpr static unsigned long long const value::* type() noexcept       { return &value::integer; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, member>      final { constexpr static sfinaeptr_t $n::*  const value::* type() noexcept       { return &value::member; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, null>        final { constexpr static sfinaeptr_t        const value::* type() noexcept       { return &value::null; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, pointer>     final { constexpr static void*              const value::* type() noexcept       { return &value::pointer; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, reference>   final { constexpr static unsigned char*     const value::* type() noexcept       { return &value::reference; } };
+    template <typename base, typename subbase> struct valueof<base, subbase, shorthand>   final { constexpr static $$                       value::* type() noexcept       { return static_cast<$$                   value::*>(NULL); } };
+    template <typename base, typename subbase> struct valueof<base, subbase, standard>    final { constexpr static union standard     const value::* type() noexcept       { return static_cast<union standard const value::*>(NULL); } };
+    template <typename base, typename subbase> struct valueof<base, subbase, undefined>   final { constexpr static struct undefined   const value::* type() noexcept       { return &value::undefined; } };
+
+    /* ... */
+    struct $n::value const value;
+
+  public:
+    template <typename... types>
+    constexpr $n(types&&... arguments) noexcept(noexcept(decltype(instanceof<$n>().value) /* --> struct $n::value */($n::template valueof<typename at<(arity > sizeof...(types) ? 0u : arity), void, types&&...>::type>::type(), at<(arity > sizeof...(types) ? 0u : arity)>::value(sfinaeptr, instanceof<types&&>()...)))) :
+      value(
+        $n::template valueof<typename at<(arity > sizeof...(types) ? 0u : arity), void, types&&...>::type>::type(),
+        at<(arity > sizeof...(types) ? 0u : arity)>::value(sfinaeptr, forward_cast<types>(arguments)...)
+      )
+    {}
+};
+
+template <std::size_t arity, $$ state>
+struct $n<arity, state, false /* --> $$c */, true /* --> $$o */> /* final */ : public $n<arity, state, true, true> {
+  $n(...) = delete;
+  inline ~$n() noexcept {
+    switch (static_cast<unsigned char>(this -> value.type)) {
+      case $n::undefined                     : (void) this -> undefined;                                                                                                              break;
+      case $n::standard::bad_alloc           : reinterpret_cast<std::bad_alloc*>           (const_cast<unsigned char*>(this -> std_bad_alloc))            -> ~bad_alloc           (); break;
+      case $n::standard::bad_array_new_length: reinterpret_cast<std::bad_array_new_length*>(const_cast<unsigned char*>(this -> std_bad_array_new_length)) -> ~bad_array_new_length(); break;
+      case $n::standard::bad_exception       : reinterpret_cast<std::bad_exception*>       (const_cast<unsigned char*>(this -> std_bad_exception))        -> ~bad_exception       (); break;
+      case $n::standard::bad_function_call   : reinterpret_cast<std::bad_function_call*>   (const_cast<unsigned char*>(this -> std_bad_function_call))    -> ~bad_function_call   (); break;
+      case $n::standard::bad_typeid          : reinterpret_cast<std::bad_typeid*>          (const_cast<unsigned char*>(this -> std_bad_typeid))           -> ~bad_typeid          (); break;
+      case $n::standard::bad_weak_ptr        : reinterpret_cast<std::bad_weak_ptr*>        (const_cast<unsigned char*>(this -> std_bad_weak_ptr))         -> ~bad_weak_ptr        (); break;
+      case $n::standard::exception           : reinterpret_cast<std::exception*>           (const_cast<unsigned char*>(this -> std_exception))            -> ~exception           (); break;
+      case $n::standard::exception_ptr       : reinterpret_cast<std::exception_ptr*>       (const_cast<unsigned char*>(this -> std_exception_ptr))        -> ~exception_ptr       (); break;
+      case $n::standard::nested_exception    : reinterpret_cast<std::nested_exception*>    (const_cast<unsigned char*>(this -> std_nested_exception))     -> ~nested_exception    (); break;
+    }
+  }
+};
+  // template <std::size_t indexA, $$ stateA, bool $ca, bool $oa, std::size_t indexB>
+  // constexpr $lambda<$op::add, $n<indexA>, $n<indexB> > operator +($n<indexA> const, $n<indexB> const) noexcept = delete;
+
+/* Constant */
+constexpr static $n<0u, $c> $0 = {};
+constexpr static $n<1u, $c> $1 = {};
+constexpr static $n<2u, $c> $2 = {};
+constexpr static $n<3u, $c> $3 = {};
+constexpr static $n<4u, $c> $4 = {};
+constexpr static $n<5u, $c> $5 = {};
+constexpr static $n<6u, $c> $6 = {};
+constexpr static $n<7u, $c> $7 = {};
+constexpr static $n<8u, $c> $8 = {};
+constexpr static $n<9u, $c> $9 = {};
+
+constexpr static $n<1u, $c> $self = {};
+// --> $add
+// --> $bitwise_and
+// --> $bitwise_or
+// --> $bitwise_xor
+// --> $boolean_and
+// --> $boolean_or
+// --> $complement
+// --> $divide
+// --> $equals
+// --> $equals_greater
+// --> $equals_lesser
+// --> $greater
+// --> $lesser
+// --> $minus
+// --> $modulo
+// --> $multiply
+// --> $negate
+// --> $subtract
+// --> $unequals
+
+/* Main */
+int main(int, char*[]) /* noexcept */ {
+  // typedef $n<1u, $co> sus;
+  typedef $n<2u, $co> bruh;
+  (void) bruh(1);
+  // (void) sus();
+
+  // del shorthand.exe & cls && clang++ -pedantic-errors -std=c++11 -Wall -Werror -Wextra -Wno-dollar-in-identifier-extension -Wno-unused-const-variable shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe
+  // del shorthand.exe & cls && g++ -pedantic-errors -std=c++11 -Wall -Werror -Wextra -Wno-unused-const-variable shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe
+  // del shorthand.exe shorthand.obj & cls && cl /std:c++14 /W4 shorthand.cpp && shorthand.exe & del shorthand.exe shorthand.obj
+  // del shorthand.exe shorthand.obj & cls && icl -std=c++11 -Wall -Werror -w3 -wd2415,4131 shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe shorthand.obj
+  // rm ./shorthand & clear && circle shorthand.cpp --pedantic -std=c++11 -Wall -Werror -Wextra && ./shorthand || rm ./shorthand
+}
