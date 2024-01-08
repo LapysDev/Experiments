@@ -6,7 +6,7 @@
 template <typename T>
 struct nonvector {
   union element {
-    alignas(T) std::byte value[sizeof(T)];
+    alignas(T) std::byte value[sizeof(T)]; // → `T value` itself is viable
     T                   *reference;
   };
 
@@ -56,7 +56,7 @@ struct nonvector {
       std::launder(reinterpret_cast<T*>(std::launder(subiterator) -> value)) -> ~T();
     }
     
-    ::delete[] buffer; // ???
+    ::delete[] buffer;
   }
 
   // …
