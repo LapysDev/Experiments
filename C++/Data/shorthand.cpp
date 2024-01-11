@@ -216,8 +216,8 @@ template <typename base> struct is_volatile<base volatile> final { static bool c
 template <typename base>
 struct is_enum final {
   private:
-    template <typename type> constexpr static bool (&valueof(sfinaeptr_t const, bool const (*const)[+static_cast<type>(static_cast<unsigned long long>(1u))] = NULL) noexcept)[true  + 1u];
-    template <typename>      constexpr static bool (&valueof(...)                                                                                                    noexcept)[false + 1u];
+    template <typename type> constexpr static bool (&valueof(sfinaeptr_t const, bool const (*const)[sizeof static_cast<std::size_t>(+instanceof<type>())] = NULL) noexcept)[true  + 1u];
+    template <typename>      constexpr static bool (&valueof(...)                                                                                                 noexcept)[false + 1u];
 
   public:
     static bool const value =
@@ -821,7 +821,7 @@ struct $shorthand {
       {}
 
       template <std::size_t arityA, std::size_t arityB, $$ state, bool $$c>
-      constexpr value(constant<arityA> const, $$ value::* const, $n<arityB, state, $$c, true> const& shorthand) noexcept(true) :
+      constexpr value(constant<arityA> const, $$ value::* const, $n<arityB, state, $$c, true> const& shorthand) noexcept(noexcept(value(instanceof<value const&>()))) :
         value::value(shorthand.value)
       {}
     };
@@ -868,7 +868,7 @@ struct $n<arity, state, $$c, true /* --> $$o */> : public $n<arity, state, $$c, 
 
   friend struct $shorthand::value;
 
-  protected:
+  private:
     template <typename base, typename subbase = typename remove_qualifiers<base>::type, enum $shorthand::type = (
       is_shorthand       <subbase>                               ::value ? $shorthand::shorthand   :
       is_function        <typename remove_pointer<subbase>::type>::value ? $shorthand::function    :
@@ -1065,7 +1065,17 @@ struct $n<arity, state, $$c, true /* --> $$o */> : public $n<arity, state, $$c, 
 
     // ...
     template <typename base, class = valueof<base> >
-    struct cast;
+    struct cast final {
+      constexpr static base value($shorthand::value const&) noexcept {
+        static_assert(0u == sizeof(base), "Can not convert shorthand");
+        return nocast<base>::value();
+      }
+    };
+
+    // template <> struct cast<void,                void> final { constexpr static sfinaeptr_t value($shorthand::value const&) noexcept { return sfinaeptr; } };
+    // template <> struct cast<void const,          void> final { constexpr static sfinaeptr_t value($shorthand::value const&) noexcept { return sfinaeptr; } };
+    // template <> struct cast<void const volatile, void> final { constexpr static sfinaeptr_t value($shorthand::value const&) noexcept { return sfinaeptr; } };
+    // template <> struct cast<void       volatile, void> final { constexpr static sfinaeptr_t value($shorthand::value const&) noexcept { return sfinaeptr; } };
 
     template <typename base> struct cast<base, valueof<base, decltype(std::placeholders::_1),  $shorthand::standard> > final { constexpr static decltype(std::placeholders::_1)  value($shorthand::value const& value) noexcept { return value.std_placeholders_1; } };
     template <typename base> struct cast<base, valueof<base, decltype(std::placeholders::_2),  $shorthand::standard> > final { constexpr static decltype(std::placeholders::_2)  value($shorthand::value const& value) noexcept { return value.std_placeholders_2; } };
@@ -1221,153 +1231,139 @@ struct $n<arity, state, $$c, true /* --> $$o */> : public $n<arity, state, $$c, 
       template <typename base> struct cast<base, valueof<base, std::float128_t, $shorthand::standard> > final { constexpr static std::float128_t value($shorthand::value const& value) noexcept { return value.std_float128_t; } };
     #endif
 
-    // template <typename base> struct cast<base, valueof<base, std::atto,                        $shorthand::standard> > final { constexpr static std::atto                        value($shorthand::value const& value) noexcept { return value.std_atto; } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_alloc,                   $shorthand::standard> > final { inline    static std::bad_alloc                   value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_alloc            const*>(value.std_bad_alloc);            /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_array_new_length,        $shorthand::standard> > final { inline    static std::bad_array_new_length        value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_array_new_length const*>(value.std_bad_array_new_length); /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_cast,                    $shorthand::standard> > final { inline    static std::bad_cast                    value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_cast             const*>(value.std_bad_cast);             /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_exception,               $shorthand::standard> > final { inline    static std::bad_exception               value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_exception        const*>(value.std_bad_exception);        /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_function_call,           $shorthand::standard> > final { inline    static std::bad_function_call           value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_function_call    const*>(value.std_bad_function_call);    /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_typeid,                  $shorthand::standard> > final { inline    static std::bad_typeid                  value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_typeid           const*>(value.std_bad_typeid);           /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bad_weak_ptr,                $shorthand::standard> > final { inline    static std::bad_weak_ptr                value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::bad_weak_ptr         const*>(value.std_bad_weak_ptr);         /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::bidirectional_iterator_tag,  $shorthand::standard> > final { constexpr static std::bidirectional_iterator_tag  value($shorthand::value const& value) noexcept { return value.std_bidirectional_iterator_tag; } };
-    // template <typename base> struct cast<base, valueof<base, std::centi,                       $shorthand::standard> > final { constexpr static std::centi                       value($shorthand::value const& value) noexcept { return value.std_centi; } };
-    // template <typename base> struct cast<base, valueof<base, std::deca,                        $shorthand::standard> > final { constexpr static std::deca                        value($shorthand::value const& value) noexcept { return value.std_deca; } };
-    // template <typename base> struct cast<base, valueof<base, std::deci,                        $shorthand::standard> > final { constexpr static std::deci                        value($shorthand::value const& value) noexcept { return value.std_deci; } };
-    // template <typename base> struct cast<base, valueof<base, std::div_t,                       $shorthand::standard> > final { constexpr static std::div_t                       value($shorthand::value const& value) noexcept { return value.std_div_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::exa,                         $shorthand::standard> > final { constexpr static std::exa                         value($shorthand::value const& value) noexcept { return value.std_exa; } };
-    // template <typename base> struct cast<base, valueof<base, std::exception,                   $shorthand::standard> > final { inline    static std::exception                   value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::exception     const*>(value.std_exception);     /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::exception_ptr,               $shorthand::standard> > final { inline    static std::exception_ptr               value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::exception_ptr const*>(value.std_exception_ptr); /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::false_type,                  $shorthand::standard> > final { constexpr static std::false_type                  value($shorthand::value const& value) noexcept { return value.std_false_type; } };
-    // template <typename base> struct cast<base, valueof<base, std::femto,                       $shorthand::standard> > final { constexpr static std::femto                       value($shorthand::value const& value) noexcept { return value.std_femto; } };
-    // template <typename base> struct cast<base, valueof<base, std::forward_iterator_tag,        $shorthand::standard> > final { constexpr static std::forward_iterator_tag        value($shorthand::value const& value) noexcept { return value.std_forward_iterator_tag; } };
-    // template <typename base> struct cast<base, valueof<base, std::giga,                        $shorthand::standard> > final { constexpr static std::giga                        value($shorthand::value const& value) noexcept { return value.std_giga; } };
-    // template <typename base> struct cast<base, valueof<base, std::hecto,                       $shorthand::standard> > final { constexpr static std::hecto                       value($shorthand::value const& value) noexcept { return value.std_hecto; } };
-    // template <typename base> struct cast<base, valueof<base, std::input_iterator_tag,          $shorthand::standard> > final { constexpr static std::input_iterator_tag          value($shorthand::value const& value) noexcept { return value.std_input_iterator_tag; } };
-    // template <typename base> struct cast<base, valueof<base, std::kilo,                        $shorthand::standard> > final { constexpr static std::kilo                        value($shorthand::value const& value) noexcept { return value.std_kilo; } };
-    // template <typename base> struct cast<base, valueof<base, std::ldiv_t,                      $shorthand::standard> > final { constexpr static std::ldiv_t                      value($shorthand::value const& value) noexcept { return value.std_ldiv_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::lldiv_t,                     $shorthand::standard> > final { constexpr static std::lldiv_t                     value($shorthand::value const& value) noexcept { return value.std_lldiv_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::max_align_t,                 $shorthand::standard> > final { constexpr static std::max_align_t                 value($shorthand::value const& value) noexcept { return value.std_max_align_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::mega,                        $shorthand::standard> > final { constexpr static std::mega                        value($shorthand::value const& value) noexcept { return value.std_mega; } };
-    // template <typename base> struct cast<base, valueof<base, std::memory_order,                $shorthand::standard> > final { constexpr static std::memory_order                value($shorthand::value const& value) noexcept { return value.std_memory_order; } };
-    // template <typename base> struct cast<base, valueof<base, std::micro,                       $shorthand::standard> > final { constexpr static std::micro                       value($shorthand::value const& value) noexcept { return value.std_micro; } };
-    // template <typename base> struct cast<base, valueof<base, std::milli,                       $shorthand::standard> > final { constexpr static std::milli                       value($shorthand::value const& value) noexcept { return value.std_milli; } };
-    // template <typename base> struct cast<base, valueof<base, std::nano,                        $shorthand::standard> > final { constexpr static std::nano                        value($shorthand::value const& value) noexcept { return value.std_nano; } };
-    // template <typename base> struct cast<base, valueof<base, std::nested_exception,            $shorthand::standard> > final { inline    static std::nested_exception            value($shorthand::value const& value) noexcept { return *reinterpret_cast<std::nested_exception const*>(value.std_nested_exception); /* --> std::launder(...) */ } };
-    // template <typename base> struct cast<base, valueof<base, std::new_handler,                 $shorthand::standard> > final { constexpr static std::new_handler                 value($shorthand::value const& value) noexcept { return value.std_new_terminate_unexpected_handler; } };
-    // template <typename base> struct cast<base, valueof<base, std::nothrow_t,                   $shorthand::standard> > final { constexpr static std::nothrow_t                   value($shorthand::value const& value) noexcept { return value.std_nothrow_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::nullptr_t,                   $shorthand::standard> > final { constexpr static std::nullptr_t                   value($shorthand::value const& value) noexcept { return value.std_nullptr_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::output_iterator_tag,         $shorthand::standard> > final { constexpr static std::output_iterator_tag         value($shorthand::value const& value) noexcept { return value.std_output_iterator_tag; } };
-    // template <typename base> struct cast<base, valueof<base, std::owner_less<void>,            $shorthand::standard> > final { constexpr static std::owner_less<void>            value($shorthand::value const& value) noexcept { return value.std_owner_less; } };
-    // template <typename base> struct cast<base, valueof<base, std::peta,                        $shorthand::standard> > final { constexpr static std::peta                        value($shorthand::value const& value) noexcept { return value.std_peta; } };
-    // template <typename base> struct cast<base, valueof<base, std::pico,                        $shorthand::standard> > final { constexpr static std::pico                        value($shorthand::value const& value) noexcept { return value.std_pico; } };
-    // template <typename base> struct cast<base, valueof<base, std::piecewise_construct_t,       $shorthand::standard> > final { constexpr static std::piecewise_construct_t       value($shorthand::value const& value) noexcept { return value.std_piecewise_construct_t; } };
-    // template <typename base> struct cast<base, valueof<base, std::random_access_iterator_tag,  $shorthand::standard> > final { constexpr static std::random_access_iterator_tag  value($shorthand::value const& value) noexcept { return value.std_random_access_iterator_tag; } };
-    // template <typename base> struct cast<base, valueof<base, std::tera,                        $shorthand::standard> > final { constexpr static std::tera                        value($shorthand::value const& value) noexcept { return value.std_tera; } };
-    // template <typename base> struct cast<base, valueof<base, std::true_type,                   $shorthand::standard> > final { constexpr static std::true_type                   value($shorthand::value const& value) noexcept { return value.std_true_type; } };
-    // template <typename base> struct cast<base, valueof<base, std::type_info,                   $shorthand::standard> > final { constexpr static std::type_info const&            value($shorthand::value const& value) noexcept { return *value.std_type_info; } };
-    // template <typename base> struct cast<base, valueof<base, std::va_list*,                    $shorthand::standard> > final { constexpr static std::va_list*                    value($shorthand::value const& value) noexcept { return value.std_va_list; } };
-    // template <typename base> struct cast<base, valueof<base, std::va_list const*,              $shorthand::standard> > final { constexpr static std::va_list const*              value($shorthand::value const& value) noexcept { return value.std_va_list; } };
-    // template <typename base> struct cast<base, valueof<base, std::va_list const volatile*,     $shorthand::standard> > final { constexpr static std::va_list const volatile*     value($shorthand::value const& value) noexcept { return value.std_va_list; } };
-    // template <typename base> struct cast<base, valueof<base, std::va_list       volatile*,     $shorthand::standard> > final { constexpr static std::va_list       volatile*     value($shorthand::value const& value) noexcept { return value.std_va_list; } };
-    // #ifdef __cpp_aligned_new
-    //   template <typename base> struct cast<base, valueof<base, std::align_val_t, $shorthand::standard> > final { constexpr static std::align_val_t value($shorthand::value const& value) noexcept { return value.std_align_val_t; } };
-    // #endif
-    // #ifdef __cpp_char8_t
-    //   template <typename base> struct cast<base, valueof<base, std::atomic_char8_t, $shorthand::standard> > final { constexpr static std::atomic_char8_t value($shorthand::value const& value) noexcept { return {reinterpret_cast<std::atomic_char8_t const*>(value.std_atomic_char8_t) /* --> std::launder(...) */ -> load()}; } };
-    // #endif
-    // #ifdef __cpp_lib_byte
-    //   template <typename base> struct cast<base, valueof<base, std::byte, $shorthand::standard> > final { constexpr static std::byte value($shorthand::value const& value) noexcept { return value.std_byte; } };
-    // #endif
-    // #ifdef __cpp_lib_endian
-    //   template <typename base> struct cast<base, valueof<base, std::endian, $shorthand::standard> > final { constexpr static std::endian value($shorthand::value const& value) noexcept { return value.std_endian; } };
-    // #endif
-    // #ifdef __cpp_lib_ranges
-    //   template <typename base> struct cast<base, valueof<base, std::ranges::dangling,      $shorthand::standard> > final { constexpr static std::ranges::dangling      value($shorthand::value const& value) noexcept { return value.std_dangling; } };
-    //   template <typename base> struct cast<base, valueof<base, std::ranges::subrange_kind, $shorthand::standard> > final { constexpr static std::ranges::subrange_kind value($shorthand::value const& value) noexcept { return value.std_subrange_kind; } };
-    // #endif
-    // #ifdef __cpp_lib_source_location
-    //   template <typename base> struct cast<base, valueof<base, std::source_location, $shorthand::standard> > final { constexpr static std::source_location value($shorthand::value const& value) noexcept { return value.std_source_location; } };
-    // #endif
-    // #ifdef __cpp_lib_three_way_comparison
-    //   template <typename base> struct cast<base, valueof<base, std::compare_three_way, $shorthand::standard> > final { constexpr static std::compare_three_way value($shorthand::value const& value) noexcept { return value.std_compare_three_way; } };
-    //   template <typename base> struct cast<base, valueof<base, std::partial_ordering,  $shorthand::standard> > final { constexpr static std::partial_ordering  value($shorthand::value const& value) noexcept { return value.std_partial_ordering; } };
-    //   template <typename base> struct cast<base, valueof<base, std::strong_ordering,   $shorthand::standard> > final { constexpr static std::strong_ordering   value($shorthand::value const& value) noexcept { return value.std_strong_ordering; } };
-    //   template <typename base> struct cast<base, valueof<base, std::weak_ordering,     $shorthand::standard> > final { constexpr static std::weak_ordering     value($shorthand::value const& value) noexcept { return value.std_weak_ordering; } };
-    //   #ifdef __cpp_lib_coroutine
-    //     template <typename base> struct cast<base, valueof<base, std::coroutine_handle<void>, $shorthand::standard> > final { constexpr static std::coroutine_handle<void> value($shorthand::value const& value) noexcept { return value.std_coroutine_handle; } };
-    //     template <typename base> struct cast<base, valueof<base, std::noop_coroutine_handle,  $shorthand::standard> > final { constexpr static std::noop_coroutine_handle  value($shorthand::value const& value) noexcept { return value.std_noop_coroutine_handle; } };
-    //     template <typename base> struct cast<base, valueof<base, std::noop_coroutine_promise, $shorthand::standard> > final { constexpr static std::noop_coroutine_promise value($shorthand::value const& value) noexcept { return value.std_noop_coroutine_promise; } };
-    //     template <typename base> struct cast<base, valueof<base, std::suspend_always,         $shorthand::standard> > final { constexpr static std::suspend_always         value($shorthand::value const& value) noexcept { return value.std_suspend_always; } };
-    //     template <typename base> struct cast<base, valueof<base, std::suspend_never,          $shorthand::standard> > final { constexpr static std::suspend_never          value($shorthand::value const& value) noexcept { return value.std_suspend_never; } };
-    //   #endif
-    // #endif
-    // #ifdef __cpp_unicode_characters
-    //   template <typename base> struct cast<base, valueof<base, std::atomic_char16_t, $shorthand::standard> > final { constexpr static std::atomic_char16_t value($shorthand::value const& value) noexcept { return {reinterpret_cast<std::atomic_char16_t const*>(value.std_atomic_char16_t) /* --> std::launder(...) */ -> load()}; } };
-    //   template <typename base> struct cast<base, valueof<base, std::atomic_char32_t, $shorthand::standard> > final { constexpr static std::atomic_char32_t value($shorthand::value const& value) noexcept { return {reinterpret_cast<std::atomic_char32_t const*>(value.std_atomic_char32_t) /* --> std::launder(...) */ -> load()}; } };
-    // #endif
-    // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201402L
-    //   template <typename base> struct cast<base, valueof<base, std::bit_and      <void>, $shorthand::standard> > final { constexpr static std::bit_and      <void> value($shorthand::value const& value) noexcept { return value.std_bit_and; } };
-    //   template <typename base> struct cast<base, valueof<base, std::bit_not      <>,     $shorthand::standard> > final { constexpr static std::bit_not      <>     value($shorthand::value const& value) noexcept { return value.std_bit_not; } };
-    //   template <typename base> struct cast<base, valueof<base, std::bit_or       <void>, $shorthand::standard> > final { constexpr static std::bit_or       <void> value($shorthand::value const& value) noexcept { return value.std_bit_or; } };
-    //   template <typename base> struct cast<base, valueof<base, std::bit_xor      <void>, $shorthand::standard> > final { constexpr static std::bit_xor      <void> value($shorthand::value const& value) noexcept { return value.std_bit_xor; } };
-    //   template <typename base> struct cast<base, valueof<base, std::divides      <void>, $shorthand::standard> > final { constexpr static std::divides      <void> value($shorthand::value const& value) noexcept { return value.std_divides; } };
-    //   template <typename base> struct cast<base, valueof<base, std::equal_to     <void>, $shorthand::standard> > final { constexpr static std::equal_to     <void> value($shorthand::value const& value) noexcept { return value.std_equal_to; } };
-    //   template <typename base> struct cast<base, valueof<base, std::greater      <void>, $shorthand::standard> > final { constexpr static std::greater      <void> value($shorthand::value const& value) noexcept { return value.std_greater; } };
-    //   template <typename base> struct cast<base, valueof<base, std::greater_equal<void>, $shorthand::standard> > final { constexpr static std::greater_equal<void> value($shorthand::value const& value) noexcept { return value.std_greater_equal; } };
-    //   template <typename base> struct cast<base, valueof<base, std::less         <void>, $shorthand::standard> > final { constexpr static std::less         <void> value($shorthand::value const& value) noexcept { return value.std_less; } };
-    //   template <typename base> struct cast<base, valueof<base, std::less_equal   <void>, $shorthand::standard> > final { constexpr static std::less_equal   <void> value($shorthand::value const& value) noexcept { return value.std_less_equal; } };
-    //   template <typename base> struct cast<base, valueof<base, std::logical_and  <void>, $shorthand::standard> > final { constexpr static std::logical_and  <void> value($shorthand::value const& value) noexcept { return value.std_logical_and; } };
-    //   template <typename base> struct cast<base, valueof<base, std::logical_not  <void>, $shorthand::standard> > final { constexpr static std::logical_not  <void> value($shorthand::value const& value) noexcept { return value.std_logical_not; } };
-    //   template <typename base> struct cast<base, valueof<base, std::logical_or   <void>, $shorthand::standard> > final { constexpr static std::logical_or   <void> value($shorthand::value const& value) noexcept { return value.std_logical_or; } };
-    //   template <typename base> struct cast<base, valueof<base, std::minus        <void>, $shorthand::standard> > final { constexpr static std::minus        <void> value($shorthand::value const& value) noexcept { return value.std_minus; } };
-    //   template <typename base> struct cast<base, valueof<base, std::modulus      <void>, $shorthand::standard> > final { constexpr static std::modulus      <void> value($shorthand::value const& value) noexcept { return value.std_modulus; } };
-    //   template <typename base> struct cast<base, valueof<base, std::multiplies   <void>, $shorthand::standard> > final { constexpr static std::multiplies   <void> value($shorthand::value const& value) noexcept { return value.std_multiplies; } };
-    //   template <typename base> struct cast<base, valueof<base, std::negate       <void>, $shorthand::standard> > final { constexpr static std::negate       <void> value($shorthand::value const& value) noexcept { return value.std_negate; } };
-    //   template <typename base> struct cast<base, valueof<base, std::not_equal_to <void>, $shorthand::standard> > final { constexpr static std::not_equal_to <void> value($shorthand::value const& value) noexcept { return value.std_not_equal_to; } };
-    //   template <typename base> struct cast<base, valueof<base, std::plus         <void>, $shorthand::standard> > final { constexpr static std::plus         <void> value($shorthand::value const& value) noexcept { return value.std_plus; } };
-    // #endif
-    // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L
-    //   template <typename base> struct cast<base, valueof<base, std::in_place_t, $shorthand::standard> > final { constexpr static std::in_place_t value($shorthand::value const& value) noexcept { return value.std_in_place_t; } };
-    // #endif
-    // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L
-    //   template <typename base> struct cast<base, valueof<base, std::contiguous_iterator_tag, $shorthand::standard> > final { constexpr static std::contiguous_iterator_tag value($shorthand::value const& value) noexcept { return value.std_contiguous_iterator_tag; } };
-    //   template <typename base> struct cast<base, valueof<base, std::default_sentinel_t,      $shorthand::standard> > final { constexpr static std::default_sentinel_t      value($shorthand::value const& value) noexcept { return value.std_default_sentinel_t; } };
-    //   template <typename base> struct cast<base, valueof<base, std::destroying_delete_t,     $shorthand::standard> > final { constexpr static std::destroying_delete_t     value($shorthand::value const& value) noexcept { return value.std_destroying_delete_t; } };
-    //   template <typename base> struct cast<base, valueof<base, std::identity,                $shorthand::standard> > final { constexpr static std::identity                value($shorthand::value const& value) noexcept { return value.std_identity; } };
-    //   template <typename base> struct cast<base, valueof<base, std::unreachable_sentinel_t,  $shorthand::standard> > final { constexpr static std::unreachable_sentinel_t  value($shorthand::value const& value) noexcept { return value.std_unreachable_sentinel_t; } };
-    // #endif
-    // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
-    //   template <typename base> struct cast<base, valueof<base, std::pointer_safety, $shorthand::standard> > final { constexpr static std::pointer_safety value($shorthand::value const& value) noexcept { return value.std_pointer_safety; } };
-    // #endif
-    // #if defined __STDCPP_BFLOAT16_T__
-    //   template <typename base> struct cast<base, valueof<base, std::bfloat16_t, $shorthand::standard> > final { constexpr static std::bfloat16_t value($shorthand::value const& value) noexcept { return value.std_bfloat16_t; } };
-    // #endif
-    // #if defined __STDCPP_FLOAT16_T__
-    //   template <typename base> struct cast<base, valueof<base, std::float16_t, $shorthand::standard> > final { constexpr static std::float16_t value($shorthand::value const& value) noexcept { return value.std_float16_t; } };
-    // #endif
-    // #if defined __STDCPP_FLOAT32_T__
-    //   template <typename base> struct cast<base, valueof<base, std::float32_t, $shorthand::standard> > final { constexpr static std::float32_t value($shorthand::value const& value) noexcept { return value.std_float32_t; } };
-    // #endif
-    // #if defined __STDCPP_FLOAT64_T__
-    //   template <typename base> struct cast<base, valueof<base, std::float64_t, $shorthand::standard> > final { constexpr static std::float64_t value($shorthand::value const& value) noexcept { return value.std_float64_t; } };
-    // #endif
-    // #if defined __STDCPP_FLOAT128_T__
-    //   template <typename base> struct cast<base, valueof<base, std::float128_t, $shorthand::standard> > final { constexpr static std::float128_t value($shorthand::value const& value) noexcept { return value.std_float128_t; } };
-    // #endif
+    template <typename base, typename subbase>
+    struct cast<base, valueof<base, subbase, $shorthand::decimal> > final {
+      constexpr static base value($shorthand::value const& value) noexcept {
+        return
+          value.type == $shorthand::decimal     ? static_cast<base>(value.decimal)     :
+          value.type == $shorthand::enumeration ? static_cast<base>(value.enumeration) :
+          value.type == $shorthand::integer     ? static_cast<base>(value.integer)     :
+          #ifdef __STDCPP_BFLOAT16_T__
+            value.type == $shorthand::standard::bfloat16_t ? static_cast<base>(value.std_bfloat16_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT16_T__
+            value.type == $shorthand::standard::float16_t ? static_cast<base>(value.std_float16_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT32_T__
+            value.type == $shorthand::standard::float32_t ? static_cast<base>(value.std_float32_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT64_T__
+            value.type == $shorthand::standard::float64_t ? static_cast<base>(value.std_float64_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT128_T__
+            value.type == $shorthand::standard::float128_t ? static_cast<base>(value.std_float128_t) :
+          #endif
+        nocast<base>::value()
+        ;
+      }
+    };
 
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::decimal> >     final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::decimal ? static_cast<base>(value.decimal) : value.type == $shorthand::enumeration ? static_cast<base>(value.enumeration) : value.type == $shorthand::integer ? static_cast<base>(value.integer) : nocast<base>::value(); } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::enumeration> > final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::enumeration ? static_cast<base>(value.enumeration) : value.type == $shorthand::integer ? static_cast<base>(value.integer) : nocast<base>::value(); } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::function> >    final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::function ? (base) *value.function : nocast<base>::value(); } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::integer> >     final { constexpr static base value($shorthand::value const& value) noexcept { return static_cast<base>(value.integer); } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::member> >      final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == static_cast<$shorthand::type>($shorthand::standard::nullptr_t) ? static_cast<base>(NULL) : (base) value.member; } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::null> >        final { constexpr static base value($shorthand::value const& value) noexcept { static_assert(0u == sizeof(base), "Can not convert shorthand"); return (base) value.null; } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::pointer> >     final { constexpr static base value($shorthand::value const& value) noexcept { return static_cast<base>(value.type == static_cast<$shorthand::type>($shorthand::standard::nullptr_t) ? NULL : value.pointer); } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::reference> >   final { constexpr static base value($shorthand::value const& value) noexcept { return *reinterpret_cast<typename remove_reference<base>::type*>(value.reference); /* --> std::launder(...) */ } };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::shorthand> >   final { constexpr static base value($shorthand::value const&) noexcept = delete; /* TODO (Lapys) */ };
-    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::undefined> >   final { constexpr static base value($shorthand::value const& value) noexcept { return *static_cast<base*>(value.undefined.address); } };
+    template <typename base, typename subbase>
+    struct cast<base, valueof<base, subbase, $shorthand::enumeration> > final {
+      constexpr static base value($shorthand::value const& value) noexcept {
+        return
+          value.type == $shorthand::enumeration                               ? static_cast<base>(value.enumeration)      :
+          value.type == $shorthand::integer                                   ? static_cast<base>(value.integer)          :
+          value.type == static_cast<type>($shorthand::standard::memory_order) ? static_cast<base>(value.std_memory_order) :
+          #ifdef __cpp_aligned_new
+            value.type == static_cast<type>($shorthand::standard::align_val_t) ? static_cast<base>(value.std_align_val_t) :
+          #endif
+          #ifdef __cpp_lib_byte
+            value.type == static_cast<type>($shorthand::standard::byte) ? static_cast<base>(value.std_byte) :
+          #endif
+          #ifdef __cpp_lib_endian
+            value.type == static_cast<type>($shorthand::standard::endian) ? static_cast<base>(value.std_endian) :
+          #endif
+          #ifdef __cpp_lib_ranges
+            value.type == static_cast<type>($shorthand::standard::subrange_kind) ? static_cast<base>(value.std_subrange_kind) :
+          #endif
+          #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
+            value.type == static_cast<type>($shorthand::standard::pointer_safety) ? static_cast<base>(value.std_pointer_safety) :
+          #endif
+        nocast<base>::value();
+      }
+    };
+
+    template <typename base, typename subbase>
+    struct cast<base, valueof<base, subbase, $shorthand::integer> > final {
+      constexpr static base value($shorthand::value const& value) noexcept {
+        return
+          value.type == $shorthand::decimal                                     ? static_cast<base>(value.decimal)                                                                                       :
+          value.type == $shorthand::enumeration                                 ? static_cast<base>(value.enumeration)                                                                                   :
+          value.type == $shorthand::integer                                     ? static_cast<base>(value.integer)                                                                                       :
+          value.type == static_cast<type>($shorthand::standard::atomic_bool)    ? static_cast<base>(*reinterpret_cast<std::atomic_bool    const*>(value.std_atomic_bool))    /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_char)    ? static_cast<base>(*reinterpret_cast<std::atomic_char    const*>(value.std_atomic_char))    /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_int)     ? static_cast<base>(*reinterpret_cast<std::atomic_int     const*>(value.std_atomic_int))     /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_llong)   ? static_cast<base>(*reinterpret_cast<std::atomic_llong   const*>(value.std_atomic_llong))   /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_long)    ? static_cast<base>(*reinterpret_cast<std::atomic_long    const*>(value.std_atomic_long))    /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_schar)   ? static_cast<base>(*reinterpret_cast<std::atomic_schar   const*>(value.std_atomic_schar))   /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_short)   ? static_cast<base>(*reinterpret_cast<std::atomic_short   const*>(value.std_atomic_short))   /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_uchar)   ? static_cast<base>(*reinterpret_cast<std::atomic_uchar   const*>(value.std_atomic_uchar))   /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_uint)    ? static_cast<base>(*reinterpret_cast<std::atomic_uint    const*>(value.std_atomic_uint))    /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_ullong)  ? static_cast<base>(*reinterpret_cast<std::atomic_ullong  const*>(value.std_atomic_ullong))  /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_ulong)   ? static_cast<base>(*reinterpret_cast<std::atomic_ulong   const*>(value.std_atomic_ulong))   /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_ushort)  ? static_cast<base>(*reinterpret_cast<std::atomic_ushort  const*>(value.std_atomic_ushort))  /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::atomic_wchar_t) ? static_cast<base>(*reinterpret_cast<std::atomic_wchar_t const*>(value.std_atomic_wchar_t)) /* --> std::launder(...) */ :
+          value.type == static_cast<type>($shorthand::standard::memory_order)   ? static_cast<base>(value.std_memory_order)                                                                              :
+          #ifdef __cpp_aligned_new
+            value.type == static_cast<type>($shorthand::standard::align_val_t) ? static_cast<base>(value.std_align_val_t) :
+          #endif
+          #ifdef __cpp_char8_t
+            value.type == static_cast<type>($shorthand::standard::atomic_char8_t) ? static_cast<base>(*reinterpret_cast<std::atomic_char8_t const*>(value.std_atomic_char8_t)) /* --> std::launder(...) */ :
+          #endif
+          #ifdef __cpp_lib_byte
+            value.type == static_cast<type>($shorthand::standard::byte) ? static_cast<base>(value.std_byte) :
+          #endif
+          #ifdef __cpp_lib_endian
+            value.type == static_cast<type>($shorthand::standard::endian) ? static_cast<base>(value.std_endian) :
+          #endif
+          #ifdef __cpp_lib_ranges
+            value.type == static_cast<type>($shorthand::standard::subrange_kind) ? static_cast<base>(value.std_subrange_kind) :
+          #endif
+          #ifdef __cpp_unicode_characters
+            value.type == static_cast<type>($shorthand::standard::atomic_char16_t) ? static_cast<base>(*reinterpret_cast<std::atomic_char16_t const*>(value.std_atomic_char16_t)) /* --> std::launder(...) */ :
+            value.type == static_cast<type>($shorthand::standard::atomic_char32_t) ? static_cast<base>(*reinterpret_cast<std::atomic_char32_t const*>(value.std_atomic_char32_t)) /* --> std::launder(...) */ :
+          #endif
+          #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
+            value.type == static_cast<type>($shorthand::standard::pointer_safety) ? static_cast<base>(value.std_pointer_safety) :
+          #endif
+          #ifdef __STDCPP_BFLOAT16_T__
+            value.type == $shorthand::standard::bfloat16_t ? static_cast<base>(value.std_bfloat16_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT16_T__
+            value.type == $shorthand::standard::float16_t ? static_cast<base>(value.std_float16_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT32_T__
+            value.type == $shorthand::standard::float32_t ? static_cast<base>(value.std_float32_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT64_T__
+            value.type == $shorthand::standard::float64_t ? static_cast<base>(value.std_float64_t) :
+          #endif
+          #ifdef __STDCPP_FLOAT128_T__
+            value.type == $shorthand::standard::float128_t ? static_cast<base>(value.std_float128_t) :
+          #endif
+        nocast<base>::value();
+      }
+    };
+
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::function> >  final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::function ? (base) *value.function : value.type == static_cast<type>($shorthand::standard::new_terminate_unexpected_handler) and is_same<subbase, typename remove_qualifiers<std::new_handler>::type>::value ? static_cast<base>(value.std_new_terminate_unexpected_handler) : nocast<base>::value(); } };
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::member> >    final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::member ? (base) value.member : value.type == static_cast<type>($shorthand::standard::nullptr_t) ? static_cast<base>(NULL) : nocast<base>::value(); } };
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::null> >      final { constexpr static base value($shorthand::value const& value) noexcept { static_assert(0u == sizeof(base), "Can not convert shorthand"); return value.type == $shorthand::null ? (base) value.null : nocast<base>::value(); } };
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::pointer> >   final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::pointer ? static_cast<base>(value.pointer) : value.type == static_cast<type>($shorthand::standard::nullptr_t) ? static_cast<base>(NULL) : value.type == static_cast<type>($shorthand::standard::va_list) and is_same<typename remove_cv<typename remove_pointer<subbase>::type>::type, std::va_list>::value ? (base) value.std_va_list : nocast<base>::value(); } };
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::reference> > final { constexpr static base value($shorthand::value const& value) noexcept { return value.type == $shorthand::reference ? *reinterpret_cast<typename remove_reference<base>::type*>(value.reference) /* --> std::launder(...) */ : nocast<base>::value(); } };
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::shorthand> > final { constexpr static base value($shorthand::value const&)       noexcept { static_assert(0u == sizeof(base), "Can not convert shorthand"); return nocast<base>::value(); } };
+    template <typename base, typename subbase> struct cast<base, valueof<base, subbase, $shorthand::undefined> > final { constexpr static base value($shorthand::value const& value) noexcept { return NULL != value.metadata and value.metadata -> hash_code() == typeid(base).hash_code() and value.type == $shorthand::undefined ? *static_cast<base*>(value.undefined.address) : nocast<base>::value(); } };
+
+    template <typename base, $$ substate, bool $$$c>                       struct cast<base, valueof<base, $n<0u,       substate, $$$c, true>, $shorthand::shorthand> > final { constexpr static base value($shorthand::value const&)       noexcept { return {}; } };
+    template <typename base, std::size_t subarity, $$ substate, bool $$$c> struct cast<base, valueof<base, $n<subarity, substate, $$$c, true>, $shorthand::shorthand> > final { constexpr static base value($shorthand::value const& value) noexcept { return {value}; } };
 
     /* ... */
     $shorthand::value const value;
+
+    // ...
+    constexpr $n($shorthand::value const& value) noexcept(noexcept($shorthand::value(instanceof<$shorthand::value const&>()))) :
+      value(value)
+    {}
 
   public:
     template <typename... types>
@@ -1378,7 +1374,8 @@ struct $n<arity, state, $$c, true /* --> $$o */> : public $n<arity, state, $$c, 
     // ...
     template <typename type>
     constexpr operator type() const volatile noexcept {
-      return cast<type>::value(const_cast<$shorthand::value const&>(this -> value));
+      static_assert(arity, "Can not convert shorthand");
+      return static_cast<type>(cast<type>::value(const_cast<$shorthand::value const&>(this -> value)));
     }
 };
 
@@ -1466,26 +1463,9 @@ constexpr static $n<1u, $c> $self = $1;
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  // typedef $n<1u, $o>  A;
-  // typedef $n<0u, $co> B;
-  typedef $n<1u, $co> C;
-
-  // (void) B();
-  // (void) A(B());
-  // (void) A(1);
-  // (void) A(1.0f);
-  // (void) A($op::add);
-  // (void) A(static_cast<void*>(NULL));
-  // (void) A(nullptr);
-  constexpr float number  = static_cast<float>(C(2.5f));
-  constexpr void *pointer = static_cast<void*>(C(nullptr));
-
-  std::printf("[]: %f" "\r\n", static_cast<double>(number));
-  std::printf("[]: %p" "\r\n", pointer);
-
   // del shorthand.exe & cls && clang++ -pedantic-errors -std=c++11 -Wall -Werror -Wextra -Wno-dollar-in-identifier-extension -Wno-inaccessible-base -Wno-unused-const-variable shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe
   // del shorthand.exe & cls && g++ -pedantic-errors -std=c++11 -Wall -Werror -Wextra -Wno-ignored-attributes -Wno-inaccessible-base -Wno-unused-const-variable shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe
   // del shorthand.exe shorthand.obj & cls && cl /std:c++14 /W4 /wd4584 shorthand.cpp && shorthand.exe & del shorthand.exe shorthand.obj
-  // del shorthand.exe shorthand.obj & cls && icl -std=c++11 -Wall -Werror -w3 -wd2415,4131 shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe shorthand.obj
+  // del shorthand.exe shorthand.obj & cls && icl -std=c++11 -Wall -Werror -w3 -wd2415,3280,4131 shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe shorthand.obj
   // rm ./shorthand & clear && circle shorthand.cpp --pedantic -std=c++11 -Wall -Werror -Wextra && ./shorthand || rm ./shorthand
 }
