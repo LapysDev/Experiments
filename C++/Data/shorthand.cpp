@@ -319,6 +319,10 @@ template <
 > struct $n;
 
 // ...
+template <typename>
+struct $object;
+
+// ... --- TODO (Lapys)
 struct $shorthand {
   template <$op::$$, class, class, class>
   friend struct $lambda;
@@ -327,8 +331,23 @@ struct $shorthand {
     template <std::size_t, typename>
     struct cast;
 
-    template <std::size_t arity, typename base, typename... bases> struct cast<arity, base (bases...)      noexcept> { static std::size_t const adicity = sizeof...(bases); constexpr static base value(bases... arguments)      noexcept { return static_cast<base>($n<arity, $c>{}.operator ()(static_cast<bases>(arguments)...)); } };
-    template <std::size_t arity, typename base, typename... bases> struct cast<arity, base (bases..., ...) noexcept> { static std::size_t const adicity = sizeof...(bases); constexpr static base value(bases... arguments, ...) noexcept { return static_cast<base>($n<arity, $c>{}.operator ()(static_cast<bases>(arguments)...)); } };
+    template <std::size_t arity, typename base, typename... bases>
+    struct cast<arity, base (bases...) noexcept> {
+      static std::size_t const adicity = sizeof...(bases);
+
+      constexpr static base value(bases... arguments) noexcept {
+        return static_cast<base>($n<arity, $c>{}.operator ()(static_cast<bases>(arguments)...));
+      }
+    };
+
+    template <std::size_t arity, typename base, typename... bases>
+    struct cast<arity, base (bases..., ...) noexcept> {
+      static std::size_t const adicity = sizeof...(bases);
+
+      constexpr static base value(bases... arguments, ...) noexcept {
+        return static_cast<base>($n<arity, $c>{}.operator ()(static_cast<bases>(arguments)...));
+      }
+    };
 
     #ifdef __cpp_noexcept_function_type
       template <std::size_t arity, typename base, typename... bases> struct cast<arity, base (bases...)>      : public cast<arity, base (bases...)      noexcept> {};
@@ -833,6 +852,11 @@ struct $shorthand {
       static bool const value = false;
     };
 
+    template <class base>
+    struct is_shorthand<base, $object<base> > final {
+      static bool const value = true;
+    };
+
     template <class base, $op::$$ operation, class... shorthands>
     struct is_shorthand<base, $lambda<operation, shorthands...> > final {
       static bool const value = true;
@@ -989,8 +1013,8 @@ struct $shorthand {
       );
     };
 
-    template <std::size_t arity, $$ state, bool $$c>
-    struct is<$o, $n<arity, state, $$c, true> > final {
+    template <typename base>
+    struct is<$o, $object<base> > final {
       static bool const value = true;
     };
 
@@ -1002,6 +1026,11 @@ struct $shorthand {
     template <$op::$$ operation, class shorthand, class... shorthands>
     struct is<$o, $lambda<operation, shorthand, shorthands...> > final {
       static bool const value = is<$o, shorthand>::value or is<$o, $lambda<operation, shorthands...> >::value;
+    };
+
+    template <std::size_t arity, $$ state, bool $$c>
+    struct is<$o, $n<arity, state, $$c, true> > final {
+      static bool const value = true;
     };
 
   private:
@@ -1051,7 +1080,7 @@ struct $n : public $shorthand {
 
   template <typename type, typename... types>
   constexpr typename conditional<(arity > 1u and arity <= sizeof...(types) + 1u), typename at<arity - 1u, type&&, types&&...>::type>::type operator ()(type&&, types&&... arguments) const volatile noexcept {
-    return $n<arity - 1u>{}.operator ()(forward_cast<types>(arguments)...);
+    return $n<arity - 1u, $c>{}.operator ()(forward_cast<types>(arguments)...);
   }
 
   // ...
@@ -1642,14 +1671,51 @@ template <class shorthandA, class shorthandB>
 struct $lambda<$op::add, shorthandA, shorthandB> final {
   private: $shorthand::members<shorthandA, shorthandB> operands;
   public:
-    constexpr $lambda(shorthandA const& operandA, shorthandB const& operandB) noexcept(noexcept($shorthand::members<shorthandA, shorthandB>(operandA, operandB))) : operands(operandA, operandB) {}
+    constexpr $lambda()                                                       noexcept(noexcept($shorthand::members<shorthandA, shorthandB>(shorthandA(), shorthandB()))) : operands(shorthandA(), shorthandB()) {}
+    constexpr $lambda(shorthandA const& operandA, shorthandB const& operandB) noexcept(noexcept($shorthand::members<shorthandA, shorthandB>(operandA, operandB)))         : operands(operandA,     operandB)     {}
+
+    template <typename... types> constexpr decltype(instanceof<shorthandA>().operator ()(instanceof<types&&>()...) + instanceof<shorthandB>().operator ()(instanceof<types&&>()...)) operator ()(types&&... arguments) const noexcept(noexcept(instanceof<shorthandA>().operator ()(instanceof<types&&>()...) + instanceof<shorthandB>().operator ()(instanceof<types&&>()...))) { return this -> operands.template at<0u>().operator ()(forward_cast<types>(arguments)...) + this -> operands.template at<1u>().operator ()(forward_cast<types>(arguments)...); }
 };
+  template <typename type, $op::$$ operation, class... shorthands>
+  constexpr $lambda<$op::add, $lambda<operation, shorthands...>, typename conditional<
+    not $shorthand::template is_shorthand<type>::value,
+    $object<typename remove_rvalue_reference<type>::type>,
+    typename remove_qualifiers<type>::type
+  >::type> operator +($lambda<operation, shorthands...> const& shorthand, type&& value) noexcept { return {shorthand, forward_cast<type>(value)}; }
 
-  template <typename type, $op::$$ operation, class... shorthands> constexpr $lambda<$op::add, $lambda<operation, shorthands...>, typename conditional<not $shorthand::template is_shorthand<type>::value, typename conditional<$shorthand::template is<$c, type>::value, $n<1u, $co>, $n<1u, $o> >::type, typename remove_qualifiers<type>::type>::type> operator +($lambda<operation, shorthands...> const& shorthand, type&& value) noexcept { return {shorthand, forward_cast<type>(value)}; }
-  template <typename type, $op::$$ operation, class... shorthands> constexpr $lambda<$op::add, typename conditional<not $shorthand::template is_shorthand<type>::value, typename conditional<$shorthand::template is<$c, type>::value, $n<1u, $co>, $n<1u, $o> >::type>::type, $lambda<operation, shorthands...> >                                        operator +(type&& value, $lambda<operation, shorthands...> const& shorthand) noexcept { return {forward_cast<type>(value), shorthand}; }
+  template <typename type, $op::$$ operation, class... shorthands>
+  constexpr $lambda<$op::add, typename conditional<
+    not $shorthand::template is_shorthand<type>::value,
+    $object<typename remove_rvalue_reference<type>::type>
+  >::type, $lambda<operation, shorthands...> > operator +(type&& value, $lambda<operation, shorthands...> const& shorthand) noexcept { return {forward_cast<type>(value), shorthand}; }
 
-  template <typename type, std::size_t index, $$ state, bool... states> constexpr $lambda<$op::add, $n<index, state, states...>, typename conditional<not $shorthand::template is_shorthand<type>::value, typename conditional<$shorthand::template is<$c, type>::value, $n<1u, $co>, $n<1u, $o> >::type, typename remove_qualifiers<type>::type>::type> operator +($n<index, state, states...> const& shorthand, type&& value) noexcept { return {shorthand, forward_cast<type>(value)}; }
-  template <typename type, std::size_t index, $$ state, bool... states> constexpr $lambda<$op::add, typename conditional<not $shorthand::template is_shorthand<type>::value, typename conditional<$shorthand::template is<$c, type>::value, $n<1u, $co>, $n<1u, $o> >::type>::type, $n<index, state, states...> >                                        operator +(type&& value, $n<index, state, states...> const& shorthand) noexcept { return {forward_cast<type>(value), shorthand}; }
+  template <typename type, std::size_t index, $$ state, bool... states>
+  constexpr $lambda<$op::add, $n<index, state, states...>, typename conditional<
+    not $shorthand::template is_shorthand<type>::value,
+    $object<typename remove_rvalue_reference<type>::type>,
+    typename remove_qualifiers<type>::type
+  >::type> operator +($n<index, state, states...> const& shorthand, type&& value)       noexcept { return {shorthand, forward_cast<type>(value)}; }
+
+  template <typename type, std::size_t index, $$ state, bool... states>
+  constexpr $lambda<$op::add, typename conditional<
+    not $shorthand::template is_shorthand<type>::value,
+    $object<typename remove_rvalue_reference<type>::type>
+  >::type, $n<index, state, states...> > operator +(type&& value, $n<index, state, states...> const& shorthand)       noexcept { return {forward_cast<type>(value), shorthand}; }
+
+// ...
+template <typename base>
+struct $object final : public conditional<$shorthand::template is<$c, base>::value, $n<1u, $co>, $n<1u, $o> >::type {
+  template <typename type>
+  constexpr $object(type&& object) noexcept(noexcept(typename conditional<$shorthand::template is<$c, base>::value, $n<1u, $co>, $n<1u, $o> >::type(instanceof<type&&>()))) :
+    conditional<$shorthand::template is<$c, base>::value, $n<1u, $co>, $n<1u, $o> >::type::$n(forward_cast<type>(object))
+  {}
+
+  // ...
+  template <typename... types>
+  constexpr base operator ()(types&&...) const noexcept(noexcept(static_cast<base>(instanceof<$object const&>()))) {
+    return static_cast<base>(*this);
+  }
+};
 
 /* Constant */
 constexpr static $n<0u, $c> $0 = {};
@@ -1686,11 +1752,6 @@ constexpr static $n<1u, $c>                                 $self = $1;
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  constexpr decltype($add) add      = {$add};
-  constexpr auto           more_add = add + $3;
-
-  (void) add;
-  (void) more_add;
   // del shorthand.exe & cls && clang++ -pedantic-errors -std=c++11 -Wall -Werror -Wextra -Wno-dollar-in-identifier-extension -Wno-inaccessible-base -Wno-unused-const-variable shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe
   // del shorthand.exe & cls && g++ -pedantic-errors -std=c++11 -Wall -Werror -Wextra -Wno-ignored-attributes -Wno-inaccessible-base -Wno-unused-const-variable shorthand.cpp -o shorthand.exe && shorthand.exe & del shorthand.exe
   // del shorthand.exe shorthand.obj & cls && cl /std:c++14 /W4 /wd4584 shorthand.cpp && shorthand.exe & del shorthand.exe shorthand.obj
