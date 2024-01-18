@@ -1169,21 +1169,21 @@ struct $shorthand {
     #endif
 
     // ... ->> Enumeration for tagging trivial non-class type elidable objects
-    enum type : unsigned char {
-      null = 0x00u,                                                // ->> Flag for invalid object
-      function,                                                    // ->> Flag for elidable function pointers
-      number,                                                      // ->> Flag for elidable booleans, characters, floating-point and integer numbers
-      pointer,                                                     // ->> Flag for elidable object pointers
-      shorthand,                                                   // ->> Flag for shorthands such as `$lambda`, `$n`, or `$object`
-      undefined,                                                   // ->> Flag for unidentifiable objects that align and can be stored within `$n::value`
-      extended  = 1u << ((CHAR_BIT * sizeof(unsigned char)) - 2u), // ->> Extensible flag for other possible enumerator tags
-      reference = 1u << ((CHAR_BIT * sizeof(unsigned char)) - 1u)  // ->>   See `$shorthand::reference::type`
+    enum type : std::size_t {
+      null = 0x00u,                                              // ->> Flag for invalid object
+      function,                                                  // ->> Flag for elidable function pointers
+      number,                                                    // ->> Flag for elidable booleans, characters, floating-point and integer numbers
+      pointer,                                                   // ->> Flag for elidable object pointers
+      shorthand,                                                 // ->> Flag for shorthands such as `$lambda`, `$n`, or `$object`
+      undefined,                                                 // ->> Flag for elidable type-ambiguous objects that align and can be stored within `$n::value`
+      extended  = 1u << ((CHAR_BIT * sizeof(std::size_t)) - 2u), // ->> Extensible flag for other possible enumerator tags
+      reference = 1u << ((CHAR_BIT * sizeof(std::size_t)) - 1u)  // ->>   See `$shorthand::reference::type`
     };
 
     // ... ->> Container for referable `$shorthand::value` object
     struct reference final {
       enum type : unsigned char {
-        undefined = 0x00u, // ->> Flag for unidentifiable objects that are referenced
+        undefined = 0x00u, // ->> Flag for elidable type-ambiguous objects that are referenced
         boolean,
         character_char,
         character_char16_t,
@@ -1238,182 +1238,19 @@ struct $shorthand {
       };
 
       // ...
-      constexpr reference(char                            const volatile& value) noexcept : character_char                      (addressof(value)) {}
-      constexpr reference(double                          const volatile& value) noexcept : decimal_double                      (addressof(value)) {}
-      constexpr reference(float                           const volatile& value) noexcept : decimal_float                       (addressof(value)) {}
-      constexpr reference(int                             const volatile& value) noexcept : integer_int                         (addressof(value)) {}
-      constexpr reference(long                            const volatile& value) noexcept : integer_long                        (addressof(value)) {}
-      constexpr reference(long double                     const volatile& value) noexcept : decimal_long_double                 (addressof(value)) {}
-      constexpr reference(long long                       const volatile& value) noexcept : integer_long_long                   (addressof(value)) {}
-      constexpr reference(short                           const volatile& value) noexcept : integer_short                       (addressof(value)) {}
-      constexpr reference(signed char                     const volatile& value) noexcept : integer_signed_char                 (addressof(value)) {}
-      constexpr reference(unsigned char                   const volatile& value) noexcept : integer_unsigned_char               (addressof(value)) {}
-      constexpr reference(unsigned int                    const volatile& value) noexcept : integer_unsigned_int                (addressof(value)) {}
-      constexpr reference(unsigned long                   const volatile& value) noexcept : integer_unsigned_long               (addressof(value)) {}
-      constexpr reference(unsigned long long              const volatile& value) noexcept : integer_unsigned_long_long          (addressof(value)) {}
-      constexpr reference(unsigned short                  const volatile& value) noexcept : integer_unsigned_short              (addressof(value)) {}
-      constexpr reference(wchar_t                         const volatile& value) noexcept : character_wchar_t                   (addressof(value)) {}
-      constexpr reference(std::allocator_arg_t            const volatile& value) noexcept : std_allocator_arg_t                 (addressof(value)) {}
-      constexpr reference(std::atomic_bool                const volatile& value) noexcept : std_atomic_bool                     (addressof(value)) {}
-      constexpr reference(std::atomic_flag                const volatile& value) noexcept : std_atomic_flag                     (addressof(value)) {}
-      constexpr reference(std::atomic_char                const volatile& value) noexcept : std_atomic_char                     (addressof(value)) {}
-      constexpr reference(std::atomic_int                 const volatile& value) noexcept : std_atomic_int                      (addressof(value)) {}
-      constexpr reference(std::atomic_llong               const volatile& value) noexcept : std_atomic_llong                    (addressof(value)) {}
-      constexpr reference(std::atomic_long                const volatile& value) noexcept : std_atomic_long                     (addressof(value)) {}
-      constexpr reference(std::atomic_schar               const volatile& value) noexcept : std_atomic_schar                    (addressof(value)) {}
-      constexpr reference(std::atomic_short               const volatile& value) noexcept : std_atomic_short                    (addressof(value)) {}
-      constexpr reference(std::atomic_uchar               const volatile& value) noexcept : std_atomic_uchar                    (addressof(value)) {}
-      constexpr reference(std::atomic_uint                const volatile& value) noexcept : std_atomic_uint                     (addressof(value)) {}
-      constexpr reference(std::atomic_ullong              const volatile& value) noexcept : std_atomic_ullong                   (addressof(value)) {}
-      constexpr reference(std::atomic_ulong               const volatile& value) noexcept : std_atomic_ulong                    (addressof(value)) {}
-      constexpr reference(std::atomic_ushort              const volatile& value) noexcept : std_atomic_ushort                   (addressof(value)) {}
-      constexpr reference(std::atomic_wchar_t             const volatile& value) noexcept : std_atomic_wchar_t                  (addressof(value)) {}
-      constexpr reference(std::atto                       const volatile& value) noexcept : std_atto                            (addressof(value)) {}
-      constexpr reference(std::bad_alloc                  const volatile& value) noexcept : std_bad_alloc                       (addressof(value)) {}
-      constexpr reference(std::bad_array_new_length       const volatile& value) noexcept : std_bad_array_new_length            (addressof(value)) {}
-      constexpr reference(std::bad_cast                   const volatile& value) noexcept : std_bad_cast                        (addressof(value)) {}
-      constexpr reference(std::bad_exception              const volatile& value) noexcept : std_bad_exception                   (addressof(value)) {}
-      constexpr reference(std::bad_function_call          const volatile& value) noexcept : std_bad_function_call               (addressof(value)) {}
-      constexpr reference(std::bad_typeid                 const volatile& value) noexcept : std_bad_typeid                      (addressof(value)) {}
-      constexpr reference(std::bad_weak_ptr               const volatile& value) noexcept : std_bad_weak_ptr                    (addressof(value)) {}
-      constexpr reference(std::bidirectional_iterator_tag const volatile& value) noexcept : std_bidirectional_iterator_tag      (addressof(value)) {}
-      constexpr reference(std::centi                      const volatile& value) noexcept : std_centi                           (addressof(value)) {}
-      constexpr reference(std::deca                       const volatile& value) noexcept : std_deca                            (addressof(value)) {}
-      constexpr reference(std::deci                       const volatile& value) noexcept : std_deci                            (addressof(value)) {}
-      constexpr reference(std::div_t                      const volatile& value) noexcept : std_div_t                           (addressof(value)) {}
-      constexpr reference(std::exa                        const volatile& value) noexcept : std_exa                             (addressof(value)) {}
-      constexpr reference(std::exception                  const volatile& value) noexcept : std_exception                       (addressof(value)) {}
-      constexpr reference(std::exception_ptr              const volatile& value) noexcept : std_exception_ptr                   (addressof(value)) {}
-      constexpr reference(std::false_type                 const volatile& value) noexcept : std_false_type                      (addressof(value)) {}
-      constexpr reference(std::femto                      const volatile& value) noexcept : std_femto                           (addressof(value)) {}
-      constexpr reference(std::forward_iterator_tag       const volatile& value) noexcept : std_forward_iterator_tag            (addressof(value)) {}
-      constexpr reference(std::giga                       const volatile& value) noexcept : std_giga                            (addressof(value)) {}
-      constexpr reference(std::hecto                      const volatile& value) noexcept : std_hecto                           (addressof(value)) {}
-      constexpr reference(std::input_iterator_tag         const volatile& value) noexcept : std_input_iterator_tag              (addressof(value)) {}
-      constexpr reference(std::kilo                       const volatile& value) noexcept : std_kilo                            (addressof(value)) {}
-      constexpr reference(std::ldiv_t                     const volatile& value) noexcept : std_ldiv_t                          (addressof(value)) {}
-      constexpr reference(std::lldiv_t                    const volatile& value) noexcept : std_lldiv_t                         (addressof(value)) {}
-      constexpr reference(std::max_align_t                const volatile& value) noexcept : std_max_align_t                     (addressof(value)) {}
-      constexpr reference(std::mega                       const volatile& value) noexcept : std_mega                            (addressof(value)) {}
-      constexpr reference(std::memory_order               const volatile& value) noexcept : std_memory_order                    (addressof(value)) {}
-      constexpr reference(std::micro                      const volatile& value) noexcept : std_micro                           (addressof(value)) {}
-      constexpr reference(std::milli                      const volatile& value) noexcept : std_milli                           (addressof(value)) {}
-      constexpr reference(std::nano                       const volatile& value) noexcept : std_nano                            (addressof(value)) {}
-      constexpr reference(std::nested_exception           const volatile& value) noexcept : std_nested_exception                (addressof(value)) {}
-      constexpr reference(std::new_handler                const volatile& value) noexcept : std_new_terminate_unexpected_handler(addressof(value)) {}
-      constexpr reference(std::nothrow_t                  const volatile& value) noexcept : std_nothrow_t                       (addressof(value)) {}
-      constexpr reference(std::nullptr_t                  const volatile& value) noexcept : std_nullptr_t                       (addressof(value)) {}
-      constexpr reference(std::output_iterator_tag        const volatile& value) noexcept : std_output_iterator_tag             (addressof(value)) {}
-      constexpr reference(std::owner_less<void>           const volatile& value) noexcept : std_owner_less                      (addressof(value)) {}
-      constexpr reference(std::peta                       const volatile& value) noexcept : std_peta                            (addressof(value)) {}
-      constexpr reference(std::pico                       const volatile& value) noexcept : std_pico                            (addressof(value)) {}
-      constexpr reference(std::piecewise_construct_t      const volatile& value) noexcept : std_piecewise_construct_t           (addressof(value)) {}
-      constexpr reference(decltype(std::placeholders::_1) const volatile& value) noexcept : std_placeholders_1                  (addressof(value)) {}
-      constexpr reference(std::random_access_iterator_tag const volatile& value) noexcept : std_random_access_iterator_tag      (addressof(value)) {}
-      constexpr reference(std::tera                       const volatile& value) noexcept : std_tera                            (addressof(value)) {}
-      constexpr reference(std::true_type                  const volatile& value) noexcept : std_true_type                       (addressof(value)) {}
-      // std::type_info const           **const std_type_info;
-      // std::va_list                   **const std_va_list;
-      // #ifdef __cpp_aligned_new // --> 201606L
-      //   std::align_val_t const *std_align_val_t;
-      // #endif
-      // #ifdef __cpp_char8_t // --> 201811L
-      //   std::atomic_char8_t const *std_atomic_char8_t;
-      // #endif
-      // #ifdef __cpp_lib_byte // --> 201603L
-      //   std::byte const *std_byte;
-      // #endif
-      // #ifdef __cpp_lib_endian // --> 201907L
-      //   std::endian const *std_endian;
-      // #endif
-      // #ifdef __cpp_lib_ranges // --> 201911L
-      //   std::ranges::dangling      const *std_dangling;
-      //   std::ranges::subrange_kind const *std_subrange_kind;
-      // #endif
-      // #ifdef __cpp_lib_source_location // --> 201907L
-      //   std::source_location const *std_source_location;
-      // #endif
-      // #ifdef __cpp_lib_spanstream // --> 202106L
-      //   std::ispanstream  const *std_ispanstream;
-      //   std::ospanstream  const *std_ospanstream;
-      //   std::spanbuf      const *std_spanbuf;
-      //   std::spanstream   const *std_spanstream;
-      //   std::wispanstream const *std_wispanstream;
-      //   std::wospanstream const *std_wospanstream;
-      //   std::wspanbuf     const *std_wspanbuf;
-      //   std::wspanstream  const *std_wspanstream;
-      // #endif
-      // #ifdef __cpp_lib_three_way_comparison // --> 201907L
-      //   std::compare_three_way const *std_compare_three_way;
-      //   std::partial_ordering  const *std_partial_ordering;
-      //   std::strong_ordering   const *std_strong_ordering;
-      //   std::weak_ordering     const *std_weak_ordering;
-      //   #ifdef __cpp_lib_coroutine // --> 201902L
-      //     std::coroutine_handle<void> const *std_coroutine_handle;
-      //     std::noop_coroutine_handle  const *std_noop_coroutine_handle;
-      //     std::noop_coroutine_promise const *std_noop_coroutine_promise;
-      //     std::suspend_always         const *std_suspend_always;
-      //     std::suspend_never          const *std_suspend_never;
-      //   #endif
-      // #endif
-      // #ifdef __cpp_unicode_characters // --> 200704L
-      //   std::atomic_char16_t const *std_atomic_char16_t;
-      //   std::atomic_char32_t const *std_atomic_char32_t;
-      // #endif
-      // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201402L
-      //   std::bit_and      <void> const *std_bit_and;
-      //   std::bit_not      <>     const *std_bit_not;
-      //   std::bit_or       <void> const *std_bit_or;
-      //   std::bit_xor      <void> const *std_bit_xor;
-      //   std::divides      <void> const *std_divides;
-      //   std::equal_to     <void> const *std_equal_to;
-      //   std::greater      <void> const *std_greater;
-      //   std::greater_equal<void> const *std_greater_equal;
-      //   std::less         <void> const *std_less;
-      //   std::less_equal   <void> const *std_less_equal;
-      //   std::logical_and  <void> const *std_logical_and;
-      //   std::logical_not  <void> const *std_logical_not;
-      //   std::logical_or   <void> const *std_logical_or;
-      //   std::minus        <void> const *std_minus;
-      //   std::modulus      <void> const *std_modulus;
-      //   std::multiplies   <void> const *std_multiplies;
-      //   std::negate       <void> const *std_negate;
-      //   std::not_equal_to <void> const *std_not_equal_to;
-      //   std::plus         <void> const *std_plus;
-      // #endif
-      // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L
-      //   std::in_place_t const *std_in_place_t;
-      // #endif
-      // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 202002L
-      //   std::contiguous_iterator_tag const *std_contiguous_iterator_tag;
-      //   std::default_sentinel_t      const *std_default_sentinel_t;
-      //   std::destroying_delete_t     const *std_destroying_delete_t;
-      //   std::format_args             const *std_format_args;
-      //   std::identity                const *std_identity;
-      //   std::unreachable_sentinel_t  const *std_unreachable_sentinel_t;
-      //   std::wformat_args            const *std_wformat_args;
-      // #endif
-      // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) > 202002L
-      //   std::unexpect_t const *std_unexpect_t;
-      // #endif
-      // #if (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) <= 202002L // --> < 2023..L
-      //   std::pointer_safety const *std_pointer_safety;
-      // #endif
-      // #if defined __STDCPP_BFLOAT16_T__
-      //   std::bfloat16_t const *std_bfloat16_t;
-      // #endif
-      // #if defined __STDCPP_FLOAT16_T__
-      //   std::float16_t const *std_float16_t;
-      // #endif
-      // #if defined __STDCPP_FLOAT32_T__
-      //   std::float32_t const *std_float32_t;
-      // #endif
-      // #if defined __STDCPP_FLOAT64_T__
-      //   std::float64_t const *std_float64_t;
-      // #endif
-      // #if defined __STDCPP_FLOAT128_T__
-      //   std::float128_t const *std_float128_t;
-      // #endif
+      constexpr reference(bool               const volatile& object) noexcept : boolean                   (const_cast<bool*>              (&object)) {}
+      constexpr reference(char               const volatile& object) noexcept : character_char            (const_cast<char*>              (&object)) {}
+      constexpr reference(double             const volatile& object) noexcept : decimal_double            (const_cast<double*>            (&object)) {}
+      constexpr reference(float              const volatile& object) noexcept : decimal_float             (const_cast<float*>             (&object)) {}
+      constexpr reference(unsigned long long const volatile& object) noexcept : integer_unsigned_long_long(const_cast<unsigned long long*>(&object)) {}
+      constexpr reference(wchar_t            const volatile& object) noexcept : character_wchar_t         (const_cast<wchar_t*>           (&object)) {}
+      #ifdef __cpp_unicode_characters // --> 200704L
+        constexpr reference(char16_t const volatile& object) noexcept : character_char16_t(const_cast<char16_t*>(&object)) {}
+        constexpr reference(char32_t const volatile& object) noexcept : character_char32_t(const_cast<char32_t*>(&object)) {}
+      #endif
+      #ifdef __cpp_char8_t // --> 201811L
+        constexpr reference(char8_t const volatile& object) noexcept : character_char8_t(const_cast<char8_t*>(&object)) {}
+      #endif
     };
 
     // ... ->> Container for non-reconstructible `$shorthand::value` object
