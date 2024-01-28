@@ -31,7 +31,7 @@ enum NSWindowStyleMask {
 };
 
 /* Main ->> Minimal Pure C code to create a window in Cocoa (Adapted to work on ARM64) --- CITE (Lapys) -> https://developer.apple.com/documentation/objectivec/objective-c_runtime?language=objc, https://stackoverflow.com/a/59596600/834108 */
-int main(int count, char* arguments[]) /* noexcept */ {
+int main(int, char*[]) /* noexcept */ {
   // id application = [NSApplication sharedApplication];
   id     const application = ::msg_class(::objc_getClass("NSApplication"), ::sel_getUid("sharedApplication"));
   CGRect const bounds      = {{0, 0}, {600, 500}};
