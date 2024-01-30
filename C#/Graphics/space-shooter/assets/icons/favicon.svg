@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="us-ascii" standalone="no"?>
-<svg height="512" version="1.1" viewBox="0 0 136 136" width="512" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
-  <rect height="10" style="fill: #ACACAC" transform="matrix(-0.9, -0.45, 0, 1, 0, 0)" width="40" x="-115" y="5.0" />
-  <rect height="15" style="fill: #CFCFCF" transform="matrix(-0.9, -0.45, 0, 1, 0, 0)" width="50" x="-125" y="22.5"/>
-  <rect height="10" style="fill: #F0F0F0" transform="matrix(+0.9, -0.45, 0, 1, 0, 0)" width="40" x="35"   y="72.5"/>
-  <rect height="15" style="fill: #FFFFFF" transform="matrix(+0.9, -0.45, 0, 1, 0, 0)" width="50" x="25"   y="90.0"/>
-
-  <path d="M 67.733335 0 A 67.733337 67.733337 0 0 0 0 67.733335 A 67.733337 67.733337 0 0 0 67.733335 135.46667 A 67.733337 67.733337 0 0 0 135.46667 67.733335 A 67.733337 67.733337 0 0 0 67.733335 0 z M 67.733335 2.6458334 A 65.087502 65.087502 0 0 1 132.82084 67.733335 A 65.087502 65.087502 0 0 1 67.733335 132.82084 A 65.087502 65.087502 0 0 1 2.6458334 67.733335 A 65.087502 65.087502 0 0 1 67.733335 2.6458334 z " style="fill: #FFFFFF"/>
-</svg>
