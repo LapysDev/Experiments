@@ -94,13 +94,13 @@ constexpr unsigned char       volatile* bless(unsigned char       volatile* addr
       return address; // ->> WARN (Lapys) -> Spoofed
     }
   #endif
-#elif CPP_FRONTEND == CPP_GNUC_FRONTEND
+#elif defined __GNUC__
   template <typename type>
   inline type* bless(type* address) noexcept {
     __asm__("" : "+r"(address));
     return address;
   }
-#elif defined _ReadWriteBarrier and (CPP_COMPILER == CPP_MSVC_COMPILER and CPP_VENDOR == CPP_MICROSOFT_WINDOWS_VENDOR)
+#elif defined _ReadWriteBarrier and defined _MSC_VER
   template <typename type>
   inline type* bless(type* address) noexcept {
     _ReadWriteBarrier();
@@ -132,6 +132,24 @@ constexpr type instanceof() noexcept;
 template <typename base, std::size_t capacity>
 struct arrayof final {
   typedef base type[capacity];
+};
+
+// ... --> bitwise_ceil<N> ->> Rounds up to the next (equal or greater) power of two
+template <std::size_t value>
+struct bitwise_ceil final {
+  private:
+    template <std::size_t ceiling, bool = (ceiling < value)>
+    struct valueof final {
+      static std::size_t const value = ceiling;
+    };
+
+    template <std::size_t ceiling>
+    struct valueof<ceiling, true> final {
+      static std::size_t const value = valueof<(SIZE_MAX >> 1u > ceiling ? ceiling ? ceiling << 1u : 1u : SIZE_MAX)>::value;
+    };
+
+  public:
+    static std::size_t const value = valueof<0u, value != 0u>::value;
 };
 
 // ... --> boolean_and<bool...> --> std::conjunction
@@ -263,18 +281,55 @@ struct lcm<multipleA, multipleB, multiples...> final {
 // ...
 struct commonof final {
   // ... --> commonof::alignment<N, Ns...> ->> Evaluates the best-fit alignment of multiple sizes
-  template <std::size_t /* --> std::align_val_t */ common, std::size_t...>
+  template <typename... bases>
   struct alignment final {
-    static std::size_t const value = common;
+    private:
+      template <std::size_t...>
+      struct valueof final {
+        static std::size_t const value = 0u;
+      };
+
+      template <std::size_t alignment>
+      struct valueof<alignment> final {
+        static std::size_t const value = bitwise_ceil<alignment>::value;
+      };
+
+      template <std::size_t alignmentA, std::size_t alignmentB, std::size_t... alignments>
+      struct valueof<alignmentA, alignmentB, alignments...> final {
+        static std::size_t const value = valueof<(
+          0u == alignmentA % alignmentB ? alignmentA :
+          0u == alignmentB % alignmentA ? alignmentB :
+          lcm<alignmentA, alignmentB>::value
+        ), alignments...>::value;
+      };
+
+    public:
+      static std::size_t /* --> std::align_val_t */ const value = valueof<alignof(bases)...>::value;
   };
 
-  template <std::size_t alignmentA, std::size_t alignmentB, std::size_t... alignments>
-  struct alignment<alignmentA, alignmentB, alignments...> final {
-    static std::size_t const value = alignment<(
-      0u == alignmentA % alignmentB ? alignmentA :
-      0u == alignmentB % alignmentA ? alignmentB :
-      lcm<alignmentA, alignmentB>::value
-    ), alignments...>::value;
+  // ... --> commonof::size<N, Ns...> ->> Evaluates the most-fit (maximum) size of multiple types
+  template <typename... bases>
+  struct size final {
+    private:
+      template <std::size_t...>
+      struct valueof final {
+        static std::size_t const value = 0u;
+      };
+
+      template <std::size_t size>
+      struct valueof<size> final {
+        static std::size_t const value = size;
+      };
+
+      template <std::size_t sizeA, std::size_t sizeB, std::size_t... sizes>
+      struct valueof<sizeA, sizeB, sizes...> final {
+        static std::size_t const value = valueof<(
+          sizeA > sizeB ? sizeA : sizeB
+        ), sizes...>::value;
+      };
+
+    public:
+      static std::size_t const value = valueof<sizeof(bases)...>::value;
   };
 };
 
@@ -721,17 +776,6 @@ struct is_function final {
   static bool const value = not is_const<base const>::value and not is_reference<base>::value and not is_volatile<base volatile>::value;
 };
 
-// ... --> max<Ns...> ->> Evaluates maximum of `Ns...`
-template <std::size_t size, std::size_t...>
-struct max final {
-  static std::size_t const value = size;
-};
-
-template <std::size_t sizeA, std::size_t sizeB, std::size_t... sizes>
-struct max<sizeA, sizeB, sizes...> final {
-  static std::size_t const value = max<(sizeA > sizeB ? sizeA : sizeB), sizes...>::value;
-};
-
 // ... --> novoid{}, ..., novoid{} ->> Re-evaluates possibly `void` expressions as `struct novoid` expressions
 struct novoid final {
   #ifdef __cpp_rvalue_references // --> 200610L
@@ -762,8 +806,10 @@ struct opinfo final {
     assign_bitwise_shift_left,   // -->                  x <<= y
     assign_bitwise_shift_right,  // -->                  x >>= y
     assign_bitwise_xor,          // -->                  x  ^= y
+    assign_copy,                 // -->                  x   = static_cast<x const&>(...)
     assign_divide,               // -->                  x  /= y
     assign_modulo,               // -->                  x  %= y
+    assign_move,                 // -->                  x   = static_cast<x&&>(...)
     assign_multiply,             // -->                  x  *= y
     assign_subtract,             // -->                  x  -= y
     bitwise_and,                 // -->                  x   & y
@@ -783,7 +829,8 @@ struct opinfo final {
     comma,                       // -->                  x   , y
     compare,                     // -->                  x <=> y
     complement,                  // -->                 ~x
-    construct,                   // -->                  x(...)
+    construct,                   // -->                  x::x(...)
+    copy,                        // -->                  x::x (static_cast<x const&>(...))
     delete_array,                // --> delete[]         x
     delete_object,               // --> delete           x
     dereference,                 // -->                 *x
@@ -799,6 +846,7 @@ struct opinfo final {
     lesser_equals,               // -->                  x  <= y
     minus,                       // -->                  x   - y
     modulo,                      // -->                  x   % y
+    move,                        // -->                  x::x (static_cast<x&&>(...))
     multiply,                    // -->                  x   * y
     negate,                      // -->                 !x
     new_array,                   // --> new              x    [y]   {...}
@@ -820,7 +868,23 @@ struct opinfo final {
     subtract,                    // -->                  x   - y
     trilean_conditional,         // -->                  x   ? y : z
     typeid_object,               // --> typeid          (x)
-    unequals                     // -->                  x  != y
+    unequals,                    // -->                  x  != y
+
+    constant = static_cast<unsigned char>(1u) << ((CHAR_BIT * sizeof(unsigned char)) - 1u),
+      constant_access, constant_access_pointer, constant_add, constant_address, constant_alignof_object, constant_assign, constant_assign_add, constant_assign_bitwise_and, constant_assign_bitwise_or, constant_assign_bitwise_shift_left, constant_assign_bitwise_shift_right, constant_assign_bitwise_xor, constant_assign_copy, constant_assign_divide, constant_assign_modulo, constant_assign_move, constant_assign_multiply, constant_assign_subtract,
+      constant_bitwise_and, constant_bitwise_or, constant_bitwise_shift_left, constant_bitwise_shift_right, constant_bitwise_xor, constant_boolean_and, constant_boolean_or,
+      constant_call, constant_call_static, constant_cast, constant_cast_const, constant_cast_dynamic, constant_cast_reinterpret, constant_cast_static, constant_comma, constant_compare, constant_complement, constant_construct, constant_copy,
+      constant_delete_array, constant_delete_object, constant_dereference, constant_dereferenced_access, constant_dereferenced_access_pointer, constant_destruct, constant_divide,
+      constant_equals,
+      constant_greater, constant_greater_equals,
+      constant_initialize,
+      constant_lesser, constant_lesser_equals,
+      constant_minus, constant_move, constant_modulo, constant_multiply,
+      constant_negate, constant_new_array, constant_new_array_placement, constant_new_constructed, constant_new_constructed_placement, constant_new_initialized, constant_new_initialized_placement, constant_noexcept_object,
+      constant_plus, constant_post_decrement, constant_post_increment, constant_pre_decrement, constant_pre_increment,
+      constant_scope, constant_sizeof_object, constant_subscript, constant_subscript_static, constant_subtract,
+      constant_trilean_conditional, constant_typeid_object,
+      constant_unequals
   };
 
   /* ... */
@@ -835,10 +899,10 @@ struct opinfo final {
     struct can<opinfo::address, base> final {
       private:
         template <typename type>
-        constexpr static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, &instanceof<type>(), novoid{})] = NULL) noexcept)[true + 1u];
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, &instanceof<type>(), novoid{})] = NULL) noexcept)[true + 1u];
 
         template <typename>
-        constexpr static bool const (&valueof(...) noexcept)[false + 1u];
+        static bool const (&valueof(...) noexcept)[false + 1u];
 
       public:
         static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
@@ -848,40 +912,73 @@ struct opinfo final {
     struct can<opinfo::alignof_object, base> final {
       private:
         template <typename type>
-        constexpr static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, alignof(type), novoid{})] = NULL) noexcept)[true + 1u];
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, alignof(type), novoid{})] = NULL) noexcept)[true + 1u];
 
         template <typename>
-        constexpr static bool const (&valueof(...) noexcept)[false + 1u];
+        static bool const (&valueof(...) noexcept)[false + 1u];
 
       public:
         static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
+    };
+
+    template <typename base, typename... bases>
+    struct can<opinfo::constant_construct, base, bases...> final {
+      private:
+        template <typename type, typename... types>
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[(static_cast<void>(type(instanceof<types>()...)), 1u)] = NULL) noexcept)[true + 1u];
+
+        template <typename, typename...>
+        static bool const (&valueof(...) noexcept)[false + 1u];
+
+      public:
+        static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base, bases...>(sfinaeptr);
+    };
+
+    template <typename base>
+    struct can<opinfo::constant_destruct, base> final {
+      private:
+        template <typename type>
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[(instanceof<type>().~type(), 1u)] = NULL) noexcept)[true + 1u];
+
+        template <typename, typename...>
+        static bool const (&valueof(...) noexcept)[false + 1u];
+
+      public:
+        static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
+    };
+
+    template <typename base>
+    struct can<opinfo::copy, base> final {
+      static bool const value = (
+        opinfo::can<opinfo::construct, base, base>                ::value or
+        opinfo::can<opinfo::construct, base, base&>               ::value or
+        opinfo::can<opinfo::construct, base, base const&>         ::value or
+        opinfo::can<opinfo::construct, base, base const volatile&>::value or
+        opinfo::can<opinfo::construct, base, base       volatile&>::value
+      );
+    };
+
+    template <typename base, typename... bases>
+    struct can<opinfo::construct, base, bases...> final {
+      private:
+        template <typename type, typename... types>
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, type(instanceof<types>()...), novoid{})] = NULL) noexcept)[true + 1u];
+
+        template <typename, typename...>
+        static bool const (&valueof(...) noexcept)[false + 1u];
+
+      public:
+        static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base, bases...>(sfinaeptr);
     };
 
     template <typename base>
     struct can<opinfo::sizeof_object, base> final {
       private:
         template <typename type>
-        constexpr static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, sizeof(type), novoid{})] = NULL) noexcept)[true + 1u];
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, sizeof(type), novoid{})] = NULL) noexcept)[true + 1u];
 
         template <typename>
-        constexpr static bool const (&valueof(...) noexcept)[false + 1u];
-
-      public:
-        static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
-    };
-
-    // ...
-    template <op, typename>
-    struct has_function;
-
-    template <typename base>
-    struct has_function<opinfo::destruct, base> final {
-      private:
-        template <typename type>
-        constexpr static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, instanceof<type>().~type(), novoid{})] = NULL) noexcept)[true + 1u];
-
-        template <typename>
-        constexpr static bool const (&valueof(...) noexcept)[false + 1u];
+        static bool const (&valueof(...) noexcept)[false + 1u];
 
       public:
         static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
@@ -895,10 +992,10 @@ struct opinfo final {
     struct has_overloaded_function<opinfo::address, base> final {
       private:
         template <typename type>
-        constexpr static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, operator &(instanceof<type>()), novoid{})] = NULL) noexcept)[true + 1u];
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, operator &(instanceof<type>()), novoid{})] = NULL) noexcept)[true + 1u];
 
         template <typename>
-        constexpr static bool const (&valueof(...) noexcept)[false + 1u];
+        static bool const (&valueof(...) noexcept)[false + 1u];
 
       public:
         static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
@@ -912,10 +1009,10 @@ struct opinfo final {
     struct has_overloaded_member<opinfo::address, base> final {
       private:
         template <typename type>
-        constexpr static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, instanceof<type>().operator &(), novoid{})] = NULL) noexcept)[true + 1u];
+        static bool const (&valueof(sfinaeptr_t const, bool const (*const)[sizeof(novoid{}, instanceof<type>().operator &(), novoid{})] = NULL) noexcept)[true + 1u];
 
         template <typename>
-        constexpr static bool const (&valueof(...) noexcept)[false + 1u];
+        static bool const (&valueof(...) noexcept)[false + 1u];
 
       public:
         static bool const value = sizeof(bool const (&)[true + 1u]) == sizeof valueof<base>(sfinaeptr);
@@ -1281,13 +1378,16 @@ struct $shorthand final {
     };
 
   private:
+    static std::size_t const alignment = commonof::alignment<bool, long double, sfinaeptr_t $shorthand::*, unsigned long long, void*, void (*)(...)>::value;
+    static std::size_t const size      = commonof::size     <bool, long double, sfinaeptr_t $shorthand::*, unsigned long long, void*, void (*)(...)>::value;
+
     enum : bool {
       destruct   = false,
       nodestruct = true
     };
 
     // ... ->> Context information for shorthand formats
-    template <bool /* destructible */, $$...>
+    template <bool, $$...>
     struct format;
 
     // ... --> is_shorthand<T> ->> Determines if `T` is a `$shorthand` type
@@ -1311,13 +1411,27 @@ struct $shorthand final {
       static bool const value = true;
     };
 
-    // ... ->> Container for referable `$shorthand::value` object
-    struct reference final {
+    // ... ->> Container for object pointer or referable `$shorthand::value` object
+    struct referrable final {
       union {
-        bool *const value_bool;
+        void *const undefined;
 
-        char    *const value_char;
-        wchar_t *const value_wchar_t;
+        bool               *const value_bool;
+        char               *const value_char;
+        wchar_t            *const value_wchar_t;
+        double             *const value_double;
+        float              *const value_float;
+        long double        *const value_long_double;
+        int                *const value_int;
+        long               *const value_long;
+        long long          *const value_long_long;
+        short              *const value_short;
+        signed char        *const value_signed_char;
+        unsigned char      *const value_unsigned_char;
+        unsigned int       *const value_unsigned_int;
+        unsigned long      *const value_unsigned_long;
+        unsigned long long *const value_unsigned_long_long;
+        unsigned short     *const value_unsigned_short;
         #ifdef __cpp_unicode_characters // --> 200704L
           char16_t *const value_char16_t;
           char32_t *const value_char32_t;
@@ -1330,21 +1444,6 @@ struct $shorthand final {
         #else
           decltype(&instanceof<null>()) (*const value_char8_t)[3];
         #endif
-
-        double      *const value_double;
-        float       *const value_float;
-        long double *const value_long_double;
-
-        int                *const value_int;
-        long               *const value_long;
-        long long          *const value_long_long;
-        short              *const value_short;
-        signed char        *const value_signed_char;
-        unsigned char      *const value_unsigned_char;
-        unsigned int       *const value_unsigned_int;
-        unsigned long      *const value_unsigned_long;
-        unsigned long long *const value_unsigned_long_long;
-        unsigned short     *const value_unsigned_short;
         #if defined __clang__
           __int128_t  *const value_int128_t;
           __uint128_t *const value_uint128_t;
@@ -1366,35 +1465,33 @@ struct $shorthand final {
           decltype(&instanceof<null>()) (*const value_int128_t) [4];
           decltype(&instanceof<null>()) (*const value_uint128_t)[5];
         #endif
-
-        void *const undefined;
       };
 
       // ...
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, bool>                                                               ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_bool              (const_cast<bool*>                               (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, char>                                                               ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char              (const_cast<char*>                               (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, double>                                                             ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_double            (const_cast<double*>                             (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, float>                                                              ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_float             (const_cast<float*>                              (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, int>                                                                ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_int               (const_cast<int*>                                (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, long>                                                               ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_long              (const_cast<long*>                               (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, long double>                                                        ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_long_double       (const_cast<long double*>                        (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, long long>                                                          ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_long_long         (const_cast<long long*>                          (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, short>                                                              ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_short             (const_cast<short*>                              (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, signed char>                                                        ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_signed_char       (const_cast<signed char*>                        (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, unsigned char>                                                      ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_char     (const_cast<unsigned char*>                      (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, unsigned int>                                                       ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_int      (const_cast<unsigned int*>                       (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, unsigned long>                                                      ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_long     (const_cast<unsigned long*>                      (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, unsigned long long>                                                 ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_long_long(const_cast<unsigned long long*>                 (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, unsigned short>                                                     ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_short    (const_cast<unsigned short*>                     (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, wchar_t>                                                            ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_wchar_t           (const_cast<wchar_t*>                            (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_char8_t)>  ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char8_t           (const_cast<decltype(reference::value_char8_t)>  (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_char16_t)> ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char16_t          (const_cast<decltype(reference::value_char16_t)> (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_char32_t)> ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char32_t          (const_cast<decltype(reference::value_char32_t)> (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_int128_t)> ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_int128_t          (const_cast<decltype(reference::value_int128_t)> (&object)) {}
-      template <typename type> constexpr reference(type& object, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_uint128_t)>::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_uint128_t         (const_cast<decltype(reference::value_uint128_t)>(&object)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, bool>                                                               ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_bool              (const_cast<bool*>                               (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, char>                                                               ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char              (const_cast<char*>                               (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, double>                                                             ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_double            (const_cast<double*>                             (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, float>                                                              ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_float             (const_cast<float*>                              (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, int>                                                                ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_int               (const_cast<int*>                                (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, long>                                                               ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_long              (const_cast<long*>                               (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, long double>                                                        ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_long_double       (const_cast<long double*>                        (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, long long>                                                          ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_long_long         (const_cast<long long*>                          (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, short>                                                              ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_short             (const_cast<short*>                              (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, signed char>                                                        ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_signed_char       (const_cast<signed char*>                        (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, unsigned char>                                                      ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_char     (const_cast<unsigned char*>                      (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, unsigned int>                                                       ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_int      (const_cast<unsigned int*>                       (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, unsigned long>                                                      ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_long     (const_cast<unsigned long*>                      (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, unsigned long long>                                                 ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_long_long(const_cast<unsigned long long*>                 (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, unsigned short>                                                     ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_unsigned_short    (const_cast<unsigned short*>                     (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, wchar_t>                                                            ::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_wchar_t           (const_cast<wchar_t*>                            (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_char8_t)>  ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char8_t           (const_cast<decltype(reference::value_char8_t)>  (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_char16_t)> ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char16_t          (const_cast<decltype(reference::value_char16_t)> (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_char32_t)> ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_char32_t          (const_cast<decltype(reference::value_char32_t)> (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_int128_t)> ::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_int128_t          (const_cast<decltype(reference::value_int128_t)> (reference)) {}
+      template <typename type> constexpr referrable(type* const reference, typename conditional<is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_uint128_t)>::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept : value_uint128_t         (const_cast<decltype(reference::value_uint128_t)>(reference)) {}
 
       template <typename type>
-      constexpr reference(type& object, typename conditional<not (
+      constexpr referrable(type* const reference, typename conditional<not (
         is_same<typename remove_cv<type>::type, bool>                                                               ::value or
         is_same<typename remove_cv<type>::type, char>                                                               ::value or
         is_same<typename remove_cv<type>::type, double>                                                             ::value or
@@ -1417,7 +1514,7 @@ struct $shorthand final {
         is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_int128_t)> ::type>::value or
         is_same<typename remove_cv<type>::type, typename remove_pointer<decltype(reference::value_uint128_t)>::type>::value
       ), sfinaeptr_t>::type = sfinaeptr) noexcept :
-        undefined(const_cast<void*>(static_cast<void const volatile*>(addressof(object))))
+        undefined(const_cast<void*>(static_cast<void const volatile*>(reference)))
       {}
 
       /* ... */
@@ -1448,48 +1545,38 @@ struct $shorthand final {
       };
 
       // ... --> kindof<T> ->> Evaluates the shorthand enumerator tag for elidable types
-      template <typename base>
+      template <typename base, std::size_t = alignment, std::size_t = size>
       struct kindof final {
         static type const value = (
-          is_same<typename remove_qualifiers<base>::type, bool>                                  ::value ? $shorthand::reference::boolean                    :
-          is_same<typename remove_qualifiers<base>::type, char>                                  ::value ? $shorthand::reference::character_char             :
-          is_same<typename remove_qualifiers<base>::type, double>                                ::value ? $shorthand::reference::decimal_double             :
-          is_same<typename remove_qualifiers<base>::type, float>                                 ::value ? $shorthand::reference::decimal_float              :
-          is_same<typename remove_qualifiers<base>::type, int>                                   ::value ? $shorthand::reference::integer_int                :
-          is_same<typename remove_qualifiers<base>::type, long>                                  ::value ? $shorthand::reference::integer_long               :
-          is_same<typename remove_qualifiers<base>::type, long double>                           ::value ? $shorthand::reference::decimal_long_double        :
-          is_same<typename remove_qualifiers<base>::type, long long>                             ::value ? $shorthand::reference::integer_long_long          :
-          is_same<typename remove_qualifiers<base>::type, short>                                 ::value ? $shorthand::reference::integer_short              :
-          is_same<typename remove_qualifiers<base>::type, signed char>                           ::value ? $shorthand::reference::integer_signed_char        :
-          is_same<typename remove_qualifiers<base>::type, unsigned char>                         ::value ? $shorthand::reference::integer_unsigned_char      :
-          is_same<typename remove_qualifiers<base>::type, unsigned int>                          ::value ? $shorthand::reference::integer_unsigned_int       :
-          is_same<typename remove_qualifiers<base>::type, unsigned long>                         ::value ? $shorthand::reference::integer_unsigned_long      :
-          is_same<typename remove_qualifiers<base>::type, unsigned long long>                    ::value ? $shorthand::reference::integer_unsigned_long_long :
-          is_same<typename remove_qualifiers<base>::type, unsigned short>                        ::value ? $shorthand::reference::integer_unsigned_short     :
-          is_same<typename remove_qualifiers<base>::type, wchar_t>                               ::value ? $shorthand::reference::character_wchar_t          :
-          is_same<typename remove_qualifiers<base>::type, decltype(reference::integer_int128_t)> ::value ? $shorthand::reference::integer_int128_t           :
-          is_same<typename remove_qualifiers<base>::type, decltype(reference::integer_uint128_t)>::value ? $shorthand::reference::integer_uint128_t          :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, bool>                                  ::value ? $shorthand::reference::boolean                    :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, char>                                  ::value ? $shorthand::reference::character_char             :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, double>                                ::value ? $shorthand::reference::decimal_double             :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, float>                                 ::value ? $shorthand::reference::decimal_float              :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, int>                                   ::value ? $shorthand::reference::integer_int                :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, long>                                  ::value ? $shorthand::reference::integer_long               :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, long double>                           ::value ? $shorthand::reference::decimal_long_double        :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, long long>                             ::value ? $shorthand::reference::integer_long_long          :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, short>                                 ::value ? $shorthand::reference::integer_short              :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, signed char>                           ::value ? $shorthand::reference::integer_signed_char        :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, unsigned char>                         ::value ? $shorthand::reference::integer_unsigned_char      :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, unsigned int>                          ::value ? $shorthand::reference::integer_unsigned_int       :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, unsigned long>                         ::value ? $shorthand::reference::integer_unsigned_long      :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, unsigned long long>                    ::value ? $shorthand::reference::integer_unsigned_long_long :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, unsigned short>                        ::value ? $shorthand::reference::integer_unsigned_short     :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, wchar_t>                               ::value ? $shorthand::reference::character_wchar_t          :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, decltype(reference::integer_int128_t)> ::value ? $shorthand::reference::integer_int128_t           :
+          is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, decltype(reference::integer_uint128_t)>::value ? $shorthand::reference::integer_uint128_t          :
           #ifdef __cpp_unicode_characters // --> 200704L
-            is_same<typename remove_qualifiers<base>::type, char16_t>::value ? $shorthand::reference::character_char16_t :
-            is_same<typename remove_qualifiers<base>::type, char32_t>::value ? $shorthand::reference::character_char32_t :
+            is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, char16_t>::value ? $shorthand::reference::character_char16_t :
+            is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, char32_t>::value ? $shorthand::reference::character_char32_t :
           #endif
           #ifdef __cpp_char8_t // --> 201811L
-            is_same<typename remove_qualifiers<base>::type, char8_t>::value ? $shorthand::reference::character_char8_t :
+            is_same<typename remove_pointer<typename remove_qualifiers<base>::type>::type, char8_t>::value ? $shorthand::reference::character_char8_t :
           #endif
           static_cast<type>(0x00u) // --> $shorthand::null
         );
       };
     };
-
-    // ...
-    static std::size_t const size = max<
-      sizeof(bool),
-      sizeof(long double),
-      sizeof(sfinaeptr_t $shorthand::*),
-      sizeof(unsigned long long),
-      sizeof(void*),
-      sizeof(void (*)(...))
-    >::value;
 
     // ... ->> Enumeration for tagging trivial non-class type elidable objects
     enum type : std::size_t {
@@ -1498,16 +1585,19 @@ struct $shorthand final {
       function,                                                                                  // ->> Flag for elidable function pointers
       integer,                                                                                   // ->> Flag for elidable booleans, characters, and integer numbers
       member,                                                                                    // ->> Flag for elidable data member pointers
-      pointer,                                                                                   // ->> Flag for elidable object pointers
       shorthand,                                                                                 // ->> Flag for shorthands such as `$lambda`, `$n`, or `$object`
       undefined,                                                                                 // ->> Flag for elidable type-ambiguous objects that align and can be stored within `$n::value`
+                                                                                                 //
       extended        = static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(std::size_t)) - 1u), // ->> Extensible flag for other possible enumerator tags
-      reference       = static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(std::size_t)) - 2u), // ->> See `$shorthand::reference::type`
-      reference_array = reference | $shorthand::reference::array
+      pointer         = static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(std::size_t)) - 2u), // ->> Flag for elidable object pointers
+      reference       = static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(std::size_t)) - 3u), // ->> Flag for elidable references
+
+      reference_array    = reference | $shorthand::reference::array,
+      reference_extended = reference | extended
     };
 
     // ... ->> Container for non-reconstructible `$shorthand::value` object
-    template <std::size_t capacity = $shorthand::size>
+    template <std::size_t alignment = $shorthand::alignment, std::size_t capacity /* --> size */ = $shorthand::size>
     struct unknown final {
       template <typename base>
       struct handlerof final {
@@ -1521,13 +1611,15 @@ struct $shorthand final {
       };
 
       /* ... */
-      unsigned char value[capacity];
-      void*       (*handler)(opinfo::op, void*, void*), *address;
-      std::size_t   size, alignment;
+      alignas(alignment) unsigned char value[capacity];
+      void*                    (*const handler)(opinfo::op, void*, void*);
+      void                      *const address;
+      std::size_t                const size;
+      std::size_t                const alignment;
     };
 
     // ... --> kindof<T> ->> Evaluates the shorthand enumerator tag for elidable types
-    template <std::size_t size /* = $shorthand::size */, typename base>
+    template <typename base, std::size_t alignment = $shorthand::alignment, std::size_t size = $shorthand::size>
     struct kindof final {
       typedef typename conditional<opinfo::can<opinfo::alignof_object, base>::value or opinfo::can<opinfo::sizeof_object, base>::value, base, sfinaeptr_t>::type subbase;
       static type const value = (
@@ -1542,11 +1634,12 @@ struct $shorthand final {
         is_member_pointer  <typename remove_qualifiers<base>::type>                               ::value ? $shorthand::member    :
         is_pointer         <typename remove_qualifiers<base>::type>                               ::value ? $shorthand::pointer   :
 
-        (is_rvalue_reference<base>::value or not is_reference<base>::value)                         and                           // ->> Only elide temporary objects
-        (not opinfo::has_function<opinfo::destruct, typename remove_qualifiers<base>::type>::value) and                           // ->> Constant destructors unsupported
-        (alignof(subbase) <= alignof(decltype(unknown<size>::value))                                                              // ->> `base` can be properly aligned within `unknown::value`
-          ? sizeof(subbase) <= sizeof unknown<size>::value and 0u == (alignof(decltype(unknown<size>::value)) % alignof(subbase)) // ->> `unknown::value` can store and is aligned with `base`
-          : sizeof(subbase) <= sizeof unknown<size>::value -         (alignof(subbase) - alignof(decltype(unknown<size>::value))) // ->> `unknown::value` can store `base` along with its alignment i.e.: `alignof(base)`
+        opinfo::can     <opinfo::copy, typename remove_qualifiers<base>::type>::value and                                                               // ->> Elide copy-constructible objects
+        std::is_trivially_destructible<typename remove_qualifiers<base>::type>::value and                                                               // ->> Elide trivially-destructible objects
+        (is_rvalue_reference<base>::value or not is_reference<base>::value)           and                                                               // ->> Elide temporary objects
+        (alignof(subbase) <= alignof(decltype(unknown<alignment, size>::value))                                                                         // ->> `base` can be properly aligned within `unknown::value`
+          ? sizeof(subbase) <= sizeof unknown<alignment, size>::value and 0u == (alignof(decltype(unknown<alignment, size>::value)) % alignof(subbase)) // ->> `unknown::value` can store and is aligned with `base`
+          : sizeof(subbase) <= sizeof unknown<alignment, size>::value -         (alignof(subbase) - alignof(decltype(unknown<alignment, size>::value))) // ->> `unknown::value` can store `base` along with its alignment i.e.: `alignof(base)`
         ) ? $shorthand::undefined :
 
         $shorthand::null
@@ -1554,52 +1647,80 @@ struct $shorthand final {
     };
 
     // ... --> valueinfo<arity, type>
-    template <std::size_t...>
-    struct valueinfo final {};
+    template <std::size_t alignment = $shorthand::alignment, std::size_t size = $shorthand::size, std::size_t...>
+    struct valueinfo final {
+      union {                                                                      //
+        std::size_t           capacity;                                            // ->> Track bounds for type-unambiguous reference-to-arrays
+        std::type_info const *metadata;                                            // ->> Track type information for type-ambiguous objects and reference-to-arrays
+      };                                                                           //
+                                                                                   //
+      typename conditional<size <= sizeof(unsigned char),      unsigned char,      // ->> Track type information for
+      typename conditional<size <= sizeof(unsigned short),     unsigned short,     //       data member,
+      typename conditional<size <= sizeof(unsigned int),       unsigned int,       //       floating-point, function,
+      typename conditional<size <= sizeof(unsigned long),      unsigned long,      //       integer,
+      typename conditional<size <= sizeof(unsigned long long), unsigned long long, //       object pointer,
+        std::size_t                                                                //       reference, and
+      >::type>::type>::type>::type>::type type;                                    //       type-ambiguous types
+
+      /* ... */
+      constexpr valueinfo() noexcept :
+        valueinfo::valueinfo(NULL, $shorthand::null)
+      {}
+
+      constexpr valueinfo(std::size_t const capacity, type const type) noexcept :
+        capacity(capacity),
+        type    (type)
+      {}
+
+      constexpr valueinfo(std::type_info const* const metadata, type const type) noexcept :
+        metadata(metadata),
+        type    (type)
+      {}
+    };
 
     // ... ->> Container for elidable objects
-    template <std::size_t size = $shorthand::size>
-    struct value {
-      union {
-        #if defined __clang__                                                                                       // ->> Elide boolean, character, enumeration, and integer objects
-          __uint128_t integer;                                                                                      //
-        #elif defined __GNUC__                                                                                      //
-        # ifdef __SIZEOF_INT128__                                                                                   //
-        #   pragma GCC diagnostic push                                                                              //
-        #   pragma GCC diagnostic ignored "-Wpedantic"                                                              //
-            unsigned __int128 integer;                                                                              //
-        #   pragma GCC diagnostic pop                                                                               //
-        # else                                                                                                      //
-          unsigned long long integer;                                                                               //
-        # endif                                                                                                     //
-        #elif defined __cpp_lib_ranges // --> 201911L                                                               //
-          std::ranges::range_difference_t<std::ranges::iota_view<unsigned long long, unsigned long long> > integer; //
-        #else                                                                                                       //
-          unsigned long long integer;                                                                               //
-        #endif                                                                                                      //
-        long double               decimal;                                                                          // ->> Elide floating-point      objects
-        void                    (*function)(...);                                                                   // ->> Elide function    pointer objects
-        sfinaeptr_t $shorthand:: *member;                                                                           // ->> Elide data member pointer objects
-        sfinaeptr_t               null;                                                                             // ->> Default-/ nil-constructed `$shorthand::value` or un-elidable object
-        void                     *pointer;                                                                          // ->> Elide object pointer objects
-        struct reference          reference;                                                                        // ->> Elide references
-        struct unknown<size>      undefined;                                                                        // ->> Elide type-ambiguous objects
-      };                                                                                                            //
-                                                                                                                    //
-      union {                                                                                                       //
-        std::size_t           const capacity;                                                                       // ->> Track bounds for array references
-        std::type_info const *const metadata;                                                                       // ->> Track type information for data member pointers, function pointers, and type-ambiguous objects
-      };                                                                                                            //
-                                                                                                                    //
-      typename conditional<size <= sizeof(unsigned char),      unsigned char,                                       // ->> Track trivial non-class type elidable objects
-      typename conditional<size <= sizeof(unsigned short),     unsigned short,                                      //
-      typename conditional<size <= sizeof(unsigned int),       unsigned int,                                        //
-      typename conditional<size <= sizeof(unsigned long),      unsigned long,                                       //
-      typename conditional<size <= sizeof(unsigned long long), unsigned long long,                                  //
-        std::size_t                                                                                                 //
-      >::type>::type>::type>::type>::type const type;                                                               //
+    template <std::size_t alignment = $shorthand::alignment, std::size_t size = $shorthand::size>
+    struct value final {
+      typedef valueinfo<alignment, size> memberinfo;
 
-      // ...
+      /* ... */
+      constexpr static struct /* final */ {
+        mutable memberinfo value;
+        constexpr operator memberinfo&() const noexcept {
+          return this -> value;
+        }
+      } dummy = {};
+
+      union {
+        #if defined __clang__                                     // ->> Elide boolean, character, enumeration, and integer objects
+          __uint128_t integer;                                    //
+        #elif defined __GNUC__                                    //
+        # ifdef __SIZEOF_INT128__                                 //
+        #   pragma GCC diagnostic push                            //
+        #   pragma GCC diagnostic ignored "-Wpedantic"            //
+            unsigned __int128 integer;                            //
+        #   pragma GCC diagnostic pop                             //
+        # else                                                    //
+          unsigned long long integer;                             //
+        # endif                                                   //
+        #elif defined __cpp_lib_ranges // --> 201911L             //
+          std::ranges::range_difference_t<std::ranges::iota_view< //
+            unsigned long long,                                   //
+            unsigned long long                                    //
+          > > integer;                                            //
+        #else                                                     //
+          unsigned long long integer;                             //
+        #endif                                                    //
+        long double                               decimal;        // ->> Elide floating-point      objects
+        void                                    (*function)(...); // ->> Elide function    pointer objects
+        sfinaeptr_t $shorthand::                 *member;         // ->> Elide data member pointer objects
+        sfinaeptr_t                               null;           // ->> Default-/ nil-constructed `$shorthand::value` or un-elidable object
+        struct referrable                         pointer;        // ->> Elide object pointer objects
+        struct referrable                         reference;      // ->> Elide references
+        struct unknown<alignment, size>           undefined;      // ->> Elide type-ambiguous objects
+      };                                                          //
+
+      /* ... */
       #ifdef __GNUC__
       # pragma GCC diagnostic push
       # pragma GCC diagnostic ignored "-Wpedantic"
@@ -1607,206 +1728,254 @@ struct $shorthand final {
         template <std::size_t arity, typename type, typename conditional<(
           is_same<typename remove_qualifiers<type>::type, sfinaeptr_t>                             ::value or
           is_same<typename remove_qualifiers<type>::type, typename remove_qualifiers<::null>::type>::value
-        ), sfinaeptr_t>::type = sfinaeptr>
-        constexpr value(valueinfo<arity> const, type&&) noexcept :
-          value::value(valueinfo<arity, $shorthand::null>(), sfinaeptr)
+        ), sfinaeptr_t>::type = sfinaeptr> // ERROR (Lapys) -> Elide `null` or `sfinaeptr_t` objects
+        constexpr value(memberinfo&, valueinfo<arity> const, type&&) noexcept :
+          value::value(dummy, valueinfo<arity, $shorthand::null>(), sfinaeptr)
         { static_assert(arity != arity, "Unable to construct shorthand with argument(s)"); }
 
         template <std::size_t arity, typename type, typename conditional<not (
           is_same<typename remove_qualifiers<type>::type, sfinaeptr_t>                             ::value or
           is_same<typename remove_qualifiers<type>::type, typename remove_qualifiers<::null>::type>::value
-        ), sfinaeptr_t>::type = sfinaeptr>
-        constexpr value(valueinfo<arity> const, type&& value) noexcept(noexcept($shorthand::value<size>(valueinfo<arity, kindof<size, type&&>::value>(), instanceof<type&&>()))) :
-          value::value(valueinfo<arity, kindof<size, type&&>::value>(), forward_cast<type>(value))
-        { static_assert(kindof<size, type&&>::value != $shorthand::null, "Unable to construct shorthand with argument(s)"); }
-
-        template <std::size_t arity, typename typeA, class typeB> // ->> Elide data member pointer objects
-        constexpr value(valueinfo<arity, $shorthand::member> const, typeA typeB::* const value) noexcept :
-          member  (reinterpret_cast<sfinaeptr_t $shorthand::*>(value)),
-          metadata(NULL),
-          type    ($shorthand::member)
-        {}
+        ), sfinaeptr_t>::type = sfinaeptr> // NOTE (Lapys) -> Defer elision of object
+        constexpr value(memberinfo& information, valueinfo<arity> const, type&& value) noexcept(noexcept($shorthand::value<alignment, size>(
+          instanceof<memberinfo&>                                              (),
+          instanceof<valueinfo<arity, kindof<type&&, alignment, size>::value> >(),
+          instanceof<type&&>                                                   ()
+        ))) :
+          value::value(
+            information,
+            valueinfo<arity, kindof<type&&, alignment, size>::value>(),
+            forward_cast<type>(value)
+          )
+        { static_assert(kindof<type&&, alignment, size>::value != $shorthand::null, "Unable to construct shorthand with argument(s)"); }
 
         template <std::size_t arity> // ->> Elide floating-point objects
-        constexpr value(valueinfo<arity, $shorthand::decimal> const, long double const value) noexcept :
-          decimal (value),
-          metadata(NULL),
-          type    ($shorthand::decimal)
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::decimal> const, long double const value) noexcept :
+          decimal((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::decimal
+          )), value))
         {}
 
         template <std::size_t arity> // ->> Elide function pointer objects
-        constexpr value(valueinfo<arity, $shorthand::function> const, decltype(value::function) const value) noexcept :
-          function(value),
-          metadata(NULL),
-          type    ($shorthand::function)
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::function> const, decltype(value::function) const value) noexcept :
+          function((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::function
+          )), value))
         {}
 
         template <std::size_t arity, typename type> // ->> Elide function pointer objects
-        inline value(valueinfo<arity, $shorthand::function> const, type const value) noexcept :
-          function(reinterpret_cast<void (*)(...)>(value)),
-          metadata(NULL),
-          type    ($shorthand::function)
+        inline value(memberinfo& information, valueinfo<arity, $shorthand::function> const, type const value) noexcept :
+          function((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::function
+          )), reinterpret_cast<decltype(value::function)>(value)))
         {}
 
         template <std::size_t arity> // ->> Elide integer objects
-        constexpr value(valueinfo<arity, $shorthand::integer> const, decltype(value::integer) const value) noexcept :
-          integer (value),
-          metadata(NULL),
-          type    ($shorthand::integer)
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::integer> const, decltype(value::integer) const value) noexcept :
+          integer((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::integer
+          )), value))
         {}
 
-        template <std::size_t arity, typename type>
-        constexpr value(valueinfo<arity, $shorthand::null> const, type&&) noexcept :
-          null    (),
-          metadata(NULL),
-          type    ($shorthand::null)
+        template <std::size_t arity, typename typeA, class typeB> // ->> Elide data member pointer objects
+        inline value(memberinfo& information, valueinfo<arity, $shorthand::member> const, typeA typeB::* const value) noexcept :
+          member((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::member
+          )), reinterpret_cast<sfinaeptr_t $shorthand::*>(value)))
         {}
 
-        template <std::size_t arity> // ->> Elide object pointer objects
-        constexpr value(valueinfo<arity, $shorthand::pointer> const, void const volatile* const value) noexcept :
-          pointer (const_cast<void*>(value)),
-          metadata(NULL),
-          type    ($shorthand::integer)
+        template <std::size_t arity, typename type> // ->> Elide nothing
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::null> const, type&&) noexcept :
+          null((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::null
+          )), sfinaeptr()))
         {}
 
-        template <std::size_t arity, std::size_t subsize> // ->> Elide references
-        constexpr value(valueinfo<arity, $shorthand::reference> const, value<subsize> const& value, decltype(value::capacity) value::* const) noexcept :
-          reference(value.reference),
-          capacity (value.capacity),
-          type     (value.type)
+        template <std::size_t arity, typename type> // ->> Elide object pointer objects
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::pointer> const, type* const value) noexcept :
+          pointer((static_cast<void>(information = memberinfo(
+            static_cast<std::type_info const*>(NULL),
+            $shorthand::pointer | referrable::kindof<type>::value
+          )), value))
         {}
 
-        template <std::size_t arity, std::size_t subsize> // ->> Elide references
-        constexpr value(valueinfo<arity, $shorthand::reference> const, value<subsize> const& value, decltype(value::metadata) value::* const) noexcept :
-          reference(value.reference),
-          metadata (value.metadata),
-          type     (value.type)
-        {}
+        // template <std::size_t arity, std::size_t subalignment, std::size_t subsize> // TODO (Lapys) -> Elide references
+        // constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, value<subalignment, subsize> const& value, decltype(value::capacity) value::* const) noexcept :
+        //   reference((static_cast<void>(information = memberinfo(
+        //     value.capacity,
+        //     value.type
+        //   )), value.reference))
+        // {}
+
+        // template <std::size_t arity, std::size_t subalignment, std::size_t subsize> // TODO (Lapys) -> Elide references
+        // constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, value<subalignment, subsize> const& value, decltype(value::metadata) value::* const) noexcept :
+        //   reference((static_cast<void>(information = memberinfo(
+        //     value.metadata,
+        //     value.type
+        //   )), value.reference))
+        // {}
 
         template <std::size_t arity, typename type> // ->> Elide references
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type&& value) noexcept :
-          reference(static_cast<type&>(value)),
-          metadata (reference::kindof<typename remove_reference<type>::type>::value == static_cast<reference::type>($shorthand::null) ? &typeid(type) : NULL),
-          type     ($shorthand::reference | reference::kindof<typename remove_reference<type>::type>::value)
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type&& value) noexcept :
+          reference((static_cast<void>(information = memberinfo(
+            referrable::kindof<type>::value == static_cast<reference::type>($shorthand::null) ? &typeid(type) : static_cast<std::type_info const*>(NULL),
+            $shorthand::reference | referrable::kindof<type>::value
+          )), addressof(forward_cast<type>(value))))
         {}
 
-        template <std::size_t arity, typename type> // ->> Elide references-to-arrays
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type (&value)[], typename conditional<$shorthand::null == reference::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
-          reference(value),
-          metadata (&typeid(type)), // ->> May not be compile-time evaluable
-          type     ($shorthand::reference_array)
+        template <std::size_t arity, typename type> // ->> Elide reference-to-arrays
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type (&value)[], typename conditional<$shorthand::null == referrable::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
+          reference((static_cast<void>(information = memberinfo(
+            &typeid(type),
+            $shorthand::reference_array
+          )), &value))
         {}
 
-        template <std::size_t arity, typename type, std::size_t subcapacity> // ->> Elide references-to-arrays
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type (&value)[subcapacity], typename conditional<$shorthand::null == reference::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
-          reference(value),
-          metadata (&typeid(type)), // ->> May not be compile-time evaluable
-          type     ($shorthand::reference_array)
+        template <std::size_t arity, typename type, std::size_t subcapacity> // ->> Elide reference-to-arrays
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type (&value)[subcapacity], typename conditional<$shorthand::null == referrable::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
+          reference((static_cast<void>(information = memberinfo(
+            &typeid(type),
+            $shorthand::reference_array
+          )), &value))
         {}
 
-        template <std::size_t arity, typename type> // ->> Elide references-to-arrays
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type (&value)[], typename conditional<$shorthand::null != reference::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
-          reference(value),
-          capacity (0u),
-          type     ($shorthand::reference_array | (reference::kindof<type>::value << 1u /* --> $shorthand::reference::array */))
+        template <std::size_t arity, typename type> // ->> Elide reference-to-arrays
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type (&value)[], typename conditional<$shorthand::null != referrable::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
+          reference((static_cast<void>(information = memberinfo(
+            static_cast<std::size_t>(0u),
+            $shorthand::reference_array | (referrable::kindof<type>::value << 1u /* --> $shorthand::reference::array */)
+          )), static_cast<type*>(value)))
         {}
 
-        template <std::size_t arity, typename type, std::size_t subcapacity> // ->> Elide references-to-arrays
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type (&value)[subcapacity], typename conditional<$shorthand::null != reference::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
-          reference(value),
-          capacity (subcapacity),
-          type     ($shorthand::reference_array | (reference::kindof<type>::value << 1u /* --> $shorthand::reference::array */))
+        template <std::size_t arity, typename type, std::size_t capacity> // ->> Elide reference-to-arrays
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type (&value)[capacity], typename conditional<$shorthand::null != referrable::kindof<type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
+          reference((static_cast<void>(information = memberinfo(
+            capacity,
+            $shorthand::reference_array | (referrable::kindof<type>::value << 1u /* --> $shorthand::reference::array */)
+          )), static_cast<type*>(value)))
         {}
 
-        template <std::size_t arity, typename type> // ->> Elide references-to-arrays
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type (&&value)[]) noexcept :
-          value::value(valueinfo<arity, $shorthand::reference>(), static_cast<type (&)[]>(value))
+        template <std::size_t arity, typename type> // ->> Elide reference-to-arrays
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type (&&value)[]) noexcept :
+          value::value(
+            information,
+            valueinfo<arity, $shorthand::reference>(),
+            static_cast<type (&)[]>(value)
+          )
         {}
 
-        template <std::size_t arity, typename type, std::size_t subcapacity> // ->> Elide references-to-arrays
-        constexpr value(valueinfo<arity, $shorthand::reference> const, type (&&value)[subcapacity]) noexcept :
-          value::value(valueinfo<arity, $shorthand::reference>(), static_cast<type (&)[subcapacity]>(value))
+        template <std::size_t arity, typename type, std::size_t capacity> // ->> Elide reference-to-arrays
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::reference> const, type (&&value)[capacity]) noexcept :
+          value::value(
+            information,
+            valueinfo<arity, $shorthand::reference>(),
+            static_cast<type (&)[capacity]>(value)
+          )
         {}
 
         template <std::size_t arity, typename type> // ->> Elide `$object` shorthand
-        constexpr value(valueinfo<arity, $shorthand::shorthand> const, $object<type> const& value) noexcept(noexcept($shorthand::value<size>(instanceof<sfinaeptr_t (*)[arity]>(), instanceof<type>()))) :
-          value::value(valueinfo<arity>(), static_cast<type>(value.operator type()))
+        constexpr value(memberinfo& information, valueinfo<arity, $shorthand::shorthand> const, $object<type> const& value) noexcept(noexcept($shorthand::value<alignment, size>(
+          instanceof<memberinfo&>      ()
+          instanceof<valueinfo<arity> >(),
+          instanceof<type>             ()
+        ))) :
+          value::value(
+            information,
+            valueinfo<arity>(),
+            static_cast<type>(value.operator type())
+          )
         {}
 
         template <std::size_t arity, opinfo::op operation, class... operands> // ->> Elide `$lambda` shorthand
-        constexpr value(valueinfo<arity, $shorthand::shorthand> const, $lambda<operation, operands...> const&) noexcept :
-          value::value(valueinfo<arity, $shorthand::null>(), sfinaeptr)
+        constexpr value(memberinfo&, valueinfo<arity, $shorthand::shorthand> const, $lambda<operation, operands...> const&) noexcept :
+          value::value(dummy, valueinfo<arity, $shorthand::null>(), sfinaeptr)
         { static_assert(arity != arity, "Unable to construct index shorthand with lambda expression shorthand"); }
 
         template <std::size_t arity, std::size_t subarity, $$... states, typename... extensions> // ->> Elide `$n` shorthand
-        constexpr value(valueinfo<arity, $shorthand::shorthand> const, $n<subarity, $f<states...>, extensions...> const&, typename conditional<not boolean_or<(states == $o)...>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
-          value::value(valueinfo<arity, $shorthand::null>(), sfinaeptr)
+        constexpr value(memberinfo&, valueinfo<arity, $shorthand::shorthand> const, $n<subarity, $f<states...>, extensions...> const&, typename conditional<not boolean_or<(states == $o)...>::value, sfinaeptr_t>::type = sfinaeptr) noexcept :
+          value::value(dummy, valueinfo<arity, $shorthand::null>(), sfinaeptr)
         { static_assert(arity != arity, "Unable to copy-construct shorthand without the `$o` format"); }
 
-        template <std::size_t arity, std::size_t subarity, $$... states, typename... extensions> // ->> Elide `$n` shorthand
-        constexpr value(valueinfo<arity, $shorthand::shorthand> const, $n<subarity, $f<states...>, extensions...> const& value, typename conditional<boolean_or<(states == $o)...>::value, sfinaeptr_t>::type = sfinaeptr) noexcept(noexcept($shorthand::value<size>(valueinfo<arity, $shorthand::undefined>(), instanceof<$n<subarity, $f<states...>, extensions...> const&>().value))) :
-          value::value(
-            value.type == $shorthand::decimal  ? $shorthand::value<size>(valueinfo<arity, $shorthand::decimal> (), value.value.decimal)  :
-            value.type == $shorthand::function ? $shorthand::value<size>(valueinfo<arity, $shorthand::function>(), value.value.function) :
-            value.type == $shorthand::integer  ? $shorthand::value<size>(valueinfo<arity, $shorthand::integer> (), value.value.integer)  :
-            value.type == $shorthand::member   ? $shorthand::value<size>(valueinfo<arity, $shorthand::member>  (), value.value.member)   :
-            value.type == $shorthand::pointer  ? $shorthand::value<size>(valueinfo<arity, $shorthand::pointer> (), value.value.pointer)  :
-            value.type == $shorthand::null     ? $shorthand::value<size>(valueinfo<arity, $shorthand::null>    (), sfinaeptr)            :
+        // template <std::size_t arity, std::size_t subarity, $$... states, typename... extensions> // TODO (Lapys) -> Elide `$n` shorthand
+        // constexpr value(memberinfo& information, valueinfo<arity, $shorthand::shorthand> const, $n<subarity, $f<states...>, extensions...> const& value, typename conditional<boolean_or<(states == $o)...>::value, sfinaeptr_t>::type = sfinaeptr) noexcept(noexcept($shorthand::value<alignment, size>(
+        //   valueinfo<arity, $shorthand::undefined>(),
+        //   instanceof<$n<subarity, $f<states...>, extensions...> const&>().value,
+        //   instanceof<unsigned char*>()
+        // ))) :
+        //   value::value(
+        //     value.type == $shorthand::decimal  ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::decimal> (), value.value.decimal)  :
+        //     value.type == $shorthand::function ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::function>(), value.value.function) :
+        //     value.type == $shorthand::integer  ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::integer> (), value.value.integer)  :
+        //     value.type == $shorthand::member   ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::member>  (), value.value.member)   :
+        //     value.type == $shorthand::pointer  ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::pointer> (), value.value.pointer)  :
+        //     value.type == $shorthand::null     ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::null>    (), sfinaeptr)            :
 
-            value.type & $shorthand::reference ? (
-              (value.type & $shorthand::reference_array) and value.type != $shorthand::reference_array
-              ? $shorthand::value<size>(valueinfo<arity, $shorthand::reference>(), value.value, &$shorthand::value<size>::capacity)
-              : $shorthand::value<size>(valueinfo<arity, $shorthand::reference>(), value.value, &$shorthand::value<size>::metadata)
-            ) :
+        //     value.type & $shorthand::reference ? (
+        //       (value.type & $shorthand::reference_array) and value.type != $shorthand::reference_array
+        //       ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::reference>(), value.value, &$shorthand::value<alignment, size>::capacity)
+        //       : $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::reference>(), value.value, &$shorthand::value<alignment, size>::metadata)
+        //     ) :
 
-            value.type == $shorthand::undefined and (value.undefined.alignment <= alignof(decltype(unknown<size>::value))                              // ->> See `kindof<...>::value == $shorthand::undefined`
-              ? value.undefined.size <= sizeof unknown<size>::value and 0u == (alignof(decltype(unknown<size>::value)) % value.undefined.alignment)    //
-              : value.undefined.size <= sizeof unknown<size>::value -         (value.undefined.alignment - alignof(decltype(unknown<size>::value)))    //
-            ) ? $shorthand::value<size>(valueinfo<arity, $shorthand::undefined>(), value.value, ::new (this -> undefined.value) unsigned char[size]) : // WARN (Lapys) -> Unsure if undefined behavior
+        //     value.type == $shorthand::undefined and (value.undefined.alignment <= alignof(decltype(unknown<size>::value))                                   // ->> See `kindof<...>::value == $shorthand::undefined`
+        //       ? value.undefined.size <= sizeof unknown<size>::value and 0u == (alignof(decltype(unknown<size>::value)) % value.undefined.alignment)         //
+        //       : value.undefined.size <= sizeof unknown<size>::value -         (value.undefined.alignment - alignof(decltype(unknown<size>::value)))         //
+        //     ) ? $shorthand::value<alignment, size>(valueinfo<arity, $shorthand::undefined>(), value.value, ::new (this -> undefined.value) unsigned char[size]) : // WARN (Lapys) -> Unsure if undefined behavior
 
-            instanceof<$shorthand::value<size> >()
-          )
-        { static_assert(arity == subarity, "Unable to copy-construct shorthand with another of different index"); }
+        //     instanceof<$shorthand::value<alignment, size> >()
+        //   )
+        // { static_assert(arity == subarity, "Unable to copy-construct shorthand with another of different index"); }
 
-        template <std::size_t arity, std::size_t subsize> // ->> Elide type-ambiguous objects
-        inline value(valueinfo<arity, $shorthand::undefined> const, value<subsize> const& value, void* buffer) :
-          undefined(),
-          metadata (value.metadata),
-          type     ($shorthand::undefined)
-        {
-          std::size_t    capacity  = sizeof unknown<size>::value;
-          unsigned char *prebuffer = static_cast<unsigned char*>(buffer);
+        // template <std::size_t arity, std::size_t subalignment, std::size_t subsize> // TODO (Lapys) -> Elide type-ambiguous objects
+        // inline value(memberinfo& information, valueinfo<arity, $shorthand::undefined> const, value<subalignment, subsize> const& value, void* buffer) :
+        //   undefined()
+        // {
+        //   std::size_t    capacity  = sizeof unknown<size>::value;
+        //   unsigned char *prebuffer = static_cast<unsigned char*>(buffer);
 
-          // ...
-          buffer = std::align(value.undefined.alignment, value.undefined.size, buffer, capacity);
+        //   // ...
+        //   buffer      = std::align(value.undefined.alignment, value.undefined.size, buffer, capacity);
+        //   information = memberinfo(&typeid(type), $shorthand::undefined);
 
-          this -> undefined.address   = value.undefined.handler(opinfo::construct, NULL == buffer ? prebuffer + (value.undefined.alignment > alignof(decltype(unknown<size>::value)) ? value.undefined.alignment - alignof(decltype(unknown<size>::value)) : 0u) : buffer, value.undefined.address);
-          this -> undefined.alignment = value.undefined.alignment;
-          this -> undefined.handler   = value.undefined.handler;
-          this -> undefined.size      = value.undefined.size;
+        //   this -> undefined.size      = value.undefined.size;
+        //   this -> undefined.handler   = value.undefined.handler;
+        //   this -> undefined.alignment = value.undefined.alignment;
+        //   this -> undefined.address   = value.undefined.handler(opinfo::construct, (
+        //     NULL == buffer
+        //     ? prebuffer + (value.undefined.alignment > alignof(decltype(unknown<size>::value)) ? value.undefined.alignment - alignof(decltype(unknown<size>::value)) : 0u)
+        //     : buffer
+        //   ), value.undefined.address);
 
-          if (prebuffer != this -> undefined.value) {
-            for (unsigned char *const end = prebuffer + size, *iterator = this -> undefined.value; end != prebuffer; ++iterator, ++prebuffer)
-            *iterator = *prebuffer;
-          }
-        }
+        //   if (prebuffer != this -> undefined.value) {
+        //     for (unsigned char *const end = prebuffer + size, *iterator = this -> undefined.value; end != prebuffer; ++iterator, ++prebuffer)
+        //     *iterator = *prebuffer;
+        //   }
+        // }
 
         template <std::size_t arity, typename type> // ->> Elide type-ambiguous objects
-        inline value(valueinfo<arity, $shorthand::undefined> const, type&& value) noexcept(noexcept(typename remove_qualifiers<type>::type(instanceof<type&&>()))) :
-          undefined(),
-          metadata (&typeid(type)),
-          type     ($shorthand::undefined)
+        inline value(memberinfo& information, valueinfo<arity, $shorthand::undefined> const, type&& value) noexcept(noexcept(typename remove_qualifiers<type>::type(instanceof<type&>()))) :
+          undefined()
         {
           void       *buffer   = this -> undefined.value;
           std::size_t capacity = sizeof unknown<size>::value;
 
           // ...
-          buffer = std::align(alignof(type), sizeof(type), buffer, capacity);
+          buffer      = std::align(alignof(type), sizeof(type), buffer, capacity);
+          information = memberinfo(&typeid(type), $shorthand::undefined);
 
-          this -> undefined.address   = const_cast<void*>(static_cast<void const volatile*>(::new (NULL == buffer ? this -> undefined.value + (alignof(type) > alignof(decltype(unknown<size>::value)) ? alignof(type) - alignof(decltype(unknown<size>::value)) : 0u) : buffer) typename remove_qualifiers<type>::type(forward_cast<type>(value))));
-          this -> undefined.alignment = alignof(type);
-          this -> undefined.handler   = &unknown<size>::template handlerof<typename remove_reference<type>::type>::value;
           this -> undefined.size      = sizeof(type);
+          this -> undefined.handler   = &unknown<size>::template handlerof<typename remove_reference<type>::type>::value;
+          this -> undefined.alignment = alignof(type);
+          this -> undefined.address   = const_cast<void*>(static_cast<void const volatile*>(::new (
+            NULL == buffer
+            ? this -> undefined.value + (alignof(type) > alignof(decltype(unknown<size>::value)) ? alignof(type) - alignof(decltype(unknown<size>::value)) : 0u)
+            : buffer
+          ) typename remove_qualifiers<type>::type(value)));
         }
       #ifdef __GNUC__
       # pragma GCC diagnostic pop
@@ -1817,91 +1986,193 @@ struct $shorthand final {
 // TODO (Lapys) -> Make code readable, support array conversions, lambda-to-function conversion
 template <std::size_t arity, $$... states, typename... extensions>
 struct $n<arity, $f<states...>, extensions...> final {
+  template <class>
+  friend struct $shorthand::value;
+
+  static_assert((
+    sizeof...(extensions) < static_cast<std::size_t>($shorthand::extended) and
+    sizeof...(extensions) < static_cast<std::size_t>($shorthand::pointer)  and
+    sizeof...(extensions) < static_cast<std::size_t>($shorthand::reference)
+  ), "Too many types passed to shorthand");
+
   private:
-    $n<arity, typename conditional<
-      boolean_or<(
+    $n<
+      arity,
+      $shorthand::format<boolean_or<(
         #ifdef __cpp_constexpr // --> 200704L
-        # if __cpp_constexpr >= 201907L
+        # if __cpp_constexpr < 201907L
             states != $c and
         # endif
         #endif
         states == $o
-      )...>::value,
-      $shorthand::format<$shorthand::destruct,   states...>,
-      $shorthand::format<$shorthand::nodestruct, states...>
-    >::type, std::nullptr_t, std::type_info const&, extensions...> value;
+      )...>::value ? $shorthand::destruct : $shorthand::nodestruct, states...>,
+      std::nullptr_t, std::type_info const&, extensions...
+    > value;
 
   public:
+    template <typename... types>
+    constexpr $n(types&&... arguments) noexcept(noexcept(decltype($n::value)(instanceof<types&&>()...))) :
+      value(forward_cast<types>(arguments)...)
+    {}
+
+    /* TODO (Lapys) -> Operator composition-inheritance */
 };
 
 template <std::size_t arity, $$... states, typename... extensions>
-struct $n<arity, $shorthand::format<$shorthand::destruct, states...>, extensions...> final {
-  private:
-    $n<arity, $shorthand::format<$shorthand::nodestruct, states...>, extensions...> value;
-
-  public:
-    #ifdef __cpp_constexpr // --> 200704L
-    # if __cpp_constexpr >= 201907L
-        constexpr
-    # endif
-    #endif
-    ~$n() noexcept(noexcept(1)) {}
+struct $n<arity, $shorthand::format<$shorthand::destruct, states...>, extensions...> /* final */ : public $n<arity, $shorthand::format<$shorthand::nodestruct, states...>, extensions...> {
+  #ifdef __cpp_constexpr // --> 200704L
+  # if __cpp_constexpr >= 201907L
+      constexpr
+  # endif
+  #endif
+  ~$n() noexcept(noexcept(1)) {}
 };
 
 template <std::size_t arity, $$... states, typename... extensions>
-struct $n<arity, $shorthand::format<$shorthand::nodestruct, states...>, extensions...> final {
+struct $n<arity, $shorthand::format<$shorthand::nodestruct, states...>, extensions...> /* final */ {
+  template <class>
+  friend struct $shorthand::value;
+
   private:
-    static std::size_t const alignment = commonof::alignment<alignof(typename conditional<opinfo::can<opinfo::alignof_object, extensions>::value, extensions, sfinaeptr_t>::type)...>::value;
-    static std::size_t const size      = max                <sizeof (typename conditional<opinfo::can<opinfo::sizeof_object,  extensions>::value, extensions, sfinaeptr_t>::type)...>::value;
+    static std::size_t const alignment = commonof::alignment<typename conditional<opinfo::can<opinfo::alignof_object, extensions>::value, extensions, sfinaeptr_t>::type...>::value;
+    static std::size_t const size      = commonof::size     <typename conditional<opinfo::can<opinfo::sizeof_object,  extensions>::value, extensions, sfinaeptr_t>::type...>::value;
 
     /* ... */
-    struct noextvalue {
+    typedef $shorthand::valueinfo<alignment, size> memberinfo;
+
+    // ...
+    struct novalue final {
       template <typename... types>
-      constexpr noextvalue(types&&...) noexcept {}
+      constexpr novalue(types&&...) noexcept {}
     };
 
     // ...
-    typedef typename conditional<
-      boolean_or<(states == $o or states == $r)...>::value,
-      $shorthand::value<$n::size>,
-      noextvalue
-    >::type subextvalue;
+    template <typename base, std::size_t alignment, std::size_t size>
+    struct kindof final {
+      private:
+        template <typename...>
+        struct subkindof {
+          static type const value = $shorthand::kindof<base, alignment, size>::value;
+        };
+
+        template <typename subbase, typename... subbases>
+        struct subkindof<subbase, subbases...> : public subkindof<subbases...> {
+          static type const value = (
+            opinfo::can<opinfo::construct, subbase, base>::value
+            ? $shorthand::extended | (sizeof...(extensions) - sizeof...(subbases) - 1u)
+            : subkindof<subbases...>::value
+          );
+        };
+
+      public:
+        static type const value = (
+          is_shorthand       <typename remove_qualifiers<base>::type>                               ::value ? $shorthand::shorthand :
+          is_lvalue_reference<base>::value or is_array<typename remove_rvalue_reference<base>::type>::value ? $shorthand::reference :
+          subkindof          <base, extensions...>                                                  ::value
+        );
+    };
 
     // ...
     template <typename...>
-    struct extvalue : public subextvalue {
+    struct extvalue final {
+      $shorthand::value<alignment, size> subvalue;
+
+      /* ... */
       template <typename... types>
-      constexpr extvalue(types&&... values) noexcept(noexcept(subextvalue(instanceof<types&&>()...))) :
-        subextvalue(forward_cast<types>(values)...)
+      constexpr extvalue(types&&... values) noexcept(noexcept($shorthand::value<alignment, size>(instanceof<types&&>()...))) :
+        subvalue(forward_cast<types>(values)...)
       {}
     };
 
+    // TODO (Lapys)
+    //   IF REFERENCE: CHECK $r, OTHERWISE SKIP TO NEXT-FITTING OBJECT OR POSSIBLY UNKNOWN
+    //   IF CONSTANT: SKIP NON-BYTE OBJECTS
     template <typename subextension, typename... subextensions>
-    struct extvalue<subextension, subextensions...> : public extvalue<subextensions...> {
+    struct extvalue<subextension, subextensions...> final {
+      typedef typename conditional<opinfo::can<opinfo::alignof_object, subextension>::value and not is_reference<subextension>::value, subextension, sfinaeptr_t>::type type;
+
+      /* ... */
+      static std::size_t const index               = sizeof...(extensions) - sizeof...(subextensions) - 1u;
+      static bool        const is_trivial_lifetime = (opinfo::can<opinfo::constant_destruct, type>::value) and (opinfo::can<opinfo::copy, type>::value or opinfo::can<opinfo::move, type>::value);
+
       union {
-        /* $o, $r; not destructor() */
-        typename remove_reference<subextension>::type                                           *reference;
-        // typename conditional<is_reference<subextension>::value, sfinaeptr_t, subextension>::type value;
+        alignas(type) typename conditional<is_trivial_lifetime, type, sfinaeptr_t>::type extended;   // ->> Elide extended-type that are constant-destructible objects and copy-/ move-constructible objects
+        typename remove_reference<subextension>::type                                   *referrable; // ->> Elide pointer-/ reference-to-extended-type objects
+        extvalue<subextensions...>                                                       subvalue;   // ->> Elide ...
       };
 
       /* ... */
-      constexpr extvalue() noexcept :
-        extvalue<subextensions...>::extvalue()
+      constexpr extvalue(memberinfo& information, valueinfo<arity, $shorthand::pointer> const, typename remove_reference<subextension>::type* const value) noexcept : // ->> Elide object pointer objects
+        referrable((static_cast<void>(information = memberinfo(
+          NULL,
+          $shorthand::pointer | index
+        )), value))
       {}
 
-      template <typename type>
-      constexpr extvalue(type&& value) noexcept(noexcept(extvalue<subextensions...>($shorthand::valueinfo<arity>(), instanceof<type&&>()))) :
-        extvalue<subextensions...>::extvalue($shorthand::valueinfo<arity>(), forward_cast<type>(value))
+      constexpr extvalue(memberinfo& information, valueinfo<arity, $shorthand::reference> const, typename remove_reference<subextension>::type& value) noexcept : // ->> Elide references
+        referrable((static_cast<void>(information = memberinfo(
+          NULL,
+          $shorthand::reference_extended | index
+        )), addressof(value)))
+      {}
+
+      constexpr extvalue(memberinfo& information, valueinfo<arity, $shorthand::reference> const, typename remove_reference<subextension>::type&& value) noexcept : // ->> Elide references
+        referrable((static_cast<void>(information = memberinfo(
+          NULL,
+          $shorthand::reference_extended | index
+        )), addressof(static_cast<typename remove_reference<subextension>::type&&>(value))))
+      {}
+
+      template <type subtype, typename type> // ->> Defer elision of object
+      constexpr extvalue(memberinfo& information, valueinfo<arity, subtype> const, type&& value, typename conditional<not is_same<typename remove_qualifiers<type>::type, typename remove_qualifiers<subextension>::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept(noexcept(extvalue<subextensions...>(
+        instanceof<memberinfo&>                           (),
+        instanceof<$shorthand::valueinfo<arity, subtype> >(),
+        instanceof<type&&>                                ()
+      ))) :
+        subvalue(
+          information,
+          $shorthand::valueinfo<arity, subtype>(),
+          forward_cast<type>(value)
+        )
+      {}
+
+      template <type subtype, typename type> // ->> Elide extended-type objects
+      constexpr extvalue(memberinfo& information, valueinfo<arity, subtype> const, type&& value, typename conditional<is_trivial_lifetime and is_same<typename remove_qualifiers<type>::type, typename remove_qualifiers<subextension>::type>::value, sfinaeptr_t>::type = sfinaeptr) noexcept(noexcept(
+        ...
+      )) :
+        extended()
       {}
     };
 
     /* ... */
-    extvalue<extensions...> value;
+    memberinfo                                                                                                   information;
+    typename conditional<arity and boolean_or<(states == $o)...>::value, extvalue<extensions...>, novalue>::type value;
 
   public:
     constexpr $n() noexcept :
-      value()
+      information(),
+      value      (
+        this -> information,
+        valueinfo<arity, $shorthand::null>(),
+        sfinaeptr
+      )
     {}
+
+    template <typename type>
+    constexpr $n(type&& value) noexcept(noexcept(decltype($n::value)(
+      instanceof<$shorthand::valueinfo<alignment, size>&>                              (),
+      instanceof<$shorthand::valueinfo<arity, kindof<type&&, alignment, size>::value> >(),
+      instanceof<type&&>                                                               ()
+    ))) :
+      information(),
+      value      (
+        this -> information,
+        $shorthand::valueinfo<arity, kindof<type&&, alignment, size>::value>(),
+        forward_cast<type>(value)
+      )
+    {}
+
+    /* TODO (Lapys) -> Operator overloads */
 };
 
 /* Constant */
