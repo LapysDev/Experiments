@@ -71,13 +71,13 @@ constexpr unsigned char const*          bless(unsigned char const*          addr
 constexpr unsigned char const volatile* bless(unsigned char const volatile* address) noexcept { return address; }
 constexpr unsigned char       volatile* bless(unsigned char       volatile* address) noexcept { return address; }
 #ifdef __cpp_lib_byte // --> 201603L
-  constexpr std::byte*                bless(std::byte*                         address) noexcept { return address; }
-  constexpr std::byte const*          bless(std::byte const*                   address) noexcept { return address; }
-  constexpr std::byte const volatile* bless(std::byte const volatile*          address) noexcept { return address; }
-  constexpr std::byte       volatile* bless(std::byte       volatile*          address) noexcept { return address; }
+  constexpr std::byte*                bless(std::byte*                address) noexcept { return address; }
+  constexpr std::byte const*          bless(std::byte const*          address) noexcept { return address; }
+  constexpr std::byte const volatile* bless(std::byte const volatile* address) noexcept { return address; }
+  constexpr std::byte       volatile* bless(std::byte       volatile* address) noexcept { return address; }
 #endif
 
-#if defined __cpp_lib_launder /* --> 201606L */ or (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L or (defined _MSVC_LANG and defined _HAS_LAUNDER)
+#if defined __cpp_lib_launder /* --> 201606L */ or (defined _MSVC_LANG and defined _HAS_LAUNDER) or (defined _MSVC_LANG ? _MSVC_LANG : __cplusplus) >= 201703L
   template <typename type>
   constexpr type* bless(type* const address) noexcept {
     return std::launder(address);
@@ -103,7 +103,7 @@ constexpr unsigned char       volatile* bless(unsigned char       volatile* addr
 #elif defined _ReadWriteBarrier and defined _MSC_VER
   template <typename type>
   inline type* bless(type* address) noexcept {
-    _ReadWriteBarrier();
+    ::_ReadWriteBarrier();
     return address;
   }
 #else
@@ -128,12 +128,6 @@ constexpr type&& forward_cast(type&& object) noexcept {
 template <typename type>
 constexpr type instanceof() noexcept;
 
-// ... --> arrayof<T, N> ->> For MSVC to handle templates
-template <typename base, std::size_t capacity>
-struct arrayof final {
-  typedef base type[capacity];
-};
-
 // ... --> bitwise_ceil<N> ->> Rounds up to the next (equal or greater) power of two
 template <std::size_t value>
 struct bitwise_ceil final {
@@ -145,11 +139,11 @@ struct bitwise_ceil final {
 
     template <std::size_t ceiling>
     struct valueof<ceiling, true> final {
-      static std::size_t const value = valueof<(SIZE_MAX >> 1u > ceiling ? ceiling ? ceiling << 1u : 1u : SIZE_MAX)>::value;
+      static std::size_t const value = valueof<(ceiling > SIZE_MAX >> 1u ? SIZE_MAX : 0u != ceiling ? ceiling << 1u : 1u)>::value;
     };
 
   public:
-    static std::size_t const value = valueof<0u, value != 0u>::value;
+    static std::size_t const value = valueof<0u, 0u != value>::value;
 };
 
 // ... --> boolean_and<bool...> --> std::conjunction
@@ -2096,7 +2090,7 @@ struct $n<arity, $shorthand::format<$shorthand::nodestruct, states...>, extensio
       static bool        const is_trivial_lifetime = (opinfo::can<opinfo::constant_destruct, type>::value) and (opinfo::can<opinfo::copy, type>::value or opinfo::can<opinfo::move, type>::value);
 
       union {
-        alignas(type) typename conditional<is_trivial_lifetime, type, sfinaeptr_t>::type extended;   // ->> Elide extended-type that are constant-destructible objects and copy-/ move-constructible objects
+          alignas(type) typename conditional<is_trivial_lifetime, type, sfinaeptr_t>::type extended;   // ->> Elide extended-type that are constant-destructible objects and copy-/ move-constructible objects
         typename remove_reference<subextension>::type                                   *referrable; // ->> Elide pointer-/ reference-to-extended-type objects
         extvalue<subextensions...>                                                       subvalue;   // ->> Elide ...
       };

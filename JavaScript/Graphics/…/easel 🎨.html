@@ -101,7 +101,7 @@
           // … ->> Event data & settings e.g.: how long should a double-click be listened for after a click
           CLICK_RATE: 1.0 / 3.0,
           KEYS      : array(),
-          POINTER   : xy(0.0, 0.0),
+          POINTER   : xy   (0.0, 0.0),
           POINTS    : array( /* --> …, Events.POINTER, … */ )
         };
 
@@ -346,10 +346,10 @@
           this.minimumHeight      = Styles.AUTO === Style.prototype.minimumHeight ? Styles.AUTO : px(Style.prototype.minimumHeight);
           this.minimumWidth       = Styles.AUTO === Style.prototype.minimumWidth  ? Styles.AUTO : px(Style.prototype.minimumWidth);
           this.opacity            =             rel(Style.prototype.opacity);
-          this.paddingBottom      =             px (Style.prototype.paddingBottom);
-          this.paddingLeft        =             px (Style.prototype.paddingLeft);
-          this.paddingRight       =             px (Style.prototype.paddingRight);
-          this.paddingTop         =             px (Style.prototype.paddingTop);
+          this.paddingBottom      =              px(Style.prototype.paddingBottom);
+          this.paddingLeft        =              px(Style.prototype.paddingLeft);
+          this.paddingRight       =              px(Style.prototype.paddingRight);
+          this.paddingTop         =              px(Style.prototype.paddingTop);
           this.shadowColor        =                 Style.prototype.shadowColor;
           this.shadowRadius       =              px(Style.prototype.shadowRadius);
           this.shadowX            =              px(Style.prototype.shadowX);
