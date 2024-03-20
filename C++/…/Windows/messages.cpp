@@ -4,22 +4,26 @@
 #define _WIN32_WINNT 0x0501 // --> _WIN32_WINNT_WINXP
 
 /* Import */
-#include <ciso646>    // ->> C ISO 646
-#include <climits>    // ->> C Limits
-#include <cstddef>    // ->> C Standard Definition
-#include <cstdio>     // ->> C Standard Input/ Output
-#include <cstdlib>    // ->> C Standard Library
-#include <inttypes.h> // ->> Integer Types
-#include <stdint.h>   // ->> Standard Integers
-#include <windows.h>  // ->> Windows --- (TODO) -> The other headers
-# include <commctrl.h>    // ->> Common Control    --> ACM_OPENA, ACM_OPENW, ACM_PLAY, ACM_STOP
-# include <ddraw.h>       // ->> Direct Draw       --> DDM_BEGIN, DDM_CLOSE, DDM_DRAW, DDM_END, DDM_SETFMT
-// # include <inked.h>       // ->> Ink Edit          --> IE_DOCOMMAND, IE_GETAPPDATA, IE_GETBKGND, IE_GETCOMMAND, IE_GETCOUNT, IE_GETDRAWOPTS, IE_GETERASERTIP, IE_GETFORMAT, IE_GETGESTURE, IE_GETGRIDORIGIN, IE_GETGRIDPEN, IE_GETGRIDSIZE, IE_GETINK, IE_GETINKINPUT, IE_GETINKRECT, IE_GETMENU, IE_GETMODE, IE_GETNOTIFY, IE_GETPDEVENT, IE_GETPENTIP, IE_GETRECOG, IE_GETSECURITY, IE_GETSEL, IE_GETSELCOUNT, IE_GETSELITEMS, IE_GETSTYLE, IE_MSGFIRST, IE_SETAPPDATA, IE_SETBKGND, IE_SETDRAWOPTS, IE_SETERASERTIP, IE_SETFORMAT, IE_SETGRIDORIGIN, IE_SETGRIDPEN, IE_SETGRIDSIZE, IE_SETINK, IE_SETINKINPUT, IE_SETMODE, IE_SETNOTIFY, IE_SETPENTIP, IE_SETRECOG, IE_SETSECURITY, IE_SETSEL
-# include <richedit.h>    // ->> Rich Edit         --> EM_AUTOURLDETECT, EM_CANPASTE, EM_CANREDO, EM_CANUNDO, EM_CHARFROMPOS, EM_CONVPOSITION, EM_DISPLAYBAND, EM_EMPTYUNDOBUFFER, EM_EXGETSEL, EM_EXLIMITTEXT, EM_EXLINEFROMCHAR, EM_EXSETSEL, EM_FINDTEXT, EM_FINDTEXTEX, EM_FINDTEXTEXW, EM_FINDTEXTW, EM_FINDWORDBREAK, EM_FMTLINES, EM_FORMATRANGE, EM_GETAUTOURLDETECT, EM_GETBIDIOPTIONS, EM_GETCHARFORMAT, EM_GETCTFMODEBIAS, EM_GETCTFOPENSTATUS, EM_GETEDITSTYLE, EM_GETEVENTMASK, EM_GETFIRSTVISIBLELINE, EM_GETHANDLE, EM_GETHYPHENATEINFO, EM_GETIMECOLOR, EM_GETIMECOMPMODE, EM_GETIMECOMPTEXT, EM_GETIMECOMPTEXT, EM_GETIMEMODEBIAS, EM_GETIMEOPTIONS, EM_GETIMEPROPERTY, EM_GETIMESTATUS, EM_GETLANGOPTIONS, EM_GETLIMITTEXT, EM_GETLINE, EM_GETLINECOUNT, EM_GETMARGINS, EM_GETMODIFY, EM_GETOLEINTERFACE, EM_GETOPTIONS, EM_GETPAGE, EM_GETPAGEROTATE, EM_GETPARAFORMAT, EM_GETPASSWORDCHAR, EM_GETPUNCTUATION, EM_GETQUERYRTFOBJ, EM_GETRECT, EM_GETREDONAME, EM_GETSCROLLPOS, EM_GETSEL, EM_GETSELTEXT, EM_GETTEXTEX, EM_GETTEXTLENGTHEX, EM_GETTEXTMODE, EM_GETTEXTRANGE, EM_GETTHUMB, EM_GETTYPOGRAPHYOPTIONS, EM_GETUNDONAME, EM_GETVIEWKIND, EM_GETWORDBREAKPROC, EM_GETWORDBREAKPROCEX, EM_GETWORDWRAPMODE, EM_GETZOOM, EM_HIDESELECTION, EM_ISIME, EM_LIMITTEXT, EM_LINEFROMCHAR, EM_LINEINDEX, EM_LINELENGTH, EM_LINESCROLL, EM_OUTLINE, EM_PASTESPECIAL, EM_POSFROMCHAR, EM_RECONVERSION, EM_REDO, EM_REPLACESEL, EM_REQUESTRESIZE, EM_SCROLL, EM_SCROLLCARET, EM_SELECTIONTYPE, EM_SETBIDIOPTIONS, EM_SETBKGNDCOLOR, EM_SETCHARFORMAT, EM_SETCTFMODEBIAS, EM_SETCTFOPENSTATUS, EM_SETEDITSTYLE, EM_SETEVENTMASK, EM_SETFONT, EM_SETFONTSIZE, EM_SETHANDLE, EM_SETHYPHENATEINFO, EM_SETIMECOLOR, EM_SETIMEMODEBIAS, EM_SETIMEOPTIONS, EM_SETIMESTATUS, EM_SETLANGOPTIONS, EM_SETLIMITTEXT, EM_SETMARGINS, EM_SETMODIFY, EM_SETOLECALLBACK, EM_SETOPTIONS, EM_SETPAGE, EM_SETPAGEROTATE, EM_SETPALETTE, EM_SETPARAFORMAT, EM_SETPASSWORDCHARR, EM_SETPUNCTUATION, EM_SETQUERYRTFOBJ, EM_SETREADONLY, EM_SETRECT, EM_SETRECTNP, EM_SETSCROLLPOS, EM_SETSEL, EM_SETTABSTOPS, EM_SETTARGETDEVICE, EM_SETTEXTEX, EM_SETTEXTMODE, EM_SETTYPOGRAPHYOPTIONS, EM_SETUNDOLIMIT, EM_SETVIEWKIND, EM_SETWORDBREAK, EM_SETWORDBREAKPROC, EM_SETWORDBREAKPROCEX, EM_SETWORDWRAPMODE, EM_SETZOOM, EM_SHOWSCROLLBAR, EM_STOPGROUPTYPING, EM_STREAMIN, EM_STREAMOUT, EM_UNDO
-# include <shlobj.h>      // ->> Shell Objects     --> BFFM_SETSTATUSTEXTA, BFFM_SETSELECTIONW, BFFM_ENABLEOK, BFFM_SETSELECTIONA, BFFM_SETSTATUSTEXTW
-# include <vfw.h>         // ->> Video for Windows --> WM_CAP_DRIVER_GET_NAMEW, WM_CAP_DRIVER_GET_VERSIONW, WM_CAP_FILE_GET_CAPTURE_FILEW, WM_CAP_FILE_SAVEASW, WM_CAP_FILE_SAVEDIBW, WM_CAP_FILE_SET_CAPTURE_FILEW, WM_CAP_GET_MCI_DEVICEW, WM_CAP_PAL_OPENW, WM_CAP_PAL_SAVEW, WM_CAP_SET_CALLBACK_ERRORW, WM_CAP_SET_CALLBACK_STATUSW, WM_CAP_SET_MCI_DEVICEW, WM_CAP_UNICODE_START
-# include <winuser.h>     // ->> Windows User      --> VK_ACCEPT, VK_ADD, VK_APPS, VK_ATTN, VK_BACK, VK_BROWSER_BACK, VK_BROWSER_FAVORITES, VK_BROWSER_FORWARD, VK_BROWSER_HOME, VK_BROWSER_REFRESH, VK_BROWSER_SEARCH, VK_BROWSER_STOP, VK_CANCEL, VK_CAPITAL, VK_CLEAR, VK_CONTROL, VK_CONVERT, VK_CRSEL, VK_DECIMAL, VK_DELETE, VK_DIVIDE, VK_DOWN, VK_END, VK_EREOF, VK_ESCAPE, VK_EXECUTE, VK_EXSEL, VK_F1, VK_F10, VK_F11, VK_F12, VK_F13, VK_F14, VK_F15, VK_F16, VK_F17, VK_F18, VK_F19, VK_F2, VK_F20, VK_F21, VK_F22, VK_F23, VK_F24, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_FINAL, VK_HANGUL, VK_HANJA, VK_HELP, VK_HOME, VK_IME_OFF, VK_IME_ON, VK_INSERT, VK_JUNJA, VK_KANA, VK_KANJI, VK_LAUNCH_APP1, VK_LAUNCH_APP2, VK_LAUNCH_MAIL, VK_LAUNCH_MEDIA_SELECT, VK_LBUTTON, VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT, VK_LWIN, VK_MBUTTON, VK_MEDIA_NEXT_TRACK, VK_MEDIA_PLAY_PAUSE, VK_MEDIA_PREV_TRACK, VK_MEDIA_STOP, VK_MENU, VK_MODECHANGE, VK_MULTIPLY, VK_NEXT, VK_NONAME, VK_NONCONVERT, VK_NUMLOCK, VK_NUMPAD0, VK_NUMPAD1, VK_NUMPAD2, VK_NUMPAD3, VK_NUMPAD4, VK_NUMPAD5, VK_NUMPAD6, VK_NUMPAD7, VK_NUMPAD8, VK_NUMPAD9, VK_OEM_1, VK_OEM_102, VK_OEM_2, VK_OEM_3, VK_OEM_4, VK_OEM_5, VK_OEM_6, VK_OEM_7, VK_OEM_8, VK_OEM_CLEAR, VK_OEM_COMMA, VK_OEM_MINUS, VK_OEM_PERIOD, VK_OEM_PLUS, VK_PA1, VK_PACKET, VK_PAUSE, VK_PLAY, VK_PRINT, VK_PRIOR, VK_PROCESSKEY, VK_RBUTTON, VK_RCONTROL, VK_RETURN, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SCROLL, VK_SELECT, VK_SEPARATOR, VK_SHIFT, VK_SLEEP, VK_SNAPSHOT, VK_SPACE, VK_SUBTRACT, VK_TAB, VK_UP, VK_VOLUME_DOWN, VK_VOLUME_MUTE, VK_VOLUME_UP, VK_XBUTTON1, VK_XBUTTON2, VK_ZOOM
-# include <wow64apiset.h> // ->> Windows on Windows 64-Bit API Set --> ::IsWow64Process2(…)
+#include <ciso646>
+#include <climits>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cwchar>
+#include <new>
+#include <inttypes.h>
+#include <stdint.h>
+#include <windows.h>
+# include <commctrl.h>
+# include <ddraw.h>
+# include <richedit.h>
+# include <shlobj.h>
+# include <vfw.h>
+# include <winuser.h>
+# include <wow64apiset.h>
+# ifdef _MSC_VER
+#   include <inked.h>
+# endif
 
 /* Main */
 int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int const windowAppearance) {
@@ -30,45 +34,247 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
     HWND        handle;
 
     /* ... */
-    inline LRESULT CALLBACK (*getProcedureByCallback(LRESULT (&callback)(HWND, HWND, UINT, WPARAM, LPARAM)) /* noexcept */)(HWND, UINT, WPARAM, LPARAM) {
-      static LRESULT   (&procedureCallback)(HWND, HWND, UINT, WPARAM, LPARAM) = callback;
-      static HWND const &procedureWindowHandle                                = this -> handle;
+    static LRESULT CALLBACK procedure(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) /* noexcept */ {
+      struct log /* final */ {
+        /* ... ->> Used only for `log::format(…)` */
+        typedef struct unused {
+          uintmax_t const value;
+          bool      const signedness : 1;
 
-      struct procedure /* final */ {
-        static LRESULT CALLBACK value(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) {
-          return procedureCallback(procedureWindowHandle, windowHandle, message, parameter, subparameter);
+          explicit inline unused(INT  const value) /* noexcept */ : value(value), signedness(value < 0)  {}
+          explicit inline unused(LONG const value) /* noexcept */ : value(value), signedness(value < 0L) {}
+          explicit inline unused(UINT const value) /* noexcept */ : value(value), signedness(false)      {}
+          explicit inline unused(WORD const value) /* noexcept */ : value(value), signedness(false)      {}
+          #ifdef _WIN64
+            explicit inline unused(LPARAM const value) /* noexcept */ : value(value), signedness(value < 0L) {}
+            explicit inline unused(WPARAM const value) /* noexcept */ : value(value), signedness(false)      {}
+          #endif
+        } number;
+
+        struct undefined : public unused {
+          std::size_t const length : 6; // ->> Count of digits within `unused::value`; Arbitrary bit width
+
+          explicit inline undefined(INT  const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+          explicit inline undefined(LONG const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+          explicit inline undefined(UINT const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+          explicit inline undefined(WORD const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+          #ifdef _WIN64
+            explicit inline undefined(LPARAM const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+            explicit inline undefined(WPARAM const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+          #endif
+        };
+
+        struct any /* final */ {
+          typedef void const    *address;
+          typedef bool           binary;
+          typedef log::number    number;
+          typedef log::undefined undefined;
+          typedef log::unused    unused;
+
+          unsigned char storage[sizeof(any::address) | sizeof(any::number) | sizeof(any::undefined) | sizeof(any::unused)];
+          void   *const value; // ->> `union`s were more restrictive than this address/ byte buffer composition
+          enum /* : unsigned char */ {
+            addressable,
+            boolean,
+            functional,
+            literal,
+            nullable,
+            numerable,
+            textual, // ->> Assume `wchar_t`
+            undefinable,
+            unusable
+          } const type : 4;
+
+          inline any()                                /* noexcept */ : storage(), value(NULL),                                              type(any::nullable)    {}
+          inline any(bool           const  boolean)   /* noexcept */ : storage(), value(::new (this -> storage) any::binary   (boolean)),   type(any::boolean)     {}
+          inline any(void const*    const  address)   /* noexcept */ : storage(), value(::new (this -> storage) any::address  (address)),   type(any::addressable) {}
+          inline any(INT            const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
+          inline any(LONG           const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
+          inline any(UINT           const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
+          inline any(WORD           const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
+          inline any(char           const  text[])    /* noexcept */ : storage(), value(::new (this -> storage) any::address  (text)),      type(any::literal)     {}
+          inline any(wchar_t        const  text[])    /* noexcept */ : storage(), value(::new (this -> storage) any::address  (text)),      type(any::textual)     {}
+          inline any(log::undefined const& undefined) /* noexcept */ : storage(), value(::new (this -> storage) any::undefined(undefined)), type(any::undefinable) {}
+          inline any(log::unused    const& unused)    /* noexcept */ : storage(), value(::new (this -> storage) any::unused   (unused)),    type(any::unusable)    {}
+          #ifdef _WIN64
+            inline any(LPARAM const number) /* noexcept */ : storage(), value(::new (this -> storage) any::number(number)), type(any::numerable) {}
+            inline any(WPARAM const number) /* noexcept */ : storage(), value(::new (this -> storage) any::number(number)), type(any::numerable) {}
+          #endif
+        };
+
+        /* ... */
+        inline static char const* format(any const message1 = any(), any const message2 = any(), any const message3 = any(), any const message4 = any(), any const message5 = any(), any const message6 = any(), any const message7 = any(), any const message8 = any(), any const message9 = any(), any const message10 = any(), any const message11 = any(), any const message12 = any(), any const message13 = any(), any const message14 = any(), any const message15 = any(), any const message16 = any(), any const message17 = any(), any const message18 = any(), any const message19 = any(), any const message20 = any(), any const message21 = any(), any const message22 = any(), any const message23 = any(), any const message24 = any(), any const message25 = any(), any const message26 = any(), any const message27 = any(), any const message28 = any(), any const message29 = any(), any const message30 = any(), any const message31 = any(), any const message32 = any(), any const message33 = any(), any const message34 = any(), any const message35 = any(), any const message36 = any(), any const message37 = any(), any const message38 = any(), any const message39 = any(), any const message40 = any(), any const message41 = any(), any const message42 = any(), any const message43 = any(), any const message44 = any(), any const message45 = any(), any const message46 = any(), any const message47 = any(), any const message48 = any(), any const message49 = any(), any const message50 = any(), any const message51 = any(), any const message52 = any(), any const message53 = any(), any const message54 = any(), any const message55 = any(), any const message56 = any(), any const message57 = any(), any const message58 = any(), any const message59 = any(), any const message60 = any(), any const message61 = any(), any const message62 = any(), any const message63 = any(), any const message64 = any(), any const message65 = any(), any const message66 = any(), any const message67 = any(), any const message68 = any(), any const message69 = any(), any const message70 = any(), any const message71 = any(), any const message72 = any(), any const message73 = any(), any const message74 = any(), any const message75 = any(), any const message76 = any(), any const message77 = any(), any const message78 = any(), any const message79 = any(), any const message80 = any(), any const message81 = any(), any const message82 = any(), any const message83 = any(), any const message84 = any(), any const message85 = any(), any const message86 = any(), any const message87 = any(), any const message88 = any(), any const message89 = any(), any const message90 = any(), any const message91 = any(), any const message92 = any(), any const message93 = any(), any const message94 = any(), any const message95 = any(), any const message96 = any(), any const message97 = any(), any const message98 = any(), any const message99 = any(), any const message100 = any(), any const message101 = any(), any const message102 = any(), any const message103 = any(), any const message104 = any(), any const message105 = any(), any const message106 = any(), any const message107 = any(), any const message108 = any(), any const message109 = any(), any const message110 = any(), any const message111 = any(), any const message112 = any(), any const message113 = any(), any const message114 = any(), any const message115 = any(), any const message116 = any(), any const message117 = any(), any const message118 = any(), any const message119 = any(), any const message120 = any(), any const message121 = any(), any const message122 = any(), any const message123 = any(), any const message124 = any(), any const message125 = any(), any const message126 = any(), any const message127 = any()) /* noexcept */ {
+          static struct /* final */ {
+            std::size_t length;
+            char        value[4096];
+
+            inline bool apply(any const& message) /* noexcept */ {
+              switch (message.type) {
+                case any::addressable: {
+                  any::address const &address = *static_cast<any::address*>(message.value);
+
+                  // ...
+                  if (NULL == address)
+                  return this -> apply("NULL");
+
+                  if (this -> apply("@") ? not this -> apply(static_cast<undefined>(reinterpret_cast<uintptr_t>(address))) : true)
+                  return false;
+                } break;
+
+                case any::boolean: {
+                  any::binary const &boolean = *static_cast<any::binary*>(message.value);
+
+                  if (not this -> apply(boolean ? "true" : "false"))
+                  return false;
+                } break;
+
+                case any::functional: {
+                  any::address const &address = *static_cast<any::address*>(message.value);
+                  std::size_t         length  = 0u;
+
+                  // ...
+                  if (NULL == address)
+                  return this -> apply("NULL");
+
+                  if (not this -> apply("0x"))
+                  return false;
+
+                  for (std::size_t characteristics = UCHAR_MAX; characteristics; characteristics /= 16u)
+                    ++length;
+
+                  for (unsigned char const *iterator = static_cast<unsigned char const*>(address); iterator != static_cast<unsigned char const*>(address) + sizeof(void (*)(...)); ++iterator) {
+                    if (length + this -> length > sizeof this -> value / sizeof(char))
+                    return false;
+
+                    for (std::size_t byte = *iterator, sublength = length; sublength--; byte /= 16u)
+                    this -> value[this -> length++] = "0123456789ABCDEF"[byte % 16u];
+                  }
+                } break;
+
+                case any::literal: {
+                  any::address const &address = *static_cast<any::address*>(message.value);
+
+                  // ...
+                  for (char *destination = this -> value + this -> length, *source = const_cast<char*>(static_cast<char const*>(address)); '\0' != *source; ++destination, ++source) {
+                    if (destination == this -> value + ((sizeof this -> value / sizeof(char)) - 1u))
+                    return false;
+
+                    *destination = *source;
+                    ++(this -> length);
+                  }
+                } break;
+
+                case any::nullable: break;
+
+                case any::numerable:
+                case any::undefinable:
+                case any::unusable: {
+                  uintmax_t   characteristics = 0u;
+                  std::size_t length          = 0u;
+                  std::size_t radix           = 2u;
+                  bool        signedness      = false;
+                  uintmax_t   value           = 0u;
+
+                  // ...
+                  switch (message.type) {
+                    case any::numerable  : { any::number    const *const number    = static_cast<any::number*>   (message.value); signedness = number    -> signedness; value = number    -> value; } break;
+                    case any::undefinable: { any::undefined const *const undefined = static_cast<any::undefined*>(message.value); signedness = undefined -> signedness; value = undefined -> value; } break;
+                    case any::unusable   : { any::unused    const *const unused    = static_cast<any::unused*>   (message.value); signedness = unused    -> signedness; value = unused    -> value; } break;
+                    default: return false;
+                  }
+
+                  value           = signedness                       ? -static_cast<intmax_t>(value)                                                                                                   : value;
+                  radix           = message.type == any::numerable   ? 10u                                                                                                                             : 16u;
+                  characteristics = message.type == any::undefinable ? (((static_cast<std::size_t>(1u) << ((CHAR_BIT * static_cast<any::undefined*>(message.value) -> length) - 1u)) - 1u) << 1u) + 1u : value ? value : 1u;
+
+                  if (signedness ? not this -> apply("-") : false)
+                  return false;
+
+                  switch (radix) {
+                    case 2u : if (not this -> apply("0b")) return false; break;
+                    case 8u : if (not this -> apply("0o")) return false; break;
+                    case 16u: if (not this -> apply("0x")) return false; break;
+                  }
+
+                  if (message.type == any::unusable ? not this -> apply("...") : false)
+                  return false;
+
+                  for (; characteristics; characteristics /= radix) {
+                    if (length++ + this -> length == sizeof this -> value / sizeof(char))
+                    return false;
+                  }
+
+                  for (char *iterator = this -> value + (length + this -> length); length--; ++(this -> length), value /= radix)
+                  *--iterator = "0123456789ABCDEF"[value % radix];
+                } break;
+
+                case any::textual: {
+                  any::address const &address = *static_cast<any::address*>(message.value);
+                  wchar_t const      *text    = static_cast<wchar_t const*>(address);
+                  std::mbstate_t      state   = std::mbstate_t();
+                  std::size_t const   length  = std::wcsrtombs(NULL, &text, 0u, &state);
+
+                  // ...
+                  if (length + this -> length > sizeof this -> value / sizeof(char))
+                  return false;
+
+                  if (std::wcsrtombs(this -> value + this -> length, &text, length, &state) == static_cast<std::size_t>(-1))
+                  return false;
+
+                  this -> length += length;
+                } break;
+              }
+
+              return true;
+            }
+          } translation = {0u, {'\0'}};
+
+          // ...
+          translation.length = 0u;
+
+          for (any const *const messages[] = {&message1, &message2, &message3, &message4, &message5, &message6, &message7, &message8, &message9, &message10, &message11, &message12, &message13, &message14, &message15, &message16, &message17, &message18, &message19, &message20, &message21, &message22, &message23, &message24, &message25, &message26, &message27, &message28, &message29, &message30, &message31, &message32, &message33, &message34, &message35, &message36, &message37, &message38, &message39, &message40, &message41, &message42, &message43, &message44, &message45, &message46, &message47, &message48, &message49, &message50, &message51, &message52, &message53, &message54, &message55, &message56, &message57, &message58, &message59, &message60, &message61, &message62, &message63, &message64, &message65, &message66, &message67, &message68, &message69, &message70, &message71, &message72, &message73, &message74, &message75, &message76, &message77, &message78, &message79, &message80, &message81, &message82, &message83, &message84, &message85, &message86, &message87, &message88, &message89, &message90, &message91, &message92, &message93, &message94, &message95, &message96, &message97, &message98, &message99, &message100, &message101, &message102, &message103, &message104, &message105, &message106, &message107, &message108, &message109, &message110, &message111, &message112, &message113, &message114, &message115, &message116, &message117, &message118, &message119, &message120, &message121, &message122, &message123, &message124, &message125, &message126, &message127}, *const *message = messages; message != messages + (sizeof(messages) / sizeof(any const*)); ++message) {
+            if (not translation.apply(**message))
+            return NULL;
+          }
+
+          if (translation.length == sizeof translation.value / sizeof(char))
+          return NULL;
+
+          translation.value[translation.length] = '\0';
+
+          return translation.value;
         }
-      };
 
-      // ...
-      return callback == procedureCallback ? &procedure::value : NULL;
-    }
+        inline static bool output(char const message[]) /* noexcept */ {
+          return NULL != message ? EOF != std::fputs(message, stdout) : false;
+        }
 
-    static LRESULT procedureCallback(HWND const procedureWindowHandle, HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) /* noexcept */ {
-      struct output /* final */ {
+        // ... ->> `NULL` if `message` unrecognized, otherwise `""` if `message` untranslatable, otherwise `"NMSP_CONSTANT" "\0" "Namespace" "\0" "Event Action"`
         inline static char const* translate(UINT const message) /* noexcept */ {
           static struct /* final */ {
             std::size_t length;
-            char        value[2048];
+            char        value[4096];
 
             inline bool apply(char const* messageConstant, char const* messageType, char const* messageEvent) /* noexcept */ {
-              std::size_t const capacity = sizeof this -> value / sizeof(char);
-
-              // ...
               for (char const *const messages[] = {messageConstant, messageType, messageEvent}, *const *message = messages; message != messages + (sizeof messages / sizeof(char const*)); ++message) {
                 for (char *destination = this -> value + this -> length, *source = const_cast<char*>(*message); '\0' != *source; ++destination, ++source, ++(this -> length)) {
-                  if (capacity == this -> length) break;
+                  if (this -> length == sizeof this -> value / sizeof(char))
+                  break;
+
                   *destination = *source;
                 }
 
-                if (capacity == this -> length) break;
+                if (this -> length == sizeof this -> value / sizeof(char))
+                break;
+
                 this -> value[this -> length++] = '\0';
               }
 
-              if (capacity == this -> length)
-                return false;
+              if (this -> length == sizeof this -> value / sizeof(char))
+              return false;
 
               this -> value[this -> length] = '\0';
+
               return true;
             }
           } translation = {0u, {'\0'}};
@@ -5015,581 +5221,604 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
         }
       };
 
-      std::size_t       messageLength           = 0u;
-      std::size_t const messageMaximum          = (((static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof message) - 1u)) - 1u) << 1u) + 1u;
-      std::size_t       parameterLength         = 0u;
-      std::size_t       parameterMaximum        = (((static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof parameter) - 1u)) - 1u) << 1u) + 1u;
-      std::size_t       subparameterLength      = 0u;
-      std::size_t const subparameterMaximum     = (((static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof subparameter) - 1u)) - 1u) << 1u) + 1u;
-      char const       *translation             = output::translate(message);
-      std::size_t       windowHandleLength      = 0u;
-      std::size_t const windowHandleMaximum     = (((static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof windowHandle) - 1u)) - 1u) << 1u) + 1u;
-      static LPWSTR     windowText              = NULL; // ->> Ideally `HeapFree(…)`-ed on program termination
-      bool              windowTextAcquired      = false;
-      static SIZE_T     windowTextCapacity      = 0L;
-      static HANDLE     windowTextHeap          = NULL; // ->> Ideally `HeapDestroy(…)`-ed on program termination
-      LRESULT           windowTextLength        = 0L;   // --> int
-      LRESULT const     windowTextLengthMaximum = (static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(LRESULT)) - 1u)) - 1u;
-      SIZE_T            windowTextSize          = 0u;
+      typedef log::undefined undefined;
+      typedef log::unused    unused;
 
-      // ... --> …Length = ::log16(…);
-      for (std::size_t value = messageMaximum;      value; value /= 16u) ++messageLength;
-      for (std::size_t value = parameterMaximum;    value; value /= 16u) ++parameterLength;
-      for (std::size_t value = subparameterMaximum; value; value /= 16u) ++subparameterLength;
-      for (std::size_t value = windowHandleMaximum; value; value /= 16u) ++windowHandleLength;
+      char const   *messageTranslation                = log::translate(message);
+      bool          messageTranslationMultilineFormat = false;
+      static LPWSTR windowText                        = NULL; // ->> Ideally `HeapFree(…)`-ed on program termination
+      bool          windowTextAcquired                = false;
+      static SIZE_T windowTextCapacity                = 0L;
+      static HANDLE windowTextHeap                    = NULL; // ->> Ideally `HeapDestroy(…)`-ed on program termination
+      LRESULT       windowTextLength                  = 0L;   // --> int
+      LRESULT const windowTextLengthMaximum           = (static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(LRESULT)) - 1u)) - 1u;
+      SIZE_T        windowTextSize                    = 0u;
+      bool const    windowUsesProcedure               = &procedure == reinterpret_cast<WNDPROC>(::GetWindowLongPtrW(windowHandle, GWLP_WNDPROC));
 
-      // ... ->> Prevent recursive `::GetMessageW(…, WM_GETTEXT…, …WM_GETTEXT)`-to-`::SendMessage(…, WM_GETTEXT, …)` chains
-      if (WM_GETTEXT != message or (windowText != static_cast<LPWSTR>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter))) and windowTextCapacity != static_cast<SIZE_T>(parameter))) {
-        // ... --> windowText… = …;
-        if (NULL != windowHandle) {
-          windowTextHeap = NULL == windowTextHeap ? ::HeapCreate(HEAP_NO_SERIALIZE, 0u, 0u) : windowTextHeap;
-          windowTextHeap = NULL == windowTextHeap ? ::GetProcessHeap()                      : windowTextHeap;
+      // ... --> windowText… = …;
+      if (NULL != windowHandle) {
+        windowTextHeap = NULL == windowTextHeap ? ::HeapCreate(HEAP_NO_SERIALIZE, 0u, 0u) : windowTextHeap;
+        windowTextHeap = NULL == windowTextHeap ? ::GetProcessHeap()                      : windowTextHeap;
 
-          // ...
-          if (not windowTextAcquired and NULL != windowTextHeap) {
-            windowTextLength = WM_GETTEXTLENGTH != message and procedureWindowHandle != windowHandle ? ::SendMessage(windowHandle, WM_GETTEXTLENGTH, 0x00u, 0x00L) : ::DefWindowProcW(windowHandle, WM_GETTEXTLENGTH, 0x00u, 0x00L); // ->> NUL character omitted
+        // ... ->> Get `windowText` via `::SendMessage(…)` (or `::DefWindowProcW(…)`) requests
+        if (not windowTextAcquired and NULL != windowTextHeap) {
+          windowTextLength = (windowUsesProcedure ? ::DefWindowProcW : ::SendMessage)(windowHandle, WM_GETTEXTLENGTH, 0x00u, 0x00L); // ->> NUL character omitted
 
-            if (ERROR_ACCESS_DENIED != ::GetLastError())
-            if (windowTextLength < windowTextLengthMaximum - 1L) {
-              windowTextSize = static_cast<std::size_t>(windowTextLength + 1L);
+          if (ERROR_ACCESS_DENIED != ::GetLastError())
+          if (windowTextLength < windowTextLengthMaximum - 1L) {
+            windowTextSize = static_cast<std::size_t>(windowTextLength + 1L);
 
-              if (windowTextCapacity < windowTextSize) {
-                LPVOID const allocation = NULL == windowText ? ::HeapAlloc(windowTextHeap, HEAP_ZERO_MEMORY, static_cast<SIZE_T>(windowTextSize) /* ->> Less than `0x7FFF8u`? */) : ::HeapReAlloc(windowTextHeap, HEAP_ZERO_MEMORY, windowText, static_cast<SIZE_T>(windowTextSize));
-
-                // ...
-                if (NULL != allocation) {
-                  windowText         = static_cast<LPWSTR>(allocation);
-                  windowTextCapacity = windowTextSize;
-                }
-              }
+            if (windowTextCapacity < windowTextSize) {
+              LPVOID const allocation = NULL == windowText ? ::HeapAlloc(windowTextHeap, HEAP_ZERO_MEMORY, static_cast<SIZE_T>(windowTextSize) /* ->> Less than `0x7FFF8u`? */) : ::HeapReAlloc(windowTextHeap, HEAP_ZERO_MEMORY, windowText, static_cast<SIZE_T>(windowTextSize));
 
               // ...
-              if (windowTextCapacity >= windowTextSize)
-              windowTextAcquired = windowTextLength >= (
-                WM_GETTEXT != message and procedureWindowHandle != windowHandle
-                ? ::SendMessage   (windowHandle, WM_GETTEXT, static_cast<WPARAM>(windowTextCapacity), static_cast<LPARAM>(reinterpret_cast<uintptr_t>(static_cast<void*>(windowText))))
-                : ::DefWindowProcW(windowHandle, WM_GETTEXT, static_cast<WPARAM>(windowTextCapacity), static_cast<LPARAM>(reinterpret_cast<uintptr_t>(static_cast<void*>(windowText))))
-              ) ? ERROR_ACCESS_DENIED != ::GetLastError() : false;
-            }
-          }
-
-          // ...
-          if (not windowTextAcquired and NULL != windowTextHeap) {
-            ::SetLastError(0x0000u /* --> ERROR_SUCCESS */);
-            windowTextLength = WM_GETTEXTLENGTH != message and procedureWindowHandle != windowHandle ? ::GetWindowTextLengthW(windowHandle) : 0; // ->> Presumably NUL character omitted
-
-            if (0 != windowTextLength and 0x0000u /* --> ERROR_SUCCESS */ == ::GetLastError())
-            if (windowTextLength < windowTextLengthMaximum - 1L) {
-              windowTextSize = static_cast<std::size_t>(windowTextLength + 1);
-
-              if (windowTextCapacity < windowTextSize) {
-                LPVOID const allocation = NULL == windowText ? ::HeapAlloc(windowTextHeap, HEAP_ZERO_MEMORY, static_cast<SIZE_T>(windowTextSize) /* ->> Less than `0x7FFF8u`? */) : ::HeapReAlloc(windowTextHeap, HEAP_ZERO_MEMORY, windowText, static_cast<SIZE_T>(windowTextSize));
-
-                // ...
-                if (NULL != allocation) {
-                  windowText         = static_cast<LPWSTR>(allocation);
-                  windowTextCapacity = windowTextSize;
-                }
+              if (NULL != allocation) {
+                windowText         = static_cast<LPWSTR>(allocation);
+                windowTextCapacity = windowTextSize;
               }
-
-              // ...
-              if (windowTextCapacity >= windowTextSize)
-              windowTextAcquired = WM_GETTEXT != message and procedureWindowHandle != windowHandle ? 0 != ::GetWindowTextW(windowHandle, windowText, static_cast<int>(windowTextCapacity)) : false;
             }
+
+            // ...
+            if (windowTextCapacity >= windowTextSize)
+            windowTextAcquired = windowTextLength >= (windowUsesProcedure ? ::DefWindowProcW : ::SendMessage)(windowHandle, WM_GETTEXT, static_cast<WPARAM>(windowTextCapacity), static_cast<LPARAM>(reinterpret_cast<uintptr_t>(static_cast<void*>(windowText)))) ? ERROR_ACCESS_DENIED != ::GetLastError() : false;
           }
         }
 
-        // ... ->> Log the `message`
-        if (NULL == translation)
-          (void) std::fprintf(stdout, "%1.2s%0*" PRIXMAX "%1.12s%0*" PRIXMAX "%0.1s%0.1s%0.*ls%0.1s%1.16s%0*" PRIXMAX "%1.4s%0*" PRIXMAX "%1.4s",
-            "0x", static_cast<int>(messageLength), static_cast<uintmax_t>(message), " {"
-              "window: "
-                "0x", static_cast<int>(windowHandleLength), static_cast<uintmax_t>(reinterpret_cast<uintptr_t>(static_cast<void*>(windowHandle))),         windowTextAcquired ? " " : "",
-                windowTextAcquired ? "\"" : "", static_cast<int>(windowTextLength), windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
-              "arguments: ["
-                "0x", static_cast<int>(parameterLength),    static_cast<uintmax_t>(parameter), ", "
-                "0x", static_cast<int>(subparameterLength), static_cast<uintmax_t>(subparameter),
-              "]"
-            "}" "\r\n"
-          );
+        // ... ->> Get `windowText` via `::GetWindowText…(…)` functions
+        if (not windowTextAcquired and NULL != windowTextHeap) {
+          ::SetLastError(0x0000u /* --> ERROR_SUCCESS */);
+          windowTextLength = not windowUsesProcedure ? ::GetWindowTextLengthW(windowHandle) : 0; // ->> Presumably NUL character omitted
 
-        else while ('\0' != *translation) {
-          char const *const messageConstantTranslation = translation;
-          char const       *messageEventTranslation    = NULL;
-          char const       *messageTypeTranslation     = NULL;
+          if (0 != windowTextLength and 0x0000u /* --> ERROR_SUCCESS */ == ::GetLastError())
+          if (windowTextLength < windowTextLengthMaximum - 1L) {
+            windowTextSize = static_cast<std::size_t>(windowTextLength + 1);
 
-          // ...
-          for (messageTypeTranslation  = messageConstantTranslation; '\0' != *(messageTypeTranslation++); )  continue;
-          for (messageEventTranslation = messageTypeTranslation;     '\0' != *(messageEventTranslation++); ) continue;
+            if (windowTextCapacity < windowTextSize) {
+              LPVOID const allocation = NULL == windowText ? ::HeapAlloc(windowTextHeap, HEAP_ZERO_MEMORY, static_cast<SIZE_T>(windowTextSize) /* ->> Less than `0x7FFF8u`? */) : ::HeapReAlloc(windowTextHeap, HEAP_ZERO_MEMORY, windowText, static_cast<SIZE_T>(windowTextSize));
 
-          // ...
-          if (std::fprintf(stdout, "%1.2s%0*" PRIXMAX "%1.9s%s%1.3s%s%1.2s%s%1.13s%0*" PRIXMAX "%0.1s%0.1s%0.*ls%0.1s%1.13s",
-            "0x", static_cast<int>(messageLength), static_cast<uintmax_t>(message), " {"
-              "name: `", messageConstantTranslation, "` \"", messageTypeTranslation, ": ", messageEventTranslation, "\"" ", "
-              "window: "
-                "0x", static_cast<int>(windowHandleLength), static_cast<uintmax_t>(reinterpret_cast<uintptr_t>(static_cast<void*>(windowHandle))),         windowTextAcquired ? " " : "",
-                windowTextAcquired ? "\"" : "", static_cast<int>(windowTextLength), windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
-              "arguments: "
-          ) > static_cast<int>(messageLength + windowHandleLength + 42u)) {
-            switch (message) {
-              case WM_CLOSE:
-              case WM_DESTROY:
-              case WM_GETTEXTLENGTH:
-              case WM_NCDESTROY: {
-                (void) std::fputs("[..., ...]", stdout);
-              } break;
-
-              case WM_GETTEXT: {
-                if (std::fprintf(stdout, "%c%" PRIuMAX "%1.4s%0*" PRIXMAX "%c", '[',
-                  static_cast<uintmax_t>(parameter), ", "
-                  "0x", static_cast<int>(subparameterLength), static_cast<uintmax_t>(subparameter),
-                ']') < static_cast<int>(subparameterLength + 6u))
-                (void) std::fputs("...", stdout);
-              } break;
-
-              // CITE (Lapys) -> https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input
-              case WM_KEYDOWN   :
-              case WM_KEYUP     :
-              case WM_SYSKEYDOWN:
-              case WM_SYSKEYUP  : {
-                WORD        const  keyFlags        = HIWORD(subparameter);                                                                      //
-                BOOL        const  extended        = KF_EXTENDED == (LOBYTE(keyFlags) & KF_EXTENDED);                                           // ->> `TRUE` if `scanCode` has `0xE0` prefix
-                BOOL        const  context         = KF_ALTDOWN  == (keyFlags         & KF_ALTDOWN);                                            // ->> `TRUE` on `VK_MENU`, always `FALSE` on `WM_KEYDOWN`
-                BOOL        const  previous        = KF_REPEAT   == (keyFlags         & KF_REPEAT);                                             // ->> `TRUE` on auto-repeat
-                WORD        const  repeatCount     = LOWORD(subparameter);                                                                      //
-                WORD        const  scanCode        = extended ? MAKEWORD(LOBYTE(keyFlags), 0xE0u) : LOBYTE(keyFlags);                           //
-                std::size_t        scanCodeLength  = 0u;                                                                                        //
-                char        const *scanCodeLog     = NULL;                                                                                      //
-                std::size_t const  scanCodeMaximum = (((static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof scanCode) - 1u)) - 1u) << 1u) + 1u; //
-                BOOL        const  transition      = KF_UP == (keyFlags & KF_UP);                                                               // ->> `TRUE` on key release
-                WORD        const  virtualKey      = LOWORD(parameter);                                                                         //
-                char        const *virtualKeyLog   = NULL;                                                                                      //
-
-                // ...
-                for (std::size_t value = scanCodeMaximum; value; value /= 16u)
-                  ++scanCodeLength;
-
-                switch (scanCode) {
-                  case 0x0001u:               scanCodeLog = "Key"             ": Keyboard Escape";                                     break;
-                  case 0x0002u:               scanCodeLog = "Key"             ": Keyboard 1 and Bang";                                 break;
-                  case 0x0003u:               scanCodeLog = "Key"             ": Keyboard 2 and At";                                   break;
-                  case 0x0004u:               scanCodeLog = "Key"             ": Keyboard 3 And Hash";                                 break;
-                  case 0x0005u:               scanCodeLog = "Key"             ": Keyboard 4 and Dollar";                               break;
-                  case 0x0006u:               scanCodeLog = "Key"             ": Keyboard 5 and Percent";                              break;
-                  case 0x0007u:               scanCodeLog = "Key"             ": Keyboard 6 and Caret";                                break;
-                  case 0x0008u:               scanCodeLog = "Key"             ": Keyboard 7 and Ampersand";                            break;
-                  case 0x0009u:               scanCodeLog = "Key"             ": Keyboard 8 and Star";                                 break;
-                  case 0x000Au:               scanCodeLog = "Key"             ": Keyboard 9 and Left Bracket";                         break;
-                  case 0x000Bu:               scanCodeLog = "Key"             ": Keyboard 0 and Right Bracket";                        break;
-                  case 0x000Cu:               scanCodeLog = "Key"             ": Keyboard Dash and Underscore";                        break;
-                  case 0x000Du:               scanCodeLog = "Key"             ": Keyboard Equals and Plus";                            break;
-                  case 0x000Eu:               scanCodeLog = "Key"             ": Keyboard Delete";                                     break;
-                  case 0x000Fu:               scanCodeLog = "Key"             ": Keyboard Tab";                                        break;
-                  case 0x0010u:               scanCodeLog = "Key"             ": Keyboard Q";                                          break;
-                  case 0x0011u:               scanCodeLog = "Key"             ": Keyboard W";                                          break;
-                  case 0x0012u:               scanCodeLog = "Key"             ": Keyboard E";                                          break;
-                  case 0x0013u:               scanCodeLog = "Key"             ": Keyboard R";                                          break;
-                  case 0x0014u:               scanCodeLog = "Key"             ": Keyboard T";                                          break;
-                  case 0x0015u:               scanCodeLog = "Key"             ": Keyboard Y";                                          break;
-                  case 0x0016u:               scanCodeLog = "Key"             ": Keyboard U";                                          break;
-                  case 0x0017u:               scanCodeLog = "Key"             ": Keyboard I";                                          break;
-                  case 0x0018u:               scanCodeLog = "Key"             ": Keyboard O";                                          break;
-                  case 0x0019u:               scanCodeLog = "Key"             ": Keyboard P";                                          break;
-                  case 0x001Au:               scanCodeLog = "Key"             ": Keyboard Left Brace";                                 break;
-                  case 0x001Bu:               scanCodeLog = "Key"             ": Keyboard Right Brace";                                break;
-                  case 0x001Cu:               scanCodeLog = "Key"             ": Keyboard Return Enter";                               break;
-                  case 0x001Du:               scanCodeLog = "Key"             ": Keyboard Left Control";                               break;
-                  case 0x001Eu:               scanCodeLog = "Key"             ": Keyboard A";                                          break;
-                  case 0x001Fu:               scanCodeLog = "Key"             ": Keyboard S";                                          break;
-                  case 0x0020u:               scanCodeLog = "Key"             ": Keyboard D";                                          break;
-                  case 0x0021u:               scanCodeLog = "Key"             ": Keyboard F";                                          break;
-                  case 0x0022u:               scanCodeLog = "Key"             ": Keyboard G";                                          break;
-                  case 0x0023u:               scanCodeLog = "Key"             ": Keyboard H";                                          break;
-                  case 0x0024u:               scanCodeLog = "Key"             ": Keyboard J";                                          break;
-                  case 0x0025u:               scanCodeLog = "Key"             ": Keyboard K";                                          break;
-                  case 0x0026u:               scanCodeLog = "Key"             ": Keyboard L";                                          break;
-                  case 0x0027u:               scanCodeLog = "Key"             ": Keyboard SemiColon and Colon";                        break;
-                  case 0x0028u:               scanCodeLog = "Key"             ": Keyboard Apostrophe and Double Quotation Mark";       break;
-                  case 0x0029u:               scanCodeLog = "Key"             ": Keyboard Grave Accent and Tilde";                     break;
-                  case 0x002Au:               scanCodeLog = "Key"             ": Keyboard Left Shift";                                 break;
-                  case 0x002Bu:               scanCodeLog = "Key"             ": Keyboard Non-United States, Keyboard Pipe and Slash"; break;
-                  case 0x002Cu:               scanCodeLog = "Key"             ": Keyboard Z";                                          break;
-                  case 0x002Du:               scanCodeLog = "Key"             ": Keyboard X";                                          break;
-                  case 0x002Eu:               scanCodeLog = "Key"             ": Keyboard C";                                          break;
-                  case 0x002Fu:               scanCodeLog = "Key"             ": Keyboard V";                                          break;
-                  case 0x0030u:               scanCodeLog = "Key"             ": Keyboard B";                                          break;
-                  case 0x0031u:               scanCodeLog = "Key"             ": Keyboard N";                                          break;
-                  case 0x0032u:               scanCodeLog = "Key"             ": Keyboard M";                                          break;
-                  case 0x0033u:               scanCodeLog = "Key"             ": Keyboard Comma";                                      break;
-                  case 0x0034u:               scanCodeLog = "Key"             ": Keyboard Period";                                     break;
-                  case 0x0035u:               scanCodeLog = "Key"             ": Keyboard QuestionMark";                               break;
-                  case 0x0036u:               scanCodeLog = "Key"             ": Keyboard Right Shift";                                break;
-                  case 0x0037u:               scanCodeLog = "Key"             ": Keypad Star";                                         break;
-                  case 0x0038u:               scanCodeLog = "Key"             ": Keyboard Left Alternative";                           break;
-                  case 0x0039u:               scanCodeLog = "Key"             ": Keyboard Spacebar";                                   break;
-                  case 0x003Au:               scanCodeLog = "Key"             ": Keyboard Caps Lock";                                  break;
-                  case 0x003Bu:               scanCodeLog = "Key"             ": Keyboard Function 1";                                 break;
-                  case 0x003Cu:               scanCodeLog = "Key"             ": Keyboard Function 2";                                 break;
-                  case 0x003Du:               scanCodeLog = "Key"             ": Keyboard Function 3";                                 break;
-                  case 0x003Eu:               scanCodeLog = "Key"             ": Keyboard Function 4";                                 break;
-                  case 0x003Fu:               scanCodeLog = "Key"             ": Keyboard Function 5";                                 break;
-                  case 0x0040u:               scanCodeLog = "Key"             ": Keyboard Function 6";                                 break;
-                  case 0x0041u:               scanCodeLog = "Key"             ": Keyboard Function 7";                                 break;
-                  case 0x0042u:               scanCodeLog = "Key"             ": Keyboard Function 8";                                 break;
-                  case 0x0043u:               scanCodeLog = "Key"             ": Keyboard Function 9";                                 break;
-                  case 0x0044u:               scanCodeLog = "Key"             ": Keyboard Function 10";                                break;
-                  case 0x0045u:               scanCodeLog = "Key"             ": Keyboard Pause, Keypad Number Lock and Clear";        break;
-                  case 0xE045u:               scanCodeLog = "Key"             ": Keypad Number Lock and Clear";                        break;
-                  case 0xE046u:               scanCodeLog = "Key"             ": Keyboard Pause";                                      break; // --> 0xE11D45u
-                  case 0x0046u:               scanCodeLog = "Key"             ": Keyboard Scroll Lock";                                break;
-                  case 0x0047u:               scanCodeLog = "Key"             ": Keypad 7 and Home";                                   break;
-                  case 0x0048u:               scanCodeLog = "Key"             ": Keypad 8 and Up Arrow";                               break;
-                  case 0x0049u:               scanCodeLog = "Key"             ": Keypad 9 and Page Up";                                break;
-                  case 0x004Au:               scanCodeLog = "Key"             ": Keypad Dash";                                         break;
-                  case 0x004Bu:               scanCodeLog = "Key"             ": Keypad 4 and Left Arrow";                             break;
-                  case 0x004Cu:               scanCodeLog = "Key"             ": Keypad 5";                                            break;
-                  case 0x004Du:               scanCodeLog = "Key"             ": Keypad 6 and Right Arrow";                            break;
-                  case 0x004Eu:               scanCodeLog = "Key"             ": Keypad Plus";                                         break;
-                  case 0x004Fu:               scanCodeLog = "Key"             ": Keypad 1 and End";                                    break;
-                  case 0x0050u:               scanCodeLog = "Key"             ": Keypad 2 and Down Arrow";                             break;
-                  case 0x0051u:               scanCodeLog = "Key"             ": Keypad 3 and Page Down";                              break;
-                  case 0x0052u:               scanCodeLog = "Key"             ": Keypad 0 and Insert";                                 break;
-                  case 0x0053u:               scanCodeLog = "Key"             ": Keypad Period";                                       break;
-                  case 0x0054u: case 0xE037u: scanCodeLog = "Key"             ": Keyboard Print Screen";                               break;
-                  case 0x0056u:               scanCodeLog = "Key"             ": Keyboard Non-United States Slash Bar";                break;
-                  case 0x0057u:               scanCodeLog = "Key"             ": Keyboard Function 11";                                break;
-                  case 0x0058u:               scanCodeLog = "Key"             ": Keyboard Function 12";                                break;
-                  case 0x0059u:               scanCodeLog = "Key"             ": Keypad Equals";                                       break;
-                  case 0x005Cu:               scanCodeLog = "Key"             ": Keyboard International 6";                            break;
-                  case 0x0064u:               scanCodeLog = "Key"             ": Keyboard Function 13";                                break;
-                  case 0x0065u:               scanCodeLog = "Key"             ": Keyboard Function 14";                                break;
-                  case 0x0066u:               scanCodeLog = "Key"             ": Keyboard Function 15";                                break;
-                  case 0x0067u:               scanCodeLog = "Key"             ": Keyboard Function 16";                                break;
-                  case 0x0068u:               scanCodeLog = "Key"             ": Keyboard Function 17";                                break;
-                  case 0x0069u:               scanCodeLog = "Key"             ": Keyboard Function 18";                                break;
-                  case 0x006Au:               scanCodeLog = "Key"             ": Keyboard Function 19";                                break;
-                  case 0x006Bu:               scanCodeLog = "Key"             ": Keyboard Function 20";                                break;
-                  case 0x006Cu:               scanCodeLog = "Key"             ": Keyboard Function 21";                                break;
-                  case 0x006Du:               scanCodeLog = "Key"             ": Keyboard Function 22";                                break;
-                  case 0x006Eu:               scanCodeLog = "Key"             ": Keyboard Function 23";                                break;
-                  case 0x0070u:               scanCodeLog = "Key"             ": Keyboard International 2";                            break;
-                  case 0x0071u: case 0x00F1u: scanCodeLog = "Key"             ": Keyboard Language 2";                                 break;
-                  case 0x0072u: case 0x00F2u: scanCodeLog = "Key"             ": Keyboard Language 1";                                 break;
-                  case 0x0073u:               scanCodeLog = "Key"             ": Keyboard International 1";                            break;
-                  case 0x0076u:               scanCodeLog = "Key"             ": Keyboard Function 24, Keyboard Language 5";           break;
-                  case 0x0077u:               scanCodeLog = "Key"             ": Keyboard Language 4";                                 break;
-                  case 0x0078u:               scanCodeLog = "Key"             ": Keyboard Language 3";                                 break;
-                  case 0x0079u:               scanCodeLog = "Key"             ": Keyboard International 4";                            break;
-                  case 0x007Bu:               scanCodeLog = "Key"             ": Keyboard International 5";                            break;
-                  case 0x007Du:               scanCodeLog = "Key"             ": Keyboard International 3";                            break;
-                  case 0x007Eu:               scanCodeLog = "Key"             ": Keypad Comma";                                        break;
-                  case 0x00FFu:               scanCodeLog = "Key"             ": Error Roll Over";                                     break;
-                  case 0xE010u:               scanCodeLog = "Consumer"        ": Scan Previous Track";                                 break;
-                  case 0xE019u:               scanCodeLog = "Consumer"        ": Scan Next Track";                                     break;
-                  case 0xE01Cu:               scanCodeLog = "Key"             ": Keypad Enter";                                        break;
-                  case 0xE01Du:               scanCodeLog = "Key"             ": Keyboard Right Control";                              break;
-                  case 0xE020u:               scanCodeLog = "Consumer"        ": Mute";                                                break;
-                  case 0xE021u:               scanCodeLog = "Consumer"        ": AL Calculator";                                       break;
-                  case 0xE022u:               scanCodeLog = "Consumer"        ": Play/ Pause";                                         break;
-                  case 0xE024u:               scanCodeLog = "Consumer"        ": Stop";                                                break;
-                  case 0xE02Eu:               scanCodeLog = "Consumer"        ": Volume Decrement";                                    break;
-                  case 0xE030u:               scanCodeLog = "Consumer"        ": Volume Increment";                                    break;
-                  case 0xE032u:               scanCodeLog = "Consumer"        ": AC Home";                                             break;
-                  case 0xE035u:               scanCodeLog = "Key"             ": Keypad Slash";                                        break;
-                  case 0xE038u:               scanCodeLog = "Key"             ": Keyboard Right Alternatives";                         break;
-                  case 0xE047u:               scanCodeLog = "Key"             ": Keyboard Home";                                       break;
-                  case 0xE048u:               scanCodeLog = "Key"             ": Keyboard Up Arrow";                                   break;
-                  case 0xE049u:               scanCodeLog = "Key"             ": Keyboard Page Up";                                    break;
-                  case 0xE04Bu:               scanCodeLog = "Key"             ": Keyboard Left Arrow";                                 break;
-                  case 0xE04Du:               scanCodeLog = "Key"             ": Keyboard Right Arrow";                                break;
-                  case 0xE04Fu:               scanCodeLog = "Key"             ": Keyboard End";                                        break;
-                  case 0xE050u:               scanCodeLog = "Key"             ": Keyboard Down Arrow";                                 break;
-                  case 0xE051u:               scanCodeLog = "Key"             ": Keyboard Page Down";                                  break;
-                  case 0xE052u:               scanCodeLog = "Key"             ": Keyboard Insert";                                     break;
-                  case 0xE053u:               scanCodeLog = "Key"             ": Keyboard Delete Forward";                             break;
-                  case 0xE05Bu:               scanCodeLog = "Key"             ": Keyboard Left GUI";                                   break;
-                  case 0xE05Cu:               scanCodeLog = "Key"             ": Keyboard Right GUI";                                  break;
-                  case 0xE05Du:               scanCodeLog = "Key"             ": Keyboard Application";                                break;
-                  case 0xE05Eu:               scanCodeLog = "Generic Desktop" ": System Power Down, Key: Keyboard Power";              break;
-                  case 0xE05Fu:               scanCodeLog = "Generic Desktop" ": System Sleep";                                        break;
-                  case 0xE063u:               scanCodeLog = "Generic Desktop" ": System Wake Up";                                      break;
-                  case 0xE065u:               scanCodeLog = "Consumer"        ": AC Search";                                           break;
-                  case 0xE066u:               scanCodeLog = "Consumer"        ": AC Bookmarks";                                        break;
-                  case 0xE067u:               scanCodeLog = "Consumer"        ": AC Refresh";                                          break;
-                  case 0xE068u:               scanCodeLog = "Consumer"        ": AC Stop";                                             break;
-                  case 0xE069u:               scanCodeLog = "Consumer"        ": AC Forward";                                          break;
-                  case 0xE06Au:               scanCodeLog = "Consumer"        ": AC Back";                                             break;
-                  case 0xE06Bu:               scanCodeLog = "Consumer"        ": AL Local Machine Browser";                            break;
-                  case 0xE06Cu:               scanCodeLog = "Consumer"        ": AL Email Reader";                                     break;
-                  case 0xE06Du:               scanCodeLog = "Consumer"        ": AL Consumer Control Configuration";                   break;
-                }
-
-                // ...
-                if (
-                  virtualKey == 0xE1u or
-                  virtualKey == 0xE6u or
-                  (virtualKey >= 0x92u and virtualKey <= 0x96u) or
-                  (virtualKey >= 0xE3u and virtualKey <= 0xE4u) or
-                  (virtualKey >= 0xE9u and virtualKey <= 0xF5u)
-                ) virtualKeyLog = "OEM-specific";
-
-                else if (
-                  virtualKey == 0xE8u or
-                  (virtualKey >= 0x0Eu and virtualKey <= 0x0Fu) or
-                  (virtualKey >= 0x97u and virtualKey <= 0x9Fu)
-                ) virtualKeyLog = "Unassigned";
-
-                else if (virtualKey >= 0x3Au and virtualKey <= 0x40u)
-                  virtualKeyLog = "Undefined";
-
-                else switch (virtualKey) {
-                  case 0x30u: virtualKeyLog = "0"; break;
-                  case 0x31u: virtualKeyLog = "1"; break;
-                  case 0x32u: virtualKeyLog = "2"; break;
-                  case 0x33u: virtualKeyLog = "3"; break;
-                  case 0x34u: virtualKeyLog = "4"; break;
-                  case 0x35u: virtualKeyLog = "5"; break;
-                  case 0x36u: virtualKeyLog = "6"; break;
-                  case 0x37u: virtualKeyLog = "7"; break;
-                  case 0x38u: virtualKeyLog = "8"; break;
-                  case 0x39u: virtualKeyLog = "9"; break;
-                  case 0x41u: virtualKeyLog = "A"; break;
-                  case 0x42u: virtualKeyLog = "B"; break;
-                  case 0x43u: virtualKeyLog = "C"; break;
-                  case 0x44u: virtualKeyLog = "D"; break;
-                  case 0x45u: virtualKeyLog = "E"; break;
-                  case 0x46u: virtualKeyLog = "F"; break;
-                  case 0x47u: virtualKeyLog = "G"; break;
-                  case 0x48u: virtualKeyLog = "H"; break;
-                  case 0x49u: virtualKeyLog = "I"; break;
-                  case 0x4Au: virtualKeyLog = "J"; break;
-                  case 0x4Bu: virtualKeyLog = "K"; break;
-                  case 0x4Cu: virtualKeyLog = "L"; break;
-                  case 0x4Du: virtualKeyLog = "M"; break;
-                  case 0x4Eu: virtualKeyLog = "N"; break;
-                  case 0x4Fu: virtualKeyLog = "O"; break;
-                  case 0x50u: virtualKeyLog = "P"; break;
-                  case 0x51u: virtualKeyLog = "Q"; break;
-                  case 0x52u: virtualKeyLog = "R"; break;
-                  case 0x53u: virtualKeyLog = "S"; break;
-                  case 0x54u: virtualKeyLog = "T"; break;
-                  case 0x55u: virtualKeyLog = "U"; break;
-                  case 0x56u: virtualKeyLog = "V"; break;
-                  case 0x57u: virtualKeyLog = "W"; break;
-                  case 0x58u: virtualKeyLog = "X"; break;
-                  case 0x59u: virtualKeyLog = "Y"; break;
-                  case 0x5Au: virtualKeyLog = "Z"; break;
-
-                  case VK_CONTROL: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
-                    case VK_LCONTROL: virtualKeyLog = "Left"  " Control"; break;
-                    case VK_RCONTROL: virtualKeyLog = "Right" " Control"; break;
-                    default         : virtualKeyLog =          "Control";
-                  } break;
-
-                  case VK_MENU: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
-                    case VK_LMENU: virtualKeyLog = "Left"  " Alternative"; break;
-                    case VK_RMENU: virtualKeyLog = "Right" " Alternative"; break;
-                    default      : virtualKeyLog =          "Alternative";
-                  } break;
-
-                  case VK_SHIFT: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
-                    case VK_LSHIFT: virtualKeyLog = "Left"  " Shift"; break;
-                    case VK_RSHIFT: virtualKeyLog = "Right" " Shift"; break;
-                    default       : virtualKeyLog =          "Shift";
-                  } break;
-
-                  case VK_ACCEPT             : virtualKeyLog = "Input Method Encoding: Accept";              break;
-                  case VK_ADD                : virtualKeyLog = "Add";                                        break;
-                  case VK_APPS               : virtualKeyLog = "Application";                                break;
-                  case VK_ATTN               : virtualKeyLog = "Attention";                                  break;
-                  case VK_BACK               : virtualKeyLog = "Backspace";                                  break;
-                  case VK_BROWSER_BACK       : virtualKeyLog = "Browser: Back";                              break;
-                  case VK_BROWSER_FAVORITES  : virtualKeyLog = "Browser: Favorites";                         break;
-                  case VK_BROWSER_FORWARD    : virtualKeyLog = "Browser: Forward";                           break;
-                  case VK_BROWSER_HOME       : virtualKeyLog = "Browser: Start and Home";                    break;
-                  case VK_BROWSER_REFRESH    : virtualKeyLog = "Browser: Refresh";                           break;
-                  case VK_BROWSER_SEARCH     : virtualKeyLog = "Browser: Search";                            break;
-                  case VK_BROWSER_STOP       : virtualKeyLog = "Browser: Stop";                              break;
-                  case VK_CANCEL             : virtualKeyLog = "Cancel, Control-Break Processing";           break;
-                  case VK_CAPITAL            : virtualKeyLog = "Capital Lock";                               break;
-                  case VK_CLEAR              : virtualKeyLog = "Clear";                                      break;
-                  case VK_CONVERT            : virtualKeyLog = "Input Method Encoding: Convert";             break;
-                  case VK_CRSEL              : virtualKeyLog = "Cursor Select";                              break;
-                  case VK_DECIMAL            : virtualKeyLog = "Decimal";                                    break;
-                  case VK_DELETE             : virtualKeyLog = "Delete";                                     break;
-                  case VK_DIVIDE             : virtualKeyLog = "Divide";                                     break;
-                  case VK_DOWN               : virtualKeyLog = "Down Arrow";                                 break;
-                  case VK_END                : virtualKeyLog = "End";                                        break;
-                  case VK_EREOF              : virtualKeyLog = "Erase End-of-File";                          break;
-                  case VK_ESCAPE             : virtualKeyLog = "Escape";                                     break;
-                  case VK_EXECUTE            : virtualKeyLog = "Execute";                                    break;
-                  case VK_EXSEL              : virtualKeyLog = "Extend Selection";                           break;
-                  case VK_F1                 : virtualKeyLog = "Function 1";                                 break;
-                  case VK_F2                 : virtualKeyLog = "Function 2";                                 break;
-                  case VK_F3                 : virtualKeyLog = "Function 3";                                 break;
-                  case VK_F4                 : virtualKeyLog = "Function 4";                                 break;
-                  case VK_F5                 : virtualKeyLog = "Function 5";                                 break;
-                  case VK_F6                 : virtualKeyLog = "Function 6";                                 break;
-                  case VK_F7                 : virtualKeyLog = "Function 7";                                 break;
-                  case VK_F8                 : virtualKeyLog = "Function 8";                                 break;
-                  case VK_F9                 : virtualKeyLog = "Function 9";                                 break;
-                  case VK_F10                : virtualKeyLog = "Function 10";                                break;
-                  case VK_F11                : virtualKeyLog = "Function 11";                                break;
-                  case VK_F12                : virtualKeyLog = "Function 12";                                break;
-                  case VK_F13                : virtualKeyLog = "Function 13";                                break;
-                  case VK_F14                : virtualKeyLog = "Function 14";                                break;
-                  case VK_F15                : virtualKeyLog = "Function 15";                                break;
-                  case VK_F16                : virtualKeyLog = "Function 16";                                break;
-                  case VK_F17                : virtualKeyLog = "Function 17";                                break;
-                  case VK_F18                : virtualKeyLog = "Function 18";                                break;
-                  case VK_F19                : virtualKeyLog = "Function 19";                                break;
-                  case VK_F20                : virtualKeyLog = "Function 20";                                break;
-                  case VK_F21                : virtualKeyLog = "Function 21";                                break;
-                  case VK_F22                : virtualKeyLog = "Function 22";                                break;
-                  case VK_F23                : virtualKeyLog = "Function 23";                                break;
-                  case VK_F24                : virtualKeyLog = "Function 24";                                break;
-                  case VK_FINAL              : virtualKeyLog = "Input Method Encoding: Final";               break;
-                  case VK_HANGUL | VK_KANA   : virtualKeyLog = "Input Method Encoding: Hangul, Kana";        break;
-                  case VK_HANJA  | VK_KANJI  : virtualKeyLog = "Input Method Encoding: Hanja, Kanji";        break;
-                  case VK_HELP               : virtualKeyLog = "Help";                                       break;
-                  case VK_HOME               : virtualKeyLog = "Home";                                       break;
-                  case VK_IME_OFF            : virtualKeyLog = "Input Method Encoding: Off";                 break;
-                  case VK_IME_ON             : virtualKeyLog = "Input Method Encoding: On";                  break;
-                  case VK_INSERT             : virtualKeyLog = "Insert";                                     break;
-                  case VK_JUNJA              : virtualKeyLog = "Input Method Encoding: Junja";               break;
-                  case VK_LAUNCH_APP1        : virtualKeyLog = "Start Application 1";                        break;
-                  case VK_LAUNCH_APP2        : virtualKeyLog = "Start Application 2";                        break;
-                  case VK_LAUNCH_MAIL        : virtualKeyLog = "Start Mail";                                 break;
-                  case VK_LAUNCH_MEDIA_SELECT: virtualKeyLog = "Select Media";                               break;
-                  case VK_LBUTTON            : virtualKeyLog = "Left Mouse Button";                          break;
-                  case VK_LCONTROL           : virtualKeyLog = "Left Control";                               break;
-                  case VK_LEFT               : virtualKeyLog = "Left Arrow";                                 break;
-                  case VK_LMENU              : virtualKeyLog = "Left Alternative";                           break;
-                  case VK_LSHIFT             : virtualKeyLog = "Left Shift";                                 break;
-                  case VK_LWIN               : virtualKeyLog = "Left Windows";                               break;
-                  case VK_MBUTTON            : virtualKeyLog = "Middle Mouse Button";                        break;
-                  case VK_MEDIA_NEXT_TRACK   : virtualKeyLog = "Media: Next";                                break;
-                  case VK_MEDIA_PLAY_PAUSE   : virtualKeyLog = "Media: Play/ Pause";                         break;
-                  case VK_MEDIA_PREV_TRACK   : virtualKeyLog = "Media: Previous";                            break;
-                  case VK_MEDIA_STOP         : virtualKeyLog = "Media: Stop";                                break;
-                  case VK_MODECHANGE         : virtualKeyLog = "Input Method Encoding: Mode Change Request"; break;
-                  case VK_MULTIPLY           : virtualKeyLog = "Multiply";                                   break;
-                  case VK_NEXT               : virtualKeyLog = "Next, Page Down";                            break;
-                  case VK_NONAME             : /* Do nothing… */                                            break;
-                  case VK_NONCONVERT         : virtualKeyLog = "Input Method Encoding: Non-Convert";         break;
-                  case VK_NUMLOCK            : virtualKeyLog = "Number Lock";                                break;
-                  case VK_NUMPAD0            : virtualKeyLog = "Number Keypad 0";                            break;
-                  case VK_NUMPAD1            : virtualKeyLog = "Number Keypad 1";                            break;
-                  case VK_NUMPAD2            : virtualKeyLog = "Number Keypad 2";                            break;
-                  case VK_NUMPAD3            : virtualKeyLog = "Number Keypad 3";                            break;
-                  case VK_NUMPAD4            : virtualKeyLog = "Number Keypad 4";                            break;
-                  case VK_NUMPAD5            : virtualKeyLog = "Number Keypad 5";                            break;
-                  case VK_NUMPAD6            : virtualKeyLog = "Number Keypad 6";                            break;
-                  case VK_NUMPAD7            : virtualKeyLog = "Number Keypad 7";                            break;
-                  case VK_NUMPAD8            : virtualKeyLog = "Number Keypad 8";                            break;
-                  case VK_NUMPAD9            : virtualKeyLog = "Number Keypad 9";                            break;
-                  case VK_OEM_1              : virtualKeyLog = "OEM-specific 1";                             break;
-                  case VK_OEM_2              : virtualKeyLog = "OEM-specific 2";                             break;
-                  case VK_OEM_3              : virtualKeyLog = "OEM-specific 3";                             break;
-                  case VK_OEM_4              : virtualKeyLog = "OEM-specific 4";                             break;
-                  case VK_OEM_5              : virtualKeyLog = "OEM-specific 5";                             break;
-                  case VK_OEM_6              : virtualKeyLog = "OEM-specific 6";                             break;
-                  case VK_OEM_7              : virtualKeyLog = "OEM-specific 7";                             break;
-                  case VK_OEM_8              : virtualKeyLog = "OEM-specific 8";                             break;
-                  case VK_OEM_102            : virtualKeyLog = "OEM-specific 102";                           break;
-                  case VK_OEM_CLEAR          : virtualKeyLog = "Clear";                                      break;
-                  case VK_OEM_COMMA          : virtualKeyLog = "OEM-specific Comma";                         break;
-                  case VK_OEM_MINUS          : virtualKeyLog = "OEM-specific Minus";                         break;
-                  case VK_OEM_PERIOD         : virtualKeyLog = "OEM-specific Period";                        break;
-                  case VK_OEM_PLUS           : virtualKeyLog = "OEM-specific Plus";                          break;
-                  case VK_PA1                : virtualKeyLog = "Program Action 1";                           break;
-                  case VK_PACKET             : virtualKeyLog = "Unicode Packet";                             break;
-                  case VK_PAUSE              : virtualKeyLog = "Pause";                                      break;
-                  case VK_PLAY               : virtualKeyLog = "Play";                                       break;
-                  case VK_PRINT              : virtualKeyLog = "Print";                                      break;
-                  case VK_PRIOR              : virtualKeyLog = "Prior, Page Up";                             break;
-                  case VK_PROCESSKEY         : virtualKeyLog = "Input Method Encoding: Process";             break;
-                  case VK_RBUTTON            : virtualKeyLog = "Right Mouse Button";                         break;
-                  case VK_RCONTROL           : virtualKeyLog = "Right Control";                              break;
-                  case VK_RETURN             : virtualKeyLog = "Return";                                     break;
-                  case VK_RIGHT              : virtualKeyLog = "Right Arrow";                                break;
-                  case VK_RMENU              : virtualKeyLog = "Right Alternative";                          break;
-                  case VK_RSHIFT             : virtualKeyLog = "Right Shift";                                break;
-                  case VK_RWIN               : virtualKeyLog = "Right Windows";                              break;
-                  case VK_SCROLL             : virtualKeyLog = "Scroll Lock";                                break;
-                  case VK_SELECT             : virtualKeyLog = "Select";                                     break;
-                  case VK_SEPARATOR          : virtualKeyLog = "Separator";                                  break;
-                  case VK_SLEEP              : virtualKeyLog = "Sleep";                                      break;
-                  case VK_SNAPSHOT           : virtualKeyLog = "Snapshot";                                   break;
-                  case VK_SPACE              : virtualKeyLog = "Space";                                      break;
-                  case VK_SUBTRACT           : virtualKeyLog = "Subtract";                                   break;
-                  case VK_TAB                : virtualKeyLog = "Tab";                                        break;
-                  case VK_UP                 : virtualKeyLog = "Up Arrow";                                   break;
-                  case VK_VOLUME_DOWN        : virtualKeyLog = "Volume: Down";                               break;
-                  case VK_VOLUME_MUTE        : virtualKeyLog = "Volume: Mute";                               break;
-                  case VK_VOLUME_UP          : virtualKeyLog = "Volume: Up";                                 break;
-                  case VK_XBUTTON1           : virtualKeyLog = "Extended Mouse Button 1";                    break;
-                  case VK_XBUTTON2           : virtualKeyLog = "Extended Mouse Button 2";                    break;
-                  case VK_ZOOM               : virtualKeyLog = "Zoom";
-                }
-
-                // ...
-                if (NULL == virtualKeyLog)
-                return false;
-
-                if (std::fprintf(stdout, "%1.2s%s%1.13s%4.5s%1.12s%4.5s%1.12s%4.5s%1.10s%" PRIuMAX "%1.10s%0*" PRIXMAX "%0.2s%s%0.1s%1.14s%4.5s%1.2s", "["
-                  "`", virtualKeyLog, "`, "
-                  "{"
-                    "context: ",      context  ? "TRUE" : "FALSE",
-                    ", extended: ",   extended ? "TRUE" : "FALSE",
-                    ", previous: ",   previous ? "TRUE" : "FALSE",
-                    ", repeat: ",     static_cast<uintmax_t>(repeatCount),
-                    ", scan: 0x",     static_cast<int>(scanCodeLength), static_cast<uintmax_t>(scanCode), NULL != scanCodeLog ? " `" : "", NULL != scanCodeLog ? scanCodeLog : "", NULL != scanCodeLog ? "`" : "",
-                    ", transition: ", transition ? "TRUE" : "FALSE",
-                  "}"
-                "]") < static_cast<int>(scanCodeLength + 94u))
-                (void) std::fputs("...", stdout);
-              } break;
-
-              case WM_QUIT: {
-                parameterLength  = 0u;
-                parameterMaximum = (((static_cast<std::size_t>(1u) << ((CHAR_BIT * sizeof(int)) - 1u)) - 1u) << 1u) + 1u;
-
-                for (std::size_t value = parameterMaximum; value; value /= 16u)
-                  ++parameterLength;
-
-                switch (static_cast<int>(parameter)) {
-                  case EXIT_FAILURE: if (EOF == std::fputs("[EXIT_FAILURE, ...]", stdout)) (void) std::fputs("...", stdout); break;
-                  case EXIT_SUCCESS: if (EOF == std::fputs("[EXIT_SUCCESS, ...]", stdout)) (void) std::fputs("...", stdout); break;
-                  default: {
-                    if (std::fprintf(stdout, "%c%0.1s%1.2s%0*" PRIXMAX "%1.6s", '[',
-                      static_cast<int>(parameter) < 0 ? "-" : "", "0x", static_cast<int>(parameterLength), static_cast<uintmax_t>(static_cast<int>(parameter) < 0 ? -static_cast<int>(parameter) : static_cast<int>(parameter)), ", "
-                      "..."
-                    "]") < static_cast<int>(parameterLength + 9u))
-                    (void) std::fputs("...", stdout);
-                  } break;
-                }
-              } break;
-
-              // TODO (Lapys) -> The other messages
-              default: {
-                if (std::fprintf(stdout, "%1.3s%0*" PRIXMAX "%1.4s%0*" PRIXMAX "%c", "["
-                  "0x", static_cast<int>(parameterLength),    static_cast<uintmax_t>(parameter), ", "
-                  "0x", static_cast<int>(subparameterLength), static_cast<uintmax_t>(subparameter),
-                ']') < static_cast<int>(parameterLength + subparameterLength + 8u))
-                (void) std::fputs("...", stdout);
-              } break;
+              // ...
+              if (NULL != allocation) {
+                windowText         = static_cast<LPWSTR>(allocation);
+                windowTextCapacity = windowTextSize;
+              }
             }
 
-            (void) std::fputs("}" "\r\n", stdout);
+            // ...
+            if (windowTextCapacity >= windowTextSize)
+            windowTextAcquired = not windowUsesProcedure ? 0 != ::GetWindowTextW(windowHandle, windowText, static_cast<int>(windowTextCapacity)) : false;
           }
-
-          translation = messageEventTranslation;
-          while ('\0' != *(translation++)) continue;
         }
       }
 
-      // ...
+      if (windowTextAcquired) {
+        for (LPWSTR iterator = windowText; L'\0' != *iterator; ++iterator)
+        switch (*iterator) { case L'\b': case L'\n': case L'\r': case L'\v': *iterator = L'\\'; break; }
+      }
+
+      // ... ->> Log the `message`
+      if (NULL == messageTranslation) (void) log::output(log::format(
+        static_cast<undefined>(message), " {"
+          "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
+          "arguments" ": [", static_cast<undefined>(parameter), ", ", static_cast<undefined>(subparameter), "]"
+        "}" "\r\n"
+      )); else while ('\0' != *messageTranslation) {
+        char const *const messageConstantTranslation = messageTranslation;
+        char const       *messageEventTranslation    = NULL;
+        char const       *messageTypeTranslation     = NULL;
+
+        // ... --> messageEventTranslation = …; messageTypeTranslation = …;
+        for (messageTypeTranslation  = messageConstantTranslation; '\0' != *(messageTypeTranslation++); )  continue;
+        for (messageEventTranslation = messageTypeTranslation;     '\0' != *(messageEventTranslation++); ) continue;
+
+        // ...
+        if (log::output(log::format(
+          static_cast<undefined>(message), " {"
+            "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
+            "name"      ": `", messageConstantTranslation, "` \"", messageTypeTranslation, ": ", messageEventTranslation, "\""                      ", "
+            "arguments" ": "
+        ))) {
+          switch (message) {
+            case WM_ACTIVATE: {
+              WORD const minimizationState = LOWORD(parameter);
+              BOOL const minimized         = HIWORD(parameter);
+              HWND const windowHandle      = static_cast<HWND>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
+
+              // ...
+              messageTranslationMultilineFormat = true;
+
+              if (log::output(log::format("[", static_cast<bool>(minimized), " {state: ")))
+              if (log::output(
+                WA_ACTIVE      == minimizationState ? log::format("`WA_ACTIVE`")      :
+                WA_CLICKACTIVE == minimizationState ? log::format("`WA_CLICKACTIVE`") :
+                WA_INACTIVE    == minimizationState ? log::format("`WA_INACTIVE`")    :
+                log::format(static_cast<unused>(minimizationState))
+              )) messageTranslationMultilineFormat = not log::output(log::format("}, ", windowHandle));
+            } break;
+            // case WM_ACTIVATEAPP: break; // TODO (Lapys)
+            // case WM_CAPTURECHANGED: break; // TODO (Lapys)
+
+            case WM_CLOSE:
+            case WM_DESTROY:
+            case WM_GETTEXTLENGTH:
+            case WM_NCDESTROY: messageTranslationMultilineFormat = not log::output(log::format(
+              "[",
+                static_cast<unused>(parameter), ", ",
+                static_cast<unused>(subparameter),
+              "]"
+            )); break;
+
+            // case WM_CREATE: break; // TODO (Lapys)
+            // case WM_ERASEBKGND: break; // TODO (Lapys)
+            // case WM_GETICON: break; // TODO (Lapys)
+
+            case WM_GETMINMAXINFO: {
+              MINMAXINFO *const minimumMaximumInformation = static_cast<MINMAXINFO*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
+              messageTranslationMultilineFormat = not log::output(log::format(
+                ""   "[..., {"                                                                                                                                "\r\n"
+                "  " "maximumPosition : {x: ", minimumMaximumInformation -> ptMaxPosition .x, ", y: ", minimumMaximumInformation -> ptMaxPosition .y, "}" "," "\r\n"
+                "  " "maximumSize     : {x: ", minimumMaximumInformation -> ptMaxSize     .x, ", y: ", minimumMaximumInformation -> ptMaxSize     .y, "}" "," "\r\n"
+                "  " "maximumTrackSize: {x: ", minimumMaximumInformation -> ptMaxTrackSize.x, ", y: ", minimumMaximumInformation -> ptMaxTrackSize.y, "}" "," "\r\n"
+                "  " "minimumTrackSize: {x: ", minimumMaximumInformation -> ptMinTrackSize.x, ", y: ", minimumMaximumInformation -> ptMinTrackSize.y, "}"     "\r\n"
+                ""   "}]"
+              ));
+            } break;
+
+            // case WM_GETOBJECT: break; // TODO (Lapys)
+
+            case WM_GETTEXT: messageTranslationMultilineFormat = not log::output(log::format(
+              "[",
+                parameter, ", ",
+                reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)),
+              "]"
+            )); break;
+
+            // case WM_IME_NOTIFY: break; // TODO (Lapys)
+            // case WM_IME_REQUEST: break; // TODO (Lapys)
+            // case WM_IME_SETCONTEXT: break; // TODO (Lapys)
+
+            // CITE (Lapys) -> https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input
+            case WM_KEYDOWN   :
+            case WM_KEYUP     :
+            case WM_SYSKEYDOWN:
+            case WM_SYSKEYUP  : {
+              WORD        const  keyFlags              = HIWORD(subparameter);                                            //
+              BOOL        const  extended              = KF_EXTENDED == (LOBYTE(keyFlags) & KF_EXTENDED);                 // ->> `TRUE` if `scanCode` has `0xE0` prefix
+              BOOL        const  context               = KF_ALTDOWN  == (keyFlags         & KF_ALTDOWN);                  // ->> `TRUE` on `VK_MENU`, always `FALSE` on `WM_KEYDOWN`
+              BOOL        const  previous              = KF_REPEAT   == (keyFlags         & KF_REPEAT);                   // ->> `TRUE` on auto-repeat
+              WORD        const  repeatCount           = LOWORD(subparameter);                                            //
+              WORD        const  scanCode              = extended ? MAKEWORD(LOBYTE(keyFlags), 0xE0u) : LOBYTE(keyFlags); //
+              char        const *scanCodeTranslation   = NULL;                                                            //
+              BOOL        const  transition            = KF_UP == (keyFlags & KF_UP);                                     // ->> `TRUE` on key release
+              WORD        const  virtualKey            = LOWORD(parameter);                                               //
+              char        const *virtualKeyTranslation = NULL;                                                            //
+
+              // ... --> scanCodeTranslation = …;
+              switch (scanCode) {
+                case 0x0001u:               scanCodeTranslation = "Key"             ": Keyboard Escape";                                     break;
+                case 0x0002u:               scanCodeTranslation = "Key"             ": Keyboard 1 and Bang";                                 break;
+                case 0x0003u:               scanCodeTranslation = "Key"             ": Keyboard 2 and At";                                   break;
+                case 0x0004u:               scanCodeTranslation = "Key"             ": Keyboard 3 And Hash";                                 break;
+                case 0x0005u:               scanCodeTranslation = "Key"             ": Keyboard 4 and Dollar";                               break;
+                case 0x0006u:               scanCodeTranslation = "Key"             ": Keyboard 5 and Percent";                              break;
+                case 0x0007u:               scanCodeTranslation = "Key"             ": Keyboard 6 and Caret";                                break;
+                case 0x0008u:               scanCodeTranslation = "Key"             ": Keyboard 7 and Ampersand";                            break;
+                case 0x0009u:               scanCodeTranslation = "Key"             ": Keyboard 8 and Star";                                 break;
+                case 0x000Au:               scanCodeTranslation = "Key"             ": Keyboard 9 and Left Bracket";                         break;
+                case 0x000Bu:               scanCodeTranslation = "Key"             ": Keyboard 0 and Right Bracket";                        break;
+                case 0x000Cu:               scanCodeTranslation = "Key"             ": Keyboard Dash and Underscore";                        break;
+                case 0x000Du:               scanCodeTranslation = "Key"             ": Keyboard Equals and Plus";                            break;
+                case 0x000Eu:               scanCodeTranslation = "Key"             ": Keyboard Delete";                                     break;
+                case 0x000Fu:               scanCodeTranslation = "Key"             ": Keyboard Tab";                                        break;
+                case 0x0010u:               scanCodeTranslation = "Key"             ": Keyboard Q";                                          break;
+                case 0x0011u:               scanCodeTranslation = "Key"             ": Keyboard W";                                          break;
+                case 0x0012u:               scanCodeTranslation = "Key"             ": Keyboard E";                                          break;
+                case 0x0013u:               scanCodeTranslation = "Key"             ": Keyboard R";                                          break;
+                case 0x0014u:               scanCodeTranslation = "Key"             ": Keyboard T";                                          break;
+                case 0x0015u:               scanCodeTranslation = "Key"             ": Keyboard Y";                                          break;
+                case 0x0016u:               scanCodeTranslation = "Key"             ": Keyboard U";                                          break;
+                case 0x0017u:               scanCodeTranslation = "Key"             ": Keyboard I";                                          break;
+                case 0x0018u:               scanCodeTranslation = "Key"             ": Keyboard O";                                          break;
+                case 0x0019u:               scanCodeTranslation = "Key"             ": Keyboard P";                                          break;
+                case 0x001Au:               scanCodeTranslation = "Key"             ": Keyboard Left Brace";                                 break;
+                case 0x001Bu:               scanCodeTranslation = "Key"             ": Keyboard Right Brace";                                break;
+                case 0x001Cu:               scanCodeTranslation = "Key"             ": Keyboard Return Enter";                               break;
+                case 0x001Du:               scanCodeTranslation = "Key"             ": Keyboard Left Control";                               break;
+                case 0x001Eu:               scanCodeTranslation = "Key"             ": Keyboard A";                                          break;
+                case 0x001Fu:               scanCodeTranslation = "Key"             ": Keyboard S";                                          break;
+                case 0x0020u:               scanCodeTranslation = "Key"             ": Keyboard D";                                          break;
+                case 0x0021u:               scanCodeTranslation = "Key"             ": Keyboard F";                                          break;
+                case 0x0022u:               scanCodeTranslation = "Key"             ": Keyboard G";                                          break;
+                case 0x0023u:               scanCodeTranslation = "Key"             ": Keyboard H";                                          break;
+                case 0x0024u:               scanCodeTranslation = "Key"             ": Keyboard J";                                          break;
+                case 0x0025u:               scanCodeTranslation = "Key"             ": Keyboard K";                                          break;
+                case 0x0026u:               scanCodeTranslation = "Key"             ": Keyboard L";                                          break;
+                case 0x0027u:               scanCodeTranslation = "Key"             ": Keyboard SemiColon and Colon";                        break;
+                case 0x0028u:               scanCodeTranslation = "Key"             ": Keyboard Apostrophe and Double Quotation Mark";       break;
+                case 0x0029u:               scanCodeTranslation = "Key"             ": Keyboard Grave Accent and Tilde";                     break;
+                case 0x002Au:               scanCodeTranslation = "Key"             ": Keyboard Left Shift";                                 break;
+                case 0x002Bu:               scanCodeTranslation = "Key"             ": Keyboard Non-United States, Keyboard Pipe and Slash"; break;
+                case 0x002Cu:               scanCodeTranslation = "Key"             ": Keyboard Z";                                          break;
+                case 0x002Du:               scanCodeTranslation = "Key"             ": Keyboard X";                                          break;
+                case 0x002Eu:               scanCodeTranslation = "Key"             ": Keyboard C";                                          break;
+                case 0x002Fu:               scanCodeTranslation = "Key"             ": Keyboard V";                                          break;
+                case 0x0030u:               scanCodeTranslation = "Key"             ": Keyboard B";                                          break;
+                case 0x0031u:               scanCodeTranslation = "Key"             ": Keyboard N";                                          break;
+                case 0x0032u:               scanCodeTranslation = "Key"             ": Keyboard M";                                          break;
+                case 0x0033u:               scanCodeTranslation = "Key"             ": Keyboard Comma";                                      break;
+                case 0x0034u:               scanCodeTranslation = "Key"             ": Keyboard Period";                                     break;
+                case 0x0035u:               scanCodeTranslation = "Key"             ": Keyboard QuestionMark";                               break;
+                case 0x0036u:               scanCodeTranslation = "Key"             ": Keyboard Right Shift";                                break;
+                case 0x0037u:               scanCodeTranslation = "Key"             ": Keypad Star";                                         break;
+                case 0x0038u:               scanCodeTranslation = "Key"             ": Keyboard Left Alternative";                           break;
+                case 0x0039u:               scanCodeTranslation = "Key"             ": Keyboard Spacebar";                                   break;
+                case 0x003Au:               scanCodeTranslation = "Key"             ": Keyboard Caps Lock";                                  break;
+                case 0x003Bu:               scanCodeTranslation = "Key"             ": Keyboard Function 1";                                 break;
+                case 0x003Cu:               scanCodeTranslation = "Key"             ": Keyboard Function 2";                                 break;
+                case 0x003Du:               scanCodeTranslation = "Key"             ": Keyboard Function 3";                                 break;
+                case 0x003Eu:               scanCodeTranslation = "Key"             ": Keyboard Function 4";                                 break;
+                case 0x003Fu:               scanCodeTranslation = "Key"             ": Keyboard Function 5";                                 break;
+                case 0x0040u:               scanCodeTranslation = "Key"             ": Keyboard Function 6";                                 break;
+                case 0x0041u:               scanCodeTranslation = "Key"             ": Keyboard Function 7";                                 break;
+                case 0x0042u:               scanCodeTranslation = "Key"             ": Keyboard Function 8";                                 break;
+                case 0x0043u:               scanCodeTranslation = "Key"             ": Keyboard Function 9";                                 break;
+                case 0x0044u:               scanCodeTranslation = "Key"             ": Keyboard Function 10";                                break;
+                case 0x0045u:               scanCodeTranslation = "Key"             ": Keyboard Pause, Keypad Number Lock and Clear";        break;
+                case 0xE045u:               scanCodeTranslation = "Key"             ": Keypad Number Lock and Clear";                        break;
+                case 0xE046u:               scanCodeTranslation = "Key"             ": Keyboard Pause";                                      break; // --> 0xE11D45u
+                case 0x0046u:               scanCodeTranslation = "Key"             ": Keyboard Scroll Lock";                                break;
+                case 0x0047u:               scanCodeTranslation = "Key"             ": Keypad 7 and Home";                                   break;
+                case 0x0048u:               scanCodeTranslation = "Key"             ": Keypad 8 and Up Arrow";                               break;
+                case 0x0049u:               scanCodeTranslation = "Key"             ": Keypad 9 and Page Up";                                break;
+                case 0x004Au:               scanCodeTranslation = "Key"             ": Keypad Dash";                                         break;
+                case 0x004Bu:               scanCodeTranslation = "Key"             ": Keypad 4 and Left Arrow";                             break;
+                case 0x004Cu:               scanCodeTranslation = "Key"             ": Keypad 5";                                            break;
+                case 0x004Du:               scanCodeTranslation = "Key"             ": Keypad 6 and Right Arrow";                            break;
+                case 0x004Eu:               scanCodeTranslation = "Key"             ": Keypad Plus";                                         break;
+                case 0x004Fu:               scanCodeTranslation = "Key"             ": Keypad 1 and End";                                    break;
+                case 0x0050u:               scanCodeTranslation = "Key"             ": Keypad 2 and Down Arrow";                             break;
+                case 0x0051u:               scanCodeTranslation = "Key"             ": Keypad 3 and Page Down";                              break;
+                case 0x0052u:               scanCodeTranslation = "Key"             ": Keypad 0 and Insert";                                 break;
+                case 0x0053u:               scanCodeTranslation = "Key"             ": Keypad Period";                                       break;
+                case 0x0054u: case 0xE037u: scanCodeTranslation = "Key"             ": Keyboard Print Screen";                               break;
+                case 0x0056u:               scanCodeTranslation = "Key"             ": Keyboard Non-United States Slash Bar";                break;
+                case 0x0057u:               scanCodeTranslation = "Key"             ": Keyboard Function 11";                                break;
+                case 0x0058u:               scanCodeTranslation = "Key"             ": Keyboard Function 12";                                break;
+                case 0x0059u:               scanCodeTranslation = "Key"             ": Keypad Equals";                                       break;
+                case 0x005Cu:               scanCodeTranslation = "Key"             ": Keyboard International 6";                            break;
+                case 0x0064u:               scanCodeTranslation = "Key"             ": Keyboard Function 13";                                break;
+                case 0x0065u:               scanCodeTranslation = "Key"             ": Keyboard Function 14";                                break;
+                case 0x0066u:               scanCodeTranslation = "Key"             ": Keyboard Function 15";                                break;
+                case 0x0067u:               scanCodeTranslation = "Key"             ": Keyboard Function 16";                                break;
+                case 0x0068u:               scanCodeTranslation = "Key"             ": Keyboard Function 17";                                break;
+                case 0x0069u:               scanCodeTranslation = "Key"             ": Keyboard Function 18";                                break;
+                case 0x006Au:               scanCodeTranslation = "Key"             ": Keyboard Function 19";                                break;
+                case 0x006Bu:               scanCodeTranslation = "Key"             ": Keyboard Function 20";                                break;
+                case 0x006Cu:               scanCodeTranslation = "Key"             ": Keyboard Function 21";                                break;
+                case 0x006Du:               scanCodeTranslation = "Key"             ": Keyboard Function 22";                                break;
+                case 0x006Eu:               scanCodeTranslation = "Key"             ": Keyboard Function 23";                                break;
+                case 0x0070u:               scanCodeTranslation = "Key"             ": Keyboard International 2";                            break;
+                case 0x0071u: case 0x00F1u: scanCodeTranslation = "Key"             ": Keyboard Language 2";                                 break;
+                case 0x0072u: case 0x00F2u: scanCodeTranslation = "Key"             ": Keyboard Language 1";                                 break;
+                case 0x0073u:               scanCodeTranslation = "Key"             ": Keyboard International 1";                            break;
+                case 0x0076u:               scanCodeTranslation = "Key"             ": Keyboard Function 24, Keyboard Language 5";           break;
+                case 0x0077u:               scanCodeTranslation = "Key"             ": Keyboard Language 4";                                 break;
+                case 0x0078u:               scanCodeTranslation = "Key"             ": Keyboard Language 3";                                 break;
+                case 0x0079u:               scanCodeTranslation = "Key"             ": Keyboard International 4";                            break;
+                case 0x007Bu:               scanCodeTranslation = "Key"             ": Keyboard International 5";                            break;
+                case 0x007Du:               scanCodeTranslation = "Key"             ": Keyboard International 3";                            break;
+                case 0x007Eu:               scanCodeTranslation = "Key"             ": Keypad Comma";                                        break;
+                case 0x00FFu:               scanCodeTranslation = "Key"             ": Error Roll Over";                                     break;
+                case 0xE010u:               scanCodeTranslation = "Consumer"        ": Scan Previous Track";                                 break;
+                case 0xE019u:               scanCodeTranslation = "Consumer"        ": Scan Next Track";                                     break;
+                case 0xE01Cu:               scanCodeTranslation = "Key"             ": Keypad Enter";                                        break;
+                case 0xE01Du:               scanCodeTranslation = "Key"             ": Keyboard Right Control";                              break;
+                case 0xE020u:               scanCodeTranslation = "Consumer"        ": Mute";                                                break;
+                case 0xE021u:               scanCodeTranslation = "Consumer"        ": AL Calculator";                                       break;
+                case 0xE022u:               scanCodeTranslation = "Consumer"        ": Play/ Pause";                                         break;
+                case 0xE024u:               scanCodeTranslation = "Consumer"        ": Stop";                                                break;
+                case 0xE02Eu:               scanCodeTranslation = "Consumer"        ": Volume Decrement";                                    break;
+                case 0xE030u:               scanCodeTranslation = "Consumer"        ": Volume Increment";                                    break;
+                case 0xE032u:               scanCodeTranslation = "Consumer"        ": AC Home";                                             break;
+                case 0xE035u:               scanCodeTranslation = "Key"             ": Keypad Slash";                                        break;
+                case 0xE038u:               scanCodeTranslation = "Key"             ": Keyboard Right Alternatives";                         break;
+                case 0xE047u:               scanCodeTranslation = "Key"             ": Keyboard Home";                                       break;
+                case 0xE048u:               scanCodeTranslation = "Key"             ": Keyboard Up Arrow";                                   break;
+                case 0xE049u:               scanCodeTranslation = "Key"             ": Keyboard Page Up";                                    break;
+                case 0xE04Bu:               scanCodeTranslation = "Key"             ": Keyboard Left Arrow";                                 break;
+                case 0xE04Du:               scanCodeTranslation = "Key"             ": Keyboard Right Arrow";                                break;
+                case 0xE04Fu:               scanCodeTranslation = "Key"             ": Keyboard End";                                        break;
+                case 0xE050u:               scanCodeTranslation = "Key"             ": Keyboard Down Arrow";                                 break;
+                case 0xE051u:               scanCodeTranslation = "Key"             ": Keyboard Page Down";                                  break;
+                case 0xE052u:               scanCodeTranslation = "Key"             ": Keyboard Insert";                                     break;
+                case 0xE053u:               scanCodeTranslation = "Key"             ": Keyboard Delete Forward";                             break;
+                case 0xE05Bu:               scanCodeTranslation = "Key"             ": Keyboard Left GUI";                                   break;
+                case 0xE05Cu:               scanCodeTranslation = "Key"             ": Keyboard Right GUI";                                  break;
+                case 0xE05Du:               scanCodeTranslation = "Key"             ": Keyboard Application";                                break;
+                case 0xE05Eu:               scanCodeTranslation = "Generic Desktop" ": System Power Down, Key: Keyboard Power";              break;
+                case 0xE05Fu:               scanCodeTranslation = "Generic Desktop" ": System Sleep";                                        break;
+                case 0xE063u:               scanCodeTranslation = "Generic Desktop" ": System Wake Up";                                      break;
+                case 0xE065u:               scanCodeTranslation = "Consumer"        ": AC Search";                                           break;
+                case 0xE066u:               scanCodeTranslation = "Consumer"        ": AC Bookmarks";                                        break;
+                case 0xE067u:               scanCodeTranslation = "Consumer"        ": AC Refresh";                                          break;
+                case 0xE068u:               scanCodeTranslation = "Consumer"        ": AC Stop";                                             break;
+                case 0xE069u:               scanCodeTranslation = "Consumer"        ": AC Forward";                                          break;
+                case 0xE06Au:               scanCodeTranslation = "Consumer"        ": AC Back";                                             break;
+                case 0xE06Bu:               scanCodeTranslation = "Consumer"        ": AL Local Machine Browser";                            break;
+                case 0xE06Cu:               scanCodeTranslation = "Consumer"        ": AL Email Reader";                                     break;
+                case 0xE06Du:               scanCodeTranslation = "Consumer"        ": AL Consumer Control Configuration";                   break;
+              }
+
+              // ... --> virtualKeyTranslation = …;
+              if (
+                virtualKey == 0xE1u or
+                virtualKey == 0xE6u or
+                (virtualKey >= 0x92u and virtualKey <= 0x96u) or
+                (virtualKey >= 0xE3u and virtualKey <= 0xE4u) or
+                (virtualKey >= 0xE9u and virtualKey <= 0xF5u)
+              ) virtualKeyTranslation = "OEM-specific";
+
+              else if (
+                virtualKey == 0xE8u or
+                (virtualKey >= 0x0Eu and virtualKey <= 0x0Fu) or
+                (virtualKey >= 0x97u and virtualKey <= 0x9Fu)
+              ) virtualKeyTranslation = "Unassigned";
+
+              else if (virtualKey >= 0x3Au and virtualKey <= 0x40u)
+                virtualKeyTranslation = "Undefined";
+
+              else switch (virtualKey) {
+                case 0x30u: virtualKeyTranslation = "0"; break;
+                case 0x31u: virtualKeyTranslation = "1"; break;
+                case 0x32u: virtualKeyTranslation = "2"; break;
+                case 0x33u: virtualKeyTranslation = "3"; break;
+                case 0x34u: virtualKeyTranslation = "4"; break;
+                case 0x35u: virtualKeyTranslation = "5"; break;
+                case 0x36u: virtualKeyTranslation = "6"; break;
+                case 0x37u: virtualKeyTranslation = "7"; break;
+                case 0x38u: virtualKeyTranslation = "8"; break;
+                case 0x39u: virtualKeyTranslation = "9"; break;
+                case 0x41u: virtualKeyTranslation = "A"; break;
+                case 0x42u: virtualKeyTranslation = "B"; break;
+                case 0x43u: virtualKeyTranslation = "C"; break;
+                case 0x44u: virtualKeyTranslation = "D"; break;
+                case 0x45u: virtualKeyTranslation = "E"; break;
+                case 0x46u: virtualKeyTranslation = "F"; break;
+                case 0x47u: virtualKeyTranslation = "G"; break;
+                case 0x48u: virtualKeyTranslation = "H"; break;
+                case 0x49u: virtualKeyTranslation = "I"; break;
+                case 0x4Au: virtualKeyTranslation = "J"; break;
+                case 0x4Bu: virtualKeyTranslation = "K"; break;
+                case 0x4Cu: virtualKeyTranslation = "L"; break;
+                case 0x4Du: virtualKeyTranslation = "M"; break;
+                case 0x4Eu: virtualKeyTranslation = "N"; break;
+                case 0x4Fu: virtualKeyTranslation = "O"; break;
+                case 0x50u: virtualKeyTranslation = "P"; break;
+                case 0x51u: virtualKeyTranslation = "Q"; break;
+                case 0x52u: virtualKeyTranslation = "R"; break;
+                case 0x53u: virtualKeyTranslation = "S"; break;
+                case 0x54u: virtualKeyTranslation = "T"; break;
+                case 0x55u: virtualKeyTranslation = "U"; break;
+                case 0x56u: virtualKeyTranslation = "V"; break;
+                case 0x57u: virtualKeyTranslation = "W"; break;
+                case 0x58u: virtualKeyTranslation = "X"; break;
+                case 0x59u: virtualKeyTranslation = "Y"; break;
+                case 0x5Au: virtualKeyTranslation = "Z"; break;
+
+                case VK_CONTROL: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
+                  case VK_LCONTROL: virtualKeyTranslation = "Left"  " Control"; break;
+                  case VK_RCONTROL: virtualKeyTranslation = "Right" " Control"; break;
+                  default         : virtualKeyTranslation =          "Control";
+                } break;
+
+                case VK_MENU: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
+                  case VK_LMENU: virtualKeyTranslation = "Left"  " Alternative"; break;
+                  case VK_RMENU: virtualKeyTranslation = "Right" " Alternative"; break;
+                  default      : virtualKeyTranslation =          "Alternative";
+                } break;
+
+                case VK_SHIFT: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
+                  case VK_LSHIFT: virtualKeyTranslation = "Left"  " Shift"; break;
+                  case VK_RSHIFT: virtualKeyTranslation = "Right" " Shift"; break;
+                  default       : virtualKeyTranslation =          "Shift";
+                } break;
+
+                case VK_ACCEPT             : virtualKeyTranslation = "Input Method Encoding: Accept";              break;
+                case VK_ADD                : virtualKeyTranslation = "Add";                                        break;
+                case VK_APPS               : virtualKeyTranslation = "Application";                                break;
+                case VK_ATTN               : virtualKeyTranslation = "Attention";                                  break;
+                case VK_BACK               : virtualKeyTranslation = "Backspace";                                  break;
+                case VK_BROWSER_BACK       : virtualKeyTranslation = "Browser: Back";                              break;
+                case VK_BROWSER_FAVORITES  : virtualKeyTranslation = "Browser: Favorites";                         break;
+                case VK_BROWSER_FORWARD    : virtualKeyTranslation = "Browser: Forward";                           break;
+                case VK_BROWSER_HOME       : virtualKeyTranslation = "Browser: Start and Home";                    break;
+                case VK_BROWSER_REFRESH    : virtualKeyTranslation = "Browser: Refresh";                           break;
+                case VK_BROWSER_SEARCH     : virtualKeyTranslation = "Browser: Search";                            break;
+                case VK_BROWSER_STOP       : virtualKeyTranslation = "Browser: Stop";                              break;
+                case VK_CANCEL             : virtualKeyTranslation = "Cancel, Control-Break Processing";           break;
+                case VK_CAPITAL            : virtualKeyTranslation = "Capital Lock";                               break;
+                case VK_CLEAR              : virtualKeyTranslation = "Clear";                                      break;
+                case VK_CONVERT            : virtualKeyTranslation = "Input Method Encoding: Convert";             break;
+                case VK_CRSEL              : virtualKeyTranslation = "Cursor Select";                              break;
+                case VK_DECIMAL            : virtualKeyTranslation = "Decimal";                                    break;
+                case VK_DELETE             : virtualKeyTranslation = "Delete";                                     break;
+                case VK_DIVIDE             : virtualKeyTranslation = "Divide";                                     break;
+                case VK_DOWN               : virtualKeyTranslation = "Down Arrow";                                 break;
+                case VK_END                : virtualKeyTranslation = "End";                                        break;
+                case VK_EREOF              : virtualKeyTranslation = "Erase End-of-File";                          break;
+                case VK_ESCAPE             : virtualKeyTranslation = "Escape";                                     break;
+                case VK_EXECUTE            : virtualKeyTranslation = "Execute";                                    break;
+                case VK_EXSEL              : virtualKeyTranslation = "Extend Selection";                           break;
+                case VK_F1                 : virtualKeyTranslation = "Function 1";                                 break;
+                case VK_F2                 : virtualKeyTranslation = "Function 2";                                 break;
+                case VK_F3                 : virtualKeyTranslation = "Function 3";                                 break;
+                case VK_F4                 : virtualKeyTranslation = "Function 4";                                 break;
+                case VK_F5                 : virtualKeyTranslation = "Function 5";                                 break;
+                case VK_F6                 : virtualKeyTranslation = "Function 6";                                 break;
+                case VK_F7                 : virtualKeyTranslation = "Function 7";                                 break;
+                case VK_F8                 : virtualKeyTranslation = "Function 8";                                 break;
+                case VK_F9                 : virtualKeyTranslation = "Function 9";                                 break;
+                case VK_F10                : virtualKeyTranslation = "Function 10";                                break;
+                case VK_F11                : virtualKeyTranslation = "Function 11";                                break;
+                case VK_F12                : virtualKeyTranslation = "Function 12";                                break;
+                case VK_F13                : virtualKeyTranslation = "Function 13";                                break;
+                case VK_F14                : virtualKeyTranslation = "Function 14";                                break;
+                case VK_F15                : virtualKeyTranslation = "Function 15";                                break;
+                case VK_F16                : virtualKeyTranslation = "Function 16";                                break;
+                case VK_F17                : virtualKeyTranslation = "Function 17";                                break;
+                case VK_F18                : virtualKeyTranslation = "Function 18";                                break;
+                case VK_F19                : virtualKeyTranslation = "Function 19";                                break;
+                case VK_F20                : virtualKeyTranslation = "Function 20";                                break;
+                case VK_F21                : virtualKeyTranslation = "Function 21";                                break;
+                case VK_F22                : virtualKeyTranslation = "Function 22";                                break;
+                case VK_F23                : virtualKeyTranslation = "Function 23";                                break;
+                case VK_F24                : virtualKeyTranslation = "Function 24";                                break;
+                case VK_FINAL              : virtualKeyTranslation = "Input Method Encoding: Final";               break;
+                case VK_HANGUL | VK_KANA   : virtualKeyTranslation = "Input Method Encoding: Hangul, Kana";        break;
+                case VK_HANJA  | VK_KANJI  : virtualKeyTranslation = "Input Method Encoding: Hanja, Kanji";        break;
+                case VK_HELP               : virtualKeyTranslation = "Help";                                       break;
+                case VK_HOME               : virtualKeyTranslation = "Home";                                       break;
+                case VK_IME_OFF            : virtualKeyTranslation = "Input Method Encoding: Off";                 break;
+                case VK_IME_ON             : virtualKeyTranslation = "Input Method Encoding: On";                  break;
+                case VK_INSERT             : virtualKeyTranslation = "Insert";                                     break;
+                case VK_JUNJA              : virtualKeyTranslation = "Input Method Encoding: Junja";               break;
+                case VK_LAUNCH_APP1        : virtualKeyTranslation = "Start Application 1";                        break;
+                case VK_LAUNCH_APP2        : virtualKeyTranslation = "Start Application 2";                        break;
+                case VK_LAUNCH_MAIL        : virtualKeyTranslation = "Start Mail";                                 break;
+                case VK_LAUNCH_MEDIA_SELECT: virtualKeyTranslation = "Select Media";                               break;
+                case VK_LBUTTON            : virtualKeyTranslation = "Left Mouse Button";                          break;
+                case VK_LCONTROL           : virtualKeyTranslation = "Left Control";                               break;
+                case VK_LEFT               : virtualKeyTranslation = "Left Arrow";                                 break;
+                case VK_LMENU              : virtualKeyTranslation = "Left Alternative";                           break;
+                case VK_LSHIFT             : virtualKeyTranslation = "Left Shift";                                 break;
+                case VK_LWIN               : virtualKeyTranslation = "Left Windows";                               break;
+                case VK_MBUTTON            : virtualKeyTranslation = "Middle Mouse Button";                        break;
+                case VK_MEDIA_NEXT_TRACK   : virtualKeyTranslation = "Media: Next";                                break;
+                case VK_MEDIA_PLAY_PAUSE   : virtualKeyTranslation = "Media: Play/ Pause";                         break;
+                case VK_MEDIA_PREV_TRACK   : virtualKeyTranslation = "Media: Previous";                            break;
+                case VK_MEDIA_STOP         : virtualKeyTranslation = "Media: Stop";                                break;
+                case VK_MODECHANGE         : virtualKeyTranslation = "Input Method Encoding: Mode Change Request"; break;
+                case VK_MULTIPLY           : virtualKeyTranslation = "Multiply";                                   break;
+                case VK_NEXT               : virtualKeyTranslation = "Next, Page Down";                            break;
+                case VK_NONAME             : /* Do nothing… */                                            break;
+                case VK_NONCONVERT         : virtualKeyTranslation = "Input Method Encoding: Non-Convert";         break;
+                case VK_NUMLOCK            : virtualKeyTranslation = "Number Lock";                                break;
+                case VK_NUMPAD0            : virtualKeyTranslation = "Number Keypad 0";                            break;
+                case VK_NUMPAD1            : virtualKeyTranslation = "Number Keypad 1";                            break;
+                case VK_NUMPAD2            : virtualKeyTranslation = "Number Keypad 2";                            break;
+                case VK_NUMPAD3            : virtualKeyTranslation = "Number Keypad 3";                            break;
+                case VK_NUMPAD4            : virtualKeyTranslation = "Number Keypad 4";                            break;
+                case VK_NUMPAD5            : virtualKeyTranslation = "Number Keypad 5";                            break;
+                case VK_NUMPAD6            : virtualKeyTranslation = "Number Keypad 6";                            break;
+                case VK_NUMPAD7            : virtualKeyTranslation = "Number Keypad 7";                            break;
+                case VK_NUMPAD8            : virtualKeyTranslation = "Number Keypad 8";                            break;
+                case VK_NUMPAD9            : virtualKeyTranslation = "Number Keypad 9";                            break;
+                case VK_OEM_1              : virtualKeyTranslation = "OEM-specific 1";                             break;
+                case VK_OEM_2              : virtualKeyTranslation = "OEM-specific 2";                             break;
+                case VK_OEM_3              : virtualKeyTranslation = "OEM-specific 3";                             break;
+                case VK_OEM_4              : virtualKeyTranslation = "OEM-specific 4";                             break;
+                case VK_OEM_5              : virtualKeyTranslation = "OEM-specific 5";                             break;
+                case VK_OEM_6              : virtualKeyTranslation = "OEM-specific 6";                             break;
+                case VK_OEM_7              : virtualKeyTranslation = "OEM-specific 7";                             break;
+                case VK_OEM_8              : virtualKeyTranslation = "OEM-specific 8";                             break;
+                case VK_OEM_102            : virtualKeyTranslation = "OEM-specific 102";                           break;
+                case VK_OEM_CLEAR          : virtualKeyTranslation = "Clear";                                      break;
+                case VK_OEM_COMMA          : virtualKeyTranslation = "OEM-specific Comma";                         break;
+                case VK_OEM_MINUS          : virtualKeyTranslation = "OEM-specific Minus";                         break;
+                case VK_OEM_PERIOD         : virtualKeyTranslation = "OEM-specific Period";                        break;
+                case VK_OEM_PLUS           : virtualKeyTranslation = "OEM-specific Plus";                          break;
+                case VK_PA1                : virtualKeyTranslation = "Program Action 1";                           break;
+                case VK_PACKET             : virtualKeyTranslation = "Unicode Packet";                             break;
+                case VK_PAUSE              : virtualKeyTranslation = "Pause";                                      break;
+                case VK_PLAY               : virtualKeyTranslation = "Play";                                       break;
+                case VK_PRINT              : virtualKeyTranslation = "Print";                                      break;
+                case VK_PRIOR              : virtualKeyTranslation = "Prior, Page Up";                             break;
+                case VK_PROCESSKEY         : virtualKeyTranslation = "Input Method Encoding: Process";             break;
+                case VK_RBUTTON            : virtualKeyTranslation = "Right Mouse Button";                         break;
+                case VK_RCONTROL           : virtualKeyTranslation = "Right Control";                              break;
+                case VK_RETURN             : virtualKeyTranslation = "Return";                                     break;
+                case VK_RIGHT              : virtualKeyTranslation = "Right Arrow";                                break;
+                case VK_RMENU              : virtualKeyTranslation = "Right Alternative";                          break;
+                case VK_RSHIFT             : virtualKeyTranslation = "Right Shift";                                break;
+                case VK_RWIN               : virtualKeyTranslation = "Right Windows";                              break;
+                case VK_SCROLL             : virtualKeyTranslation = "Scroll Lock";                                break;
+                case VK_SELECT             : virtualKeyTranslation = "Select";                                     break;
+                case VK_SEPARATOR          : virtualKeyTranslation = "Separator";                                  break;
+                case VK_SLEEP              : virtualKeyTranslation = "Sleep";                                      break;
+                case VK_SNAPSHOT           : virtualKeyTranslation = "Snapshot";                                   break;
+                case VK_SPACE              : virtualKeyTranslation = "Space";                                      break;
+                case VK_SUBTRACT           : virtualKeyTranslation = "Subtract";                                   break;
+                case VK_TAB                : virtualKeyTranslation = "Tab";                                        break;
+                case VK_UP                 : virtualKeyTranslation = "Up Arrow";                                   break;
+                case VK_VOLUME_DOWN        : virtualKeyTranslation = "Volume: Down";                               break;
+                case VK_VOLUME_MUTE        : virtualKeyTranslation = "Volume: Mute";                               break;
+                case VK_VOLUME_UP          : virtualKeyTranslation = "Volume: Up";                                 break;
+                case VK_XBUTTON1           : virtualKeyTranslation = "Extended Mouse Button 1";                    break;
+                case VK_XBUTTON2           : virtualKeyTranslation = "Extended Mouse Button 2";                    break;
+                case VK_ZOOM               : virtualKeyTranslation = "Zoom";
+              }
+
+              // ...
+              messageTranslationMultilineFormat = true;
+
+              if (log::output(
+                NULL == virtualKeyTranslation
+                ? log::format("[",     static_cast<undefined>(virtualKey), "`, {" "\r\n")
+                : log::format("[" "`", virtualKeyTranslation,              "`, {" "\r\n")
+              )) messageTranslationMultilineFormat = not log::output(log::format(
+                "  " "context   : ", static_cast<bool>(context),                                                                                                                                                "," "\r\n"
+                "  " "extended  : ", static_cast<bool>(extended),                                                                                                                                               "," "\r\n"
+                "  " "previous  : ", static_cast<bool>(previous),                                                                                                                                               "," "\r\n"
+                "  " "repeat    : ", repeatCount,                                                                                                                                                               "," "\r\n"
+                "  " "scan      : ", static_cast<undefined>(scanCode), NULL != scanCodeTranslation ? " `" : "", NULL != scanCodeTranslation ? scanCodeTranslation : "", NULL != scanCodeTranslation ? "`" : "", "," "\r\n"
+                "  " "transition: ", static_cast<bool>(transition),                                                                                                                                                 "\r\n"
+                ""   "}]"
+              ));
+            } break;
+
+            // case WM_KILLFOCUS: break; // TODO (Lapys)
+            // case WM_MOVE: break; // TODO (Lapys)
+            // case WM_MOUSEFIRST: break; // TODO (Lapys)
+            // case WM_NCACTIVATE: break; // TODO (Lapys)
+            // case WM_NCCREATE: break; // TODO (Lapys)
+            // case WM_NCCALCSIZE: break; // TODO (Lapys)
+            // case WM_NCHITTEST: break; // TODO (Lapys)
+            // case WM_NCLBUTTONDOWN: break; // TODO (Lapys)
+            // case WM_MOUSELEAVE: break; // TODO (Lapys)
+            // case WM_NCMOUSEMOVE: break; // TODO (Lapys)
+            // case WM_NCPAINT: break; // TODO (Lapys)
+            // case WM_PAINT: break; // TODO (Lapys)
+
+            case WM_QUIT: switch (static_cast<int>(parameter)) {
+              case EXIT_FAILURE: messageTranslationMultilineFormat = not log::output(log::format("[EXIT_FAILURE"                                           ", ", static_cast<unused>(subparameter), "]")); break;
+              case EXIT_SUCCESS: messageTranslationMultilineFormat = not log::output(log::format("[EXIT_SUCCESS"                                           ", ", static_cast<unused>(subparameter), "]")); break;
+              default:           messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<undefined>(static_cast<int>(parameter)), ", ", static_cast<unused>(subparameter), "]")); break;
+            } break;
+
+            // case WM_SETCURSOR: break; // TODO (Lapys)
+            // case WM_SETFOCUS: break; // TODO (Lapys)
+            // case WM_SHOWWINDOW: break; // TODO (Lapys)
+            // case WM_SIZE: break; // TODO (Lapys)
+            // case WM_SYSCOMMAND: break; // TODO (Lapys)
+            // case WM_WINDOWPOSCHANGED: break; // TODO (Lapys)
+            // case WM_WINDOWPOSCHANGING: break; // TODO (Lapys)
+
+            // TODO (Lapys) -> The other messages
+            default: messageTranslationMultilineFormat = not log::output(log::format(
+              "[",
+                static_cast<undefined>(parameter), ", ",
+                static_cast<undefined>(subparameter),
+              "]"
+            )); break;
+          }
+
+          (void) log::output(log::format("}" "\r\n", messageTranslationMultilineFormat ? "\n" : ""));
+        }
+
+        messageTranslation = messageEventTranslation;
+        while ('\0' != *(messageTranslation++)) continue;
+      }
+
+      // ... ->> Process the `message`
       switch (message) {
         case WM_CLOSE:
         case WM_DESTROY:
@@ -5635,7 +5864,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
   window.classTemplate.hIcon         = ::ExtractIconW    (static_cast<HINSTANCE>(::GetCurrentProcess()), moduleFileName, 0u);
   window.classTemplate.hIconSm       = static_cast<HICON>(NULL);
   window.classTemplate.hInstance     =  instanceHandle;
-  window.classTemplate.lpfnWndProc   = window.getProcedureByCallback(window.procedureCallback); // ->> Ideally non-null
+  window.classTemplate.lpfnWndProc   = &window.procedure;
   window.classTemplate.lpszClassName = L"window";
   window.classTemplate.lpszMenuName  = static_cast<LPCWSTR>(NULL);
   window.classTemplate.style         = CS_HREDRAW | CS_VREDRAW;
@@ -5656,7 +5885,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
     ::ShowWindow  (window.handle, SW_SHOW | (windowAppearance & SW_SHOW));
     ::UpdateWindow(window.handle);
 
-    while (FALSE != ::GetMessageW(&threadMessage, static_cast<HWND>(NULL), 0x0u, 0x0u)) {
+    while (::GetMessageW(&threadMessage, static_cast<HWND>(NULL), 0x0u, 0x0u) > FALSE) {
       ::TranslateMessage(&threadMessage);
       ::DispatchMessageW(&threadMessage);
     }
