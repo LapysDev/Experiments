@@ -37,30 +37,41 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
     static LRESULT CALLBACK procedure(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) /* noexcept */ {
       struct log /* final */ {
         /* ... ->> Used only for `log::format(…)` */
-        typedef struct unused {
+        struct number {
           uintmax_t const value;
           bool      const signedness : 1;
 
-          explicit inline unused(INT  const value) /* noexcept */ : value(value), signedness(value < 0)  {}
-          explicit inline unused(LONG const value) /* noexcept */ : value(value), signedness(value < 0L) {}
-          explicit inline unused(UINT const value) /* noexcept */ : value(value), signedness(false)      {}
-          explicit inline unused(WORD const value) /* noexcept */ : value(value), signedness(false)      {}
+          explicit inline number(INT  const value) /* noexcept */ : value(value), signedness(value < 0)  {}
+          explicit inline number(LONG const value) /* noexcept */ : value(value), signedness(value < 0L) {}
+          explicit inline number(UINT const value) /* noexcept */ : value(value), signedness(false)      {}
+          explicit inline number(WORD const value) /* noexcept */ : value(value), signedness(false)      {}
           #ifdef _WIN64
-            explicit inline unused(LPARAM const value) /* noexcept */ : value(value), signedness(value < 0L) {}
-            explicit inline unused(WPARAM const value) /* noexcept */ : value(value), signedness(false)      {}
+            explicit inline number(LPARAM const value) /* noexcept */ : value(value), signedness(value < 0L) {}
+            explicit inline number(WPARAM const value) /* noexcept */ : value(value), signedness(false)      {}
           #endif
-        } number;
+        };
 
-        struct undefined : public unused {
-          std::size_t const length : 6; // ->> Count of digits within `unused::value`; Arbitrary bit width
-
-          explicit inline undefined(INT  const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
-          explicit inline undefined(LONG const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
-          explicit inline undefined(UINT const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
-          explicit inline undefined(WORD const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+        struct unused : public number {
+          explicit inline unused(INT  const value) /* noexcept */ : number::number(value) {}
+          explicit inline unused(LONG const value) /* noexcept */ : number::number(value) {}
+          explicit inline unused(UINT const value) /* noexcept */ : number::number(value) {}
+          explicit inline unused(WORD const value) /* noexcept */ : number::number(value) {}
           #ifdef _WIN64
-            explicit inline undefined(LPARAM const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
-            explicit inline undefined(WPARAM const value) /* noexcept */ : unused::unused(value), length(sizeof value) {}
+            explicit inline unused(LPARAM const value) /* noexcept */ : number::number(value) {}
+            explicit inline unused(WPARAM const value) /* noexcept */ : number::number(value) {}
+          #endif
+        };
+
+        struct undefined : public number {
+          std::size_t const length : 6; // ->> Count of digits within `number::value`; Arbitrary bit width
+
+          explicit inline undefined(INT  const value) /* noexcept */ : number::number(value), length(sizeof value) {}
+          explicit inline undefined(LONG const value) /* noexcept */ : number::number(value), length(sizeof value) {}
+          explicit inline undefined(UINT const value) /* noexcept */ : number::number(value), length(sizeof value) {}
+          explicit inline undefined(WORD const value) /* noexcept */ : number::number(value), length(sizeof value) {}
+          #ifdef _WIN64
+            explicit inline undefined(LPARAM const value) /* noexcept */ : number::number(value), length(sizeof value) {}
+            explicit inline undefined(WPARAM const value) /* noexcept */ : number::number(value), length(sizeof value) {}
           #endif
         };
 
@@ -88,12 +99,9 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
           inline any()                                /* noexcept */ : storage(), value(NULL),                                              type(any::nullable)    {}
           inline any(bool           const  boolean)   /* noexcept */ : storage(), value(::new (this -> storage) any::binary   (boolean)),   type(any::boolean)     {}
           inline any(void const*    const  address)   /* noexcept */ : storage(), value(::new (this -> storage) any::address  (address)),   type(any::addressable) {}
-          inline any(INT            const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
-          inline any(LONG           const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
-          inline any(UINT           const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
-          inline any(WORD           const  number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
           inline any(char           const  text[])    /* noexcept */ : storage(), value(::new (this -> storage) any::address  (text)),      type(any::literal)     {}
           inline any(wchar_t        const  text[])    /* noexcept */ : storage(), value(::new (this -> storage) any::address  (text)),      type(any::textual)     {}
+          inline any(log::number    const& number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
           inline any(log::undefined const& undefined) /* noexcept */ : storage(), value(::new (this -> storage) any::undefined(undefined)), type(any::undefinable) {}
           inline any(log::unused    const& unused)    /* noexcept */ : storage(), value(::new (this -> storage) any::unused   (unused)),    type(any::unusable)    {}
           #ifdef _WIN64
@@ -5221,6 +5229,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
         }
       };
 
+      typedef log::number    number;
       typedef log::undefined undefined;
       typedef log::unused    unused;
 
@@ -5328,9 +5337,9 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
 
               if (log::output(log::format("[", static_cast<bool>(minimized), " {state: ")))
               if (log::output(
-                WA_ACTIVE      == minimizationState ? log::format("`WA_ACTIVE`")      :
-                WA_CLICKACTIVE == minimizationState ? log::format("`WA_CLICKACTIVE`") :
-                WA_INACTIVE    == minimizationState ? log::format("`WA_INACTIVE`")    :
+                WA_ACTIVE      == minimizationState ? "`WA_ACTIVE`"      :
+                WA_CLICKACTIVE == minimizationState ? "`WA_CLICKACTIVE`" :
+                WA_INACTIVE    == minimizationState ? "`WA_INACTIVE`"    :
                 log::format(static_cast<unused>(minimizationState))
               )) messageTranslationMultilineFormat = not log::output(log::format("}, ", windowHandle));
             } break;
@@ -5354,11 +5363,11 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
             case WM_GETMINMAXINFO: {
               MINMAXINFO *const minimumMaximumInformation = static_cast<MINMAXINFO*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
               messageTranslationMultilineFormat = not log::output(log::format(
-                ""   "[..., {"                                                                                                                                "\r\n"
-                "  " "maximumPosition : {x: ", minimumMaximumInformation -> ptMaxPosition .x, ", y: ", minimumMaximumInformation -> ptMaxPosition .y, "}" "," "\r\n"
-                "  " "maximumSize     : {x: ", minimumMaximumInformation -> ptMaxSize     .x, ", y: ", minimumMaximumInformation -> ptMaxSize     .y, "}" "," "\r\n"
-                "  " "maximumTrackSize: {x: ", minimumMaximumInformation -> ptMaxTrackSize.x, ", y: ", minimumMaximumInformation -> ptMaxTrackSize.y, "}" "," "\r\n"
-                "  " "minimumTrackSize: {x: ", minimumMaximumInformation -> ptMinTrackSize.x, ", y: ", minimumMaximumInformation -> ptMinTrackSize.y, "}"     "\r\n"
+                ""   "[..., {"                                                                                                                                                  "\r\n"
+                "  " "maximumPosition : {x: ", (number) minimumMaximumInformation -> ptMaxPosition .x, ", y: ", (number) minimumMaximumInformation -> ptMaxPosition .y, "}" "," "\r\n"
+                "  " "maximumSize     : {x: ", (number) minimumMaximumInformation -> ptMaxSize     .x, ", y: ", (number) minimumMaximumInformation -> ptMaxSize     .y, "}" "," "\r\n"
+                "  " "maximumTrackSize: {x: ", (number) minimumMaximumInformation -> ptMaxTrackSize.x, ", y: ", (number) minimumMaximumInformation -> ptMaxTrackSize.y, "}" "," "\r\n"
+                "  " "minimumTrackSize: {x: ", (number) minimumMaximumInformation -> ptMinTrackSize.x, ", y: ", (number) minimumMaximumInformation -> ptMinTrackSize.y, "}"     "\r\n"
                 ""   "}]"
               ));
             } break;
@@ -5367,7 +5376,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
 
             case WM_GETTEXT: messageTranslationMultilineFormat = not log::output(log::format(
               "[",
-                parameter, ", ",
+                (number) parameter, ", ",
                 reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)),
               "]"
             )); break;
@@ -5768,7 +5777,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
                 "  " "context   : ", static_cast<bool>(context),                                                                                                                                                "," "\r\n"
                 "  " "extended  : ", static_cast<bool>(extended),                                                                                                                                               "," "\r\n"
                 "  " "previous  : ", static_cast<bool>(previous),                                                                                                                                               "," "\r\n"
-                "  " "repeat    : ", repeatCount,                                                                                                                                                               "," "\r\n"
+                "  " "repeat    : ", (number) repeatCount,                                                                                                                                                      "," "\r\n"
                 "  " "scan      : ", static_cast<undefined>(scanCode), NULL != scanCodeTranslation ? " `" : "", NULL != scanCodeTranslation ? scanCodeTranslation : "", NULL != scanCodeTranslation ? "`" : "", "," "\r\n"
                 "  " "transition: ", static_cast<bool>(transition),                                                                                                                                                 "\r\n"
                 ""   "}]"
@@ -5779,7 +5788,247 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
             // case WM_MOVE: break; // TODO (Lapys)
             // case WM_MOUSEFIRST: break; // TODO (Lapys)
             // case WM_NCACTIVATE: break; // TODO (Lapys)
-            // case WM_NCCREATE: break; // TODO (Lapys)
+            case WM_NCCREATE: {
+              CREATESTRUCT *const createStructure                  = static_cast<CREATESTRUCT*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
+              bool                createStructureUsesExtendedStyle = false;
+              bool                createStructureUsesStyle         = false;
+
+              // ...
+              createStructureUsesExtendedStyle |= (createStructure -> dwExStyle & WS_EX_ACCEPTFILES) or (createStructure -> dwExStyle & WS_EX_APPWINDOW) or (createStructure -> dwExStyle & WS_EX_CLIENTEDGE) or (createStructure -> dwExStyle & WS_EX_COMPOSITED) or (createStructure -> dwExStyle & WS_EX_CONTEXTHELP) or (createStructure -> dwExStyle & WS_EX_CONTROLPARENT) or (createStructure -> dwExStyle & WS_EX_DLGMODALFRAME) or (createStructure -> dwExStyle & WS_EX_LAYERED) or (createStructure -> dwExStyle & WS_EX_LAYOUTRTL) or (createStructure -> dwExStyle & WS_EX_LEFT) or (createStructure -> dwExStyle & WS_EX_LEFTSCROLLBAR) or (createStructure -> dwExStyle & WS_EX_LTRREADING) or (createStructure -> dwExStyle & WS_EX_MDICHILD) or (createStructure -> dwExStyle & WS_EX_NOACTIVATE) or (createStructure -> dwExStyle & WS_EX_NOINHERITLAYOUT) or (createStructure -> dwExStyle & WS_EX_NOPARENTNOTIFY) or (createStructure -> dwExStyle & WS_EX_OVERLAPPEDWINDOW) or (createStructure -> dwExStyle & WS_EX_PALETTEWINDOW) or (createStructure -> dwExStyle & WS_EX_RIGHT) or (createStructure -> dwExStyle & WS_EX_RIGHTSCROLLBAR) or (createStructure -> dwExStyle & WS_EX_RTLREADING) or (createStructure -> dwExStyle & WS_EX_STATICEDGE) or (createStructure -> dwExStyle & WS_EX_TOOLWINDOW) or (createStructure -> dwExStyle & WS_EX_TOPMOST) or (createStructure -> dwExStyle & WS_EX_TRANSPARENT) or (createStructure -> dwExStyle & WS_EX_WINDOWEDGE);
+              #ifdef WS_EX_NOREDIRECTIONBITMAP
+                createStructureUsesExtendedStyle |= createStructure -> dwExStyle & WS_EX_NOREDIRECTIONBITMAP;
+              #endif
+
+              createStructureUsesStyle |= (createStructure -> style & BS_3STATE) or (createStructure -> style & BS_AUTO3STATE) or (createStructure -> style & BS_AUTOCHECKBOX) or (createStructure -> style & BS_AUTORADIOBUTTON) or (createStructure -> style & BS_BITMAP) or (createStructure -> style & BS_BOTTOM) or (createStructure -> style & BS_CENTER) or (createStructure -> style & BS_CHECKBOX) or (createStructure -> style & BS_COMMANDLINK) or (createStructure -> style & BS_DEFCOMMANDLINK) or (createStructure -> style & BS_DEFPUSHBUTTON) or (createStructure -> style & BS_DEFSPLITBUTTON) or (createStructure -> style & BS_GROUPBOX) or (createStructure -> style & BS_ICON) or (createStructure -> style & BS_FLAT) or (createStructure -> style & BS_LEFT) or (createStructure -> style & BS_LEFTTEXT) or (createStructure -> style & BS_MULTILINE) or (createStructure -> style & BS_NOTIFY) or (createStructure -> style & BS_OWNERDRAW) or (createStructure -> style & BS_PUSHBUTTON) or (createStructure -> style & BS_PUSHLIKE) or (createStructure -> style & BS_RADIOBUTTON) or (createStructure -> style & BS_RIGHT) or (createStructure -> style & BS_RIGHTBUTTON) or (createStructure -> style & BS_SPLITBUTTON) or (createStructure -> style & BS_TEXT) or (createStructure -> style & BS_TOP) or (createStructure -> style & BS_TYPEMASK) or (createStructure -> style & BS_USERBUTTON) or (createStructure -> style & BS_VCENTER);
+              createStructureUsesStyle |= (createStructure -> style & CBS_AUTOHSCROLL) or (createStructure -> style & CBS_DISABLENOSCROLL) or (createStructure -> style & CBS_DROPDOWN) or (createStructure -> style & CBS_DROPDOWNLIST) or (createStructure -> style & CBS_HASSTRINGS) or (createStructure -> style & CBS_LOWERCASE) or (createStructure -> style & CBS_NOINTEGRALHEIGHT) or (createStructure -> style & CBS_OEMCONVERT) or (createStructure -> style & CBS_OWNERDRAWFIXED) or (createStructure -> style & CBS_OWNERDRAWVARIABLE) or (createStructure -> style & CBS_SIMPLE) or (createStructure -> style & CBS_SORT) or (createStructure -> style & CBS_UPPERCASE);
+              createStructureUsesStyle |= (createStructure -> style & ES_AUTOHSCROLL) or (createStructure -> style & ES_AUTOVSCROLL) or (createStructure -> style & ES_CENTER) or (createStructure -> style & ES_DISABLENOSCROLL) or (createStructure -> style & ES_EX_NOCALLOLEINIT) or (createStructure -> style & ES_LEFT) or (createStructure -> style & ES_LOWERCASE) or (createStructure -> style & ES_MULTILINE) or (createStructure -> style & ES_NOHIDESEL) or (createStructure -> style & ES_NOIME) or (createStructure -> style & ES_NOOLEDRAGDROP) or (createStructure -> style & ES_NUMBER) or (createStructure -> style & ES_OEMCONVERT) or (createStructure -> style & ES_PASSWORD) or (createStructure -> style & ES_READONLY) or (createStructure -> style & ES_RIGHT) or (createStructure -> style & ES_SAVESEL) or (createStructure -> style & ES_SELECTIONBAR) or (createStructure -> style & ES_SELFIME) or (createStructure -> style & ES_SUNKEN) or (createStructure -> style & ES_UPPERCASE) or (createStructure -> style & ES_VERTICAL) or (createStructure -> style & ES_WANTRETURN);
+              createStructureUsesStyle |= (createStructure -> style & LBS_COMBOBOX) or (createStructure -> style & LBS_DISABLENOSCROLL) or (createStructure -> style & LBS_EXTENDEDSEL) or (createStructure -> style & LBS_HASSTRINGS) or (createStructure -> style & LBS_MULTICOLUMN) or (createStructure -> style & LBS_MULTIPLESEL) or (createStructure -> style & LBS_NODATA) or (createStructure -> style & LBS_NOINTEGRALHEIGHT) or (createStructure -> style & LBS_NOREDRAW) or (createStructure -> style & LBS_NOSEL) or (createStructure -> style & LBS_NOTIFY) or (createStructure -> style & LBS_OWNERDRAWFIXED) or (createStructure -> style & LBS_OWNERDRAWVARIABLE) or (createStructure -> style & LBS_SORT) or (createStructure -> style & LBS_STANDARD) or (createStructure -> style & LBS_USETABSTOPS) or (createStructure -> style & LBS_WANTKEYBOARDINPUT);
+              createStructureUsesStyle |= (createStructure -> style & SBS_BOTTOMALIGN) or (createStructure -> style & SBS_HORZ) or (createStructure -> style & SBS_LEFTALIGN) or (createStructure -> style & SBS_RIGHTALIGN) or (createStructure -> style & SBS_SIZEBOX) or (createStructure -> style & SBS_SIZEBOXBOTTOMRIGHTALIGN) or (createStructure -> style & SBS_SIZEBOXTOPLEFTALIGN) or (createStructure -> style & SBS_SIZEGRIP) or (createStructure -> style & SBS_TOPALIGN) or (createStructure -> style & SBS_VERT);
+              createStructureUsesStyle |= (createStructure -> style & SS_BITMAP) or (createStructure -> style & SS_BLACKFRAME) or (createStructure -> style & SS_BLACKRECT) or (createStructure -> style & SS_CENTER) or (createStructure -> style & SS_CENTERIMAGE) or (createStructure -> style & SS_EDITCONTROL) or (createStructure -> style & SS_ENDELLIPSIS) or (createStructure -> style & SS_ENHMETAFILE) or (createStructure -> style & SS_ETCHEDFRAME) or (createStructure -> style & SS_ETCHEDHORZ) or (createStructure -> style & SS_ETCHEDVERT) or (createStructure -> style & SS_GRAYFRAME) or (createStructure -> style & SS_GRAYRECT) or (createStructure -> style & SS_ICON) or (createStructure -> style & SS_LEFT) or (createStructure -> style & SS_LEFTNOWORDWRAP) or (createStructure -> style & SS_NOPREFIX) or (createStructure -> style & SS_NOTIFY) or (createStructure -> style & SS_OWNERDRAW) or (createStructure -> style & SS_PATHELLIPSIS) or (createStructure -> style & SS_REALSIZECONTROL) or (createStructure -> style & SS_REALSIZEIMAGE) or (createStructure -> style & SS_RIGHT) or (createStructure -> style & SS_RIGHTJUST) or (createStructure -> style & SS_SIMPLE) or (createStructure -> style & SS_SUNKEN) or (createStructure -> style & SS_TYPEMASK) or (createStructure -> style & SS_WHITEFRAME) or (createStructure -> style & SS_WHITERECT) or (createStructure -> style & SS_WORDELLIPSIS);
+              createStructureUsesStyle |= (createStructure -> style & WS_BORDER) or (createStructure -> style & WS_CAPTION) or (createStructure -> style & WS_CHILD) or (createStructure -> style & WS_CHILDWINDOW) or (createStructure -> style & WS_CLIPCHILDREN) or (createStructure -> style & WS_CLIPSIBLINGS) or (createStructure -> style & WS_DISABLED) or (createStructure -> style & WS_DLGFRAME) or (createStructure -> style & WS_GROUP) or (createStructure -> style & WS_HSCROLL) or (createStructure -> style & WS_ICONIC) or (createStructure -> style & WS_MAXIMIZE) or (createStructure -> style & WS_MAXIMIZEBOX) or (createStructure -> style & WS_MINIMIZE) or (createStructure -> style & WS_MINIMIZEBOX) or (createStructure -> style & WS_OVERLAPPED) or (createStructure -> style & WS_OVERLAPPEDWINDOW) or (createStructure -> style & WS_POPUP) or (createStructure -> style & WS_POPUPWINDOW) or (createStructure -> style & WS_SIZEBOX) or (createStructure -> style & WS_SYSMENU) or (createStructure -> style & WS_TABSTOP) or (createStructure -> style & WS_THICKFRAME) or (createStructure -> style & WS_TILED) or (createStructure -> style & WS_TILEDWINDOW) or (createStructure -> style & WS_VISIBLE) or (createStructure -> style & WS_VSCROLL);
+
+              messageTranslationMultilineFormat = true;
+
+              if (log::output(log::format("[", static_cast<unused>(parameter), ", {" "\r\n" "  " "className    : ")))
+              if (log::output(
+                BUTTON         == createStructure -> lpszClass ? "`BUTTON`"         "," "\r\n" :
+                COMBOBOX       == createStructure -> lpszClass ? "`COMBOBOX`"       "," "\r\n" :
+                EDIT           == createStructure -> lpszClass ? "`EDIT`"           "," "\r\n" :
+                LISTBOX        == createStructure -> lpszClass ? "`LISTBOX`"        "," "\r\n" :
+                MDICLIENT      == createStructure -> lpszClass ? "`MDICLIENT`"      "," "\r\n" :
+                RichEdit       == createStructure -> lpszClass ? "`RichEdit`"       "," "\r\n" :
+                // RICHEDIT_CLASS == createStructure -> lpszClass ? "`RICHEDIT_CLASS`" "," "\r\n" :
+                SCROLLBAR      == createStructure -> lpszClass ? "`SCROLLBAR`"      "," "\r\n" :
+                STATIC         == createStructure -> lpszClass ? "`STATIC`"         "," "\r\n" :
+                log::format(static_cast<unused>(parameter), "," "\r\n")
+              )) if (log::output(log::format(
+                "  " "extendedStyle: ", static_cast<undefined>(createStructure -> style), createStructureUsesExtendedStyle ? " `" : "",
+                  createStructure -> dwExStyle & WS_EX_ACCEPTFILES      ? "WS_EX_ACCEPTFILES"         " | " : "",
+                  createStructure -> dwExStyle & WS_EX_APPWINDOW        ? "WS_EX_APPWINDOW"           " | " : "",
+                  createStructure -> dwExStyle & WS_EX_CLIENTEDGE       ? "WS_EX_CLIENTEDGE"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_COMPOSITED       ? "WS_EX_COMPOSITED"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_CONTEXTHELP      ? "WS_EX_CONTEXTHELP"         " | " : "",
+                  createStructure -> dwExStyle & WS_EX_CONTROLPARENT    ? "WS_EX_CONTROLPARENT"       " | " : "",
+                  createStructure -> dwExStyle & WS_EX_DLGMODALFRAME    ? "WS_EX_DLGMODALFRAME"       " | " : "",
+                  createStructure -> dwExStyle & WS_EX_LAYERED          ? "WS_EX_LAYERED"             " | " : "",
+                  createStructure -> dwExStyle & WS_EX_LAYOUTRTL        ? "WS_EX_LAYOUTRTL"           " | " : "",
+                  createStructure -> dwExStyle & WS_EX_LEFT             ? "WS_EX_LEFT"                " | " : "",
+                  createStructure -> dwExStyle & WS_EX_LEFTSCROLLBAR    ? "WS_EX_LEFTSCROLLBAR"       " | " : "",
+                  createStructure -> dwExStyle & WS_EX_LTRREADING       ? "WS_EX_LTRREADING"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_MDICHILD         ? "WS_EX_MDICHILD"            " | " : "",
+                  createStructure -> dwExStyle & WS_EX_NOACTIVATE       ? "WS_EX_NOACTIVATE"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_NOINHERITLAYOUT  ? "WS_EX_NOINHERITLAYOUT"     " | " : "",
+                  createStructure -> dwExStyle & WS_EX_NOPARENTNOTIFY   ? "WS_EX_NOPARENTNOTIFY"      " | " : "",
+                  createStructure -> dwExStyle & WS_EX_OVERLAPPEDWINDOW ? "WS_EX_OVERLAPPEDWINDOW"    " | " : "",
+                  createStructure -> dwExStyle & WS_EX_PALETTEWINDOW    ? "WS_EX_PALETTEWINDOW"       " | " : "",
+                  createStructure -> dwExStyle & WS_EX_RIGHT            ? "WS_EX_RIGHT"               " | " : "",
+                  createStructure -> dwExStyle & WS_EX_RIGHTSCROLLBAR   ? "WS_EX_RIGHTSCROLLBAR"      " | " : "",
+                  createStructure -> dwExStyle & WS_EX_RTLREADING       ? "WS_EX_RTLREADING"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_STATICEDGE       ? "WS_EX_STATICEDGE"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_TOOLWINDOW       ? "WS_EX_TOOLWINDOW"          " | " : "",
+                  createStructure -> dwExStyle & WS_EX_TOPMOST          ? "WS_EX_TOPMOST"             " | " : "",
+                  createStructure -> dwExStyle & WS_EX_TRANSPARENT      ? "WS_EX_TRANSPARENT"         " | " : "",
+                  createStructure -> dwExStyle & WS_EX_WINDOWEDGE       ? "WS_EX_WINDOWEDGE"          " | " : "",
+                  #ifdef WS_EX_NOREDIRECTIONBITMAP
+                    createStructure -> dwExStyle & WS_EX_NOREDIRECTIONBITMAP ? "WS_EX_NOREDIRECTIONBITMAP" " | " : "",
+                  #endif
+                createStructureUsesExtendedStyle ? "...0x00`" : "",     "," "\r\n",
+                "  " "height       : ", (number) createStructure -> cy, "," "\r\n"
+                "  " "instance     : ", createStructure -> hInstance,   "," "\r\n"
+                "  " "menu         : ", createStructure -> hMenu,       "," "\r\n"
+              ))) if (log::output(
+                parameter == static_cast<WPARAM>(reinterpret_cast<uintptr_t>(createStructure -> lpCreateParams))
+                ? log::format("  " "parameters   : ", static_cast<unused>(parameter),    "," "\r\n")
+                : log::format("  " "parameters   : ", createStructure -> lpCreateParams, "," "\r\n")
+              )) messageTranslationMultilineFormat = not log::output(log::format(
+                "  " "parentWindow : ", createStructure -> hwndParent, "," "\r\n"
+                "  " "style        : ", static_cast<undefined>(createStructure -> style), createStructureUsesStyle ? " `" : "",
+                  createStructure -> style & BS_3STATE ? "BS_3STATE" " | " : "",
+                  createStructure -> style & BS_AUTO3STATE ? "BS_AUTO3STATE" " | " : "",
+                  createStructure -> style & BS_AUTOCHECKBOX ? "BS_AUTOCHECKBOX" " | " : "",
+                  createStructure -> style & BS_AUTORADIOBUTTON ? "BS_AUTORADIOBUTTON" " | " : "",
+                  createStructure -> style & BS_BITMAP ? "BS_BITMAP" " | " : "",
+                  createStructure -> style & BS_BOTTOM ? "BS_BOTTOM" " | " : "",
+                  createStructure -> style & BS_CENTER ? "BS_CENTER" " | " : "",
+                  createStructure -> style & BS_CHECKBOX ? "BS_CHECKBOX" " | " : "",
+                  createStructure -> style & BS_COMMANDLINK ? "BS_COMMANDLINK" " | " : "",
+                  createStructure -> style & BS_DEFCOMMANDLINK ? "BS_DEFCOMMANDLINK" " | " : "",
+                  createStructure -> style & BS_DEFPUSHBUTTON ? "BS_DEFPUSHBUTTON" " | " : "",
+                  createStructure -> style & BS_DEFSPLITBUTTON ? "BS_DEFSPLITBUTTON" " | " : "",
+                  createStructure -> style & BS_GROUPBOX ? "BS_GROUPBOX" " | " : "",
+                  createStructure -> style & BS_ICON ? "BS_ICON" " | " : "",
+                  createStructure -> style & BS_FLAT ? "BS_FLAT" " | " : "",
+                  createStructure -> style & BS_LEFT ? "BS_LEFT" " | " : "",
+                  createStructure -> style & BS_LEFTTEXT ? "BS_LEFTTEXT" " | " : "",
+                  createStructure -> style & BS_MULTILINE ? "BS_MULTILINE" " | " : "",
+                  createStructure -> style & BS_NOTIFY ? "BS_NOTIFY" " | " : "",
+                  createStructure -> style & BS_OWNERDRAW ? "BS_OWNERDRAW" " | " : "",
+                  createStructure -> style & BS_PUSHBUTTON ? "BS_PUSHBUTTON" " | " : "",
+                  createStructure -> style & BS_PUSHLIKE ? "BS_PUSHLIKE" " | " : "",
+                  createStructure -> style & BS_RADIOBUTTON ? "BS_RADIOBUTTON" " | " : "",
+                  createStructure -> style & BS_RIGHT ? "BS_RIGHT" " | " : "",
+                  createStructure -> style & BS_RIGHTBUTTON ? "BS_RIGHTBUTTON" " | " : "",
+                  createStructure -> style & BS_SPLITBUTTON ? "BS_SPLITBUTTON" " | " : "",
+                  createStructure -> style & BS_TEXT ? "BS_TEXT" " | " : "",
+                  createStructure -> style & BS_TOP ? "BS_TOP" " | " : "",
+                  createStructure -> style & BS_TYPEMASK ? "BS_TYPEMASK" " | " : "",
+                  createStructure -> style & BS_USERBUTTON ? "BS_USERBUTTON" " | " : "",
+                  createStructure -> style & BS_VCENTER ? "BS_VCENTER" " | " : "",
+
+                  createStructure -> style & CBS_AUTOHSCROLL ?  "CBS_AUTOHSCROLL" " | " : "",
+                  createStructure -> style & CBS_DISABLENOSCROLL ?  "CBS_DISABLENOSCROLL" " | " : "",
+                  createStructure -> style & CBS_DROPDOWN ?  "CBS_DROPDOWN" " | " : "",
+                  createStructure -> style & CBS_DROPDOWNLIST ?  "CBS_DROPDOWNLIST" " | " : "",
+                  createStructure -> style & CBS_HASSTRINGS ?  "CBS_HASSTRINGS" " | " : "",
+                  createStructure -> style & CBS_LOWERCASE ?  "CBS_LOWERCASE" " | " : "",
+                  createStructure -> style & CBS_NOINTEGRALHEIGHT ?  "CBS_NOINTEGRALHEIGHT" " | " : "",
+                  createStructure -> style & CBS_OEMCONVERT ?  "CBS_OEMCONVERT" " | " : "",
+                  createStructure -> style & CBS_OWNERDRAWFIXED ?  "CBS_OWNERDRAWFIXED" " | " : "",
+                  createStructure -> style & CBS_OWNERDRAWVARIABLE ?  "CBS_OWNERDRAWVARIABLE" " | " : "",
+                  createStructure -> style & CBS_SIMPLE ?  "CBS_SIMPLE" " | " : "",
+                  createStructure -> style & CBS_SORT ?  "CBS_SORT" " | " : "",
+                  createStructure -> style & CBS_UPPERCASE ?  "CBS_UPPERCASE" " | " : "",
+
+                  createStructure -> style & ES_AUTOHSCROLL ? "ES_AUTOHSCROLL" " | " : "",
+                  createStructure -> style & ES_AUTOVSCROLL ? "ES_AUTOVSCROLL" " | " : "",
+                  createStructure -> style & ES_CENTER ? "ES_CENTER" " | " : "",
+                  createStructure -> style & ES_DISABLENOSCROLL ? "ES_DISABLENOSCROLL" " | " : "",
+                  createStructure -> style & ES_EX_NOCALLOLEINIT ? "ES_EX_NOCALLOLEINIT" " | " : "",
+                  createStructure -> style & ES_LEFT ? "ES_LEFT" " | " : "",
+                  createStructure -> style & ES_LOWERCASE ? "ES_LOWERCASE" " | " : "",
+                  createStructure -> style & ES_MULTILINE ? "ES_MULTILINE" " | " : "",
+                  createStructure -> style & ES_NOHIDESEL ? "ES_NOHIDESEL" " | " : "",
+                  createStructure -> style & ES_NOIME ? "ES_NOIME" " | " : "",
+                  createStructure -> style & ES_NOOLEDRAGDROP ? "ES_NOOLEDRAGDROP" " | " : "",
+                  createStructure -> style & ES_NUMBER ? "ES_NUMBER" " | " : "",
+                  createStructure -> style & ES_OEMCONVERT ? "ES_OEMCONVERT" " | " : "",
+                  createStructure -> style & ES_PASSWORD ? "ES_PASSWORD" " | " : "",
+                  createStructure -> style & ES_READONLY ? "ES_READONLY" " | " : "",
+                  createStructure -> style & ES_RIGHT ? "ES_RIGHT" " | " : "",
+                  createStructure -> style & ES_SAVESEL ? "ES_SAVESEL" " | " : "",
+                  createStructure -> style & ES_SELECTIONBAR ? "ES_SELECTIONBAR" " | " : "",
+                  createStructure -> style & ES_SELFIME ? "ES_SELFIME" " | " : "",
+                  createStructure -> style & ES_SUNKEN ? "ES_SUNKEN" " | " : "",
+                  createStructure -> style & ES_UPPERCASE ? "ES_UPPERCASE" " | " : "",
+                  createStructure -> style & ES_VERTICAL ? "ES_VERTICAL" " | " : "",
+                  createStructure -> style & ES_WANTRETURN ? "ES_WANTRETURN" " | " : "",
+
+                  LBS_COMBOBOX
+                  LBS_DISABLENOSCROLL
+                  LBS_EXTENDEDSEL
+                  LBS_HASSTRINGS
+                  LBS_MULTICOLUMN
+                  LBS_MULTIPLESEL
+                  LBS_NODATA
+                  LBS_NOINTEGRALHEIGHT
+                  LBS_NOREDRAW
+                  LBS_NOSEL
+                  LBS_NOTIFY
+                  LBS_OWNERDRAWFIXED
+                  LBS_OWNERDRAWVARIABLE
+                  LBS_SORT
+                  LBS_STANDARD
+                  LBS_USETABSTOPS
+                  LBS_WANTKEYBOARDINPUT
+
+                  SBS_BOTTOMALIGN
+                  SBS_HORZ
+                  SBS_LEFTALIGN
+                  SBS_RIGHTALIGN
+                  SBS_SIZEBOX
+                  SBS_SIZEBOXBOTTOMRIGHTALIGN
+                  SBS_SIZEBOXTOPLEFTALIGN
+                  SBS_SIZEGRIP
+                  SBS_TOPALIGN
+                  SBS_VERT
+
+                  SS_BITMAP
+                  SS_BLACKFRAME
+                  SS_BLACKRECT
+                  SS_CENTER
+                  SS_CENTERIMAGE
+                  SS_EDITCONTROL
+                  SS_ENDELLIPSIS
+                  SS_ENHMETAFILE
+                  SS_ETCHEDFRAME
+                  SS_ETCHEDHORZ
+                  SS_ETCHEDVERT
+                  SS_GRAYFRAME
+                  SS_GRAYRECT
+                  SS_ICON
+                  SS_LEFT
+                  SS_LEFTNOWORDWRAP
+                  SS_NOPREFIX
+                  SS_NOTIFY
+                  SS_OWNERDRAW
+                  SS_PATHELLIPSIS
+                  SS_REALSIZECONTROL
+                  SS_REALSIZEIMAGE
+                  SS_RIGHT
+                  SS_RIGHTJUST
+                  SS_SIMPLE
+                  SS_SUNKEN
+                  SS_TYPEMASK
+                  SS_WHITEFRAME
+                  SS_WHITERECT
+                  SS_WORDELLIPSIS
+
+                  createStructure -> style & WS_BORDER           ? "WS_BORDER"           " | " : "",
+                  createStructure -> style & WS_CAPTION          ? "WS_CAPTION"          " | " : "",
+                  createStructure -> style & WS_CHILD            ? "WS_CHILD"            " | " : "",
+                  createStructure -> style & WS_CHILDWINDOW      ? "WS_CHILDWINDOW"      " | " : "",
+                  createStructure -> style & WS_CLIPCHILDREN     ? "WS_CLIPCHILDREN"     " | " : "",
+                  createStructure -> style & WS_CLIPSIBLINGS     ? "WS_CLIPSIBLINGS"     " | " : "",
+                  createStructure -> style & WS_DISABLED         ? "WS_DISABLED"         " | " : "",
+                  createStructure -> style & WS_DLGFRAME         ? "WS_DLGFRAME"         " | " : "",
+                  createStructure -> style & WS_GROUP            ? "WS_GROUP"            " | " : "",
+                  createStructure -> style & WS_HSCROLL          ? "WS_HSCROLL"          " | " : "",
+                  createStructure -> style & WS_ICONIC           ? "WS_ICONIC"           " | " : "",
+                  createStructure -> style & WS_MAXIMIZE         ? "WS_MAXIMIZE"         " | " : "",
+                  createStructure -> style & WS_MAXIMIZEBOX      ? "WS_MAXIMIZEBOX"      " | " : "",
+                  createStructure -> style & WS_MINIMIZE         ? "WS_MINIMIZE"         " | " : "",
+                  createStructure -> style & WS_MINIMIZEBOX      ? "WS_MINIMIZEBOX"      " | " : "",
+                  createStructure -> style & WS_OVERLAPPED       ? "WS_OVERLAPPED"       " | " : "",
+                  createStructure -> style & WS_OVERLAPPEDWINDOW ? "WS_OVERLAPPEDWINDOW" " | " : "",
+                  createStructure -> style & WS_POPUP            ? "WS_POPUP"            " | " : "",
+                  createStructure -> style & WS_POPUPWINDOW      ? "WS_POPUPWINDOW"      " | " : "",
+                  createStructure -> style & WS_SIZEBOX          ? "WS_SIZEBOX"          " | " : "",
+                  createStructure -> style & WS_SYSMENU          ? "WS_SYSMENU"          " | " : "",
+                  createStructure -> style & WS_TABSTOP          ? "WS_TABSTOP"          " | " : "",
+                  createStructure -> style & WS_THICKFRAME       ? "WS_THICKFRAME"       " | " : "",
+                  createStructure -> style & WS_TILED            ? "WS_TILED"            " | " : "",
+                  createStructure -> style & WS_TILEDWINDOW      ? "WS_TILEDWINDOW"      " | " : "",
+                  createStructure -> style & WS_VISIBLE          ? "WS_VISIBLE"          " | " : "",
+                  createStructure -> style & WS_VSCROLL          ? "WS_VSCROLL"          " | " : "",
+                createStructureUsesStyle ? "...0x00`" : "",                                    "," "\r\n",
+                "  " "text         : ", static_cast<void const*>(createStructure -> lpszName), "," "\r\n"
+                "  " "width        : ", (number) createStructure -> cx,                        "," "\r\n"
+                "  " "x            : ", (number) createStructure -> x,                         "," "\r\n"
+                "  " "y            : ", (number) createStructure -> y,                             "\r\n"
+                ""   "}]"
+              ));
+            } break;
+
             // case WM_NCCALCSIZE: break; // TODO (Lapys)
             // case WM_NCHITTEST: break; // TODO (Lapys)
             // case WM_NCLBUTTONDOWN: break; // TODO (Lapys)
