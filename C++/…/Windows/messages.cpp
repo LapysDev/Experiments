@@ -5,13 +5,9 @@
 
 /* Import */
 #include <ciso646>
-#include <climits>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 #include <cwchar>
-#include <new>
-#include <inttypes.h>
 #include <stdint.h>
 #include <windows.h>
 # include <commctrl.h>
@@ -30,127 +26,173 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
   WCHAR moduleFileName[MAX_PATH] = L"\0";
   MSG   threadMessage            = {};
   struct /* final */ {
-    WNDCLASSEXW classTemplate;
+    WNDCLASSEXW classInformation;
     HWND        handle;
 
     /* ... */
     static LRESULT CALLBACK procedure(HWND const windowHandle, UINT const message, WPARAM const parameter, LPARAM const subparameter) /* noexcept */ {
       struct log /* final */ {
         /* ... ->> Used only for `log::format(…)` */
-        struct number {
-          uintmax_t const value;
-          bool      const signedness : 1;
-
-          explicit inline number(INT  const value) /* noexcept */ : value(value), signedness(value < 0)  {}
-          explicit inline number(LONG const value) /* noexcept */ : value(value), signedness(value < 0L) {}
-          explicit inline number(UINT const value) /* noexcept */ : value(value), signedness(false)      {}
-          explicit inline number(WORD const value) /* noexcept */ : value(value), signedness(false)      {}
-          #ifdef _WIN64
-            explicit inline number(LPARAM const value) /* noexcept */ : value(value), signedness(value < 0L) {}
-            explicit inline number(WPARAM const value) /* noexcept */ : value(value), signedness(false)      {}
-          #endif
+        struct number_layout {
+          uintmax_t   value;
+          bool        signedness : 1;
+          std::size_t length     : 6; // ->> Count of digits within `number::value`; Arbitrary bit width
         };
 
-        struct unused : public number {
-          explicit inline unused(INT  const value) /* noexcept */ : number::number(value) {}
-          explicit inline unused(LONG const value) /* noexcept */ : number::number(value) {}
-          explicit inline unused(UINT const value) /* noexcept */ : number::number(value) {}
-          explicit inline unused(WORD const value) /* noexcept */ : number::number(value) {}
+        struct number : public number_layout {
+          inline number(DWORD const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = false;      this -> value = value; }
+          inline number(INT   const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = value < 0;  this -> value = value; }
+          inline number(LONG  const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = value < 0L; this -> value = value; }
+          inline number(UINT  const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = false;      this -> value = value; }
+          inline number(WORD  const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = false;      this -> value = value; }
           #ifdef _WIN64
-            explicit inline unused(LPARAM const value) /* noexcept */ : number::number(value) {}
-            explicit inline unused(WPARAM const value) /* noexcept */ : number::number(value) {}
+            inline number(LPARAM const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = value < 0L; this -> value = value; }
+            inline number(WPARAM const value) /* noexcept */ { this -> length = sizeof value; this -> signedness = false;      this -> value = value; }
           #endif
         };
-
-        struct undefined : public number {
-          std::size_t const length : 6; // ->> Count of digits within `number::value`; Arbitrary bit width
-
-          explicit inline undefined(INT  const value) /* noexcept */ : number::number(value), length(sizeof value) {}
-          explicit inline undefined(LONG const value) /* noexcept */ : number::number(value), length(sizeof value) {}
-          explicit inline undefined(UINT const value) /* noexcept */ : number::number(value), length(sizeof value) {}
-          explicit inline undefined(WORD const value) /* noexcept */ : number::number(value), length(sizeof value) {}
-          #ifdef _WIN64
-            explicit inline undefined(LPARAM const value) /* noexcept */ : number::number(value), length(sizeof value) {}
-            explicit inline undefined(WPARAM const value) /* noexcept */ : number::number(value), length(sizeof value) {}
-          #endif
-        };
+          struct special   : public number { explicit inline special  (number const& value) /* noexcept */ : number::number(value) {} };
+          struct undefined : public number { explicit inline undefined(number const& value) /* noexcept */ : number::number(value) {} };
+          struct unused    : public number { explicit inline unused   (number const& value) /* noexcept */ : number::number(value) {} };
 
         struct any /* final */ {
-          typedef void const    *address;
-          typedef bool           binary;
-          typedef log::number    number;
-          typedef log::undefined undefined;
-          typedef log::unused    unused;
+          union {
+            unsigned char : 1;                                                           //
+            void const          *const address;                                          // ->> Reference or character sequence
+            bool                 const binary;                                           //
+            char                       character[(MB_LEN_MAX | sizeof(uintmax_t)) + 1u]; // ->> `char8_t[]` sequence
+            struct number_layout const number;                                           // --> struct number | special | undefined | unused
+          };
 
-          unsigned char storage[sizeof(any::address) | sizeof(any::number) | sizeof(any::undefined) | sizeof(any::unused)];
-          void   *const value; // ->> `union`s were more restrictive than this address/ byte buffer composition
           enum /* : unsigned char */ {
             addressable,
             boolean,
             functional,
-            literal,
             nullable,
             numerable,
-            textual, // ->> Assume `wchar_t`
+            specialized,
+            subtextual,
+            textual_default,
+            textual_locale,
             undefinable,
             unusable
           } const type : 4;
 
-          inline any()                                /* noexcept */ : storage(), value(NULL),                                              type(any::nullable)    {}
-          inline any(bool           const  boolean)   /* noexcept */ : storage(), value(::new (this -> storage) any::binary   (boolean)),   type(any::boolean)     {}
-          inline any(void const*    const  address)   /* noexcept */ : storage(), value(::new (this -> storage) any::address  (address)),   type(any::addressable) {}
-          inline any(char           const  text[])    /* noexcept */ : storage(), value(::new (this -> storage) any::address  (text)),      type(any::literal)     {}
-          inline any(wchar_t        const  text[])    /* noexcept */ : storage(), value(::new (this -> storage) any::address  (text)),      type(any::textual)     {}
-          inline any(log::number    const& number)    /* noexcept */ : storage(), value(::new (this -> storage) any::number   (number)),    type(any::numerable)   {}
-          inline any(log::undefined const& undefined) /* noexcept */ : storage(), value(::new (this -> storage) any::undefined(undefined)), type(any::undefinable) {}
-          inline any(log::unused    const& unused)    /* noexcept */ : storage(), value(::new (this -> storage) any::unused   (unused)),    type(any::unusable)    {}
-          #ifdef _WIN64
-            inline any(LPARAM const number) /* noexcept */ : storage(), value(::new (this -> storage) any::number(number)), type(any::numerable) {}
-            inline any(WPARAM const number) /* noexcept */ : storage(), value(::new (this -> storage) any::number(number)), type(any::numerable) {}
-          #endif
+          /* ... */
+          inline any()                                      /* noexcept */ :                                              type(any::nullable)        {}
+          inline any(void const volatile* const  address)   /* noexcept */ : address  (const_cast<void const*>(address)), type(any::addressable)     {}
+          inline any(bool                 const  boolean)   /* noexcept */ : binary   (boolean),                          type(any::boolean)         {}
+          inline any(log::number          const& number)    /* noexcept */ : number   (number),                           type(any::numerable)       {}
+          inline any(log::special         const& special)   /* noexcept */ : number   (special),                          type(any::specialized)     {}
+          inline any(char                 const  text)      /* noexcept */ : character(""),                               type(any::subtextual)      { this -> character[0] = text; this -> character[1] = '\0'; }
+          inline any(char                 const  text[])    /* noexcept */ : address  (text),                             type(any::textual_default) {}
+          inline any(wchar_t              const  text)      /* noexcept */ : character(""),                               type(any::subtextual)      { int const length = std::wctomb(this -> character, text); this -> character[length != -1 ? length : 0] = '\0'; }
+          inline any(wchar_t              const  text[])    /* noexcept */ : address  (text),                             type(any::textual_locale)  {}
+          inline any(log::undefined       const& undefined) /* noexcept */ : number   (undefined),                        type(any::undefinable)     {}
+          inline any(log::unused          const& unused)    /* noexcept */ : number   (unused),                           type(any::unusable)        {}
         };
 
         /* ... */
+        inline static bool compare(char const stringA[], char const stringB[]) /* noexcept */ {
+          return log::compare(stringA, stringB, sizeof(char));
+        }
+
+        inline static bool compare(char const* stringA, wchar_t const* stringB) /* noexcept */ {
+          char const    *endA  = stringA;
+          std::mbstate_t state = std::mbstate_t();
+
+          // ...
+          if (static_cast<void const*>(stringA) == static_cast<void const*>(stringB))
+          return true;
+
+          if (NULL == stringA or NULL == stringB)
+          return false;
+
+          while ('\0' != *endA)
+            ++endA;
+
+          while (true) {
+            wchar_t           characterA = L'\0';
+            wchar_t     const characterB = *stringB;
+            std::size_t const count      = std::mbrtowc(&characterA, stringA, endA - stringA, &state);
+
+            // ...
+            if (characterA != characterB or count == static_cast<std::size_t>(-1) or count == static_cast<std::size_t>(-2))
+            return false;
+
+            if (0u == count or L'\0' == characterA or L'\0' == characterB)
+            break;
+
+            stringA += count;
+            stringB += 1;
+          }
+
+          return true;
+        }
+
+        inline static bool compare(wchar_t const stringA[], wchar_t const stringB[]) /* noexcept */ {
+          return log::compare(stringA, stringB, sizeof(wchar_t));
+        }
+
+        inline static bool compare(wchar_t const stringA[], char const stringB[]) /* noexcept */ {
+          return log::compare(stringB, stringA);
+        }
+
+        inline static bool compare(void const* const stringA, void const* const stringB, std::size_t const size) /* noexcept */ {
+          if (stringA == stringB)
+          return true;
+
+          if (NULL == stringA or NULL == stringB)
+          return false;
+
+          for (unsigned char const *iteratorA = static_cast<unsigned char const*>(stringA), *iteratorB = static_cast<unsigned char const*>(stringB); ; ) {
+            uintmax_t characterA = 0x00u;
+            uintmax_t characterB = 0x00u;
+
+            // ...
+            for (std::size_t count = size; count--; ) {
+              characterA = (characterA << CHAR_BIT * sizeof(unsigned char)) | *(iteratorA++);
+              characterB = (characterB << CHAR_BIT * sizeof(unsigned char)) | *(iteratorB++);
+            }
+
+            if (characterA != characterB)
+            return false;
+
+            if (0x00u == characterA or 0x00u == characterB)
+            return true;
+          }
+        }
+
+        // ... ->> Generate formatted text (maximum of 127 messages per `format(…)`)
         inline static char const* format(any const message1 = any(), any const message2 = any(), any const message3 = any(), any const message4 = any(), any const message5 = any(), any const message6 = any(), any const message7 = any(), any const message8 = any(), any const message9 = any(), any const message10 = any(), any const message11 = any(), any const message12 = any(), any const message13 = any(), any const message14 = any(), any const message15 = any(), any const message16 = any(), any const message17 = any(), any const message18 = any(), any const message19 = any(), any const message20 = any(), any const message21 = any(), any const message22 = any(), any const message23 = any(), any const message24 = any(), any const message25 = any(), any const message26 = any(), any const message27 = any(), any const message28 = any(), any const message29 = any(), any const message30 = any(), any const message31 = any(), any const message32 = any(), any const message33 = any(), any const message34 = any(), any const message35 = any(), any const message36 = any(), any const message37 = any(), any const message38 = any(), any const message39 = any(), any const message40 = any(), any const message41 = any(), any const message42 = any(), any const message43 = any(), any const message44 = any(), any const message45 = any(), any const message46 = any(), any const message47 = any(), any const message48 = any(), any const message49 = any(), any const message50 = any(), any const message51 = any(), any const message52 = any(), any const message53 = any(), any const message54 = any(), any const message55 = any(), any const message56 = any(), any const message57 = any(), any const message58 = any(), any const message59 = any(), any const message60 = any(), any const message61 = any(), any const message62 = any(), any const message63 = any(), any const message64 = any(), any const message65 = any(), any const message66 = any(), any const message67 = any(), any const message68 = any(), any const message69 = any(), any const message70 = any(), any const message71 = any(), any const message72 = any(), any const message73 = any(), any const message74 = any(), any const message75 = any(), any const message76 = any(), any const message77 = any(), any const message78 = any(), any const message79 = any(), any const message80 = any(), any const message81 = any(), any const message82 = any(), any const message83 = any(), any const message84 = any(), any const message85 = any(), any const message86 = any(), any const message87 = any(), any const message88 = any(), any const message89 = any(), any const message90 = any(), any const message91 = any(), any const message92 = any(), any const message93 = any(), any const message94 = any(), any const message95 = any(), any const message96 = any(), any const message97 = any(), any const message98 = any(), any const message99 = any(), any const message100 = any(), any const message101 = any(), any const message102 = any(), any const message103 = any(), any const message104 = any(), any const message105 = any(), any const message106 = any(), any const message107 = any(), any const message108 = any(), any const message109 = any(), any const message110 = any(), any const message111 = any(), any const message112 = any(), any const message113 = any(), any const message114 = any(), any const message115 = any(), any const message116 = any(), any const message117 = any(), any const message118 = any(), any const message119 = any(), any const message120 = any(), any const message121 = any(), any const message122 = any(), any const message123 = any(), any const message124 = any(), any const message125 = any(), any const message126 = any(), any const message127 = any()) /* noexcept */ {
           static struct /* final */ {
             std::size_t length;
-            char        value[4096];
+            char        value[4096]; // --> char8_t
 
             inline bool apply(any const& message) /* noexcept */ {
               switch (message.type) {
                 case any::addressable: {
-                  any::address const &address = *static_cast<any::address*>(message.value);
+                  if (NULL == message.address) return this -> apply("NULL");
 
-                  // ...
-                  if (NULL == address)
-                  return this -> apply("NULL");
-
-                  if (this -> apply("@") ? not this -> apply(static_cast<undefined>(reinterpret_cast<uintptr_t>(address))) : true)
-                  return false;
+                  if (not this -> apply('@'))                                                                  return false;
+                  if (not this -> apply(static_cast<undefined>(reinterpret_cast<uintptr_t>(message.address)))) return false;
                 } break;
 
                 case any::boolean: {
-                  any::binary const &boolean = *static_cast<any::binary*>(message.value);
-
-                  if (not this -> apply(boolean ? "true" : "false"))
+                  if (not this -> apply(message.binary ? "true" : "false"))
                   return false;
                 } break;
 
                 case any::functional: {
-                  any::address const &address = *static_cast<any::address*>(message.value);
-                  std::size_t         length  = 0u;
+                  std::size_t length = 0u; // --> log16(UCHAR_MAX)
 
                   // ...
-                  if (NULL == address)
-                  return this -> apply("NULL");
-
-                  if (not this -> apply("0x"))
-                  return false;
+                  if (NULL == message.address) return this -> apply("NULL");
+                  if (not this -> apply("0x")) return false;
 
                   for (std::size_t characteristics = UCHAR_MAX; characteristics; characteristics /= 16u)
                     ++length;
 
-                  for (unsigned char const *iterator = static_cast<unsigned char const*>(address); iterator != static_cast<unsigned char const*>(address) + sizeof(void (*)(...)); ++iterator) {
+                  for (unsigned char const *iterator = static_cast<unsigned char const*>(message.address), *const end = static_cast<unsigned char const*>(message.address) + sizeof(void (*)(...)); end != iterator; ++iterator) {
                     if (length + this -> length > sizeof this -> value / sizeof(char))
                     return false;
 
@@ -159,53 +201,21 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
                   }
                 } break;
 
-                case any::literal: {
-                  any::address const &address = *static_cast<any::address*>(message.value);
-
-                  // ...
-                  for (char *destination = this -> value + this -> length, *source = const_cast<char*>(static_cast<char const*>(address)); '\0' != *source; ++destination, ++source) {
-                    if (destination == this -> value + ((sizeof this -> value / sizeof(char)) - 1u))
-                    return false;
-
-                    *destination = *source;
-                    ++(this -> length);
-                  }
-                } break;
-
                 case any::nullable: break;
 
                 case any::numerable:
+                case any::specialized:
                 case any::undefinable:
                 case any::unusable: {
-                  uintmax_t   characteristics = 0u;
-                  std::size_t length          = 0u;
-                  std::size_t radix           = 2u;
-                  bool        signedness      = false;
-                  uintmax_t   value           = 0u;
+                  uintmax_t         value           = message.number.signedness ? -static_cast<intmax_t>(message.number.value) : message.number.value;
+                  std::size_t const radix           = message.type == any::numerable ? 10u : 16u;
+                  std::size_t       length          = 0u; // --> logN(characteristics, radix)
+                  uintmax_t         characteristics = message.type == any::undefinable ? (((static_cast<std::size_t>(1u) << ((CHAR_BIT * message.number.length) - 1u)) - 1u) << 1u) + 1u : value ? value : 1u;
 
                   // ...
-                  switch (message.type) {
-                    case any::numerable  : { any::number    const *const number    = static_cast<any::number*>   (message.value); signedness = number    -> signedness; value = number    -> value; } break;
-                    case any::undefinable: { any::undefined const *const undefined = static_cast<any::undefined*>(message.value); signedness = undefined -> signedness; value = undefined -> value; } break;
-                    case any::unusable   : { any::unused    const *const unused    = static_cast<any::unused*>   (message.value); signedness = unused    -> signedness; value = unused    -> value; } break;
-                    default: return false;
-                  }
-
-                  value           = signedness                       ? -static_cast<intmax_t>(value)                                                                                                   : value;
-                  radix           = message.type == any::numerable   ? 10u                                                                                                                             : 16u;
-                  characteristics = message.type == any::undefinable ? (((static_cast<std::size_t>(1u) << ((CHAR_BIT * static_cast<any::undefined*>(message.value) -> length) - 1u)) - 1u) << 1u) + 1u : value ? value : 1u;
-
-                  if (signedness ? not this -> apply("-") : false)
-                  return false;
-
-                  switch (radix) {
-                    case 2u : if (not this -> apply("0b")) return false; break;
-                    case 8u : if (not this -> apply("0o")) return false; break;
-                    case 16u: if (not this -> apply("0x")) return false; break;
-                  }
-
-                  if (message.type == any::unusable ? not this -> apply("...") : false)
-                  return false;
+                  if (not this -> apply(message.number.signedness ? "-" : ""))                               return false;
+                  if (not this -> apply(radix == 2u ? "0b" : radix == 8u ? "0o" : radix == 16u ? "0x" : "")) return false;
+                  if (not this -> apply(message.type == any::unusable ? "..." : ""))                         return false;
 
                   for (; characteristics; characteristics /= radix) {
                     if (length++ + this -> length == sizeof this -> value / sizeof(char))
@@ -216,11 +226,25 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
                   *--iterator = "0123456789ABCDEF"[value % radix];
                 } break;
 
-                case any::textual: {
-                  any::address const &address = *static_cast<any::address*>(message.value);
-                  wchar_t const      *text    = static_cast<wchar_t const*>(address);
-                  std::mbstate_t      state   = std::mbstate_t();
-                  std::size_t const   length  = std::wcsrtombs(NULL, &text, 0u, &state);
+                case any::subtextual: {
+                  if (not this -> apply(message.character))
+                  return false;
+                } break;
+
+                case any::textual_default: {
+                  for (char *destination = this -> value + this -> length, *source = const_cast<char*>(static_cast<char const*>(message.address)); '\0' != *source; ++destination, ++source) {
+                    if (destination == this -> value + ((sizeof this -> value / sizeof(char)) - 1u))
+                    return false;
+
+                    *destination = *source;
+                    ++(this -> length);
+                  }
+                } break;
+
+                case any::textual_locale: {
+                  wchar_t const    *text   = static_cast<wchar_t const*>(message.address);
+                  std::mbstate_t    state  = std::mbstate_t();
+                  std::size_t const length = std::wcsrtombs(NULL, &text, 0u, &state);
 
                   // ...
                   if (length + this -> length > sizeof this -> value / sizeof(char))
@@ -253,11 +277,12 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
           return translation.value;
         }
 
-        inline static bool output(char const message[]) /* noexcept */ {
-          return NULL != message ? EOF != std::fputs(message, stdout) : false;
+        // ... ->> Print NUL-terminated text
+        inline static bool output(char const text[]) /* noexcept */ {
+          return NULL != text ? EOF != std::fputs(text, stdout) : false;
         }
 
-        // ... ->> `NULL` if `message` unrecognized, otherwise `""` if `message` untranslatable, otherwise `"NMSP_CONSTANT" "\0" "Namespace" "\0" "Event Action"`
+        // ... ->> Generate `message` text; `NULL` if `message` unrecognized, otherwise `""` if `message` untranslatable, otherwise `"NMSP_CONSTANT" "\0" "Namespace" "\0" "Event Action"`
         inline static char const* translate(UINT const message) /* noexcept */ {
           static struct /* final */ {
             std::size_t length;
@@ -387,72 +412,72 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
           #endif
 
           #ifdef CBEM_GETCOMBOCONTROL
-            if (not (CBEM_GETCOMBOCONTROL == message ? translation.apply("CBEM_GETCOMBOCONTROL", "Combo Box", "Get Combo Control") : true))
+            if (not (CBEM_GETCOMBOCONTROL == message ? translation.apply("CBEM_GETCOMBOCONTROL", "Combination Box", "Get Combo. Control") : true))
             return "";
           #endif
 
           #ifdef CBEM_GETEDITCONTROL
-            if (not (CBEM_GETEDITCONTROL == message ? translation.apply("CBEM_GETEDITCONTROL", "Combo Box", "Get Edit Control") : true))
+            if (not (CBEM_GETEDITCONTROL == message ? translation.apply("CBEM_GETEDITCONTROL", "Combination Box", "Get Edit Control") : true))
             return "";
           #endif
 
           #ifdef CBEM_GETEXSTYLE
-            if (not (CBEM_GETEXSTYLE == message ? translation.apply("CBEM_GETEXSTYLE", "Combo Box", "Get Extended Style") : true))
+            if (not (CBEM_GETEXSTYLE == message ? translation.apply("CBEM_GETEXSTYLE", "Combination Box", "Get Extended Style") : true))
             return "";
           #endif
 
           #ifdef CBEM_GETEXTENDEDSTYLE
-            if (not (CBEM_GETEXTENDEDSTYLE == message ? translation.apply("CBEM_GETEXTENDEDSTYLE", "Combo Box", "Get Extended Style") : true))
+            if (not (CBEM_GETEXTENDEDSTYLE == message ? translation.apply("CBEM_GETEXTENDEDSTYLE", "Combination Box", "Get Extended Style") : true))
             return "";
           #endif
 
           #ifdef CBEM_GETIMAGELIST
-            if (not (CBEM_GETIMAGELIST == message ? translation.apply("CBEM_GETIMAGELIST", "Combo Box", "Get Image List") : true))
+            if (not (CBEM_GETIMAGELIST == message ? translation.apply("CBEM_GETIMAGELIST", "Combination Box", "Get Image List") : true))
             return "";
           #endif
 
           #ifdef CBEM_GETITEMA
-            if (not (CBEM_GETITEMA == message ? translation.apply("CBEM_GETITEMA", "Combo Box", "Get Item") : true))
+            if (not (CBEM_GETITEMA == message ? translation.apply("CBEM_GETITEMA", "Combination Box", "Get Item") : true))
             return "";
           #endif
 
           #ifdef CBEM_GETITEMW
-            if (not (CBEM_GETITEMW == message ? translation.apply("CBEM_GETITEMW", "Combo Box", "Get Item") : true))
+            if (not (CBEM_GETITEMW == message ? translation.apply("CBEM_GETITEMW", "Combination Box", "Get Item") : true))
             return "";
           #endif
 
           #ifdef CBEM_HASEDITCHANGED
-            if (not (CBEM_HASEDITCHANGED == message ? translation.apply("CBEM_HASEDITCHANGED", "Combo Box", "Has Edit Changed") : true))
+            if (not (CBEM_HASEDITCHANGED == message ? translation.apply("CBEM_HASEDITCHANGED", "Combination Box", "Has Edit Changed") : true))
             return "";
           #endif
 
           #ifdef CBEM_INSERTITEMA
-            if (not (CBEM_INSERTITEMA == message ? translation.apply("CBEM_INSERTITEMA", "Combo Box", "Insert Item") : true))
+            if (not (CBEM_INSERTITEMA == message ? translation.apply("CBEM_INSERTITEMA", "Combination Box", "Insert Item") : true))
             return "";
           #endif
 
           #ifdef CBEM_INSERTITEMW
-            if (not (CBEM_INSERTITEMW == message ? translation.apply("CBEM_INSERTITEMW", "Combo Box", "Insert Item") : true))
+            if (not (CBEM_INSERTITEMW == message ? translation.apply("CBEM_INSERTITEMW", "Combination Box", "Insert Item") : true))
             return "";
           #endif
 
           #ifdef CBEM_SETEXTENDEDSTYLE
-            if (not (CBEM_SETEXTENDEDSTYLE == message ? translation.apply("CBEM_SETEXTENDEDSTYLE", "Combo Box", "Set Extended Style") : true))
+            if (not (CBEM_SETEXTENDEDSTYLE == message ? translation.apply("CBEM_SETEXTENDEDSTYLE", "Combination Box", "Set Extended Style") : true))
             return "";
           #endif
 
           #ifdef CBEM_SETIMAGELIST
-            if (not (CBEM_SETIMAGELIST == message ? translation.apply("CBEM_SETIMAGELIST", "Combo Box", "Set Image List") : true))
+            if (not (CBEM_SETIMAGELIST == message ? translation.apply("CBEM_SETIMAGELIST", "Combination Box", "Set Image List") : true))
             return "";
           #endif
 
           #ifdef CBEM_SETITEMA
-            if (not (CBEM_SETITEMA == message ? translation.apply("CBEM_SETITEMA", "Combo Box", "Set Item") : true))
+            if (not (CBEM_SETITEMA == message ? translation.apply("CBEM_SETITEMA", "Combination Box", "Set Item") : true))
             return "";
           #endif
 
           #ifdef CBEM_SETITEMW
-            if (not (CBEM_SETITEMW == message ? translation.apply("CBEM_SETITEMW", "Combo Box", "Set Item") : true))
+            if (not (CBEM_SETITEMW == message ? translation.apply("CBEM_SETITEMW", "Combination Box", "Set Item") : true))
             return "";
           #endif
 
@@ -5230,6 +5255,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
       };
 
       typedef log::number    number;
+      typedef log::special   special;
       typedef log::undefined undefined;
       typedef log::unused    unused;
 
@@ -5300,17 +5326,29 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
       }
 
       if (windowTextAcquired) {
+        // ... ->> Replace common ASCII control characters within `windowText` to `L'\\'`
         for (LPWSTR iterator = windowText; L'\0' != *iterator; ++iterator)
         switch (*iterator) { case L'\b': case L'\n': case L'\r': case L'\v': *iterator = L'\\'; break; }
+
+        // ... ->> Truncate arbitrarily long `windowText` --> windowText[64..] = L"...";
+        if (windowTextLength > 64L - 3L) {
+          windowText[64 - 3] = L'.';
+          windowText[64 - 2] = L'.';
+          windowText[64 - 1] = L'.';
+          windowText[64 - 0] = L'\0';
+        }
       }
 
       // ... ->> Log the `message`
-      if (NULL == messageTranslation) (void) log::output(log::format(
-        static_cast<undefined>(message), " {"
-          "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
-          "arguments" ": [", static_cast<undefined>(parameter), ", ", static_cast<undefined>(subparameter), "]"
-        "}" "\r\n"
-      )); else while ('\0' != *messageTranslation) {
+      if (NULL == messageTranslation)
+        (void) log::output(log::format(
+          static_cast<undefined>(message), " {"
+            "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
+            "arguments" ": [", static_cast<undefined>(parameter), ", ", static_cast<undefined>(subparameter), "]"
+          "}" "\r\n"
+        ));
+
+      else while ('\0' != *messageTranslation) {
         char const *const messageConstantTranslation = messageTranslation;
         char const       *messageEventTranslation    = NULL;
         char const       *messageTypeTranslation     = NULL;
@@ -5322,743 +5360,2889 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
         // ...
         if (log::output(log::format(
           static_cast<undefined>(message), " {"
-            "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
-            "name"      ": `", messageConstantTranslation, "` \"", messageTypeTranslation, ": ", messageEventTranslation, "\""                      ", "
+            "window"    ": ",  windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
+            "name"      ": `", messageConstantTranslation, "` \"", messageTypeTranslation, ": ", messageEventTranslation, "\""                       ", "
             "arguments" ": "
         ))) {
-          switch (message) {
-            case WM_ACTIVATE: {
-              WORD const minimizationState = LOWORD(parameter);
-              BOOL const minimized         = HIWORD(parameter);
-              HWND const windowHandle      = static_cast<HWND>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
+          if (false) {
+            /* Do nothing… */
+          }
 
-              // ...
-              messageTranslationMultilineFormat = true;
+          else if (WM_ACTIVATE == message) {
+            WORD const minimizationState = LOWORD(parameter);
+            BOOL const minimized         = HIWORD(parameter);
+            HWND const windowHandle      = static_cast<HWND>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
 
-              if (log::output(log::format("[", static_cast<bool>(minimized), " {state: ")))
-              if (log::output(
-                WA_ACTIVE      == minimizationState ? "`WA_ACTIVE`"      :
-                WA_CLICKACTIVE == minimizationState ? "`WA_CLICKACTIVE`" :
-                WA_INACTIVE    == minimizationState ? "`WA_INACTIVE`"    :
-                log::format(static_cast<unused>(minimizationState))
-              )) messageTranslationMultilineFormat = not log::output(log::format("}, ", windowHandle));
-            } break;
-            // case WM_ACTIVATEAPP: break; // TODO (Lapys)
-            // case WM_CAPTURECHANGED: break; // TODO (Lapys)
+            // ...
+            messageTranslationMultilineFormat = true;
 
-            case WM_CLOSE:
-            case WM_DESTROY:
-            case WM_GETTEXTLENGTH:
-            case WM_NCDESTROY: messageTranslationMultilineFormat = not log::output(log::format(
-              "[",
-                static_cast<unused>(parameter), ", ",
-                static_cast<unused>(subparameter),
-              "]"
-            )); break;
+            if (log::output(log::format('[', static_cast<bool>(minimized), " {state: ")))
+            if (log::output(
+              WA_ACTIVE      == minimizationState ? "`WA_ACTIVE`"      :
+              WA_CLICKACTIVE == minimizationState ? "`WA_CLICKACTIVE`" :
+              WA_INACTIVE    == minimizationState ? "`WA_INACTIVE`"    :
+              log::format(static_cast<special>(minimizationState))
+            )) (void) log::output(log::format("}, ", windowHandle, ']'));
+          }
 
-            // case WM_CREATE: break; // TODO (Lapys)
-            // case WM_ERASEBKGND: break; // TODO (Lapys)
-            // case WM_GETICON: break; // TODO (Lapys)
+          else if (WM_ACTIVATEAPP == message) {
+            BOOL  const minimized = static_cast<BOOL> (parameter);
+            DWORD const threadID  = static_cast<DWORD>(subparameter);
 
-            case WM_GETMINMAXINFO: {
-              MINMAXINFO *const minimumMaximumInformation = static_cast<MINMAXINFO*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
-              messageTranslationMultilineFormat = not log::output(log::format(
-                ""   "[..., {"                                                                                                                                                  "\r\n"
-                "  " "maximumPosition : {x: ", (number) minimumMaximumInformation -> ptMaxPosition .x, ", y: ", (number) minimumMaximumInformation -> ptMaxPosition .y, "}" "," "\r\n"
-                "  " "maximumSize     : {x: ", (number) minimumMaximumInformation -> ptMaxSize     .x, ", y: ", (number) minimumMaximumInformation -> ptMaxSize     .y, "}" "," "\r\n"
-                "  " "maximumTrackSize: {x: ", (number) minimumMaximumInformation -> ptMaxTrackSize.x, ", y: ", (number) minimumMaximumInformation -> ptMaxTrackSize.y, "}" "," "\r\n"
-                "  " "minimumTrackSize: {x: ", (number) minimumMaximumInformation -> ptMinTrackSize.x, ", y: ", (number) minimumMaximumInformation -> ptMinTrackSize.y, "}"     "\r\n"
-                ""   "}]"
-              ));
-            } break;
+            messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<bool>(minimized), ", ", static_cast<special>(threadID), ']'));
+          }
 
-            // case WM_GETOBJECT: break; // TODO (Lapys)
+          // else if (WM_CAPTURECHANGED == message) {} // TODO (Lapys)
 
-            case WM_GETTEXT: messageTranslationMultilineFormat = not log::output(log::format(
-              "[",
-                (number) parameter, ", ",
-                reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)),
-              "]"
-            )); break;
+          else if (
+            WM_CLOSE         == message or
+            WM_DESTROY       == message or
+            WM_GETTEXTLENGTH == message or
+            WM_NCDESTROY     == message
+          ) messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<unused>(parameter), ", ", static_cast<unused>(subparameter), ']'));
 
-            // case WM_IME_NOTIFY: break; // TODO (Lapys)
-            // case WM_IME_REQUEST: break; // TODO (Lapys)
-            // case WM_IME_SETCONTEXT: break; // TODO (Lapys)
+          // else if (WM_ERASEBKGND == message) {} // TODO (Lapys)
+          // else if (WM_GETICON == message) {} // TODO (Lapys)
 
+          else if (WM_GETMINMAXINFO == message) {
+            MINMAXINFO *const minimumMaximumInformation = static_cast<MINMAXINFO*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter))); // --> std::launder(…)
+
+            // ...
+            messageTranslationMultilineFormat = true;
+
+            (void) log::output(log::format(
+              ""   "[", static_cast<unused>(parameter), ", ", minimumMaximumInformation, " {"                                                                                 "\r\n"
+              "  " "maximumPosition : {x: ", (number) minimumMaximumInformation -> ptMaxPosition .x, ", y: ", (number) minimumMaximumInformation -> ptMaxPosition .y, "}" "," "\r\n"
+              "  " "maximumSize     : {x: ", (number) minimumMaximumInformation -> ptMaxSize     .x, ", y: ", (number) minimumMaximumInformation -> ptMaxSize     .y, "}" "," "\r\n"
+              "  " "maximumTrackSize: {x: ", (number) minimumMaximumInformation -> ptMaxTrackSize.x, ", y: ", (number) minimumMaximumInformation -> ptMaxTrackSize.y, "}" "," "\r\n"
+              "  " "minimumTrackSize: {x: ", (number) minimumMaximumInformation -> ptMinTrackSize.x, ", y: ", (number) minimumMaximumInformation -> ptMinTrackSize.y, "}"     "\r\n"
+              ""   "}]"
+            ));
+          }
+
+          // else if (WM_GETOBJECT == message) {} // TODO (Lapys)
+          else if (WM_GETTEXT == message)
+            messageTranslationMultilineFormat = not log::output(log::format('[', (number) parameter, ", ", reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)), ']'));
+
+          // else if (WM_IME_NOTIFY == message) {} // TODO (Lapys)
+          // else if (WM_IME_REQUEST == message) {} // TODO (Lapys)
+          // else if (WM_IME_SETCONTEXT == message) {} // TODO (Lapys)
+
+          else if (
             // CITE (Lapys) -> https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input
-            case WM_KEYDOWN   :
-            case WM_KEYUP     :
-            case WM_SYSKEYDOWN:
-            case WM_SYSKEYUP  : {
-              WORD        const  keyFlags              = HIWORD(subparameter);                                            //
-              BOOL        const  extended              = KF_EXTENDED == (LOBYTE(keyFlags) & KF_EXTENDED);                 // ->> `TRUE` if `scanCode` has `0xE0` prefix
-              BOOL        const  context               = KF_ALTDOWN  == (keyFlags         & KF_ALTDOWN);                  // ->> `TRUE` on `VK_MENU`, always `FALSE` on `WM_KEYDOWN`
-              BOOL        const  previous              = KF_REPEAT   == (keyFlags         & KF_REPEAT);                   // ->> `TRUE` on auto-repeat
-              WORD        const  repeatCount           = LOWORD(subparameter);                                            //
-              WORD        const  scanCode              = extended ? MAKEWORD(LOBYTE(keyFlags), 0xE0u) : LOBYTE(keyFlags); //
-              char        const *scanCodeTranslation   = NULL;                                                            //
-              BOOL        const  transition            = KF_UP == (keyFlags & KF_UP);                                     // ->> `TRUE` on key release
-              WORD        const  virtualKey            = LOWORD(parameter);                                               //
-              char        const *virtualKeyTranslation = NULL;                                                            //
+            WM_KEYDOWN    == message or
+            WM_KEYUP      == message or
+            WM_SYSKEYDOWN == message or
+            WM_SYSKEYUP   == message
+          ) {
+            WORD const  keyFlags              = HIWORD(subparameter);                                            //
+            BOOL const  extended              = KF_EXTENDED == (LOBYTE(keyFlags) & KF_EXTENDED);                 // ->> `TRUE` if `scanCode` has `0xE0` prefix
+            BOOL const  context               = KF_ALTDOWN  == (keyFlags         & KF_ALTDOWN);                  // ->> `TRUE` on `VK_MENU`, always `FALSE` on `WM_KEYDOWN`
+            BOOL const  previous              = KF_REPEAT   == (keyFlags         & KF_REPEAT);                   // ->> `TRUE` on auto-repeat
+            WORD const  repeatCount           = LOWORD(subparameter);                                            //
+            WORD const  scanCode              = extended ? MAKEWORD(LOBYTE(keyFlags), 0xE0u) : LOBYTE(keyFlags); //
+            char const *scanCodeTranslation   = NULL;                                                            //
+            BOOL const  transition            = KF_UP == (keyFlags & KF_UP);                                     // ->> `TRUE` on key release
+            WORD const  virtualKey            = LOWORD(parameter);                                               //
+            char const *virtualKeyTranslation = NULL;                                                            //
 
-              // ... --> scanCodeTranslation = …;
-              switch (scanCode) {
-                case 0x0001u:               scanCodeTranslation = "Key"             ": Keyboard Escape";                                     break;
-                case 0x0002u:               scanCodeTranslation = "Key"             ": Keyboard 1 and Bang";                                 break;
-                case 0x0003u:               scanCodeTranslation = "Key"             ": Keyboard 2 and At";                                   break;
-                case 0x0004u:               scanCodeTranslation = "Key"             ": Keyboard 3 And Hash";                                 break;
-                case 0x0005u:               scanCodeTranslation = "Key"             ": Keyboard 4 and Dollar";                               break;
-                case 0x0006u:               scanCodeTranslation = "Key"             ": Keyboard 5 and Percent";                              break;
-                case 0x0007u:               scanCodeTranslation = "Key"             ": Keyboard 6 and Caret";                                break;
-                case 0x0008u:               scanCodeTranslation = "Key"             ": Keyboard 7 and Ampersand";                            break;
-                case 0x0009u:               scanCodeTranslation = "Key"             ": Keyboard 8 and Star";                                 break;
-                case 0x000Au:               scanCodeTranslation = "Key"             ": Keyboard 9 and Left Bracket";                         break;
-                case 0x000Bu:               scanCodeTranslation = "Key"             ": Keyboard 0 and Right Bracket";                        break;
-                case 0x000Cu:               scanCodeTranslation = "Key"             ": Keyboard Dash and Underscore";                        break;
-                case 0x000Du:               scanCodeTranslation = "Key"             ": Keyboard Equals and Plus";                            break;
-                case 0x000Eu:               scanCodeTranslation = "Key"             ": Keyboard Delete";                                     break;
-                case 0x000Fu:               scanCodeTranslation = "Key"             ": Keyboard Tab";                                        break;
-                case 0x0010u:               scanCodeTranslation = "Key"             ": Keyboard Q";                                          break;
-                case 0x0011u:               scanCodeTranslation = "Key"             ": Keyboard W";                                          break;
-                case 0x0012u:               scanCodeTranslation = "Key"             ": Keyboard E";                                          break;
-                case 0x0013u:               scanCodeTranslation = "Key"             ": Keyboard R";                                          break;
-                case 0x0014u:               scanCodeTranslation = "Key"             ": Keyboard T";                                          break;
-                case 0x0015u:               scanCodeTranslation = "Key"             ": Keyboard Y";                                          break;
-                case 0x0016u:               scanCodeTranslation = "Key"             ": Keyboard U";                                          break;
-                case 0x0017u:               scanCodeTranslation = "Key"             ": Keyboard I";                                          break;
-                case 0x0018u:               scanCodeTranslation = "Key"             ": Keyboard O";                                          break;
-                case 0x0019u:               scanCodeTranslation = "Key"             ": Keyboard P";                                          break;
-                case 0x001Au:               scanCodeTranslation = "Key"             ": Keyboard Left Brace";                                 break;
-                case 0x001Bu:               scanCodeTranslation = "Key"             ": Keyboard Right Brace";                                break;
-                case 0x001Cu:               scanCodeTranslation = "Key"             ": Keyboard Return Enter";                               break;
-                case 0x001Du:               scanCodeTranslation = "Key"             ": Keyboard Left Control";                               break;
-                case 0x001Eu:               scanCodeTranslation = "Key"             ": Keyboard A";                                          break;
-                case 0x001Fu:               scanCodeTranslation = "Key"             ": Keyboard S";                                          break;
-                case 0x0020u:               scanCodeTranslation = "Key"             ": Keyboard D";                                          break;
-                case 0x0021u:               scanCodeTranslation = "Key"             ": Keyboard F";                                          break;
-                case 0x0022u:               scanCodeTranslation = "Key"             ": Keyboard G";                                          break;
-                case 0x0023u:               scanCodeTranslation = "Key"             ": Keyboard H";                                          break;
-                case 0x0024u:               scanCodeTranslation = "Key"             ": Keyboard J";                                          break;
-                case 0x0025u:               scanCodeTranslation = "Key"             ": Keyboard K";                                          break;
-                case 0x0026u:               scanCodeTranslation = "Key"             ": Keyboard L";                                          break;
-                case 0x0027u:               scanCodeTranslation = "Key"             ": Keyboard SemiColon and Colon";                        break;
-                case 0x0028u:               scanCodeTranslation = "Key"             ": Keyboard Apostrophe and Double Quotation Mark";       break;
-                case 0x0029u:               scanCodeTranslation = "Key"             ": Keyboard Grave Accent and Tilde";                     break;
-                case 0x002Au:               scanCodeTranslation = "Key"             ": Keyboard Left Shift";                                 break;
-                case 0x002Bu:               scanCodeTranslation = "Key"             ": Keyboard Non-United States, Keyboard Pipe and Slash"; break;
-                case 0x002Cu:               scanCodeTranslation = "Key"             ": Keyboard Z";                                          break;
-                case 0x002Du:               scanCodeTranslation = "Key"             ": Keyboard X";                                          break;
-                case 0x002Eu:               scanCodeTranslation = "Key"             ": Keyboard C";                                          break;
-                case 0x002Fu:               scanCodeTranslation = "Key"             ": Keyboard V";                                          break;
-                case 0x0030u:               scanCodeTranslation = "Key"             ": Keyboard B";                                          break;
-                case 0x0031u:               scanCodeTranslation = "Key"             ": Keyboard N";                                          break;
-                case 0x0032u:               scanCodeTranslation = "Key"             ": Keyboard M";                                          break;
-                case 0x0033u:               scanCodeTranslation = "Key"             ": Keyboard Comma";                                      break;
-                case 0x0034u:               scanCodeTranslation = "Key"             ": Keyboard Period";                                     break;
-                case 0x0035u:               scanCodeTranslation = "Key"             ": Keyboard QuestionMark";                               break;
-                case 0x0036u:               scanCodeTranslation = "Key"             ": Keyboard Right Shift";                                break;
-                case 0x0037u:               scanCodeTranslation = "Key"             ": Keypad Star";                                         break;
-                case 0x0038u:               scanCodeTranslation = "Key"             ": Keyboard Left Alternative";                           break;
-                case 0x0039u:               scanCodeTranslation = "Key"             ": Keyboard Spacebar";                                   break;
-                case 0x003Au:               scanCodeTranslation = "Key"             ": Keyboard Caps Lock";                                  break;
-                case 0x003Bu:               scanCodeTranslation = "Key"             ": Keyboard Function 1";                                 break;
-                case 0x003Cu:               scanCodeTranslation = "Key"             ": Keyboard Function 2";                                 break;
-                case 0x003Du:               scanCodeTranslation = "Key"             ": Keyboard Function 3";                                 break;
-                case 0x003Eu:               scanCodeTranslation = "Key"             ": Keyboard Function 4";                                 break;
-                case 0x003Fu:               scanCodeTranslation = "Key"             ": Keyboard Function 5";                                 break;
-                case 0x0040u:               scanCodeTranslation = "Key"             ": Keyboard Function 6";                                 break;
-                case 0x0041u:               scanCodeTranslation = "Key"             ": Keyboard Function 7";                                 break;
-                case 0x0042u:               scanCodeTranslation = "Key"             ": Keyboard Function 8";                                 break;
-                case 0x0043u:               scanCodeTranslation = "Key"             ": Keyboard Function 9";                                 break;
-                case 0x0044u:               scanCodeTranslation = "Key"             ": Keyboard Function 10";                                break;
-                case 0x0045u:               scanCodeTranslation = "Key"             ": Keyboard Pause, Keypad Number Lock and Clear";        break;
-                case 0xE045u:               scanCodeTranslation = "Key"             ": Keypad Number Lock and Clear";                        break;
-                case 0xE046u:               scanCodeTranslation = "Key"             ": Keyboard Pause";                                      break; // --> 0xE11D45u
-                case 0x0046u:               scanCodeTranslation = "Key"             ": Keyboard Scroll Lock";                                break;
-                case 0x0047u:               scanCodeTranslation = "Key"             ": Keypad 7 and Home";                                   break;
-                case 0x0048u:               scanCodeTranslation = "Key"             ": Keypad 8 and Up Arrow";                               break;
-                case 0x0049u:               scanCodeTranslation = "Key"             ": Keypad 9 and Page Up";                                break;
-                case 0x004Au:               scanCodeTranslation = "Key"             ": Keypad Dash";                                         break;
-                case 0x004Bu:               scanCodeTranslation = "Key"             ": Keypad 4 and Left Arrow";                             break;
-                case 0x004Cu:               scanCodeTranslation = "Key"             ": Keypad 5";                                            break;
-                case 0x004Du:               scanCodeTranslation = "Key"             ": Keypad 6 and Right Arrow";                            break;
-                case 0x004Eu:               scanCodeTranslation = "Key"             ": Keypad Plus";                                         break;
-                case 0x004Fu:               scanCodeTranslation = "Key"             ": Keypad 1 and End";                                    break;
-                case 0x0050u:               scanCodeTranslation = "Key"             ": Keypad 2 and Down Arrow";                             break;
-                case 0x0051u:               scanCodeTranslation = "Key"             ": Keypad 3 and Page Down";                              break;
-                case 0x0052u:               scanCodeTranslation = "Key"             ": Keypad 0 and Insert";                                 break;
-                case 0x0053u:               scanCodeTranslation = "Key"             ": Keypad Period";                                       break;
-                case 0x0054u: case 0xE037u: scanCodeTranslation = "Key"             ": Keyboard Print Screen";                               break;
-                case 0x0056u:               scanCodeTranslation = "Key"             ": Keyboard Non-United States Slash Bar";                break;
-                case 0x0057u:               scanCodeTranslation = "Key"             ": Keyboard Function 11";                                break;
-                case 0x0058u:               scanCodeTranslation = "Key"             ": Keyboard Function 12";                                break;
-                case 0x0059u:               scanCodeTranslation = "Key"             ": Keypad Equals";                                       break;
-                case 0x005Cu:               scanCodeTranslation = "Key"             ": Keyboard International 6";                            break;
-                case 0x0064u:               scanCodeTranslation = "Key"             ": Keyboard Function 13";                                break;
-                case 0x0065u:               scanCodeTranslation = "Key"             ": Keyboard Function 14";                                break;
-                case 0x0066u:               scanCodeTranslation = "Key"             ": Keyboard Function 15";                                break;
-                case 0x0067u:               scanCodeTranslation = "Key"             ": Keyboard Function 16";                                break;
-                case 0x0068u:               scanCodeTranslation = "Key"             ": Keyboard Function 17";                                break;
-                case 0x0069u:               scanCodeTranslation = "Key"             ": Keyboard Function 18";                                break;
-                case 0x006Au:               scanCodeTranslation = "Key"             ": Keyboard Function 19";                                break;
-                case 0x006Bu:               scanCodeTranslation = "Key"             ": Keyboard Function 20";                                break;
-                case 0x006Cu:               scanCodeTranslation = "Key"             ": Keyboard Function 21";                                break;
-                case 0x006Du:               scanCodeTranslation = "Key"             ": Keyboard Function 22";                                break;
-                case 0x006Eu:               scanCodeTranslation = "Key"             ": Keyboard Function 23";                                break;
-                case 0x0070u:               scanCodeTranslation = "Key"             ": Keyboard International 2";                            break;
-                case 0x0071u: case 0x00F1u: scanCodeTranslation = "Key"             ": Keyboard Language 2";                                 break;
-                case 0x0072u: case 0x00F2u: scanCodeTranslation = "Key"             ": Keyboard Language 1";                                 break;
-                case 0x0073u:               scanCodeTranslation = "Key"             ": Keyboard International 1";                            break;
-                case 0x0076u:               scanCodeTranslation = "Key"             ": Keyboard Function 24, Keyboard Language 5";           break;
-                case 0x0077u:               scanCodeTranslation = "Key"             ": Keyboard Language 4";                                 break;
-                case 0x0078u:               scanCodeTranslation = "Key"             ": Keyboard Language 3";                                 break;
-                case 0x0079u:               scanCodeTranslation = "Key"             ": Keyboard International 4";                            break;
-                case 0x007Bu:               scanCodeTranslation = "Key"             ": Keyboard International 5";                            break;
-                case 0x007Du:               scanCodeTranslation = "Key"             ": Keyboard International 3";                            break;
-                case 0x007Eu:               scanCodeTranslation = "Key"             ": Keypad Comma";                                        break;
-                case 0x00FFu:               scanCodeTranslation = "Key"             ": Error Roll Over";                                     break;
-                case 0xE010u:               scanCodeTranslation = "Consumer"        ": Scan Previous Track";                                 break;
-                case 0xE019u:               scanCodeTranslation = "Consumer"        ": Scan Next Track";                                     break;
-                case 0xE01Cu:               scanCodeTranslation = "Key"             ": Keypad Enter";                                        break;
-                case 0xE01Du:               scanCodeTranslation = "Key"             ": Keyboard Right Control";                              break;
-                case 0xE020u:               scanCodeTranslation = "Consumer"        ": Mute";                                                break;
-                case 0xE021u:               scanCodeTranslation = "Consumer"        ": AL Calculator";                                       break;
-                case 0xE022u:               scanCodeTranslation = "Consumer"        ": Play/ Pause";                                         break;
-                case 0xE024u:               scanCodeTranslation = "Consumer"        ": Stop";                                                break;
-                case 0xE02Eu:               scanCodeTranslation = "Consumer"        ": Volume Decrement";                                    break;
-                case 0xE030u:               scanCodeTranslation = "Consumer"        ": Volume Increment";                                    break;
-                case 0xE032u:               scanCodeTranslation = "Consumer"        ": AC Home";                                             break;
-                case 0xE035u:               scanCodeTranslation = "Key"             ": Keypad Slash";                                        break;
-                case 0xE038u:               scanCodeTranslation = "Key"             ": Keyboard Right Alternatives";                         break;
-                case 0xE047u:               scanCodeTranslation = "Key"             ": Keyboard Home";                                       break;
-                case 0xE048u:               scanCodeTranslation = "Key"             ": Keyboard Up Arrow";                                   break;
-                case 0xE049u:               scanCodeTranslation = "Key"             ": Keyboard Page Up";                                    break;
-                case 0xE04Bu:               scanCodeTranslation = "Key"             ": Keyboard Left Arrow";                                 break;
-                case 0xE04Du:               scanCodeTranslation = "Key"             ": Keyboard Right Arrow";                                break;
-                case 0xE04Fu:               scanCodeTranslation = "Key"             ": Keyboard End";                                        break;
-                case 0xE050u:               scanCodeTranslation = "Key"             ": Keyboard Down Arrow";                                 break;
-                case 0xE051u:               scanCodeTranslation = "Key"             ": Keyboard Page Down";                                  break;
-                case 0xE052u:               scanCodeTranslation = "Key"             ": Keyboard Insert";                                     break;
-                case 0xE053u:               scanCodeTranslation = "Key"             ": Keyboard Delete Forward";                             break;
-                case 0xE05Bu:               scanCodeTranslation = "Key"             ": Keyboard Left GUI";                                   break;
-                case 0xE05Cu:               scanCodeTranslation = "Key"             ": Keyboard Right GUI";                                  break;
-                case 0xE05Du:               scanCodeTranslation = "Key"             ": Keyboard Application";                                break;
-                case 0xE05Eu:               scanCodeTranslation = "Generic Desktop" ": System Power Down, Key: Keyboard Power";              break;
-                case 0xE05Fu:               scanCodeTranslation = "Generic Desktop" ": System Sleep";                                        break;
-                case 0xE063u:               scanCodeTranslation = "Generic Desktop" ": System Wake Up";                                      break;
-                case 0xE065u:               scanCodeTranslation = "Consumer"        ": AC Search";                                           break;
-                case 0xE066u:               scanCodeTranslation = "Consumer"        ": AC Bookmarks";                                        break;
-                case 0xE067u:               scanCodeTranslation = "Consumer"        ": AC Refresh";                                          break;
-                case 0xE068u:               scanCodeTranslation = "Consumer"        ": AC Stop";                                             break;
-                case 0xE069u:               scanCodeTranslation = "Consumer"        ": AC Forward";                                          break;
-                case 0xE06Au:               scanCodeTranslation = "Consumer"        ": AC Back";                                             break;
-                case 0xE06Bu:               scanCodeTranslation = "Consumer"        ": AL Local Machine Browser";                            break;
-                case 0xE06Cu:               scanCodeTranslation = "Consumer"        ": AL Email Reader";                                     break;
-                case 0xE06Du:               scanCodeTranslation = "Consumer"        ": AL Consumer Control Configuration";                   break;
-              }
+            // ... --> scanCodeTranslation = …;
+            switch (scanCode) {
+              case 0x0001u:               scanCodeTranslation = "Key"             ": Keyboard Escape";                                     break;
+              case 0x0002u:               scanCodeTranslation = "Key"             ": Keyboard 1 and Bang";                                 break;
+              case 0x0003u:               scanCodeTranslation = "Key"             ": Keyboard 2 and At";                                   break;
+              case 0x0004u:               scanCodeTranslation = "Key"             ": Keyboard 3 And Hash";                                 break;
+              case 0x0005u:               scanCodeTranslation = "Key"             ": Keyboard 4 and Dollar";                               break;
+              case 0x0006u:               scanCodeTranslation = "Key"             ": Keyboard 5 and Percent";                              break;
+              case 0x0007u:               scanCodeTranslation = "Key"             ": Keyboard 6 and Caret";                                break;
+              case 0x0008u:               scanCodeTranslation = "Key"             ": Keyboard 7 and Ampersand";                            break;
+              case 0x0009u:               scanCodeTranslation = "Key"             ": Keyboard 8 and Star";                                 break;
+              case 0x000Au:               scanCodeTranslation = "Key"             ": Keyboard 9 and Left Bracket";                         break;
+              case 0x000Bu:               scanCodeTranslation = "Key"             ": Keyboard 0 and Right Bracket";                        break;
+              case 0x000Cu:               scanCodeTranslation = "Key"             ": Keyboard Dash and Underscore";                        break;
+              case 0x000Du:               scanCodeTranslation = "Key"             ": Keyboard Equals and Plus";                            break;
+              case 0x000Eu:               scanCodeTranslation = "Key"             ": Keyboard Delete";                                     break;
+              case 0x000Fu:               scanCodeTranslation = "Key"             ": Keyboard Tab";                                        break;
+              case 0x0010u:               scanCodeTranslation = "Key"             ": Keyboard Q";                                          break;
+              case 0x0011u:               scanCodeTranslation = "Key"             ": Keyboard W";                                          break;
+              case 0x0012u:               scanCodeTranslation = "Key"             ": Keyboard E";                                          break;
+              case 0x0013u:               scanCodeTranslation = "Key"             ": Keyboard R";                                          break;
+              case 0x0014u:               scanCodeTranslation = "Key"             ": Keyboard T";                                          break;
+              case 0x0015u:               scanCodeTranslation = "Key"             ": Keyboard Y";                                          break;
+              case 0x0016u:               scanCodeTranslation = "Key"             ": Keyboard U";                                          break;
+              case 0x0017u:               scanCodeTranslation = "Key"             ": Keyboard I";                                          break;
+              case 0x0018u:               scanCodeTranslation = "Key"             ": Keyboard O";                                          break;
+              case 0x0019u:               scanCodeTranslation = "Key"             ": Keyboard P";                                          break;
+              case 0x001Au:               scanCodeTranslation = "Key"             ": Keyboard Left Brace";                                 break;
+              case 0x001Bu:               scanCodeTranslation = "Key"             ": Keyboard Right Brace";                                break;
+              case 0x001Cu:               scanCodeTranslation = "Key"             ": Keyboard Return Enter";                               break;
+              case 0x001Du:               scanCodeTranslation = "Key"             ": Keyboard Left Control";                               break;
+              case 0x001Eu:               scanCodeTranslation = "Key"             ": Keyboard A";                                          break;
+              case 0x001Fu:               scanCodeTranslation = "Key"             ": Keyboard S";                                          break;
+              case 0x0020u:               scanCodeTranslation = "Key"             ": Keyboard D";                                          break;
+              case 0x0021u:               scanCodeTranslation = "Key"             ": Keyboard F";                                          break;
+              case 0x0022u:               scanCodeTranslation = "Key"             ": Keyboard G";                                          break;
+              case 0x0023u:               scanCodeTranslation = "Key"             ": Keyboard H";                                          break;
+              case 0x0024u:               scanCodeTranslation = "Key"             ": Keyboard J";                                          break;
+              case 0x0025u:               scanCodeTranslation = "Key"             ": Keyboard K";                                          break;
+              case 0x0026u:               scanCodeTranslation = "Key"             ": Keyboard L";                                          break;
+              case 0x0027u:               scanCodeTranslation = "Key"             ": Keyboard SemiColon and Colon";                        break;
+              case 0x0028u:               scanCodeTranslation = "Key"             ": Keyboard Apostrophe and Double Quotation Mark";       break;
+              case 0x0029u:               scanCodeTranslation = "Key"             ": Keyboard Grave Accent and Tilde";                     break;
+              case 0x002Au:               scanCodeTranslation = "Key"             ": Keyboard Left Shift";                                 break;
+              case 0x002Bu:               scanCodeTranslation = "Key"             ": Keyboard Non-United States, Keyboard Pipe and Slash"; break;
+              case 0x002Cu:               scanCodeTranslation = "Key"             ": Keyboard Z";                                          break;
+              case 0x002Du:               scanCodeTranslation = "Key"             ": Keyboard X";                                          break;
+              case 0x002Eu:               scanCodeTranslation = "Key"             ": Keyboard C";                                          break;
+              case 0x002Fu:               scanCodeTranslation = "Key"             ": Keyboard V";                                          break;
+              case 0x0030u:               scanCodeTranslation = "Key"             ": Keyboard B";                                          break;
+              case 0x0031u:               scanCodeTranslation = "Key"             ": Keyboard N";                                          break;
+              case 0x0032u:               scanCodeTranslation = "Key"             ": Keyboard M";                                          break;
+              case 0x0033u:               scanCodeTranslation = "Key"             ": Keyboard Comma";                                      break;
+              case 0x0034u:               scanCodeTranslation = "Key"             ": Keyboard Period";                                     break;
+              case 0x0035u:               scanCodeTranslation = "Key"             ": Keyboard QuestionMark";                               break;
+              case 0x0036u:               scanCodeTranslation = "Key"             ": Keyboard Right Shift";                                break;
+              case 0x0037u:               scanCodeTranslation = "Key"             ": Keypad Star";                                         break;
+              case 0x0038u:               scanCodeTranslation = "Key"             ": Keyboard Left Alternative";                           break;
+              case 0x0039u:               scanCodeTranslation = "Key"             ": Keyboard Spacebar";                                   break;
+              case 0x003Au:               scanCodeTranslation = "Key"             ": Keyboard Caps Lock";                                  break;
+              case 0x003Bu:               scanCodeTranslation = "Key"             ": Keyboard Function 1";                                 break;
+              case 0x003Cu:               scanCodeTranslation = "Key"             ": Keyboard Function 2";                                 break;
+              case 0x003Du:               scanCodeTranslation = "Key"             ": Keyboard Function 3";                                 break;
+              case 0x003Eu:               scanCodeTranslation = "Key"             ": Keyboard Function 4";                                 break;
+              case 0x003Fu:               scanCodeTranslation = "Key"             ": Keyboard Function 5";                                 break;
+              case 0x0040u:               scanCodeTranslation = "Key"             ": Keyboard Function 6";                                 break;
+              case 0x0041u:               scanCodeTranslation = "Key"             ": Keyboard Function 7";                                 break;
+              case 0x0042u:               scanCodeTranslation = "Key"             ": Keyboard Function 8";                                 break;
+              case 0x0043u:               scanCodeTranslation = "Key"             ": Keyboard Function 9";                                 break;
+              case 0x0044u:               scanCodeTranslation = "Key"             ": Keyboard Function 10";                                break;
+              case 0x0045u:               scanCodeTranslation = "Key"             ": Keyboard Pause, Keypad Number Lock and Clear";        break;
+              case 0xE045u:               scanCodeTranslation = "Key"             ": Keypad Number Lock and Clear";                        break;
+              case 0xE046u:               scanCodeTranslation = "Key"             ": Keyboard Pause";                                      break; // --> 0xE11D45u
+              case 0x0046u:               scanCodeTranslation = "Key"             ": Keyboard Scroll Lock";                                break;
+              case 0x0047u:               scanCodeTranslation = "Key"             ": Keypad 7 and Home";                                   break;
+              case 0x0048u:               scanCodeTranslation = "Key"             ": Keypad 8 and Up Arrow";                               break;
+              case 0x0049u:               scanCodeTranslation = "Key"             ": Keypad 9 and Page Up";                                break;
+              case 0x004Au:               scanCodeTranslation = "Key"             ": Keypad Dash";                                         break;
+              case 0x004Bu:               scanCodeTranslation = "Key"             ": Keypad 4 and Left Arrow";                             break;
+              case 0x004Cu:               scanCodeTranslation = "Key"             ": Keypad 5";                                            break;
+              case 0x004Du:               scanCodeTranslation = "Key"             ": Keypad 6 and Right Arrow";                            break;
+              case 0x004Eu:               scanCodeTranslation = "Key"             ": Keypad Plus";                                         break;
+              case 0x004Fu:               scanCodeTranslation = "Key"             ": Keypad 1 and End";                                    break;
+              case 0x0050u:               scanCodeTranslation = "Key"             ": Keypad 2 and Down Arrow";                             break;
+              case 0x0051u:               scanCodeTranslation = "Key"             ": Keypad 3 and Page Down";                              break;
+              case 0x0052u:               scanCodeTranslation = "Key"             ": Keypad 0 and Insert";                                 break;
+              case 0x0053u:               scanCodeTranslation = "Key"             ": Keypad Period";                                       break;
+              case 0x0054u: case 0xE037u: scanCodeTranslation = "Key"             ": Keyboard Print Screen";                               break;
+              case 0x0056u:               scanCodeTranslation = "Key"             ": Keyboard Non-United States Slash Bar";                break;
+              case 0x0057u:               scanCodeTranslation = "Key"             ": Keyboard Function 11";                                break;
+              case 0x0058u:               scanCodeTranslation = "Key"             ": Keyboard Function 12";                                break;
+              case 0x0059u:               scanCodeTranslation = "Key"             ": Keypad Equals";                                       break;
+              case 0x005Cu:               scanCodeTranslation = "Key"             ": Keyboard International 6";                            break;
+              case 0x0064u:               scanCodeTranslation = "Key"             ": Keyboard Function 13";                                break;
+              case 0x0065u:               scanCodeTranslation = "Key"             ": Keyboard Function 14";                                break;
+              case 0x0066u:               scanCodeTranslation = "Key"             ": Keyboard Function 15";                                break;
+              case 0x0067u:               scanCodeTranslation = "Key"             ": Keyboard Function 16";                                break;
+              case 0x0068u:               scanCodeTranslation = "Key"             ": Keyboard Function 17";                                break;
+              case 0x0069u:               scanCodeTranslation = "Key"             ": Keyboard Function 18";                                break;
+              case 0x006Au:               scanCodeTranslation = "Key"             ": Keyboard Function 19";                                break;
+              case 0x006Bu:               scanCodeTranslation = "Key"             ": Keyboard Function 20";                                break;
+              case 0x006Cu:               scanCodeTranslation = "Key"             ": Keyboard Function 21";                                break;
+              case 0x006Du:               scanCodeTranslation = "Key"             ": Keyboard Function 22";                                break;
+              case 0x006Eu:               scanCodeTranslation = "Key"             ": Keyboard Function 23";                                break;
+              case 0x0070u:               scanCodeTranslation = "Key"             ": Keyboard International 2";                            break;
+              case 0x0071u: case 0x00F1u: scanCodeTranslation = "Key"             ": Keyboard Language 2";                                 break;
+              case 0x0072u: case 0x00F2u: scanCodeTranslation = "Key"             ": Keyboard Language 1";                                 break;
+              case 0x0073u:               scanCodeTranslation = "Key"             ": Keyboard International 1";                            break;
+              case 0x0076u:               scanCodeTranslation = "Key"             ": Keyboard Function 24, Keyboard Language 5";           break;
+              case 0x0077u:               scanCodeTranslation = "Key"             ": Keyboard Language 4";                                 break;
+              case 0x0078u:               scanCodeTranslation = "Key"             ": Keyboard Language 3";                                 break;
+              case 0x0079u:               scanCodeTranslation = "Key"             ": Keyboard International 4";                            break;
+              case 0x007Bu:               scanCodeTranslation = "Key"             ": Keyboard International 5";                            break;
+              case 0x007Du:               scanCodeTranslation = "Key"             ": Keyboard International 3";                            break;
+              case 0x007Eu:               scanCodeTranslation = "Key"             ": Keypad Comma";                                        break;
+              case 0x00FFu:               scanCodeTranslation = "Key"             ": Error Roll Over";                                     break;
+              case 0xE010u:               scanCodeTranslation = "Consumer"        ": Scan Previous Track";                                 break;
+              case 0xE019u:               scanCodeTranslation = "Consumer"        ": Scan Next Track";                                     break;
+              case 0xE01Cu:               scanCodeTranslation = "Key"             ": Keypad Enter";                                        break;
+              case 0xE01Du:               scanCodeTranslation = "Key"             ": Keyboard Right Control";                              break;
+              case 0xE020u:               scanCodeTranslation = "Consumer"        ": Mute";                                                break;
+              case 0xE021u:               scanCodeTranslation = "Consumer"        ": AL Calculator";                                       break;
+              case 0xE022u:               scanCodeTranslation = "Consumer"        ": Play/ Pause";                                         break;
+              case 0xE024u:               scanCodeTranslation = "Consumer"        ": Stop";                                                break;
+              case 0xE02Eu:               scanCodeTranslation = "Consumer"        ": Volume Decrement";                                    break;
+              case 0xE030u:               scanCodeTranslation = "Consumer"        ": Volume Increment";                                    break;
+              case 0xE032u:               scanCodeTranslation = "Consumer"        ": AC Home";                                             break;
+              case 0xE035u:               scanCodeTranslation = "Key"             ": Keypad Slash";                                        break;
+              case 0xE038u:               scanCodeTranslation = "Key"             ": Keyboard Right Alternatives";                         break;
+              case 0xE047u:               scanCodeTranslation = "Key"             ": Keyboard Home";                                       break;
+              case 0xE048u:               scanCodeTranslation = "Key"             ": Keyboard Up Arrow";                                   break;
+              case 0xE049u:               scanCodeTranslation = "Key"             ": Keyboard Page Up";                                    break;
+              case 0xE04Bu:               scanCodeTranslation = "Key"             ": Keyboard Left Arrow";                                 break;
+              case 0xE04Du:               scanCodeTranslation = "Key"             ": Keyboard Right Arrow";                                break;
+              case 0xE04Fu:               scanCodeTranslation = "Key"             ": Keyboard End";                                        break;
+              case 0xE050u:               scanCodeTranslation = "Key"             ": Keyboard Down Arrow";                                 break;
+              case 0xE051u:               scanCodeTranslation = "Key"             ": Keyboard Page Down";                                  break;
+              case 0xE052u:               scanCodeTranslation = "Key"             ": Keyboard Insert";                                     break;
+              case 0xE053u:               scanCodeTranslation = "Key"             ": Keyboard Delete Forward";                             break;
+              case 0xE05Bu:               scanCodeTranslation = "Key"             ": Keyboard Left GUI";                                   break;
+              case 0xE05Cu:               scanCodeTranslation = "Key"             ": Keyboard Right GUI";                                  break;
+              case 0xE05Du:               scanCodeTranslation = "Key"             ": Keyboard Application";                                break;
+              case 0xE05Eu:               scanCodeTranslation = "Generic Desktop" ": System Power Down, Key: Keyboard Power";              break;
+              case 0xE05Fu:               scanCodeTranslation = "Generic Desktop" ": System Sleep";                                        break;
+              case 0xE063u:               scanCodeTranslation = "Generic Desktop" ": System Wake Up";                                      break;
+              case 0xE065u:               scanCodeTranslation = "Consumer"        ": AC Search";                                           break;
+              case 0xE066u:               scanCodeTranslation = "Consumer"        ": AC Bookmarks";                                        break;
+              case 0xE067u:               scanCodeTranslation = "Consumer"        ": AC Refresh";                                          break;
+              case 0xE068u:               scanCodeTranslation = "Consumer"        ": AC Stop";                                             break;
+              case 0xE069u:               scanCodeTranslation = "Consumer"        ": AC Forward";                                          break;
+              case 0xE06Au:               scanCodeTranslation = "Consumer"        ": AC Back";                                             break;
+              case 0xE06Bu:               scanCodeTranslation = "Consumer"        ": AL Local Machine Browser";                            break;
+              case 0xE06Cu:               scanCodeTranslation = "Consumer"        ": AL Email Reader";                                     break;
+              case 0xE06Du:               scanCodeTranslation = "Consumer"        ": AL Consumer Control Configuration";                   break;
+            }
 
-              // ... --> virtualKeyTranslation = …;
-              if (
-                virtualKey == 0xE1u or
-                virtualKey == 0xE6u or
-                (virtualKey >= 0x92u and virtualKey <= 0x96u) or
-                (virtualKey >= 0xE3u and virtualKey <= 0xE4u) or
-                (virtualKey >= 0xE9u and virtualKey <= 0xF5u)
-              ) virtualKeyTranslation = "OEM-specific";
+            // ... --> virtualKeyTranslation = …;
+            if (
+              virtualKey == 0xE1u or
+              virtualKey == 0xE6u or
+              (virtualKey >= 0x92u and virtualKey <= 0x96u) or
+              (virtualKey >= 0xE3u and virtualKey <= 0xE4u) or
+              (virtualKey >= 0xE9u and virtualKey <= 0xF5u)
+            ) virtualKeyTranslation = "OEM-specific";
 
-              else if (
-                virtualKey == 0xE8u or
-                (virtualKey >= 0x0Eu and virtualKey <= 0x0Fu) or
-                (virtualKey >= 0x97u and virtualKey <= 0x9Fu)
-              ) virtualKeyTranslation = "Unassigned";
+            else if (
+              virtualKey == 0xE8u or
+              (virtualKey >= 0x0Eu and virtualKey <= 0x0Fu) or
+              (virtualKey >= 0x97u and virtualKey <= 0x9Fu)
+            ) virtualKeyTranslation = "Unassigned";
 
-              else if (virtualKey >= 0x3Au and virtualKey <= 0x40u)
-                virtualKeyTranslation = "Undefined";
+            else if (virtualKey >= 0x3Au and virtualKey <= 0x40u)
+              virtualKeyTranslation = "Undefined";
 
-              else switch (virtualKey) {
-                case 0x30u: virtualKeyTranslation = "0"; break;
-                case 0x31u: virtualKeyTranslation = "1"; break;
-                case 0x32u: virtualKeyTranslation = "2"; break;
-                case 0x33u: virtualKeyTranslation = "3"; break;
-                case 0x34u: virtualKeyTranslation = "4"; break;
-                case 0x35u: virtualKeyTranslation = "5"; break;
-                case 0x36u: virtualKeyTranslation = "6"; break;
-                case 0x37u: virtualKeyTranslation = "7"; break;
-                case 0x38u: virtualKeyTranslation = "8"; break;
-                case 0x39u: virtualKeyTranslation = "9"; break;
-                case 0x41u: virtualKeyTranslation = "A"; break;
-                case 0x42u: virtualKeyTranslation = "B"; break;
-                case 0x43u: virtualKeyTranslation = "C"; break;
-                case 0x44u: virtualKeyTranslation = "D"; break;
-                case 0x45u: virtualKeyTranslation = "E"; break;
-                case 0x46u: virtualKeyTranslation = "F"; break;
-                case 0x47u: virtualKeyTranslation = "G"; break;
-                case 0x48u: virtualKeyTranslation = "H"; break;
-                case 0x49u: virtualKeyTranslation = "I"; break;
-                case 0x4Au: virtualKeyTranslation = "J"; break;
-                case 0x4Bu: virtualKeyTranslation = "K"; break;
-                case 0x4Cu: virtualKeyTranslation = "L"; break;
-                case 0x4Du: virtualKeyTranslation = "M"; break;
-                case 0x4Eu: virtualKeyTranslation = "N"; break;
-                case 0x4Fu: virtualKeyTranslation = "O"; break;
-                case 0x50u: virtualKeyTranslation = "P"; break;
-                case 0x51u: virtualKeyTranslation = "Q"; break;
-                case 0x52u: virtualKeyTranslation = "R"; break;
-                case 0x53u: virtualKeyTranslation = "S"; break;
-                case 0x54u: virtualKeyTranslation = "T"; break;
-                case 0x55u: virtualKeyTranslation = "U"; break;
-                case 0x56u: virtualKeyTranslation = "V"; break;
-                case 0x57u: virtualKeyTranslation = "W"; break;
-                case 0x58u: virtualKeyTranslation = "X"; break;
-                case 0x59u: virtualKeyTranslation = "Y"; break;
-                case 0x5Au: virtualKeyTranslation = "Z"; break;
+            else switch (virtualKey) {
+              case 0x30u: virtualKeyTranslation = "0"; break;
+              case 0x31u: virtualKeyTranslation = "1"; break;
+              case 0x32u: virtualKeyTranslation = "2"; break;
+              case 0x33u: virtualKeyTranslation = "3"; break;
+              case 0x34u: virtualKeyTranslation = "4"; break;
+              case 0x35u: virtualKeyTranslation = "5"; break;
+              case 0x36u: virtualKeyTranslation = "6"; break;
+              case 0x37u: virtualKeyTranslation = "7"; break;
+              case 0x38u: virtualKeyTranslation = "8"; break;
+              case 0x39u: virtualKeyTranslation = "9"; break;
+              case 0x41u: virtualKeyTranslation = "A"; break;
+              case 0x42u: virtualKeyTranslation = "B"; break;
+              case 0x43u: virtualKeyTranslation = "C"; break;
+              case 0x44u: virtualKeyTranslation = "D"; break;
+              case 0x45u: virtualKeyTranslation = "E"; break;
+              case 0x46u: virtualKeyTranslation = "F"; break;
+              case 0x47u: virtualKeyTranslation = "G"; break;
+              case 0x48u: virtualKeyTranslation = "H"; break;
+              case 0x49u: virtualKeyTranslation = "I"; break;
+              case 0x4Au: virtualKeyTranslation = "J"; break;
+              case 0x4Bu: virtualKeyTranslation = "K"; break;
+              case 0x4Cu: virtualKeyTranslation = "L"; break;
+              case 0x4Du: virtualKeyTranslation = "M"; break;
+              case 0x4Eu: virtualKeyTranslation = "N"; break;
+              case 0x4Fu: virtualKeyTranslation = "O"; break;
+              case 0x50u: virtualKeyTranslation = "P"; break;
+              case 0x51u: virtualKeyTranslation = "Q"; break;
+              case 0x52u: virtualKeyTranslation = "R"; break;
+              case 0x53u: virtualKeyTranslation = "S"; break;
+              case 0x54u: virtualKeyTranslation = "T"; break;
+              case 0x55u: virtualKeyTranslation = "U"; break;
+              case 0x56u: virtualKeyTranslation = "V"; break;
+              case 0x57u: virtualKeyTranslation = "W"; break;
+              case 0x58u: virtualKeyTranslation = "X"; break;
+              case 0x59u: virtualKeyTranslation = "Y"; break;
+              case 0x5Au: virtualKeyTranslation = "Z"; break;
 
-                case VK_CONTROL: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
-                  case VK_LCONTROL: virtualKeyTranslation = "Left"  " Control"; break;
-                  case VK_RCONTROL: virtualKeyTranslation = "Right" " Control"; break;
-                  default         : virtualKeyTranslation =          "Control";
-                } break;
+              case VK_CONTROL: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
+                case VK_LCONTROL: virtualKeyTranslation = "Left"  " Control"; break;
+                case VK_RCONTROL: virtualKeyTranslation = "Right" " Control"; break;
+                default         : virtualKeyTranslation =          "Control";
+              } break;
 
-                case VK_MENU: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
-                  case VK_LMENU: virtualKeyTranslation = "Left"  " Alternative"; break;
-                  case VK_RMENU: virtualKeyTranslation = "Right" " Alternative"; break;
-                  default      : virtualKeyTranslation =          "Alternative";
-                } break;
+              case VK_MENU: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
+                case VK_LMENU: virtualKeyTranslation = "Left"  " Alternative"; break;
+                case VK_RMENU: virtualKeyTranslation = "Right" " Alternative"; break;
+                default      : virtualKeyTranslation =          "Alternative";
+              } break;
 
-                case VK_SHIFT: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
-                  case VK_LSHIFT: virtualKeyTranslation = "Left"  " Shift"; break;
-                  case VK_RSHIFT: virtualKeyTranslation = "Right" " Shift"; break;
-                  default       : virtualKeyTranslation =          "Shift";
-                } break;
+              case VK_SHIFT: switch (LOWORD(::MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX))) {
+                case VK_LSHIFT: virtualKeyTranslation = "Left"  " Shift"; break;
+                case VK_RSHIFT: virtualKeyTranslation = "Right" " Shift"; break;
+                default       : virtualKeyTranslation =          "Shift";
+              } break;
 
-                case VK_ACCEPT             : virtualKeyTranslation = "Input Method Encoding: Accept";              break;
-                case VK_ADD                : virtualKeyTranslation = "Add";                                        break;
-                case VK_APPS               : virtualKeyTranslation = "Application";                                break;
-                case VK_ATTN               : virtualKeyTranslation = "Attention";                                  break;
-                case VK_BACK               : virtualKeyTranslation = "Backspace";                                  break;
-                case VK_BROWSER_BACK       : virtualKeyTranslation = "Browser: Back";                              break;
-                case VK_BROWSER_FAVORITES  : virtualKeyTranslation = "Browser: Favorites";                         break;
-                case VK_BROWSER_FORWARD    : virtualKeyTranslation = "Browser: Forward";                           break;
-                case VK_BROWSER_HOME       : virtualKeyTranslation = "Browser: Start and Home";                    break;
-                case VK_BROWSER_REFRESH    : virtualKeyTranslation = "Browser: Refresh";                           break;
-                case VK_BROWSER_SEARCH     : virtualKeyTranslation = "Browser: Search";                            break;
-                case VK_BROWSER_STOP       : virtualKeyTranslation = "Browser: Stop";                              break;
-                case VK_CANCEL             : virtualKeyTranslation = "Cancel, Control-Break Processing";           break;
-                case VK_CAPITAL            : virtualKeyTranslation = "Capital Lock";                               break;
-                case VK_CLEAR              : virtualKeyTranslation = "Clear";                                      break;
-                case VK_CONVERT            : virtualKeyTranslation = "Input Method Encoding: Convert";             break;
-                case VK_CRSEL              : virtualKeyTranslation = "Cursor Select";                              break;
-                case VK_DECIMAL            : virtualKeyTranslation = "Decimal";                                    break;
-                case VK_DELETE             : virtualKeyTranslation = "Delete";                                     break;
-                case VK_DIVIDE             : virtualKeyTranslation = "Divide";                                     break;
-                case VK_DOWN               : virtualKeyTranslation = "Down Arrow";                                 break;
-                case VK_END                : virtualKeyTranslation = "End";                                        break;
-                case VK_EREOF              : virtualKeyTranslation = "Erase End-of-File";                          break;
-                case VK_ESCAPE             : virtualKeyTranslation = "Escape";                                     break;
-                case VK_EXECUTE            : virtualKeyTranslation = "Execute";                                    break;
-                case VK_EXSEL              : virtualKeyTranslation = "Extend Selection";                           break;
-                case VK_F1                 : virtualKeyTranslation = "Function 1";                                 break;
-                case VK_F2                 : virtualKeyTranslation = "Function 2";                                 break;
-                case VK_F3                 : virtualKeyTranslation = "Function 3";                                 break;
-                case VK_F4                 : virtualKeyTranslation = "Function 4";                                 break;
-                case VK_F5                 : virtualKeyTranslation = "Function 5";                                 break;
-                case VK_F6                 : virtualKeyTranslation = "Function 6";                                 break;
-                case VK_F7                 : virtualKeyTranslation = "Function 7";                                 break;
-                case VK_F8                 : virtualKeyTranslation = "Function 8";                                 break;
-                case VK_F9                 : virtualKeyTranslation = "Function 9";                                 break;
-                case VK_F10                : virtualKeyTranslation = "Function 10";                                break;
-                case VK_F11                : virtualKeyTranslation = "Function 11";                                break;
-                case VK_F12                : virtualKeyTranslation = "Function 12";                                break;
-                case VK_F13                : virtualKeyTranslation = "Function 13";                                break;
-                case VK_F14                : virtualKeyTranslation = "Function 14";                                break;
-                case VK_F15                : virtualKeyTranslation = "Function 15";                                break;
-                case VK_F16                : virtualKeyTranslation = "Function 16";                                break;
-                case VK_F17                : virtualKeyTranslation = "Function 17";                                break;
-                case VK_F18                : virtualKeyTranslation = "Function 18";                                break;
-                case VK_F19                : virtualKeyTranslation = "Function 19";                                break;
-                case VK_F20                : virtualKeyTranslation = "Function 20";                                break;
-                case VK_F21                : virtualKeyTranslation = "Function 21";                                break;
-                case VK_F22                : virtualKeyTranslation = "Function 22";                                break;
-                case VK_F23                : virtualKeyTranslation = "Function 23";                                break;
-                case VK_F24                : virtualKeyTranslation = "Function 24";                                break;
-                case VK_FINAL              : virtualKeyTranslation = "Input Method Encoding: Final";               break;
-                case VK_HANGUL | VK_KANA   : virtualKeyTranslation = "Input Method Encoding: Hangul, Kana";        break;
-                case VK_HANJA  | VK_KANJI  : virtualKeyTranslation = "Input Method Encoding: Hanja, Kanji";        break;
-                case VK_HELP               : virtualKeyTranslation = "Help";                                       break;
-                case VK_HOME               : virtualKeyTranslation = "Home";                                       break;
-                case VK_IME_OFF            : virtualKeyTranslation = "Input Method Encoding: Off";                 break;
-                case VK_IME_ON             : virtualKeyTranslation = "Input Method Encoding: On";                  break;
-                case VK_INSERT             : virtualKeyTranslation = "Insert";                                     break;
-                case VK_JUNJA              : virtualKeyTranslation = "Input Method Encoding: Junja";               break;
-                case VK_LAUNCH_APP1        : virtualKeyTranslation = "Start Application 1";                        break;
-                case VK_LAUNCH_APP2        : virtualKeyTranslation = "Start Application 2";                        break;
-                case VK_LAUNCH_MAIL        : virtualKeyTranslation = "Start Mail";                                 break;
-                case VK_LAUNCH_MEDIA_SELECT: virtualKeyTranslation = "Select Media";                               break;
-                case VK_LBUTTON            : virtualKeyTranslation = "Left Mouse Button";                          break;
-                case VK_LCONTROL           : virtualKeyTranslation = "Left Control";                               break;
-                case VK_LEFT               : virtualKeyTranslation = "Left Arrow";                                 break;
-                case VK_LMENU              : virtualKeyTranslation = "Left Alternative";                           break;
-                case VK_LSHIFT             : virtualKeyTranslation = "Left Shift";                                 break;
-                case VK_LWIN               : virtualKeyTranslation = "Left Windows";                               break;
-                case VK_MBUTTON            : virtualKeyTranslation = "Middle Mouse Button";                        break;
-                case VK_MEDIA_NEXT_TRACK   : virtualKeyTranslation = "Media: Next";                                break;
-                case VK_MEDIA_PLAY_PAUSE   : virtualKeyTranslation = "Media: Play/ Pause";                         break;
-                case VK_MEDIA_PREV_TRACK   : virtualKeyTranslation = "Media: Previous";                            break;
-                case VK_MEDIA_STOP         : virtualKeyTranslation = "Media: Stop";                                break;
-                case VK_MODECHANGE         : virtualKeyTranslation = "Input Method Encoding: Mode Change Request"; break;
-                case VK_MULTIPLY           : virtualKeyTranslation = "Multiply";                                   break;
-                case VK_NEXT               : virtualKeyTranslation = "Next, Page Down";                            break;
-                case VK_NONAME             : /* Do nothing… */                                            break;
-                case VK_NONCONVERT         : virtualKeyTranslation = "Input Method Encoding: Non-Convert";         break;
-                case VK_NUMLOCK            : virtualKeyTranslation = "Number Lock";                                break;
-                case VK_NUMPAD0            : virtualKeyTranslation = "Number Keypad 0";                            break;
-                case VK_NUMPAD1            : virtualKeyTranslation = "Number Keypad 1";                            break;
-                case VK_NUMPAD2            : virtualKeyTranslation = "Number Keypad 2";                            break;
-                case VK_NUMPAD3            : virtualKeyTranslation = "Number Keypad 3";                            break;
-                case VK_NUMPAD4            : virtualKeyTranslation = "Number Keypad 4";                            break;
-                case VK_NUMPAD5            : virtualKeyTranslation = "Number Keypad 5";                            break;
-                case VK_NUMPAD6            : virtualKeyTranslation = "Number Keypad 6";                            break;
-                case VK_NUMPAD7            : virtualKeyTranslation = "Number Keypad 7";                            break;
-                case VK_NUMPAD8            : virtualKeyTranslation = "Number Keypad 8";                            break;
-                case VK_NUMPAD9            : virtualKeyTranslation = "Number Keypad 9";                            break;
-                case VK_OEM_1              : virtualKeyTranslation = "OEM-specific 1";                             break;
-                case VK_OEM_2              : virtualKeyTranslation = "OEM-specific 2";                             break;
-                case VK_OEM_3              : virtualKeyTranslation = "OEM-specific 3";                             break;
-                case VK_OEM_4              : virtualKeyTranslation = "OEM-specific 4";                             break;
-                case VK_OEM_5              : virtualKeyTranslation = "OEM-specific 5";                             break;
-                case VK_OEM_6              : virtualKeyTranslation = "OEM-specific 6";                             break;
-                case VK_OEM_7              : virtualKeyTranslation = "OEM-specific 7";                             break;
-                case VK_OEM_8              : virtualKeyTranslation = "OEM-specific 8";                             break;
-                case VK_OEM_102            : virtualKeyTranslation = "OEM-specific 102";                           break;
-                case VK_OEM_CLEAR          : virtualKeyTranslation = "Clear";                                      break;
-                case VK_OEM_COMMA          : virtualKeyTranslation = "OEM-specific Comma";                         break;
-                case VK_OEM_MINUS          : virtualKeyTranslation = "OEM-specific Minus";                         break;
-                case VK_OEM_PERIOD         : virtualKeyTranslation = "OEM-specific Period";                        break;
-                case VK_OEM_PLUS           : virtualKeyTranslation = "OEM-specific Plus";                          break;
-                case VK_PA1                : virtualKeyTranslation = "Program Action 1";                           break;
-                case VK_PACKET             : virtualKeyTranslation = "Unicode Packet";                             break;
-                case VK_PAUSE              : virtualKeyTranslation = "Pause";                                      break;
-                case VK_PLAY               : virtualKeyTranslation = "Play";                                       break;
-                case VK_PRINT              : virtualKeyTranslation = "Print";                                      break;
-                case VK_PRIOR              : virtualKeyTranslation = "Prior, Page Up";                             break;
-                case VK_PROCESSKEY         : virtualKeyTranslation = "Input Method Encoding: Process";             break;
-                case VK_RBUTTON            : virtualKeyTranslation = "Right Mouse Button";                         break;
-                case VK_RCONTROL           : virtualKeyTranslation = "Right Control";                              break;
-                case VK_RETURN             : virtualKeyTranslation = "Return";                                     break;
-                case VK_RIGHT              : virtualKeyTranslation = "Right Arrow";                                break;
-                case VK_RMENU              : virtualKeyTranslation = "Right Alternative";                          break;
-                case VK_RSHIFT             : virtualKeyTranslation = "Right Shift";                                break;
-                case VK_RWIN               : virtualKeyTranslation = "Right Windows";                              break;
-                case VK_SCROLL             : virtualKeyTranslation = "Scroll Lock";                                break;
-                case VK_SELECT             : virtualKeyTranslation = "Select";                                     break;
-                case VK_SEPARATOR          : virtualKeyTranslation = "Separator";                                  break;
-                case VK_SLEEP              : virtualKeyTranslation = "Sleep";                                      break;
-                case VK_SNAPSHOT           : virtualKeyTranslation = "Snapshot";                                   break;
-                case VK_SPACE              : virtualKeyTranslation = "Space";                                      break;
-                case VK_SUBTRACT           : virtualKeyTranslation = "Subtract";                                   break;
-                case VK_TAB                : virtualKeyTranslation = "Tab";                                        break;
-                case VK_UP                 : virtualKeyTranslation = "Up Arrow";                                   break;
-                case VK_VOLUME_DOWN        : virtualKeyTranslation = "Volume: Down";                               break;
-                case VK_VOLUME_MUTE        : virtualKeyTranslation = "Volume: Mute";                               break;
-                case VK_VOLUME_UP          : virtualKeyTranslation = "Volume: Up";                                 break;
-                case VK_XBUTTON1           : virtualKeyTranslation = "Extended Mouse Button 1";                    break;
-                case VK_XBUTTON2           : virtualKeyTranslation = "Extended Mouse Button 2";                    break;
-                case VK_ZOOM               : virtualKeyTranslation = "Zoom";
-              }
+              case VK_ACCEPT             : virtualKeyTranslation = "Input Method Encoding: Accept";              break;
+              case VK_ADD                : virtualKeyTranslation = "Add";                                        break;
+              case VK_APPS               : virtualKeyTranslation = "Application";                                break;
+              case VK_ATTN               : virtualKeyTranslation = "Attention";                                  break;
+              case VK_BACK               : virtualKeyTranslation = "Backspace";                                  break;
+              case VK_BROWSER_BACK       : virtualKeyTranslation = "Browser: Back";                              break;
+              case VK_BROWSER_FAVORITES  : virtualKeyTranslation = "Browser: Favorites";                         break;
+              case VK_BROWSER_FORWARD    : virtualKeyTranslation = "Browser: Forward";                           break;
+              case VK_BROWSER_HOME       : virtualKeyTranslation = "Browser: Start and Home";                    break;
+              case VK_BROWSER_REFRESH    : virtualKeyTranslation = "Browser: Refresh";                           break;
+              case VK_BROWSER_SEARCH     : virtualKeyTranslation = "Browser: Search";                            break;
+              case VK_BROWSER_STOP       : virtualKeyTranslation = "Browser: Stop";                              break;
+              case VK_CANCEL             : virtualKeyTranslation = "Cancel, Control-Break Processing";           break;
+              case VK_CAPITAL            : virtualKeyTranslation = "Capital Lock";                               break;
+              case VK_CLEAR              : virtualKeyTranslation = "Clear";                                      break;
+              case VK_CONVERT            : virtualKeyTranslation = "Input Method Encoding: Convert";             break;
+              case VK_CRSEL              : virtualKeyTranslation = "Cursor Select";                              break;
+              case VK_DECIMAL            : virtualKeyTranslation = "Decimal";                                    break;
+              case VK_DELETE             : virtualKeyTranslation = "Delete";                                     break;
+              case VK_DIVIDE             : virtualKeyTranslation = "Divide";                                     break;
+              case VK_DOWN               : virtualKeyTranslation = "Down Arrow";                                 break;
+              case VK_END                : virtualKeyTranslation = "End";                                        break;
+              case VK_EREOF              : virtualKeyTranslation = "Erase End-of-File";                          break;
+              case VK_ESCAPE             : virtualKeyTranslation = "Escape";                                     break;
+              case VK_EXECUTE            : virtualKeyTranslation = "Execute";                                    break;
+              case VK_EXSEL              : virtualKeyTranslation = "Extend Selection";                           break;
+              case VK_F1                 : virtualKeyTranslation = "Function 1";                                 break;
+              case VK_F2                 : virtualKeyTranslation = "Function 2";                                 break;
+              case VK_F3                 : virtualKeyTranslation = "Function 3";                                 break;
+              case VK_F4                 : virtualKeyTranslation = "Function 4";                                 break;
+              case VK_F5                 : virtualKeyTranslation = "Function 5";                                 break;
+              case VK_F6                 : virtualKeyTranslation = "Function 6";                                 break;
+              case VK_F7                 : virtualKeyTranslation = "Function 7";                                 break;
+              case VK_F8                 : virtualKeyTranslation = "Function 8";                                 break;
+              case VK_F9                 : virtualKeyTranslation = "Function 9";                                 break;
+              case VK_F10                : virtualKeyTranslation = "Function 10";                                break;
+              case VK_F11                : virtualKeyTranslation = "Function 11";                                break;
+              case VK_F12                : virtualKeyTranslation = "Function 12";                                break;
+              case VK_F13                : virtualKeyTranslation = "Function 13";                                break;
+              case VK_F14                : virtualKeyTranslation = "Function 14";                                break;
+              case VK_F15                : virtualKeyTranslation = "Function 15";                                break;
+              case VK_F16                : virtualKeyTranslation = "Function 16";                                break;
+              case VK_F17                : virtualKeyTranslation = "Function 17";                                break;
+              case VK_F18                : virtualKeyTranslation = "Function 18";                                break;
+              case VK_F19                : virtualKeyTranslation = "Function 19";                                break;
+              case VK_F20                : virtualKeyTranslation = "Function 20";                                break;
+              case VK_F21                : virtualKeyTranslation = "Function 21";                                break;
+              case VK_F22                : virtualKeyTranslation = "Function 22";                                break;
+              case VK_F23                : virtualKeyTranslation = "Function 23";                                break;
+              case VK_F24                : virtualKeyTranslation = "Function 24";                                break;
+              case VK_FINAL              : virtualKeyTranslation = "Input Method Encoding: Final";               break;
+              case VK_HANGUL | VK_KANA   : virtualKeyTranslation = "Input Method Encoding: Hangul, Kana";        break;
+              case VK_HANJA  | VK_KANJI  : virtualKeyTranslation = "Input Method Encoding: Hanja, Kanji";        break;
+              case VK_HELP               : virtualKeyTranslation = "Help";                                       break;
+              case VK_HOME               : virtualKeyTranslation = "Home";                                       break;
+              case VK_IME_OFF            : virtualKeyTranslation = "Input Method Encoding: Off";                 break;
+              case VK_IME_ON             : virtualKeyTranslation = "Input Method Encoding: On";                  break;
+              case VK_INSERT             : virtualKeyTranslation = "Insert";                                     break;
+              case VK_JUNJA              : virtualKeyTranslation = "Input Method Encoding: Junja";               break;
+              case VK_LAUNCH_APP1        : virtualKeyTranslation = "Start Application 1";                        break;
+              case VK_LAUNCH_APP2        : virtualKeyTranslation = "Start Application 2";                        break;
+              case VK_LAUNCH_MAIL        : virtualKeyTranslation = "Start Mail";                                 break;
+              case VK_LAUNCH_MEDIA_SELECT: virtualKeyTranslation = "Select Media";                               break;
+              case VK_LBUTTON            : virtualKeyTranslation = "Left Mouse Button";                          break;
+              case VK_LCONTROL           : virtualKeyTranslation = "Left Control";                               break;
+              case VK_LEFT               : virtualKeyTranslation = "Left Arrow";                                 break;
+              case VK_LMENU              : virtualKeyTranslation = "Left Alternative";                           break;
+              case VK_LSHIFT             : virtualKeyTranslation = "Left Shift";                                 break;
+              case VK_LWIN               : virtualKeyTranslation = "Left Windows";                               break;
+              case VK_MBUTTON            : virtualKeyTranslation = "Middle Mouse Button";                        break;
+              case VK_MEDIA_NEXT_TRACK   : virtualKeyTranslation = "Media: Next";                                break;
+              case VK_MEDIA_PLAY_PAUSE   : virtualKeyTranslation = "Media: Play/ Pause";                         break;
+              case VK_MEDIA_PREV_TRACK   : virtualKeyTranslation = "Media: Previous";                            break;
+              case VK_MEDIA_STOP         : virtualKeyTranslation = "Media: Stop";                                break;
+              case VK_MODECHANGE         : virtualKeyTranslation = "Input Method Encoding: Mode Change Request"; break;
+              case VK_MULTIPLY           : virtualKeyTranslation = "Multiply";                                   break;
+              case VK_NEXT               : virtualKeyTranslation = "Next, Page Down";                            break;
+              case VK_NONAME             : /* Do nothing… */                                                    break;
+              case VK_NONCONVERT         : virtualKeyTranslation = "Input Method Encoding: Non-Convert";         break;
+              case VK_NUMLOCK            : virtualKeyTranslation = "Number Lock";                                break;
+              case VK_NUMPAD0            : virtualKeyTranslation = "Number Keypad 0";                            break;
+              case VK_NUMPAD1            : virtualKeyTranslation = "Number Keypad 1";                            break;
+              case VK_NUMPAD2            : virtualKeyTranslation = "Number Keypad 2";                            break;
+              case VK_NUMPAD3            : virtualKeyTranslation = "Number Keypad 3";                            break;
+              case VK_NUMPAD4            : virtualKeyTranslation = "Number Keypad 4";                            break;
+              case VK_NUMPAD5            : virtualKeyTranslation = "Number Keypad 5";                            break;
+              case VK_NUMPAD6            : virtualKeyTranslation = "Number Keypad 6";                            break;
+              case VK_NUMPAD7            : virtualKeyTranslation = "Number Keypad 7";                            break;
+              case VK_NUMPAD8            : virtualKeyTranslation = "Number Keypad 8";                            break;
+              case VK_NUMPAD9            : virtualKeyTranslation = "Number Keypad 9";                            break;
+              case VK_OEM_1              : virtualKeyTranslation = "OEM-specific 1";                             break;
+              case VK_OEM_2              : virtualKeyTranslation = "OEM-specific 2";                             break;
+              case VK_OEM_3              : virtualKeyTranslation = "OEM-specific 3";                             break;
+              case VK_OEM_4              : virtualKeyTranslation = "OEM-specific 4";                             break;
+              case VK_OEM_5              : virtualKeyTranslation = "OEM-specific 5";                             break;
+              case VK_OEM_6              : virtualKeyTranslation = "OEM-specific 6";                             break;
+              case VK_OEM_7              : virtualKeyTranslation = "OEM-specific 7";                             break;
+              case VK_OEM_8              : virtualKeyTranslation = "OEM-specific 8";                             break;
+              case VK_OEM_102            : virtualKeyTranslation = "OEM-specific 102";                           break;
+              case VK_OEM_CLEAR          : virtualKeyTranslation = "Clear";                                      break;
+              case VK_OEM_COMMA          : virtualKeyTranslation = "OEM-specific Comma";                         break;
+              case VK_OEM_MINUS          : virtualKeyTranslation = "OEM-specific Minus";                         break;
+              case VK_OEM_PERIOD         : virtualKeyTranslation = "OEM-specific Period";                        break;
+              case VK_OEM_PLUS           : virtualKeyTranslation = "OEM-specific Plus";                          break;
+              case VK_PA1                : virtualKeyTranslation = "Program Action 1";                           break;
+              case VK_PACKET             : virtualKeyTranslation = "Unicode Packet";                             break;
+              case VK_PAUSE              : virtualKeyTranslation = "Pause";                                      break;
+              case VK_PLAY               : virtualKeyTranslation = "Play";                                       break;
+              case VK_PRINT              : virtualKeyTranslation = "Print";                                      break;
+              case VK_PRIOR              : virtualKeyTranslation = "Prior, Page Up";                             break;
+              case VK_PROCESSKEY         : virtualKeyTranslation = "Input Method Encoding: Process";             break;
+              case VK_RBUTTON            : virtualKeyTranslation = "Right Mouse Button";                         break;
+              case VK_RCONTROL           : virtualKeyTranslation = "Right Control";                              break;
+              case VK_RETURN             : virtualKeyTranslation = "Return";                                     break;
+              case VK_RIGHT              : virtualKeyTranslation = "Right Arrow";                                break;
+              case VK_RMENU              : virtualKeyTranslation = "Right Alternative";                          break;
+              case VK_RSHIFT             : virtualKeyTranslation = "Right Shift";                                break;
+              case VK_RWIN               : virtualKeyTranslation = "Right Windows";                              break;
+              case VK_SCROLL             : virtualKeyTranslation = "Scroll Lock";                                break;
+              case VK_SELECT             : virtualKeyTranslation = "Select";                                     break;
+              case VK_SEPARATOR          : virtualKeyTranslation = "Separator";                                  break;
+              case VK_SLEEP              : virtualKeyTranslation = "Sleep";                                      break;
+              case VK_SNAPSHOT           : virtualKeyTranslation = "Snapshot";                                   break;
+              case VK_SPACE              : virtualKeyTranslation = "Space";                                      break;
+              case VK_SUBTRACT           : virtualKeyTranslation = "Subtract";                                   break;
+              case VK_TAB                : virtualKeyTranslation = "Tab";                                        break;
+              case VK_UP                 : virtualKeyTranslation = "Up Arrow";                                   break;
+              case VK_VOLUME_DOWN        : virtualKeyTranslation = "Volume: Down";                               break;
+              case VK_VOLUME_MUTE        : virtualKeyTranslation = "Volume: Mute";                               break;
+              case VK_VOLUME_UP          : virtualKeyTranslation = "Volume: Up";                                 break;
+              case VK_XBUTTON1           : virtualKeyTranslation = "Extended Mouse Button 1";                    break;
+              case VK_XBUTTON2           : virtualKeyTranslation = "Extended Mouse Button 2";                    break;
+              case VK_ZOOM               : virtualKeyTranslation = "Zoom";
+            }
 
-              // ...
-              messageTranslationMultilineFormat = true;
+            // ...
+            messageTranslationMultilineFormat = true;
 
-              if (log::output(
-                NULL == virtualKeyTranslation
-                ? log::format("[",     static_cast<undefined>(virtualKey), "`, {" "\r\n")
-                : log::format("[" "`", virtualKeyTranslation,              "`, {" "\r\n")
-              )) messageTranslationMultilineFormat = not log::output(log::format(
-                "  " "context   : ", static_cast<bool>(context),                                                                                                                                                "," "\r\n"
-                "  " "extended  : ", static_cast<bool>(extended),                                                                                                                                               "," "\r\n"
-                "  " "previous  : ", static_cast<bool>(previous),                                                                                                                                               "," "\r\n"
-                "  " "repeat    : ", (number) repeatCount,                                                                                                                                                      "," "\r\n"
-                "  " "scan      : ", static_cast<undefined>(scanCode), NULL != scanCodeTranslation ? " `" : "", NULL != scanCodeTranslation ? scanCodeTranslation : "", NULL != scanCodeTranslation ? "`" : "", "," "\r\n"
-                "  " "transition: ", static_cast<bool>(transition),                                                                                                                                                 "\r\n"
-                ""   "}]"
-              ));
-            } break;
+            (void) log::output(log::format('[',
+              static_cast<undefined>(virtualKey), NULL != virtualKeyTranslation ? " ": "", NULL != virtualKeyTranslation ? "`" : "", NULL != virtualKeyTranslation ? virtualKeyTranslation : "", NULL != virtualKeyTranslation ? "`" : "",
+              ", ", static_cast<undefined>(subparameter), " {"                                                                                                                                                    "\r\n"
+              "  " "context   : ", static_cast<bool>(context),                                                                                                                                                "," "\r\n"
+              "  " "extended  : ", static_cast<bool>(extended),                                                                                                                                               "," "\r\n"
+              "  " "previous  : ", static_cast<bool>(previous),                                                                                                                                               "," "\r\n"
+              "  " "repeat    : ", (number) repeatCount,                                                                                                                                                      "," "\r\n"
+              "  " "scan      : ", static_cast<undefined>(scanCode), NULL != scanCodeTranslation ? " `" : "", NULL != scanCodeTranslation ? scanCodeTranslation : "", NULL != scanCodeTranslation ? "`" : "", "," "\r\n"
+              "  " "transition: ", static_cast<bool>(transition),                                                                                                                                                 "\r\n"
+              ""   "}"
+            "]"));
+          }
 
-            // case WM_KILLFOCUS: break; // TODO (Lapys)
-            // case WM_MOVE: break; // TODO (Lapys)
-            // case WM_MOUSEFIRST: break; // TODO (Lapys)
-            // case WM_NCACTIVATE: break; // TODO (Lapys)
-            case WM_NCCREATE: {
-              CREATESTRUCT *const createStructure                  = static_cast<CREATESTRUCT*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
-              bool                createStructureUsesExtendedStyle = false;
-              bool                createStructureUsesStyle         = false;
+          // else if (WM_KILLFOCUS == message) {} // TODO (Lapys)
+          // else if (WM_MOVE == message) {} // TODO (Lapys)
+          // else if (WM_MOUSEFIRST == message) {} // TODO (Lapys)
+          // else if (WM_NCACTIVATE == message) {} // TODO (Lapys)
 
-              // ...
-              createStructureUsesExtendedStyle |= (createStructure -> dwExStyle & WS_EX_ACCEPTFILES) or (createStructure -> dwExStyle & WS_EX_APPWINDOW) or (createStructure -> dwExStyle & WS_EX_CLIENTEDGE) or (createStructure -> dwExStyle & WS_EX_COMPOSITED) or (createStructure -> dwExStyle & WS_EX_CONTEXTHELP) or (createStructure -> dwExStyle & WS_EX_CONTROLPARENT) or (createStructure -> dwExStyle & WS_EX_DLGMODALFRAME) or (createStructure -> dwExStyle & WS_EX_LAYERED) or (createStructure -> dwExStyle & WS_EX_LAYOUTRTL) or (createStructure -> dwExStyle & WS_EX_LEFT) or (createStructure -> dwExStyle & WS_EX_LEFTSCROLLBAR) or (createStructure -> dwExStyle & WS_EX_LTRREADING) or (createStructure -> dwExStyle & WS_EX_MDICHILD) or (createStructure -> dwExStyle & WS_EX_NOACTIVATE) or (createStructure -> dwExStyle & WS_EX_NOINHERITLAYOUT) or (createStructure -> dwExStyle & WS_EX_NOPARENTNOTIFY) or (createStructure -> dwExStyle & WS_EX_OVERLAPPEDWINDOW) or (createStructure -> dwExStyle & WS_EX_PALETTEWINDOW) or (createStructure -> dwExStyle & WS_EX_RIGHT) or (createStructure -> dwExStyle & WS_EX_RIGHTSCROLLBAR) or (createStructure -> dwExStyle & WS_EX_RTLREADING) or (createStructure -> dwExStyle & WS_EX_STATICEDGE) or (createStructure -> dwExStyle & WS_EX_TOOLWINDOW) or (createStructure -> dwExStyle & WS_EX_TOPMOST) or (createStructure -> dwExStyle & WS_EX_TRANSPARENT) or (createStructure -> dwExStyle & WS_EX_WINDOWEDGE);
-              #ifdef WS_EX_NOREDIRECTIONBITMAP
-                createStructureUsesExtendedStyle |= createStructure -> dwExStyle & WS_EX_NOREDIRECTIONBITMAP;
+          else if (
+            WM_CREATE   == message or
+            WM_NCCREATE == message
+          ) {
+            CREATESTRUCTW *const createStructure                  = static_cast<CREATESTRUCTW*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter))); // --> std::launder(…)
+            ATOM           const createStructureClassID           = static_cast<ATOM>(reinterpret_cast<uintptr_t>(static_cast<void const*>(createStructure -> lpszClass)));
+            LPCTSTR              createStructureClassName         = NULL;
+            bool                 createStructureUsesExtendedStyle = (createStructure -> dwExStyle & WS_EX_ACCEPTFILES) or (createStructure -> dwExStyle & WS_EX_APPWINDOW) or (createStructure -> dwExStyle & WS_EX_CLIENTEDGE) or (createStructure -> dwExStyle & WS_EX_COMPOSITED) or (createStructure -> dwExStyle & WS_EX_CONTEXTHELP) or (createStructure -> dwExStyle & WS_EX_CONTROLPARENT) or (createStructure -> dwExStyle & WS_EX_DLGMODALFRAME) or (createStructure -> dwExStyle & WS_EX_LAYERED) or (createStructure -> dwExStyle & WS_EX_LAYOUTRTL) or (createStructure -> dwExStyle & WS_EX_LEFT) or (createStructure -> dwExStyle & WS_EX_LEFTSCROLLBAR) or (createStructure -> dwExStyle & WS_EX_LTRREADING) or (createStructure -> dwExStyle & WS_EX_MDICHILD) or (createStructure -> dwExStyle & WS_EX_NOACTIVATE) or (createStructure -> dwExStyle & WS_EX_NOINHERITLAYOUT) or (createStructure -> dwExStyle & WS_EX_NOPARENTNOTIFY) or (createStructure -> dwExStyle & WS_EX_OVERLAPPEDWINDOW) or (createStructure -> dwExStyle & WS_EX_PALETTEWINDOW) or (createStructure -> dwExStyle & WS_EX_RIGHT)    or (createStructure -> dwExStyle & WS_EX_RIGHTSCROLLBAR) or (createStructure -> dwExStyle & WS_EX_RTLREADING) or (createStructure -> dwExStyle & WS_EX_STATICEDGE) or (createStructure -> dwExStyle & WS_EX_TOOLWINDOW) or (createStructure -> dwExStyle & WS_EX_TOPMOST) or (createStructure -> dwExStyle & WS_EX_TRANSPARENT) or (createStructure -> dwExStyle & WS_EX_WINDOWEDGE);
+            bool                 createStructureUsesStyle         = (createStructure -> style     & WS_BORDER)         or (createStructure -> style     & WS_CAPTION)      or (createStructure -> style     & WS_CHILD)         or (createStructure -> style     & WS_CHILDWINDOW)   or (createStructure -> style     & WS_CLIPCHILDREN)   or (createStructure -> style     & WS_CLIPSIBLINGS)     or (createStructure -> style     & WS_DISABLED)         or (createStructure -> style     & WS_DLGFRAME)   or (createStructure -> style     & WS_GROUP)        or (createStructure -> style     & WS_HSCROLL) or (createStructure -> style     & WS_ICONIC)           or (createStructure -> style     & WS_MAXIMIZE)      or (createStructure -> style     & WS_MAXIMIZEBOX) or (createStructure -> style     & WS_MINIMIZE)      or (createStructure -> style     & WS_MINIMIZEBOX)        or (createStructure -> style     & WS_OVERLAPPED)        or (createStructure -> style     & WS_OVERLAPPEDWINDOW)    or (createStructure -> style     & WS_POPUP)            or (createStructure -> style     & WS_POPUPWINDOW) or (createStructure -> style     & WS_SIZEBOX)           or (createStructure -> style     & WS_SYSMENU)       or (createStructure -> style     & WS_TABSTOP)       or (createStructure -> style     & WS_THICKFRAME)    or (createStructure -> style     & WS_TILED)      or (createStructure -> style     & WS_TILEDWINDOW)    or (createStructure -> style     & WS_VISIBLE) or (createStructure -> style & WS_VSCROLL);
+            ULONG_PTR      const windowHandleClassID              = ::GetClassLongPtrW(windowHandle, GCW_ATOM);
+
+            // ...
+            #ifdef WS_EX_NOREDIRECTIONBITMAP
+              createStructureUsesExtendedStyle |= createStructure -> dwExStyle & WS_EX_NOREDIRECTIONBITMAP;
+            #endif
+
+            #ifdef ACS_AUTOPLAY
+              createStructureUsesStyle |= createStructure -> style & ACS_AUTOPLAY;
+            #endif
+
+            #ifdef ACS_CENTER
+              createStructureUsesStyle |= createStructure -> style & ACS_CENTER;
+            #endif
+
+            #ifdef ACS_TIMER
+              createStructureUsesStyle |= createStructure -> style & ACS_TIMER;
+            #endif
+
+            #ifdef ACS_TRANSPARENT
+              createStructureUsesStyle |= createStructure -> style & ACS_TRANSPARENT;
+            #endif
+
+            #ifdef BS_3STATE
+              createStructureUsesStyle |= createStructure -> style & BS_3STATE;
+            #endif
+
+            #ifdef BS_AUTO3STATE
+              createStructureUsesStyle |= createStructure -> style & BS_AUTO3STATE;
+            #endif
+
+            #ifdef BS_AUTOCHECKBOX
+              createStructureUsesStyle |= createStructure -> style & BS_AUTOCHECKBOX;
+            #endif
+
+            #ifdef BS_AUTORADIOBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_AUTORADIOBUTTON;
+            #endif
+
+            #ifdef BS_BITMAP
+              createStructureUsesStyle |= createStructure -> style & BS_BITMAP;
+            #endif
+
+            #ifdef BS_BOTTOM
+              createStructureUsesStyle |= createStructure -> style & BS_BOTTOM;
+            #endif
+
+            #ifdef BS_CENTER
+              createStructureUsesStyle |= createStructure -> style & BS_CENTER;
+            #endif
+
+            #ifdef BS_CHECKBOX
+              createStructureUsesStyle |= createStructure -> style & BS_CHECKBOX;
+            #endif
+
+            #ifdef BS_COMMANDLINK
+              createStructureUsesStyle |= createStructure -> style & BS_COMMANDLINK;
+            #endif
+
+            #ifdef BS_DEFCOMMANDLINK
+              createStructureUsesStyle |= createStructure -> style & BS_DEFCOMMANDLINK;
+            #endif
+
+            #ifdef BS_DEFPUSHBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_DEFPUSHBUTTON;
+            #endif
+
+            #ifdef BS_DEFSPLITBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_DEFSPLITBUTTON;
+            #endif
+
+            #ifdef BS_GROUPBOX
+              createStructureUsesStyle |= createStructure -> style & BS_GROUPBOX;
+            #endif
+
+            #ifdef BS_ICON
+              createStructureUsesStyle |= createStructure -> style & BS_ICON;
+            #endif
+
+            #ifdef BS_FLAT
+              createStructureUsesStyle |= createStructure -> style & BS_FLAT;
+            #endif
+
+            #ifdef BS_LEFT
+              createStructureUsesStyle |= createStructure -> style & BS_LEFT;
+            #endif
+
+            #ifdef BS_LEFTTEXT
+              createStructureUsesStyle |= createStructure -> style & BS_LEFTTEXT;
+            #endif
+
+            #ifdef BS_MULTILINE
+              createStructureUsesStyle |= createStructure -> style & BS_MULTILINE;
+            #endif
+
+            #ifdef BS_NOTIFY
+              createStructureUsesStyle |= createStructure -> style & BS_NOTIFY;
+            #endif
+
+            #ifdef BS_OWNERDRAW
+              createStructureUsesStyle |= createStructure -> style & BS_OWNERDRAW;
+            #endif
+
+            #ifdef BS_PUSHBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_PUSHBUTTON;
+            #endif
+
+            #ifdef BS_PUSHLIKE
+              createStructureUsesStyle |= createStructure -> style & BS_PUSHLIKE;
+            #endif
+
+            #ifdef BS_RADIOBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_RADIOBUTTON;
+            #endif
+
+            #ifdef BS_RIGHT
+              createStructureUsesStyle |= createStructure -> style & BS_RIGHT;
+            #endif
+
+            #ifdef BS_RIGHTBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_RIGHTBUTTON;
+            #endif
+
+            #ifdef BS_SPLITBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_SPLITBUTTON;
+            #endif
+
+            #ifdef BS_TEXT
+              createStructureUsesStyle |= createStructure -> style & BS_TEXT;
+            #endif
+
+            #ifdef BS_TOP
+              createStructureUsesStyle |= createStructure -> style & BS_TOP;
+            #endif
+
+            #ifdef BS_TYPEMASK
+              createStructureUsesStyle |= createStructure -> style & BS_TYPEMASK;
+            #endif
+
+            #ifdef BS_USERBUTTON
+              createStructureUsesStyle |= createStructure -> style & BS_USERBUTTON;
+            #endif
+
+            #ifdef BS_VCENTER
+              createStructureUsesStyle |= createStructure -> style & BS_VCENTER;
+            #endif
+
+            #ifdef BTNS_AUTOSIZE
+              createStructureUsesStyle |= createStructure -> style & BTNS_AUTOSIZE;
+            #endif
+
+            #ifdef BTNS_BUTTON
+              createStructureUsesStyle |= createStructure -> style & BTNS_BUTTON;
+            #endif
+
+            #ifdef BTNS_CHECK
+              createStructureUsesStyle |= createStructure -> style & BTNS_CHECK;
+            #endif
+
+            #ifdef BTNS_CHECKGROUP
+              createStructureUsesStyle |= createStructure -> style & BTNS_CHECKGROUP;
+            #endif
+
+            #ifdef BTNS_DROPDOWN
+              createStructureUsesStyle |= createStructure -> style & BTNS_DROPDOWN;
+            #endif
+
+            #ifdef BTNS_GROUP
+              createStructureUsesStyle |= createStructure -> style & BTNS_GROUP;
+            #endif
+
+            #ifdef BTNS_NOPREFIX
+              createStructureUsesStyle |= createStructure -> style & BTNS_NOPREFIX;
+            #endif
+
+            #ifdef BTNS_SEP
+              createStructureUsesStyle |= createStructure -> style & BTNS_SEP;
+            #endif
+
+            #ifdef BTNS_SHOWTEXT
+              createStructureUsesStyle |= createStructure -> style & BTNS_SHOWTEXT;
+            #endif
+
+            #ifdef BTNS_WHOLEDROPDOWN
+              createStructureUsesStyle |= createStructure -> style & BTNS_WHOLEDROPDOWN;
+            #endif
+
+            #ifdef TBS_AUTOTICKS
+              createStructureUsesStyle |= createStructure -> style & TBS_AUTOTICKS;
+            #endif
+
+            #ifdef TBS_BOTH
+              createStructureUsesStyle |= createStructure -> style & TBS_BOTH;
+            #endif
+
+            #ifdef TBS_BOTTOM
+              createStructureUsesStyle |= createStructure -> style & TBS_BOTTOM;
+            #endif
+
+            #ifdef TBS_DOWNISLEFT
+              createStructureUsesStyle |= createStructure -> style & TBS_DOWNISLEFT;
+            #endif
+
+            #ifdef TBS_ENABLESELRANGE
+              createStructureUsesStyle |= createStructure -> style & TBS_ENABLESELRANGE;
+            #endif
+
+            #ifdef TBS_FIXEDLENGTH
+              createStructureUsesStyle |= createStructure -> style & TBS_FIXEDLENGTH;
+            #endif
+
+            #ifdef TBS_HORZ
+              createStructureUsesStyle |= createStructure -> style & TBS_HORZ;
+            #endif
+
+            #ifdef TBS_LEFT
+              createStructureUsesStyle |= createStructure -> style & TBS_LEFT;
+            #endif
+
+            #ifdef TBS_NOTHUMB
+              createStructureUsesStyle |= createStructure -> style & TBS_NOTHUMB;
+            #endif
+
+            #ifdef TBS_NOTICKS
+              createStructureUsesStyle |= createStructure -> style & TBS_NOTICKS;
+            #endif
+
+            #ifdef TBS_NOTIFYBEFOREMOVE
+              createStructureUsesStyle |= createStructure -> style & TBS_NOTIFYBEFOREMOVE;
+            #endif
+
+            #ifdef TBS_REVERSED
+              createStructureUsesStyle |= createStructure -> style & TBS_REVERSED;
+            #endif
+
+            #ifdef TBS_RIGHT
+              createStructureUsesStyle |= createStructure -> style & TBS_RIGHT;
+            #endif
+
+            #ifdef TBS_TOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & TBS_TOOLTIPS;
+            #endif
+
+            #ifdef TBS_TOP
+              createStructureUsesStyle |= createStructure -> style & TBS_TOP;
+            #endif
+
+            #ifdef TBS_TRANSPARENTBKGND
+              createStructureUsesStyle |= createStructure -> style & TBS_TRANSPARENTBKGND;
+            #endif
+
+            #ifdef TBS_VERT
+              createStructureUsesStyle |= createStructure -> style & TBS_VERT;
+            #endif
+
+            #ifdef CBES_EX_CASESENSITIVE
+              createStructureUsesStyle |= createStructure -> style & CBES_EX_CASESENSITIVE;
+            #endif
+
+            #ifdef CBES_EX_NOEDITIMAGE
+              createStructureUsesStyle |= createStructure -> style & CBES_EX_NOEDITIMAGE;
+            #endif
+
+            #ifdef CBES_EX_NOEDITIMAGEINDENT
+              createStructureUsesStyle |= createStructure -> style & CBES_EX_NOEDITIMAGEINDENT;
+            #endif
+
+            #ifdef CBES_EX_NOSIZELIMIT
+              createStructureUsesStyle |= createStructure -> style & CBES_EX_NOSIZELIMIT;
+            #endif
+
+            #ifdef CBES_EX_PATHWORDBREAKPROC
+              createStructureUsesStyle |= createStructure -> style & CBES_EX_PATHWORDBREAKPROC;
+            #endif
+
+            #ifdef CBES_EX_TEXTENDELLIPSIS
+              createStructureUsesStyle |= createStructure -> style & CBES_EX_TEXTENDELLIPSIS;
+            #endif
+
+            #ifdef CBS_AUTOHSCROLL
+              createStructureUsesStyle |= createStructure -> style & CBS_AUTOHSCROLL;
+            #endif
+
+            #ifdef CBS_DISABLENOSCROLL
+              createStructureUsesStyle |= createStructure -> style & CBS_DISABLENOSCROLL;
+            #endif
+
+            #ifdef CBS_DROPDOWN
+              createStructureUsesStyle |= createStructure -> style & CBS_DROPDOWN;
+            #endif
+
+            #ifdef CBS_DROPDOWNLIST
+              createStructureUsesStyle |= createStructure -> style & CBS_DROPDOWNLIST;
+            #endif
+
+            #ifdef CBS_HASSTRINGS
+              createStructureUsesStyle |= createStructure -> style & CBS_HASSTRINGS;
+            #endif
+
+            #ifdef CBS_LOWERCASE
+              createStructureUsesStyle |= createStructure -> style & CBS_LOWERCASE;
+            #endif
+
+            #ifdef CBS_NOINTEGRALHEIGHT
+              createStructureUsesStyle |= createStructure -> style & CBS_NOINTEGRALHEIGHT;
+            #endif
+
+            #ifdef CBS_OEMCONVERT
+              createStructureUsesStyle |= createStructure -> style & CBS_OEMCONVERT;
+            #endif
+
+            #ifdef CBS_OWNERDRAWFIXED
+              createStructureUsesStyle |= createStructure -> style & CBS_OWNERDRAWFIXED;
+            #endif
+
+            #ifdef CBS_OWNERDRAWVARIABLE
+              createStructureUsesStyle |= createStructure -> style & CBS_OWNERDRAWVARIABLE;
+            #endif
+
+            #ifdef CBS_SIMPLE
+              createStructureUsesStyle |= createStructure -> style & CBS_SIMPLE;
+            #endif
+
+            #ifdef CBS_SORT
+              createStructureUsesStyle |= createStructure -> style & CBS_SORT;
+            #endif
+
+            #ifdef CBS_UPPERCASE
+              createStructureUsesStyle |= createStructure -> style & CBS_UPPERCASE;
+            #endif
+
+            #ifdef DTS_APPCANPARSE
+              createStructureUsesStyle |= createStructure -> style & DTS_APPCANPARSE;
+            #endif
+
+            #ifdef DTS_LONGDATEFORMAT
+              createStructureUsesStyle |= createStructure -> style & DTS_LONGDATEFORMAT;
+            #endif
+
+            #ifdef DTS_RIGHTALIGN
+              createStructureUsesStyle |= createStructure -> style & DTS_RIGHTALIGN;
+            #endif
+
+            #ifdef DTS_SHORTDATECENTURYFORMAT
+              createStructureUsesStyle |= createStructure -> style & DTS_SHORTDATECENTURYFORMAT;
+            #endif
+
+            #ifdef DTS_SHORTDATEFORMAT
+              createStructureUsesStyle |= createStructure -> style & DTS_SHORTDATEFORMAT;
+            #endif
+
+            #ifdef DTS_SHOWNONE
+              createStructureUsesStyle |= createStructure -> style & DTS_SHOWNONE;
+            #endif
+
+            #ifdef DTS_TIMEFORMAT
+              createStructureUsesStyle |= createStructure -> style & DTS_TIMEFORMAT;
+            #endif
+
+            #ifdef DTS_UPDOWN
+              createStructureUsesStyle |= createStructure -> style & DTS_UPDOWN;
+            #endif
+
+            #ifdef ES_AUTOHSCROLL
+              createStructureUsesStyle |= createStructure -> style & ES_AUTOHSCROLL;
+            #endif
+
+            #ifdef ES_AUTOVSCROLL
+              createStructureUsesStyle |= createStructure -> style & ES_AUTOVSCROLL;
+            #endif
+
+            #ifdef ES_CENTER
+              createStructureUsesStyle |= createStructure -> style & ES_CENTER;
+            #endif
+
+            #ifdef ES_DISABLENOSCROLL
+              createStructureUsesStyle |= createStructure -> style & ES_DISABLENOSCROLL;
+            #endif
+
+            #ifdef ES_EX_NOCALLOLEINIT
+              createStructureUsesStyle |= createStructure -> style & ES_EX_NOCALLOLEINIT;
+            #endif
+
+            #ifdef ES_LEFT
+              createStructureUsesStyle |= createStructure -> style & ES_LEFT;
+            #endif
+
+            #ifdef ES_LOWERCASE
+              createStructureUsesStyle |= createStructure -> style & ES_LOWERCASE;
+            #endif
+
+            #ifdef ES_MULTILINE
+              createStructureUsesStyle |= createStructure -> style & ES_MULTILINE;
+            #endif
+
+            #ifdef ES_NOHIDESEL
+              createStructureUsesStyle |= createStructure -> style & ES_NOHIDESEL;
+            #endif
+
+            #ifdef ES_NOIME
+              createStructureUsesStyle |= createStructure -> style & ES_NOIME;
+            #endif
+
+            #ifdef ES_NOOLEDRAGDROP
+              createStructureUsesStyle |= createStructure -> style & ES_NOOLEDRAGDROP;
+            #endif
+
+            #ifdef ES_NUMBER
+              createStructureUsesStyle |= createStructure -> style & ES_NUMBER;
+            #endif
+
+            #ifdef ES_OEMCONVERT
+              createStructureUsesStyle |= createStructure -> style & ES_OEMCONVERT;
+            #endif
+
+            #ifdef ES_PASSWORD
+              createStructureUsesStyle |= createStructure -> style & ES_PASSWORD;
+            #endif
+
+            #ifdef ES_READONLY
+              createStructureUsesStyle |= createStructure -> style & ES_READONLY;
+            #endif
+
+            #ifdef ES_RIGHT
+              createStructureUsesStyle |= createStructure -> style & ES_RIGHT;
+            #endif
+
+            #ifdef ES_SAVESEL
+              createStructureUsesStyle |= createStructure -> style & ES_SAVESEL;
+            #endif
+
+            #ifdef ES_SELECTIONBAR
+              createStructureUsesStyle |= createStructure -> style & ES_SELECTIONBAR;
+            #endif
+
+            #ifdef ES_SELFIME
+              createStructureUsesStyle |= createStructure -> style & ES_SELFIME;
+            #endif
+
+            #ifdef ES_SUNKEN
+              createStructureUsesStyle |= createStructure -> style & ES_SUNKEN;
+            #endif
+
+            #ifdef ES_UPPERCASE
+              createStructureUsesStyle |= createStructure -> style & ES_UPPERCASE;
+            #endif
+
+            #ifdef ES_VERTICAL
+              createStructureUsesStyle |= createStructure -> style & ES_VERTICAL;
+            #endif
+
+            #ifdef ES_WANTRETURN
+              createStructureUsesStyle |= createStructure -> style & ES_WANTRETURN;
+            #endif
+
+            #ifdef HDS_BUTTONS
+              createStructureUsesStyle |= createStructure -> style & HDS_BUTTONS;
+            #endif
+
+            #ifdef HDS_CHECKBOXES
+              createStructureUsesStyle |= createStructure -> style & HDS_CHECKBOXES;
+            #endif
+
+            #ifdef HDS_DRAGDROP
+              createStructureUsesStyle |= createStructure -> style & HDS_DRAGDROP;
+            #endif
+
+            #ifdef HDS_FILTERBAR
+              createStructureUsesStyle |= createStructure -> style & HDS_FILTERBAR;
+            #endif
+
+            #ifdef HDS_FLAT
+              createStructureUsesStyle |= createStructure -> style & HDS_FLAT;
+            #endif
+
+            #ifdef HDS_FULLDRAG
+              createStructureUsesStyle |= createStructure -> style & HDS_FULLDRAG;
+            #endif
+
+            #ifdef HDS_HIDDEN
+              createStructureUsesStyle |= createStructure -> style & HDS_HIDDEN;
+            #endif
+
+            #ifdef HDS_HORZ
+              createStructureUsesStyle |= createStructure -> style & HDS_HORZ;
+            #endif
+
+            #ifdef HDS_HOTTRACK
+              createStructureUsesStyle |= createStructure -> style & HDS_HOTTRACK;
+            #endif
+
+            #ifdef HDS_NOSIZING
+              createStructureUsesStyle |= createStructure -> style & HDS_NOSIZING;
+            #endif
+
+            #ifdef HDS_OVERFLOW
+              createStructureUsesStyle |= createStructure -> style & HDS_OVERFLOW;
+            #endif
+
+            #ifdef LBS_COMBOBOX
+              createStructureUsesStyle |= createStructure -> style & LBS_COMBOBOX;
+            #endif
+
+            #ifdef LBS_DISABLENOSCROLL
+              createStructureUsesStyle |= createStructure -> style & LBS_DISABLENOSCROLL;
+            #endif
+
+            #ifdef LBS_EXTENDEDSEL
+              createStructureUsesStyle |= createStructure -> style & LBS_EXTENDEDSEL;
+            #endif
+
+            #ifdef LBS_HASSTRINGS
+              createStructureUsesStyle |= createStructure -> style & LBS_HASSTRINGS;
+            #endif
+
+            #ifdef LBS_MULTICOLUMN
+              createStructureUsesStyle |= createStructure -> style & LBS_MULTICOLUMN;
+            #endif
+
+            #ifdef LBS_MULTIPLESEL
+              createStructureUsesStyle |= createStructure -> style & LBS_MULTIPLESEL;
+            #endif
+
+            #ifdef LBS_NODATA
+              createStructureUsesStyle |= createStructure -> style & LBS_NODATA;
+            #endif
+
+            #ifdef LBS_NOINTEGRALHEIGHT
+              createStructureUsesStyle |= createStructure -> style & LBS_NOINTEGRALHEIGHT;
+            #endif
+
+            #ifdef LBS_NOREDRAW
+              createStructureUsesStyle |= createStructure -> style & LBS_NOREDRAW;
+            #endif
+
+            #ifdef LBS_NOSEL
+              createStructureUsesStyle |= createStructure -> style & LBS_NOSEL;
+            #endif
+
+            #ifdef LBS_NOTIFY
+              createStructureUsesStyle |= createStructure -> style & LBS_NOTIFY;
+            #endif
+
+            #ifdef LBS_OWNERDRAWFIXED
+              createStructureUsesStyle |= createStructure -> style & LBS_OWNERDRAWFIXED;
+            #endif
+
+            #ifdef LBS_OWNERDRAWVARIABLE
+              createStructureUsesStyle |= createStructure -> style & LBS_OWNERDRAWVARIABLE;
+            #endif
+
+            #ifdef LBS_SORT
+              createStructureUsesStyle |= createStructure -> style & LBS_SORT;
+            #endif
+
+            #ifdef LBS_STANDARD
+              createStructureUsesStyle |= createStructure -> style & LBS_STANDARD;
+            #endif
+
+            #ifdef LBS_USETABSTOPS
+              createStructureUsesStyle |= createStructure -> style & LBS_USETABSTOPS;
+            #endif
+
+            #ifdef LBS_WANTKEYBOARDINPUT
+              createStructureUsesStyle |= createStructure -> style & LBS_WANTKEYBOARDINPUT;
+            #endif
+
+            #ifdef LVS_ALIGNLEFT
+              createStructureUsesStyle |= createStructure -> style & LVS_ALIGNLEFT;
+            #endif
+
+            #ifdef LVS_ALIGNMASK
+              createStructureUsesStyle |= createStructure -> style & LVS_ALIGNMASK;
+            #endif
+
+            #ifdef LVS_ALIGNTOP
+              createStructureUsesStyle |= createStructure -> style & LVS_ALIGNTOP;
+            #endif
+
+            #ifdef LVS_AUTOARRANGE
+              createStructureUsesStyle |= createStructure -> style & LVS_AUTOARRANGE;
+            #endif
+
+            #ifdef LVS_EDITLABELS
+              createStructureUsesStyle |= createStructure -> style & LVS_EDITLABELS;
+            #endif
+
+            #ifdef LVS_ICON
+              createStructureUsesStyle |= createStructure -> style & LVS_ICON;
+            #endif
+
+            #ifdef LVS_LIST
+              createStructureUsesStyle |= createStructure -> style & LVS_LIST;
+            #endif
+
+            #ifdef LVS_NOCOLUMNHEADER
+              createStructureUsesStyle |= createStructure -> style & LVS_NOCOLUMNHEADER;
+            #endif
+
+            #ifdef LVS_NOLABELWRAP
+              createStructureUsesStyle |= createStructure -> style & LVS_NOLABELWRAP;
+            #endif
+
+            #ifdef LVS_NOSCROLL
+              createStructureUsesStyle |= createStructure -> style & LVS_NOSCROLL;
+            #endif
+
+            #ifdef LVS_NOSORTHEADER
+              createStructureUsesStyle |= createStructure -> style & LVS_NOSORTHEADER;
+            #endif
+
+            #ifdef LVS_OWNERDATA
+              createStructureUsesStyle |= createStructure -> style & LVS_OWNERDATA;
+            #endif
+
+            #ifdef LVS_OWNERDRAWFIXED
+              createStructureUsesStyle |= createStructure -> style & LVS_OWNERDRAWFIXED;
+            #endif
+
+            #ifdef LVS_REPORT
+              createStructureUsesStyle |= createStructure -> style & LVS_REPORT;
+            #endif
+
+            #ifdef LVS_SHAREIMAGELISTS
+              createStructureUsesStyle |= createStructure -> style & LVS_SHAREIMAGELISTS;
+            #endif
+
+            #ifdef LVS_SHOWSELALWAYS
+              createStructureUsesStyle |= createStructure -> style & LVS_SHOWSELALWAYS;
+            #endif
+
+            #ifdef LVS_SINGLESEL
+              createStructureUsesStyle |= createStructure -> style & LVS_SINGLESEL;
+            #endif
+
+            #ifdef LVS_SMALLICON
+              createStructureUsesStyle |= createStructure -> style & LVS_SMALLICON;
+            #endif
+
+            #ifdef LVS_SORTASCENDING
+              createStructureUsesStyle |= createStructure -> style & LVS_SORTASCENDING;
+            #endif
+
+            #ifdef LVS_SORTDESCENDING
+              createStructureUsesStyle |= createStructure -> style & LVS_SORTDESCENDING;
+            #endif
+
+            #ifdef LVS_TYPEMASK
+              createStructureUsesStyle |= createStructure -> style & LVS_TYPEMASK;
+            #endif
+
+            #ifdef LVS_TYPESTYLEMASK
+              createStructureUsesStyle |= createStructure -> style & LVS_TYPESTYLEMASK;
+            #endif
+
+            #ifdef LWS_IGNORERETURN
+              createStructureUsesStyle |= createStructure -> style & LWS_IGNORERETURN;
+            #endif
+
+            #ifdef LWS_NOPREFIX
+              createStructureUsesStyle |= createStructure -> style & LWS_NOPREFIX;
+            #endif
+
+            #ifdef LWS_RIGHT
+              createStructureUsesStyle |= createStructure -> style & LWS_RIGHT;
+            #endif
+
+            #ifdef LWS_TRANSPARENT
+              createStructureUsesStyle |= createStructure -> style & LWS_TRANSPARENT;
+            #endif
+
+            #ifdef LWS_USECUSTOMTEXT
+              createStructureUsesStyle |= createStructure -> style & LWS_USECUSTOMTEXT;
+            #endif
+
+            #ifdef LWS_USEVISUALSTYLE
+              createStructureUsesStyle |= createStructure -> style & LWS_USEVISUALSTYLE;
+            #endif
+
+            #ifdef MCS_DAYSTATE
+              createStructureUsesStyle |= createStructure -> style & MCS_DAYSTATE;
+            #endif
+
+            #ifdef MCS_MULTISELECT
+              createStructureUsesStyle |= createStructure -> style & MCS_MULTISELECT;
+            #endif
+
+            #ifdef MCS_NOSELCHANGEONNAV
+              createStructureUsesStyle |= createStructure -> style & MCS_NOSELCHANGEONNAV;
+            #endif
+
+            #ifdef MCS_NOTODAY
+              createStructureUsesStyle |= createStructure -> style & MCS_NOTODAY;
+            #endif
+
+            #ifdef MCS_NOTODAYCIRCLE
+              createStructureUsesStyle |= createStructure -> style & MCS_NOTODAYCIRCLE;
+            #endif
+
+            #ifdef MCS_NOTRAILINGDATES
+              createStructureUsesStyle |= createStructure -> style & MCS_NOTRAILINGDATES;
+            #endif
+
+            #ifdef MCS_SHORTDAYSOFWEEK
+              createStructureUsesStyle |= createStructure -> style & MCS_SHORTDAYSOFWEEK;
+            #endif
+
+            #ifdef MCS_WEEKNUMBERS
+              createStructureUsesStyle |= createStructure -> style & MCS_WEEKNUMBERS;
+            #endif
+
+            #ifdef PBS_MARQUEE
+              createStructureUsesStyle |= createStructure -> style & PBS_MARQUEE;
+            #endif
+
+            #ifdef PBS_SMOOTH
+              createStructureUsesStyle |= createStructure -> style & PBS_SMOOTH;
+            #endif
+
+            #ifdef PBS_SMOOTHREVERSE
+              createStructureUsesStyle |= createStructure -> style & PBS_SMOOTHREVERSE;
+            #endif
+
+            #ifdef PBS_VERTICAL
+              createStructureUsesStyle |= createStructure -> style & PBS_VERTICAL;
+            #endif
+
+            #ifdef PGS_AUTOSCROLL
+              createStructureUsesStyle |= createStructure -> style & PGS_AUTOSCROLL;
+            #endif
+
+            #ifdef PGS_DRAGNDROP
+              createStructureUsesStyle |= createStructure -> style & PGS_DRAGNDROP;
+            #endif
+
+            #ifdef PGS_HORZ
+              createStructureUsesStyle |= createStructure -> style & PGS_HORZ;
+            #endif
+
+            #ifdef PGS_VERT
+              createStructureUsesStyle |= createStructure -> style & PGS_VERT;
+            #endif
+
+            #ifdef RBS_AUTOSIZE
+              createStructureUsesStyle |= createStructure -> style & RBS_AUTOSIZE;
+            #endif
+
+            #ifdef RBS_BANDBORDERS
+              createStructureUsesStyle |= createStructure -> style & RBS_BANDBORDERS;
+            #endif
+
+            #ifdef RBS_DBLCLKTOGGLE
+              createStructureUsesStyle |= createStructure -> style & RBS_DBLCLKTOGGLE;
+            #endif
+
+            #ifdef RBS_FIXEDORDER
+              createStructureUsesStyle |= createStructure -> style & RBS_FIXEDORDER;
+            #endif
+
+            #ifdef RBS_REGISTERDROP
+              createStructureUsesStyle |= createStructure -> style & RBS_REGISTERDROP;
+            #endif
+
+            #ifdef RBS_TOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & RBS_TOOLTIPS;
+            #endif
+
+            #ifdef RBS_VARHEIGHT
+              createStructureUsesStyle |= createStructure -> style & RBS_VARHEIGHT;
+            #endif
+
+            #ifdef RBS_VERTICALGRIPPER
+              createStructureUsesStyle |= createStructure -> style & RBS_VERTICALGRIPPER;
+            #endif
+
+            #ifdef SBARS_SIZEGRIP
+              createStructureUsesStyle |= createStructure -> style & SBARS_SIZEGRIP;
+            #endif
+
+            #ifdef SBARS_TOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & SBARS_TOOLTIPS;
+            #endif
+
+            #ifdef SBT_TOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & SBT_TOOLTIPS;
+            #endif
+
+            #ifdef SBS_BOTTOMALIGN
+              createStructureUsesStyle |= createStructure -> style & SBS_BOTTOMALIGN;
+            #endif
+
+            #ifdef SBS_HORZ
+              createStructureUsesStyle |= createStructure -> style & SBS_HORZ;
+            #endif
+
+            #ifdef SBS_LEFTALIGN
+              createStructureUsesStyle |= createStructure -> style & SBS_LEFTALIGN;
+            #endif
+
+            #ifdef SBS_RIGHTALIGN
+              createStructureUsesStyle |= createStructure -> style & SBS_RIGHTALIGN;
+            #endif
+
+            #ifdef SBS_SIZEBOX
+              createStructureUsesStyle |= createStructure -> style & SBS_SIZEBOX;
+            #endif
+
+            #ifdef SBS_SIZEBOXBOTTOMRIGHTALIGN
+              createStructureUsesStyle |= createStructure -> style & SBS_SIZEBOXBOTTOMRIGHTALIGN;
+            #endif
+
+            #ifdef SBS_SIZEBOXTOPLEFTALIGN
+              createStructureUsesStyle |= createStructure -> style & SBS_SIZEBOXTOPLEFTALIGN;
+            #endif
+
+            #ifdef SBS_SIZEGRIP
+              createStructureUsesStyle |= createStructure -> style & SBS_SIZEGRIP;
+            #endif
+
+            #ifdef SBS_TOPALIGN
+              createStructureUsesStyle |= createStructure -> style & SBS_TOPALIGN;
+            #endif
+
+            #ifdef SBS_VERT
+              createStructureUsesStyle |= createStructure -> style & SBS_VERT;
+            #endif
+
+            #ifdef SS_BITMAP
+              createStructureUsesStyle |= createStructure -> style & SS_BITMAP;
+            #endif
+
+            #ifdef SS_BLACKFRAME
+              createStructureUsesStyle |= createStructure -> style & SS_BLACKFRAME;
+            #endif
+
+            #ifdef SS_BLACKRECT
+              createStructureUsesStyle |= createStructure -> style & SS_BLACKRECT;
+            #endif
+
+            #ifdef SS_CENTER
+              createStructureUsesStyle |= createStructure -> style & SS_CENTER;
+            #endif
+
+            #ifdef SS_CENTERIMAGE
+              createStructureUsesStyle |= createStructure -> style & SS_CENTERIMAGE;
+            #endif
+
+            #ifdef SS_EDITCONTROL
+              createStructureUsesStyle |= createStructure -> style & SS_EDITCONTROL;
+            #endif
+
+            #ifdef SS_ENDELLIPSIS
+              createStructureUsesStyle |= createStructure -> style & SS_ENDELLIPSIS;
+            #endif
+
+            #ifdef SS_ENHMETAFILE
+              createStructureUsesStyle |= createStructure -> style & SS_ENHMETAFILE;
+            #endif
+
+            #ifdef SS_ETCHEDFRAME
+              createStructureUsesStyle |= createStructure -> style & SS_ETCHEDFRAME;
+            #endif
+
+            #ifdef SS_ETCHEDHORZ
+              createStructureUsesStyle |= createStructure -> style & SS_ETCHEDHORZ;
+            #endif
+
+            #ifdef SS_ETCHEDVERT
+              createStructureUsesStyle |= createStructure -> style & SS_ETCHEDVERT;
+            #endif
+
+            #ifdef SS_GRAYFRAME
+              createStructureUsesStyle |= createStructure -> style & SS_GRAYFRAME;
+            #endif
+
+            #ifdef SS_GRAYRECT
+              createStructureUsesStyle |= createStructure -> style & SS_GRAYRECT;
+            #endif
+
+            #ifdef SS_ICON
+              createStructureUsesStyle |= createStructure -> style & SS_ICON;
+            #endif
+
+            #ifdef SS_LEFT
+              createStructureUsesStyle |= createStructure -> style & SS_LEFT;
+            #endif
+
+            #ifdef SS_LEFTNOWORDWRAP
+              createStructureUsesStyle |= createStructure -> style & SS_LEFTNOWORDWRAP;
+            #endif
+
+            #ifdef SS_NOPREFIX
+              createStructureUsesStyle |= createStructure -> style & SS_NOPREFIX;
+            #endif
+
+            #ifdef SS_NOTIFY
+              createStructureUsesStyle |= createStructure -> style & SS_NOTIFY;
+            #endif
+
+            #ifdef SS_OWNERDRAW
+              createStructureUsesStyle |= createStructure -> style & SS_OWNERDRAW;
+            #endif
+
+            #ifdef SS_PATHELLIPSIS
+              createStructureUsesStyle |= createStructure -> style & SS_PATHELLIPSIS;
+            #endif
+
+            #ifdef SS_REALSIZECONTROL
+              createStructureUsesStyle |= createStructure -> style & SS_REALSIZECONTROL;
+            #endif
+
+            #ifdef SS_REALSIZEIMAGE
+              createStructureUsesStyle |= createStructure -> style & SS_REALSIZEIMAGE;
+            #endif
+
+            #ifdef SS_RIGHT
+              createStructureUsesStyle |= createStructure -> style & SS_RIGHT;
+            #endif
+
+            #ifdef SS_RIGHTJUST
+              createStructureUsesStyle |= createStructure -> style & SS_RIGHTJUST;
+            #endif
+
+            #ifdef SS_SIMPLE
+              createStructureUsesStyle |= createStructure -> style & SS_SIMPLE;
+            #endif
+
+            #ifdef SS_SUNKEN
+              createStructureUsesStyle |= createStructure -> style & SS_SUNKEN;
+            #endif
+
+            #ifdef SS_TYPEMASK
+              createStructureUsesStyle |= createStructure -> style & SS_TYPEMASK;
+            #endif
+
+            #ifdef SS_WHITEFRAME
+              createStructureUsesStyle |= createStructure -> style & SS_WHITEFRAME;
+            #endif
+
+            #ifdef SS_WHITERECT
+              createStructureUsesStyle |= createStructure -> style & SS_WHITERECT;
+            #endif
+
+            #ifdef SS_WORDELLIPSIS
+              createStructureUsesStyle |= createStructure -> style & SS_WORDELLIPSIS;
+            #endif
+
+            #ifdef TBSTYLE_ALTDRAG
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_ALTDRAG;
+            #endif
+
+            #ifdef TBSTYLE_AUTOSIZE
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_AUTOSIZE;
+            #endif
+
+            #ifdef TBSTYLE_BUTTON
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_BUTTON;
+            #endif
+
+            #ifdef TBSTYLE_CHECK
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_CHECK;
+            #endif
+
+            #ifdef TBSTYLE_CHECKGROUP
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_CHECKGROUP;
+            #endif
+
+            #ifdef TBSTYLE_CUSTOMERASE
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_CUSTOMERASE;
+            #endif
+
+            #ifdef TBSTYLE_DROPDOWN
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_DROPDOWN;
+            #endif
+
+            #ifdef TBSTYLE_FLAT
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_FLAT;
+            #endif
+
+            #ifdef TBSTYLE_GROUP
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_GROUP;
+            #endif
+
+            #ifdef TBSTYLE_LIST
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_LIST;
+            #endif
+
+            #ifdef TBSTYLE_NOPREFIX
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_NOPREFIX;
+            #endif
+
+            #ifdef TBSTYLE_REGISTERDROP
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_REGISTERDROP;
+            #endif
+
+            #ifdef TBSTYLE_SEP
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_SEP;
+            #endif
+
+            #ifdef TBSTYLE_TOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_TOOLTIPS;
+            #endif
+
+            #ifdef TBSTYLE_TRANSPARENT
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_TRANSPARENT;
+            #endif
+
+            #ifdef TBSTYLE_WRAPABLE
+              createStructureUsesStyle |= createStructure -> style & TBSTYLE_WRAPABLE;
+            #endif
+
+            #ifdef TCS_BOTTOM
+              createStructureUsesStyle |= createStructure -> style & TCS_BOTTOM;
+            #endif
+
+            #ifdef TCS_BUTTONS
+              createStructureUsesStyle |= createStructure -> style & TCS_BUTTONS;
+            #endif
+
+            #ifdef TCS_FIXEDWIDTH
+              createStructureUsesStyle |= createStructure -> style & TCS_FIXEDWIDTH;
+            #endif
+
+            #ifdef TCS_FLATBUTTONS
+              createStructureUsesStyle |= createStructure -> style & TCS_FLATBUTTONS;
+            #endif
+
+            #ifdef TCS_FOCUSNEVER
+              createStructureUsesStyle |= createStructure -> style & TCS_FOCUSNEVER;
+            #endif
+
+            #ifdef TCS_FOCUSONBUTTONDOWN
+              createStructureUsesStyle |= createStructure -> style & TCS_FOCUSONBUTTONDOWN;
+            #endif
+
+            #ifdef TCS_FORCEICONLEFT
+              createStructureUsesStyle |= createStructure -> style & TCS_FORCEICONLEFT;
+            #endif
+
+            #ifdef TCS_FORCELABELLEFT
+              createStructureUsesStyle |= createStructure -> style & TCS_FORCELABELLEFT;
+            #endif
+
+            #ifdef TCS_HOTTRACK
+              createStructureUsesStyle |= createStructure -> style & TCS_HOTTRACK;
+            #endif
+
+            #ifdef TCS_MULTILINE
+              createStructureUsesStyle |= createStructure -> style & TCS_MULTILINE;
+            #endif
+
+            #ifdef TCS_MULTISELECT
+              createStructureUsesStyle |= createStructure -> style & TCS_MULTISELECT;
+            #endif
+
+            #ifdef TCS_OWNERDRAWFIXED
+              createStructureUsesStyle |= createStructure -> style & TCS_OWNERDRAWFIXED;
+            #endif
+
+            #ifdef TCS_RAGGEDRIGHT
+              createStructureUsesStyle |= createStructure -> style & TCS_RAGGEDRIGHT;
+            #endif
+
+            #ifdef TCS_RIGHT
+              createStructureUsesStyle |= createStructure -> style & TCS_RIGHT;
+            #endif
+
+            #ifdef TCS_RIGHTJUSTIFY
+              createStructureUsesStyle |= createStructure -> style & TCS_RIGHTJUSTIFY;
+            #endif
+
+            #ifdef TCS_SCROLLOPPOSITE
+              createStructureUsesStyle |= createStructure -> style & TCS_SCROLLOPPOSITE;
+            #endif
+
+            #ifdef TCS_SINGLELINE
+              createStructureUsesStyle |= createStructure -> style & TCS_SINGLELINE;
+            #endif
+
+            #ifdef TCS_TABS
+              createStructureUsesStyle |= createStructure -> style & TCS_TABS;
+            #endif
+
+            #ifdef TCS_TOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & TCS_TOOLTIPS;
+            #endif
+
+            #ifdef TCS_VERTICAL
+              createStructureUsesStyle |= createStructure -> style & TCS_VERTICAL;
+            #endif
+
+            #ifdef TTS_ALWAYSTIP
+              createStructureUsesStyle |= createStructure -> style & TTS_ALWAYSTIP;
+            #endif
+
+            #ifdef TTS_BALLOON
+              createStructureUsesStyle |= createStructure -> style & TTS_BALLOON;
+            #endif
+
+            #ifdef TTS_CLOSE
+              createStructureUsesStyle |= createStructure -> style & TTS_CLOSE;
+            #endif
+
+            #ifdef TTS_NOANIMATE
+              createStructureUsesStyle |= createStructure -> style & TTS_NOANIMATE;
+            #endif
+
+            #ifdef TTS_NOFADE
+              createStructureUsesStyle |= createStructure -> style & TTS_NOFADE;
+            #endif
+
+            #ifdef TTS_NOPREFIX
+              createStructureUsesStyle |= createStructure -> style & TTS_NOPREFIX;
+            #endif
+
+            #ifdef TTS_USEVISUALSTYLE
+              createStructureUsesStyle |= createStructure -> style & TTS_USEVISUALSTYLE;
+            #endif
+
+            #ifdef TVS_CHECKBOXES
+              createStructureUsesStyle |= createStructure -> style & TVS_CHECKBOXES;
+            #endif
+
+            #ifdef TVS_DISABLEDRAGDROP
+              createStructureUsesStyle |= createStructure -> style & TVS_DISABLEDRAGDROP;
+            #endif
+
+            #ifdef TVS_EDITLABELS
+              createStructureUsesStyle |= createStructure -> style & TVS_EDITLABELS;
+            #endif
+
+            #ifdef TVS_FULLROWSELECT
+              createStructureUsesStyle |= createStructure -> style & TVS_FULLROWSELECT;
+            #endif
+
+            #ifdef TVS_HASBUTTONS
+              createStructureUsesStyle |= createStructure -> style & TVS_HASBUTTONS;
+            #endif
+
+            #ifdef TVS_HASLINES
+              createStructureUsesStyle |= createStructure -> style & TVS_HASLINES;
+            #endif
+
+            #ifdef TVS_INFOTIP
+              createStructureUsesStyle |= createStructure -> style & TVS_INFOTIP;
+            #endif
+
+            #ifdef TVS_LINESATROOT
+              createStructureUsesStyle |= createStructure -> style & TVS_LINESATROOT;
+            #endif
+
+            #ifdef TVS_NOHSCROLL
+              createStructureUsesStyle |= createStructure -> style & TVS_NOHSCROLL;
+            #endif
+
+            #ifdef TVS_NONEVENHEIGHT
+              createStructureUsesStyle |= createStructure -> style & TVS_NONEVENHEIGHT;
+            #endif
+
+            #ifdef TVS_NOSCROLL
+              createStructureUsesStyle |= createStructure -> style & TVS_NOSCROLL;
+            #endif
+
+            #ifdef TVS_NOTOOLTIPS
+              createStructureUsesStyle |= createStructure -> style & TVS_NOTOOLTIPS;
+            #endif
+
+            #ifdef TVS_RTLREADING
+              createStructureUsesStyle |= createStructure -> style & TVS_RTLREADING;
+            #endif
+
+            #ifdef TVS_SHOWSELALWAYS
+              createStructureUsesStyle |= createStructure -> style & TVS_SHOWSELALWAYS;
+            #endif
+
+            #ifdef TVS_SINGLEEXPAND
+              createStructureUsesStyle |= createStructure -> style & TVS_SINGLEEXPAND;
+            #endif
+
+            #ifdef TVS_TRACKSELECT
+              createStructureUsesStyle |= createStructure -> style & TVS_TRACKSELECT;
+            #endif
+
+            #ifdef UDS_ALIGNLEFT
+              createStructureUsesStyle |= createStructure -> style & UDS_ALIGNLEFT;
+            #endif
+
+            #ifdef UDS_ALIGNRIGHT
+              createStructureUsesStyle |= createStructure -> style & UDS_ALIGNRIGHT;
+            #endif
+
+            #ifdef UDS_ARROWKEYS
+              createStructureUsesStyle |= createStructure -> style & UDS_ARROWKEYS;
+            #endif
+
+            #ifdef UDS_AUTOBUDDY
+              createStructureUsesStyle |= createStructure -> style & UDS_AUTOBUDDY;
+            #endif
+
+            #ifdef UDS_HORZ
+              createStructureUsesStyle |= createStructure -> style & UDS_HORZ;
+            #endif
+
+            #ifdef UDS_HOTTRACK
+              createStructureUsesStyle |= createStructure -> style & UDS_HOTTRACK;
+            #endif
+
+            #ifdef UDS_NOTHOUSANDS
+              createStructureUsesStyle |= createStructure -> style & UDS_NOTHOUSANDS;
+            #endif
+
+            #ifdef UDS_SETBUDDYINT
+              createStructureUsesStyle |= createStructure -> style & UDS_SETBUDDYINT;
+            #endif
+
+            #ifdef UDS_WRAP
+              createStructureUsesStyle |= createStructure -> style & UDS_WRAP;
+            #endif
+
+            createStructureClassName          = createStructureClassID == windowHandleClassID and 0x00u != windowHandleClassID and (0x0000u == HIWORD(createStructureClassID) and LOWORD(createStructureClassID) < 0xC000u) ? MAKEINTATOM(createStructureClassID) : reinterpret_cast<LPCTSTR>(createStructure -> lpszClass);
+            messageTranslationMultilineFormat = true;
+
+            if (log::output(log::format('[', static_cast<unused>(parameter), ", ", createStructure, " {" "\r\n" "  " "className    : ")))
+            if (log::output(
+              log::compare("BUTTON",         createStructureClassName) ? "\"BUTTON\""         "," "\r\n"  :
+              log::compare("COMBOBOX",       createStructureClassName) ? "\"COMBOBOX\""       "," "\r\n"  :
+              log::compare("EDIT",           createStructureClassName) ? "\"EDIT\""           "," "\r\n"  :
+              log::compare("LISTBOX",        createStructureClassName) ? "\"LISTBOX\""        "," "\r\n"  :
+              log::compare("MDICLIENT",      createStructureClassName) ? "\"MDICLIENT\""      "," "\r\n"  :
+              log::compare("RichEdit",       createStructureClassName) ? "\"RichEdit\""       "," "\r\n"  :
+              log::compare("RICHEDIT_CLASS", createStructureClassName) ? "\"RICHEDIT_CLASS\"" "," "\r\n"  :
+              log::compare("SCROLLBAR",      createStructureClassName) ? "\"SCROLLBAR\""      "," "\r\n"  :
+              log::compare("STATIC",         createStructureClassName) ? "\"STATIC\""         "," "\r\n"  :
+              #ifdef ANIMATE_CLASS
+                log::compare(ANIMATE_CLASS, createStructureClassName) ? log::format("`ANIMATE_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef DATETIMEPICK_CLASS
+                log::compare(DATETIMEPICK_CLASS, createStructureClassName) ? log::format("`DATETIMEPICK_CLASS`\"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef HOTKEY_CLASS
+                log::compare(HOTKEY_CLASS, createStructureClassName) ? log::format("`HOTKEY_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef LINK_CLASS
+                log::compare(LINK_CLASS, createStructureClassName) ? log::format("`LINK_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef MONTHCAL_CLASS
+                log::compare(MONTHCAL_CLASS, createStructureClassName) ? log::format("`MONTHCAL_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef MSFTEDIT_CLASS
+                log::compare(MSFTEDIT_CLASS, createStructureClassName) ? log::format("`MSFTEDIT_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef NATIVEFNTCTL_CLASS
+                log::compare(NATIVEFNTCTL_CLASS, createStructureClassName) ? log::format("`NATIVEFNTCTL_CLASS`\"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef PROGRESS_CLASS
+                log::compare(PROGRESS_CLASS, createStructureClassName) ? log::format("`PROGRESS_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef REBARCLASSNAME
+                log::compare(REBARCLASSNAME, createStructureClassName) ? log::format("`REBARCLASSNAME` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef STANDARD_CLASSES
+                log::compare(STANDARD_CLASSES, createStructureClassName) ? log::format("`STANDARD_CLASSES` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef STATUSCLASSNAME
+                log::compare(STATUSCLASSNAME, createStructureClassName) ? log::format("`STATUSCLASSNAME` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef TOOLBARCLASSNAME
+                log::compare(TOOLBARCLASSNAME, createStructureClassName) ? log::format("`TOOLBARCLASSNAME` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef TOOLTIPS_CLASS
+                log::compare(TOOLTIPS_CLASS, createStructureClassName) ? log::format("`TOOLTIPS_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef TRACKBAR_CLASS
+                log::compare(TRACKBAR_CLASS, createStructureClassName) ? log::format("`TRACKBAR_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef UPDOWN_CLASS
+                log::compare(UPDOWN_CLASS, createStructureClassName) ? log::format("`UPDOWN_CLASS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_BUTTON
+                log::compare(WC_BUTTON, createStructureClassName) ? log::format("`WC_BUTTON` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_COMBOBOX
+                log::compare(WC_COMBOBOX, createStructureClassName) ? log::format("`WC_COMBOBOX` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_COMBOBOXEX
+                log::compare(WC_COMBOBOXEX, createStructureClassName) ? log::format("`WC_COMBOBOXEX` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_EDIT
+                log::compare(WC_EDIT, createStructureClassName) ? log::format("`WC_EDIT` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_HEADER
+                log::compare(WC_HEADER, createStructureClassName) ? log::format("`WC_HEADER` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_IPADDRESS
+                log::compare(WC_IPADDRESS, createStructureClassName) ? log::format("`WC_IPADDRESS` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_LINK
+                log::compare(WC_LINK, createStructureClassName) ? log::format("`WC_LINK` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_LISTBOX
+                log::compare(WC_LISTBOX, createStructureClassName) ? log::format("`WC_LISTBOX` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_LISTVIEW
+                log::compare(WC_LISTVIEW, createStructureClassName) ? log::format("`WC_LISTVIEW` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_NATIVEFONTCTL
+                log::compare(WC_NATIVEFONTCTL, createStructureClassName) ? log::format("`WC_NATIVEFONTCTL` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_PAGESCROLLER
+                log::compare(WC_PAGESCROLLER, createStructureClassName) ? log::format("`WC_PAGESCROLLER` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_SCROLLBAR
+                log::compare(WC_SCROLLBAR, createStructureClassName) ? log::format("`WC_SCROLLBAR` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_STATIC
+                log::compare(WC_STATIC, createStructureClassName) ? log::format("`WC_STATIC` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_TABCONTROL
+                log::compare(WC_TABCONTROL, createStructureClassName) ? log::format("`WC_TABCONTROL` \"", createStructureClassName, "\"" "," "\r\n") :
+              #endif
+              #ifdef WC_TREEVIEW
+                log::compare(WC_TREEVIEW, createStructureClassName) ? log::format("`WC_TREEVIEW` \"", createStructureClassName, "\"" "," "\r\n") :
               #endif
 
-              createStructureUsesStyle |= (createStructure -> style & BS_3STATE) or (createStructure -> style & BS_AUTO3STATE) or (createStructure -> style & BS_AUTOCHECKBOX) or (createStructure -> style & BS_AUTORADIOBUTTON) or (createStructure -> style & BS_BITMAP) or (createStructure -> style & BS_BOTTOM) or (createStructure -> style & BS_CENTER) or (createStructure -> style & BS_CHECKBOX) or (createStructure -> style & BS_COMMANDLINK) or (createStructure -> style & BS_DEFCOMMANDLINK) or (createStructure -> style & BS_DEFPUSHBUTTON) or (createStructure -> style & BS_DEFSPLITBUTTON) or (createStructure -> style & BS_GROUPBOX) or (createStructure -> style & BS_ICON) or (createStructure -> style & BS_FLAT) or (createStructure -> style & BS_LEFT) or (createStructure -> style & BS_LEFTTEXT) or (createStructure -> style & BS_MULTILINE) or (createStructure -> style & BS_NOTIFY) or (createStructure -> style & BS_OWNERDRAW) or (createStructure -> style & BS_PUSHBUTTON) or (createStructure -> style & BS_PUSHLIKE) or (createStructure -> style & BS_RADIOBUTTON) or (createStructure -> style & BS_RIGHT) or (createStructure -> style & BS_RIGHTBUTTON) or (createStructure -> style & BS_SPLITBUTTON) or (createStructure -> style & BS_TEXT) or (createStructure -> style & BS_TOP) or (createStructure -> style & BS_TYPEMASK) or (createStructure -> style & BS_USERBUTTON) or (createStructure -> style & BS_VCENTER);
-              createStructureUsesStyle |= (createStructure -> style & CBS_AUTOHSCROLL) or (createStructure -> style & CBS_DISABLENOSCROLL) or (createStructure -> style & CBS_DROPDOWN) or (createStructure -> style & CBS_DROPDOWNLIST) or (createStructure -> style & CBS_HASSTRINGS) or (createStructure -> style & CBS_LOWERCASE) or (createStructure -> style & CBS_NOINTEGRALHEIGHT) or (createStructure -> style & CBS_OEMCONVERT) or (createStructure -> style & CBS_OWNERDRAWFIXED) or (createStructure -> style & CBS_OWNERDRAWVARIABLE) or (createStructure -> style & CBS_SIMPLE) or (createStructure -> style & CBS_SORT) or (createStructure -> style & CBS_UPPERCASE);
-              createStructureUsesStyle |= (createStructure -> style & ES_AUTOHSCROLL) or (createStructure -> style & ES_AUTOVSCROLL) or (createStructure -> style & ES_CENTER) or (createStructure -> style & ES_DISABLENOSCROLL) or (createStructure -> style & ES_EX_NOCALLOLEINIT) or (createStructure -> style & ES_LEFT) or (createStructure -> style & ES_LOWERCASE) or (createStructure -> style & ES_MULTILINE) or (createStructure -> style & ES_NOHIDESEL) or (createStructure -> style & ES_NOIME) or (createStructure -> style & ES_NOOLEDRAGDROP) or (createStructure -> style & ES_NUMBER) or (createStructure -> style & ES_OEMCONVERT) or (createStructure -> style & ES_PASSWORD) or (createStructure -> style & ES_READONLY) or (createStructure -> style & ES_RIGHT) or (createStructure -> style & ES_SAVESEL) or (createStructure -> style & ES_SELECTIONBAR) or (createStructure -> style & ES_SELFIME) or (createStructure -> style & ES_SUNKEN) or (createStructure -> style & ES_UPPERCASE) or (createStructure -> style & ES_VERTICAL) or (createStructure -> style & ES_WANTRETURN);
-              createStructureUsesStyle |= (createStructure -> style & LBS_COMBOBOX) or (createStructure -> style & LBS_DISABLENOSCROLL) or (createStructure -> style & LBS_EXTENDEDSEL) or (createStructure -> style & LBS_HASSTRINGS) or (createStructure -> style & LBS_MULTICOLUMN) or (createStructure -> style & LBS_MULTIPLESEL) or (createStructure -> style & LBS_NODATA) or (createStructure -> style & LBS_NOINTEGRALHEIGHT) or (createStructure -> style & LBS_NOREDRAW) or (createStructure -> style & LBS_NOSEL) or (createStructure -> style & LBS_NOTIFY) or (createStructure -> style & LBS_OWNERDRAWFIXED) or (createStructure -> style & LBS_OWNERDRAWVARIABLE) or (createStructure -> style & LBS_SORT) or (createStructure -> style & LBS_STANDARD) or (createStructure -> style & LBS_USETABSTOPS) or (createStructure -> style & LBS_WANTKEYBOARDINPUT);
-              createStructureUsesStyle |= (createStructure -> style & SBS_BOTTOMALIGN) or (createStructure -> style & SBS_HORZ) or (createStructure -> style & SBS_LEFTALIGN) or (createStructure -> style & SBS_RIGHTALIGN) or (createStructure -> style & SBS_SIZEBOX) or (createStructure -> style & SBS_SIZEBOXBOTTOMRIGHTALIGN) or (createStructure -> style & SBS_SIZEBOXTOPLEFTALIGN) or (createStructure -> style & SBS_SIZEGRIP) or (createStructure -> style & SBS_TOPALIGN) or (createStructure -> style & SBS_VERT);
-              createStructureUsesStyle |= (createStructure -> style & SS_BITMAP) or (createStructure -> style & SS_BLACKFRAME) or (createStructure -> style & SS_BLACKRECT) or (createStructure -> style & SS_CENTER) or (createStructure -> style & SS_CENTERIMAGE) or (createStructure -> style & SS_EDITCONTROL) or (createStructure -> style & SS_ENDELLIPSIS) or (createStructure -> style & SS_ENHMETAFILE) or (createStructure -> style & SS_ETCHEDFRAME) or (createStructure -> style & SS_ETCHEDHORZ) or (createStructure -> style & SS_ETCHEDVERT) or (createStructure -> style & SS_GRAYFRAME) or (createStructure -> style & SS_GRAYRECT) or (createStructure -> style & SS_ICON) or (createStructure -> style & SS_LEFT) or (createStructure -> style & SS_LEFTNOWORDWRAP) or (createStructure -> style & SS_NOPREFIX) or (createStructure -> style & SS_NOTIFY) or (createStructure -> style & SS_OWNERDRAW) or (createStructure -> style & SS_PATHELLIPSIS) or (createStructure -> style & SS_REALSIZECONTROL) or (createStructure -> style & SS_REALSIZEIMAGE) or (createStructure -> style & SS_RIGHT) or (createStructure -> style & SS_RIGHTJUST) or (createStructure -> style & SS_SIMPLE) or (createStructure -> style & SS_SUNKEN) or (createStructure -> style & SS_TYPEMASK) or (createStructure -> style & SS_WHITEFRAME) or (createStructure -> style & SS_WHITERECT) or (createStructure -> style & SS_WORDELLIPSIS);
-              createStructureUsesStyle |= (createStructure -> style & WS_BORDER) or (createStructure -> style & WS_CAPTION) or (createStructure -> style & WS_CHILD) or (createStructure -> style & WS_CHILDWINDOW) or (createStructure -> style & WS_CLIPCHILDREN) or (createStructure -> style & WS_CLIPSIBLINGS) or (createStructure -> style & WS_DISABLED) or (createStructure -> style & WS_DLGFRAME) or (createStructure -> style & WS_GROUP) or (createStructure -> style & WS_HSCROLL) or (createStructure -> style & WS_ICONIC) or (createStructure -> style & WS_MAXIMIZE) or (createStructure -> style & WS_MAXIMIZEBOX) or (createStructure -> style & WS_MINIMIZE) or (createStructure -> style & WS_MINIMIZEBOX) or (createStructure -> style & WS_OVERLAPPED) or (createStructure -> style & WS_OVERLAPPEDWINDOW) or (createStructure -> style & WS_POPUP) or (createStructure -> style & WS_POPUPWINDOW) or (createStructure -> style & WS_SIZEBOX) or (createStructure -> style & WS_SYSMENU) or (createStructure -> style & WS_TABSTOP) or (createStructure -> style & WS_THICKFRAME) or (createStructure -> style & WS_TILED) or (createStructure -> style & WS_TILEDWINDOW) or (createStructure -> style & WS_VISIBLE) or (createStructure -> style & WS_VSCROLL);
-
-              messageTranslationMultilineFormat = true;
-
-              if (log::output(log::format("[", static_cast<unused>(parameter), ", {" "\r\n" "  " "className    : ")))
-              if (log::output(
-                BUTTON         == createStructure -> lpszClass ? "`BUTTON`"         "," "\r\n" :
-                COMBOBOX       == createStructure -> lpszClass ? "`COMBOBOX`"       "," "\r\n" :
-                EDIT           == createStructure -> lpszClass ? "`EDIT`"           "," "\r\n" :
-                LISTBOX        == createStructure -> lpszClass ? "`LISTBOX`"        "," "\r\n" :
-                MDICLIENT      == createStructure -> lpszClass ? "`MDICLIENT`"      "," "\r\n" :
-                RichEdit       == createStructure -> lpszClass ? "`RichEdit`"       "," "\r\n" :
-                // RICHEDIT_CLASS == createStructure -> lpszClass ? "`RICHEDIT_CLASS`" "," "\r\n" :
-                SCROLLBAR      == createStructure -> lpszClass ? "`SCROLLBAR`"      "," "\r\n" :
-                STATIC         == createStructure -> lpszClass ? "`STATIC`"         "," "\r\n" :
-                log::format(static_cast<unused>(parameter), "," "\r\n")
-              )) if (log::output(log::format(
-                "  " "extendedStyle: ", static_cast<undefined>(createStructure -> style), createStructureUsesExtendedStyle ? " `" : "",
-                  createStructure -> dwExStyle & WS_EX_ACCEPTFILES      ? "WS_EX_ACCEPTFILES"         " | " : "",
-                  createStructure -> dwExStyle & WS_EX_APPWINDOW        ? "WS_EX_APPWINDOW"           " | " : "",
-                  createStructure -> dwExStyle & WS_EX_CLIENTEDGE       ? "WS_EX_CLIENTEDGE"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_COMPOSITED       ? "WS_EX_COMPOSITED"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_CONTEXTHELP      ? "WS_EX_CONTEXTHELP"         " | " : "",
-                  createStructure -> dwExStyle & WS_EX_CONTROLPARENT    ? "WS_EX_CONTROLPARENT"       " | " : "",
-                  createStructure -> dwExStyle & WS_EX_DLGMODALFRAME    ? "WS_EX_DLGMODALFRAME"       " | " : "",
-                  createStructure -> dwExStyle & WS_EX_LAYERED          ? "WS_EX_LAYERED"             " | " : "",
-                  createStructure -> dwExStyle & WS_EX_LAYOUTRTL        ? "WS_EX_LAYOUTRTL"           " | " : "",
-                  createStructure -> dwExStyle & WS_EX_LEFT             ? "WS_EX_LEFT"                " | " : "",
-                  createStructure -> dwExStyle & WS_EX_LEFTSCROLLBAR    ? "WS_EX_LEFTSCROLLBAR"       " | " : "",
-                  createStructure -> dwExStyle & WS_EX_LTRREADING       ? "WS_EX_LTRREADING"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_MDICHILD         ? "WS_EX_MDICHILD"            " | " : "",
-                  createStructure -> dwExStyle & WS_EX_NOACTIVATE       ? "WS_EX_NOACTIVATE"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_NOINHERITLAYOUT  ? "WS_EX_NOINHERITLAYOUT"     " | " : "",
-                  createStructure -> dwExStyle & WS_EX_NOPARENTNOTIFY   ? "WS_EX_NOPARENTNOTIFY"      " | " : "",
-                  createStructure -> dwExStyle & WS_EX_OVERLAPPEDWINDOW ? "WS_EX_OVERLAPPEDWINDOW"    " | " : "",
-                  createStructure -> dwExStyle & WS_EX_PALETTEWINDOW    ? "WS_EX_PALETTEWINDOW"       " | " : "",
-                  createStructure -> dwExStyle & WS_EX_RIGHT            ? "WS_EX_RIGHT"               " | " : "",
-                  createStructure -> dwExStyle & WS_EX_RIGHTSCROLLBAR   ? "WS_EX_RIGHTSCROLLBAR"      " | " : "",
-                  createStructure -> dwExStyle & WS_EX_RTLREADING       ? "WS_EX_RTLREADING"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_STATICEDGE       ? "WS_EX_STATICEDGE"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_TOOLWINDOW       ? "WS_EX_TOOLWINDOW"          " | " : "",
-                  createStructure -> dwExStyle & WS_EX_TOPMOST          ? "WS_EX_TOPMOST"             " | " : "",
-                  createStructure -> dwExStyle & WS_EX_TRANSPARENT      ? "WS_EX_TRANSPARENT"         " | " : "",
-                  createStructure -> dwExStyle & WS_EX_WINDOWEDGE       ? "WS_EX_WINDOWEDGE"          " | " : "",
-                  #ifdef WS_EX_NOREDIRECTIONBITMAP
-                    createStructure -> dwExStyle & WS_EX_NOREDIRECTIONBITMAP ? "WS_EX_NOREDIRECTIONBITMAP" " | " : "",
-                  #endif
-                createStructureUsesExtendedStyle ? "...0x00`" : "",     "," "\r\n",
-                "  " "height       : ", (number) createStructure -> cy, "," "\r\n"
-                "  " "instance     : ", createStructure -> hInstance,   "," "\r\n"
-                "  " "menu         : ", createStructure -> hMenu,       "," "\r\n"
-              ))) if (log::output(
-                parameter == static_cast<WPARAM>(reinterpret_cast<uintptr_t>(createStructure -> lpCreateParams))
-                ? log::format("  " "parameters   : ", static_cast<unused>(parameter),    "," "\r\n")
-                : log::format("  " "parameters   : ", createStructure -> lpCreateParams, "," "\r\n")
-              )) messageTranslationMultilineFormat = not log::output(log::format(
-                "  " "parentWindow : ", createStructure -> hwndParent, "," "\r\n"
-                "  " "style        : ", static_cast<undefined>(createStructure -> style), createStructureUsesStyle ? " `" : "",
+              NULL != createStructureClassName
+              ? log::format("\"", createStructureClassName, "\""                    "," "\r\n")
+              : log::format(static_cast<void const*>(createStructure -> lpszClass), "," "\r\n")
+            )) if (log::output(log::format(
+              "  " "extendedStyle: ", static_cast<undefined>(createStructure -> style), createStructureUsesExtendedStyle ? " `" : "",
+                createStructure -> dwExStyle & WS_EX_ACCEPTFILES      ? "WS_EX_ACCEPTFILES"         " | " : "",
+                createStructure -> dwExStyle & WS_EX_APPWINDOW        ? "WS_EX_APPWINDOW"           " | " : "",
+                createStructure -> dwExStyle & WS_EX_CLIENTEDGE       ? "WS_EX_CLIENTEDGE"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_COMPOSITED       ? "WS_EX_COMPOSITED"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_CONTEXTHELP      ? "WS_EX_CONTEXTHELP"         " | " : "",
+                createStructure -> dwExStyle & WS_EX_CONTROLPARENT    ? "WS_EX_CONTROLPARENT"       " | " : "",
+                createStructure -> dwExStyle & WS_EX_DLGMODALFRAME    ? "WS_EX_DLGMODALFRAME"       " | " : "",
+                createStructure -> dwExStyle & WS_EX_LAYERED          ? "WS_EX_LAYERED"             " | " : "",
+                createStructure -> dwExStyle & WS_EX_LAYOUTRTL        ? "WS_EX_LAYOUTRTL"           " | " : "",
+                createStructure -> dwExStyle & WS_EX_LEFT             ? "WS_EX_LEFT"                " | " : "",
+                createStructure -> dwExStyle & WS_EX_LEFTSCROLLBAR    ? "WS_EX_LEFTSCROLLBAR"       " | " : "",
+                createStructure -> dwExStyle & WS_EX_LTRREADING       ? "WS_EX_LTRREADING"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_MDICHILD         ? "WS_EX_MDICHILD"            " | " : "",
+                createStructure -> dwExStyle & WS_EX_NOACTIVATE       ? "WS_EX_NOACTIVATE"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_NOINHERITLAYOUT  ? "WS_EX_NOINHERITLAYOUT"     " | " : "",
+                createStructure -> dwExStyle & WS_EX_NOPARENTNOTIFY   ? "WS_EX_NOPARENTNOTIFY"      " | " : "",
+                createStructure -> dwExStyle & WS_EX_OVERLAPPEDWINDOW ? "WS_EX_OVERLAPPEDWINDOW"    " | " : "",
+                createStructure -> dwExStyle & WS_EX_PALETTEWINDOW    ? "WS_EX_PALETTEWINDOW"       " | " : "",
+                createStructure -> dwExStyle & WS_EX_RIGHT            ? "WS_EX_RIGHT"               " | " : "",
+                createStructure -> dwExStyle & WS_EX_RIGHTSCROLLBAR   ? "WS_EX_RIGHTSCROLLBAR"      " | " : "",
+                createStructure -> dwExStyle & WS_EX_RTLREADING       ? "WS_EX_RTLREADING"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_STATICEDGE       ? "WS_EX_STATICEDGE"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_TOOLWINDOW       ? "WS_EX_TOOLWINDOW"          " | " : "",
+                createStructure -> dwExStyle & WS_EX_TOPMOST          ? "WS_EX_TOPMOST"             " | " : "",
+                createStructure -> dwExStyle & WS_EX_TRANSPARENT      ? "WS_EX_TRANSPARENT"         " | " : "",
+                createStructure -> dwExStyle & WS_EX_WINDOWEDGE       ? "WS_EX_WINDOWEDGE"          " | " : "",
+                #ifdef WS_EX_NOREDIRECTIONBITMAP
+                  createStructure -> dwExStyle & WS_EX_NOREDIRECTIONBITMAP ? "WS_EX_NOREDIRECTIONBITMAP" " | " : "",
+                #endif
+              createStructureUsesExtendedStyle ? "…0x00`" : "",      "," "\r\n",
+              "  " "height       : ", (number) createStructure -> cy, "," "\r\n"
+              "  " "instance     : ", createStructure -> hInstance,   "," "\r\n"
+              "  " "menu         : ", createStructure -> hMenu,       "," "\r\n"
+            ))) if (log::output(
+              parameter == static_cast<WPARAM>(reinterpret_cast<uintptr_t>(createStructure -> lpCreateParams))
+              ? log::format("  " "parameters   : ", static_cast<special>(parameter),   "," "\r\n")
+              : log::format("  " "parameters   : ", createStructure -> lpCreateParams, "," "\r\n")
+            )) if (log::output(log::format(
+              "  " "parentWindow : ", createStructure -> hwndParent, "," "\r\n"
+              "  " "style        : ", static_cast<undefined>(createStructure -> style), createStructureUsesStyle ? " `" : "",
+                createStructure -> style & WS_BORDER           ? "WS_BORDER"           " | " : "",
+                createStructure -> style & WS_CAPTION          ? "WS_CAPTION"          " | " : "",
+                createStructure -> style & WS_CHILD            ? "WS_CHILD"            " | " : "",
+                createStructure -> style & WS_CHILDWINDOW      ? "WS_CHILDWINDOW"      " | " : "",
+                createStructure -> style & WS_CLIPCHILDREN     ? "WS_CLIPCHILDREN"     " | " : "",
+                createStructure -> style & WS_CLIPSIBLINGS     ? "WS_CLIPSIBLINGS"     " | " : "",
+                createStructure -> style & WS_DISABLED         ? "WS_DISABLED"         " | " : "",
+                createStructure -> style & WS_DLGFRAME         ? "WS_DLGFRAME"         " | " : "",
+                createStructure -> style & WS_GROUP            ? "WS_GROUP"            " | " : "",
+                createStructure -> style & WS_HSCROLL          ? "WS_HSCROLL"          " | " : "",
+                createStructure -> style & WS_ICONIC           ? "WS_ICONIC"           " | " : "",
+                createStructure -> style & WS_MAXIMIZE         ? "WS_MAXIMIZE"         " | " : "",
+                createStructure -> style & WS_MAXIMIZEBOX      ? "WS_MAXIMIZEBOX"      " | " : "",
+                createStructure -> style & WS_MINIMIZE         ? "WS_MINIMIZE"         " | " : "",
+                createStructure -> style & WS_MINIMIZEBOX      ? "WS_MINIMIZEBOX"      " | " : "",
+                createStructure -> style & WS_OVERLAPPED       ? "WS_OVERLAPPED"       " | " : "",
+                createStructure -> style & WS_OVERLAPPEDWINDOW ? "WS_OVERLAPPEDWINDOW" " | " : "",
+                createStructure -> style & WS_POPUP            ? "WS_POPUP"            " | " : "",
+                createStructure -> style & WS_POPUPWINDOW      ? "WS_POPUPWINDOW"      " | " : "",
+                createStructure -> style & WS_SIZEBOX          ? "WS_SIZEBOX"          " | " : "",
+                createStructure -> style & WS_SYSMENU          ? "WS_SYSMENU"          " | " : "",
+                createStructure -> style & WS_TABSTOP          ? "WS_TABSTOP"          " | " : "",
+                createStructure -> style & WS_THICKFRAME       ? "WS_THICKFRAME"       " | " : "",
+                createStructure -> style & WS_TILED            ? "WS_TILED"            " | " : "",
+                createStructure -> style & WS_TILEDWINDOW      ? "WS_TILEDWINDOW"      " | " : "",
+                createStructure -> style & WS_VISIBLE          ? "WS_VISIBLE"          " | " : "",
+                createStructure -> style & WS_VSCROLL          ? "WS_VSCROLL"          " | " : "",
+                #ifdef ACS_AUTOPLAY
+                  createStructure -> style & ACS_AUTOPLAY ? "ACS_AUTOPLAY" " | " : "",
+                #endif
+                #ifdef ACS_CENTER
+                  createStructure -> style & ACS_CENTER ? "ACS_CENTER" " | " : "",
+                #endif
+                #ifdef ACS_TIMER
+                  createStructure -> style & ACS_TIMER ? "ACS_TIMER" " | " : "",
+                #endif
+                #ifdef ACS_TRANSPARENT
+                  createStructure -> style & ACS_TRANSPARENT ? "ACS_TRANSPARENT" " | " : "",
+                #endif
+                #ifdef BS_3STATE
                   createStructure -> style & BS_3STATE ? "BS_3STATE" " | " : "",
+                #endif
+                #ifdef BS_AUTO3STATE
                   createStructure -> style & BS_AUTO3STATE ? "BS_AUTO3STATE" " | " : "",
+                #endif
+                #ifdef BS_AUTOCHECKBOX
                   createStructure -> style & BS_AUTOCHECKBOX ? "BS_AUTOCHECKBOX" " | " : "",
+                #endif
+                #ifdef BS_AUTORADIOBUTTON
                   createStructure -> style & BS_AUTORADIOBUTTON ? "BS_AUTORADIOBUTTON" " | " : "",
+                #endif
+                #ifdef BS_BITMAP
                   createStructure -> style & BS_BITMAP ? "BS_BITMAP" " | " : "",
+                #endif
+                #ifdef BS_BOTTOM
                   createStructure -> style & BS_BOTTOM ? "BS_BOTTOM" " | " : "",
+                #endif
+                #ifdef BS_CENTER
                   createStructure -> style & BS_CENTER ? "BS_CENTER" " | " : "",
+                #endif
+                #ifdef BS_CHECKBOX
                   createStructure -> style & BS_CHECKBOX ? "BS_CHECKBOX" " | " : "",
+                #endif
+                #ifdef BS_COMMANDLINK
                   createStructure -> style & BS_COMMANDLINK ? "BS_COMMANDLINK" " | " : "",
+                #endif
+                #ifdef BS_DEFCOMMANDLINK
                   createStructure -> style & BS_DEFCOMMANDLINK ? "BS_DEFCOMMANDLINK" " | " : "",
+                #endif
+                #ifdef BS_DEFPUSHBUTTON
                   createStructure -> style & BS_DEFPUSHBUTTON ? "BS_DEFPUSHBUTTON" " | " : "",
+                #endif
+                #ifdef BS_DEFSPLITBUTTON
                   createStructure -> style & BS_DEFSPLITBUTTON ? "BS_DEFSPLITBUTTON" " | " : "",
+                #endif
+                #ifdef BS_GROUPBOX
                   createStructure -> style & BS_GROUPBOX ? "BS_GROUPBOX" " | " : "",
+                #endif
+                #ifdef BS_ICON
                   createStructure -> style & BS_ICON ? "BS_ICON" " | " : "",
+                #endif
+                #ifdef BS_FLAT
                   createStructure -> style & BS_FLAT ? "BS_FLAT" " | " : "",
+                #endif
+                #ifdef BS_LEFT
                   createStructure -> style & BS_LEFT ? "BS_LEFT" " | " : "",
+                #endif
+                #ifdef BS_LEFTTEXT
                   createStructure -> style & BS_LEFTTEXT ? "BS_LEFTTEXT" " | " : "",
+                #endif
+                #ifdef BS_MULTILINE
                   createStructure -> style & BS_MULTILINE ? "BS_MULTILINE" " | " : "",
+                #endif
+                #ifdef BS_NOTIFY
                   createStructure -> style & BS_NOTIFY ? "BS_NOTIFY" " | " : "",
+                #endif
+                #ifdef BS_OWNERDRAW
                   createStructure -> style & BS_OWNERDRAW ? "BS_OWNERDRAW" " | " : "",
+                #endif
+                #ifdef BS_PUSHBUTTON
                   createStructure -> style & BS_PUSHBUTTON ? "BS_PUSHBUTTON" " | " : "",
+                #endif
+                #ifdef BS_PUSHLIKE
                   createStructure -> style & BS_PUSHLIKE ? "BS_PUSHLIKE" " | " : "",
+                #endif
+                #ifdef BS_RADIOBUTTON
                   createStructure -> style & BS_RADIOBUTTON ? "BS_RADIOBUTTON" " | " : "",
+                #endif
+                #ifdef BS_RIGHT
                   createStructure -> style & BS_RIGHT ? "BS_RIGHT" " | " : "",
+                #endif
+                #ifdef BS_RIGHTBUTTON
                   createStructure -> style & BS_RIGHTBUTTON ? "BS_RIGHTBUTTON" " | " : "",
+                #endif
+                #ifdef BS_SPLITBUTTON
                   createStructure -> style & BS_SPLITBUTTON ? "BS_SPLITBUTTON" " | " : "",
+                #endif
+                #ifdef BS_TEXT
                   createStructure -> style & BS_TEXT ? "BS_TEXT" " | " : "",
+                #endif
+                #ifdef BS_TOP
                   createStructure -> style & BS_TOP ? "BS_TOP" " | " : "",
+                #endif
+                #ifdef BS_TYPEMASK
                   createStructure -> style & BS_TYPEMASK ? "BS_TYPEMASK" " | " : "",
+                #endif
+                #ifdef BS_USERBUTTON
                   createStructure -> style & BS_USERBUTTON ? "BS_USERBUTTON" " | " : "",
+                #endif
+                #ifdef BS_VCENTER
                   createStructure -> style & BS_VCENTER ? "BS_VCENTER" " | " : "",
-
-                  createStructure -> style & CBS_AUTOHSCROLL ?  "CBS_AUTOHSCROLL" " | " : "",
-                  createStructure -> style & CBS_DISABLENOSCROLL ?  "CBS_DISABLENOSCROLL" " | " : "",
-                  createStructure -> style & CBS_DROPDOWN ?  "CBS_DROPDOWN" " | " : "",
-                  createStructure -> style & CBS_DROPDOWNLIST ?  "CBS_DROPDOWNLIST" " | " : "",
-                  createStructure -> style & CBS_HASSTRINGS ?  "CBS_HASSTRINGS" " | " : "",
-                  createStructure -> style & CBS_LOWERCASE ?  "CBS_LOWERCASE" " | " : "",
-                  createStructure -> style & CBS_NOINTEGRALHEIGHT ?  "CBS_NOINTEGRALHEIGHT" " | " : "",
-                  createStructure -> style & CBS_OEMCONVERT ?  "CBS_OEMCONVERT" " | " : "",
-                  createStructure -> style & CBS_OWNERDRAWFIXED ?  "CBS_OWNERDRAWFIXED" " | " : "",
-                  createStructure -> style & CBS_OWNERDRAWVARIABLE ?  "CBS_OWNERDRAWVARIABLE" " | " : "",
-                  createStructure -> style & CBS_SIMPLE ?  "CBS_SIMPLE" " | " : "",
-                  createStructure -> style & CBS_SORT ?  "CBS_SORT" " | " : "",
-                  createStructure -> style & CBS_UPPERCASE ?  "CBS_UPPERCASE" " | " : "",
-
+                #endif
+                #ifdef BTNS_AUTOSIZE
+                  createStructure -> style & BTNS_AUTOSIZE ? "BTNS_AUTOSIZE" " | " : "",
+                #endif
+                #ifdef BTNS_BUTTON
+                  createStructure -> style & BTNS_BUTTON ? "BTNS_BUTTON" " | " : "",
+                #endif
+                #ifdef BTNS_CHECK
+                  createStructure -> style & BTNS_CHECK ? "BTNS_CHECK" " | " : "",
+                #endif
+                #ifdef BTNS_CHECKGROUP
+                  createStructure -> style & BTNS_CHECKGROUP ? "BTNS_CHECKGROUP" " | " : "",
+                #endif
+                #ifdef BTNS_DROPDOWN
+                  createStructure -> style & BTNS_DROPDOWN ? "BTNS_DROPDOWN" " | " : "",
+                #endif
+                #ifdef BTNS_GROUP
+                  createStructure -> style & BTNS_GROUP ? "BTNS_GROUP" " | " : "",
+                #endif
+                #ifdef BTNS_NOPREFIX
+                  createStructure -> style & BTNS_NOPREFIX ? "BTNS_NOPREFIX" " | " : "",
+                #endif
+                #ifdef BTNS_SEP
+                  createStructure -> style & BTNS_SEP ? "BTNS_SEP" " | " : "",
+                #endif
+                #ifdef BTNS_SHOWTEXT
+                  createStructure -> style & BTNS_SHOWTEXT ? "BTNS_SHOWTEXT" " | " : "",
+                #endif
+                #ifdef BTNS_WHOLEDROPDOWN
+                  createStructure -> style & BTNS_WHOLEDROPDOWN ? "BTNS_WHOLEDROPDOWN" " | " : "",
+                #endif
+                #ifdef CBES_EX_CASESENSITIVE
+                  createStructure -> style & CBES_EX_CASESENSITIVE ? "CBES_EX_CASESENSITIVE" " | " : "",
+                #endif
+                #ifdef CBES_EX_NOEDITIMAGE
+                  createStructure -> style & CBES_EX_NOEDITIMAGE ? "CBES_EX_NOEDITIMAGE" " | " : "",
+                #endif
+                #ifdef CBES_EX_NOEDITIMAGEINDENT
+                  createStructure -> style & CBES_EX_NOEDITIMAGEINDENT ? "CBES_EX_NOEDITIMAGEINDENT" " | " : "",
+                #endif
+                #ifdef CBES_EX_NOSIZELIMIT
+                  createStructure -> style & CBES_EX_NOSIZELIMIT ? "CBES_EX_NOSIZELIMIT" " | " : "",
+                #endif
+                #ifdef CBES_EX_PATHWORDBREAKPROC
+                  createStructure -> style & CBES_EX_PATHWORDBREAKPROC ? "CBES_EX_PATHWORDBREAKPROC" " | " : "",
+                #endif
+                #ifdef CBES_EX_TEXTENDELLIPSIS
+                  createStructure -> style & CBES_EX_TEXTENDELLIPSIS ? "CBES_EX_TEXTENDELLIPSIS" " | " : "",
+                #endif
+                #ifdef CBS_AUTOHSCROLL
+                  createStructure -> style & CBS_AUTOHSCROLL ? "CBS_AUTOHSCROLL" " | " : "",
+                #endif
+                #ifdef CBS_DISABLENOSCROLL
+                  createStructure -> style & CBS_DISABLENOSCROLL ? "CBS_DISABLENOSCROLL" " | " : "",
+                #endif
+                #ifdef CBS_DROPDOWN
+                  createStructure -> style & CBS_DROPDOWN ? "CBS_DROPDOWN" " | " : "",
+                #endif
+                #ifdef CBS_DROPDOWNLIST
+                  createStructure -> style & CBS_DROPDOWNLIST ? "CBS_DROPDOWNLIST" " | " : "",
+                #endif
+                #ifdef CBS_HASSTRINGS
+                  createStructure -> style & CBS_HASSTRINGS ? "CBS_HASSTRINGS" " | " : "",
+                #endif
+                #ifdef CBS_LOWERCASE
+                  createStructure -> style & CBS_LOWERCASE ? "CBS_LOWERCASE" " | " : "",
+                #endif
+                #ifdef CBS_NOINTEGRALHEIGHT
+                  createStructure -> style & CBS_NOINTEGRALHEIGHT ? "CBS_NOINTEGRALHEIGHT" " | " : "",
+                #endif
+                #ifdef CBS_OEMCONVERT
+                  createStructure -> style & CBS_OEMCONVERT ? "CBS_OEMCONVERT" " | " : "",
+                #endif
+                #ifdef CBS_OWNERDRAWFIXED
+                  createStructure -> style & CBS_OWNERDRAWFIXED ? "CBS_OWNERDRAWFIXED" " | " : "",
+                #endif
+                #ifdef CBS_OWNERDRAWVARIABLE
+                  createStructure -> style & CBS_OWNERDRAWVARIABLE ? "CBS_OWNERDRAWVARIABLE" " | " : "",
+                #endif
+                #ifdef CBS_SIMPLE
+                  createStructure -> style & CBS_SIMPLE ? "CBS_SIMPLE" " | " : "",
+                #endif
+                #ifdef CBS_SORT
+                  createStructure -> style & CBS_SORT ? "CBS_SORT" " | " : "",
+                #endif
+                #ifdef CBS_UPPERCASE
+                  createStructure -> style & CBS_UPPERCASE ? "CBS_UPPERCASE" " | " : "",
+                #endif
+                #ifdef DTS_APPCANPARSE
+                  createStructure -> style & DTS_APPCANPARSE ? "DTS_APPCANPARSE" " | " : "",
+                #endif
+                #ifdef DTS_LONGDATEFORMAT
+                  createStructure -> style & DTS_LONGDATEFORMAT ? "DTS_LONGDATEFORMAT" " | " : "",
+                #endif
+                #ifdef DTS_RIGHTALIGN
+                  createStructure -> style & DTS_RIGHTALIGN ? "DTS_RIGHTALIGN" " | " : "",
+                #endif
+                #ifdef DTS_SHORTDATECENTURYFORMAT
+                  createStructure -> style & DTS_SHORTDATECENTURYFORMAT ? "DTS_SHORTDATECENTURYFORMAT" " | " : "",
+                #endif
+                #ifdef DTS_SHORTDATEFORMAT
+                  createStructure -> style & DTS_SHORTDATEFORMAT ? "DTS_SHORTDATEFORMAT" " | " : "",
+                #endif
+                #ifdef DTS_SHOWNONE
+                  createStructure -> style & DTS_SHOWNONE ? "DTS_SHOWNONE" " | " : "",
+                #endif
+                #ifdef DTS_TIMEFORMAT
+                  createStructure -> style & DTS_TIMEFORMAT ? "DTS_TIMEFORMAT" " | " : "",
+                #endif
+                #ifdef DTS_UPDOWN
+                  createStructure -> style & DTS_UPDOWN ? "DTS_UPDOWN" " | " : "",
+                #endif
+                #ifdef ES_AUTOHSCROLL
                   createStructure -> style & ES_AUTOHSCROLL ? "ES_AUTOHSCROLL" " | " : "",
+                #endif
+                #ifdef ES_AUTOVSCROLL
                   createStructure -> style & ES_AUTOVSCROLL ? "ES_AUTOVSCROLL" " | " : "",
+                #endif
+                #ifdef ES_CENTER
                   createStructure -> style & ES_CENTER ? "ES_CENTER" " | " : "",
+                #endif
+                #ifdef ES_DISABLENOSCROLL
                   createStructure -> style & ES_DISABLENOSCROLL ? "ES_DISABLENOSCROLL" " | " : "",
+                #endif
+                #ifdef ES_EX_NOCALLOLEINIT
                   createStructure -> style & ES_EX_NOCALLOLEINIT ? "ES_EX_NOCALLOLEINIT" " | " : "",
+                #endif
+                #ifdef ES_LEFT
                   createStructure -> style & ES_LEFT ? "ES_LEFT" " | " : "",
+                #endif
+                #ifdef ES_LOWERCASE
                   createStructure -> style & ES_LOWERCASE ? "ES_LOWERCASE" " | " : "",
+                #endif
+                #ifdef ES_MULTILINE
                   createStructure -> style & ES_MULTILINE ? "ES_MULTILINE" " | " : "",
+                #endif
+                #ifdef ES_NOHIDESEL
                   createStructure -> style & ES_NOHIDESEL ? "ES_NOHIDESEL" " | " : "",
+                #endif
+                #ifdef ES_NOIME
                   createStructure -> style & ES_NOIME ? "ES_NOIME" " | " : "",
+                #endif
+                #ifdef ES_NOOLEDRAGDROP
                   createStructure -> style & ES_NOOLEDRAGDROP ? "ES_NOOLEDRAGDROP" " | " : "",
+                #endif
+                #ifdef ES_NUMBER
                   createStructure -> style & ES_NUMBER ? "ES_NUMBER" " | " : "",
+                #endif
+                #ifdef ES_OEMCONVERT
                   createStructure -> style & ES_OEMCONVERT ? "ES_OEMCONVERT" " | " : "",
+                #endif
+                #ifdef ES_PASSWORD
                   createStructure -> style & ES_PASSWORD ? "ES_PASSWORD" " | " : "",
+                #endif
+                #ifdef ES_READONLY
                   createStructure -> style & ES_READONLY ? "ES_READONLY" " | " : "",
+                #endif
+                #ifdef ES_RIGHT
                   createStructure -> style & ES_RIGHT ? "ES_RIGHT" " | " : "",
+                #endif
+                #ifdef ES_SAVESEL
                   createStructure -> style & ES_SAVESEL ? "ES_SAVESEL" " | " : "",
+                #endif
+                #ifdef ES_SELECTIONBAR
                   createStructure -> style & ES_SELECTIONBAR ? "ES_SELECTIONBAR" " | " : "",
+                #endif
+                #ifdef ES_SELFIME
                   createStructure -> style & ES_SELFIME ? "ES_SELFIME" " | " : "",
+                #endif
+                #ifdef ES_SUNKEN
                   createStructure -> style & ES_SUNKEN ? "ES_SUNKEN" " | " : "",
+                #endif
+                #ifdef ES_UPPERCASE
                   createStructure -> style & ES_UPPERCASE ? "ES_UPPERCASE" " | " : "",
+                #endif
+                #ifdef ES_VERTICAL
                   createStructure -> style & ES_VERTICAL ? "ES_VERTICAL" " | " : "",
+                #endif
+                ""
+            ))) if (log::output(log::format(
+                #ifdef ES_WANTRETURN
                   createStructure -> style & ES_WANTRETURN ? "ES_WANTRETURN" " | " : "",
-
-                  LBS_COMBOBOX
-                  LBS_DISABLENOSCROLL
-                  LBS_EXTENDEDSEL
-                  LBS_HASSTRINGS
-                  LBS_MULTICOLUMN
-                  LBS_MULTIPLESEL
-                  LBS_NODATA
-                  LBS_NOINTEGRALHEIGHT
-                  LBS_NOREDRAW
-                  LBS_NOSEL
-                  LBS_NOTIFY
-                  LBS_OWNERDRAWFIXED
-                  LBS_OWNERDRAWVARIABLE
-                  LBS_SORT
-                  LBS_STANDARD
-                  LBS_USETABSTOPS
-                  LBS_WANTKEYBOARDINPUT
-
-                  SBS_BOTTOMALIGN
-                  SBS_HORZ
-                  SBS_LEFTALIGN
-                  SBS_RIGHTALIGN
-                  SBS_SIZEBOX
-                  SBS_SIZEBOXBOTTOMRIGHTALIGN
-                  SBS_SIZEBOXTOPLEFTALIGN
-                  SBS_SIZEGRIP
-                  SBS_TOPALIGN
-                  SBS_VERT
-
-                  SS_BITMAP
-                  SS_BLACKFRAME
-                  SS_BLACKRECT
-                  SS_CENTER
-                  SS_CENTERIMAGE
-                  SS_EDITCONTROL
-                  SS_ENDELLIPSIS
-                  SS_ENHMETAFILE
-                  SS_ETCHEDFRAME
-                  SS_ETCHEDHORZ
-                  SS_ETCHEDVERT
-                  SS_GRAYFRAME
-                  SS_GRAYRECT
-                  SS_ICON
-                  SS_LEFT
-                  SS_LEFTNOWORDWRAP
-                  SS_NOPREFIX
-                  SS_NOTIFY
-                  SS_OWNERDRAW
-                  SS_PATHELLIPSIS
-                  SS_REALSIZECONTROL
-                  SS_REALSIZEIMAGE
-                  SS_RIGHT
-                  SS_RIGHTJUST
-                  SS_SIMPLE
-                  SS_SUNKEN
-                  SS_TYPEMASK
-                  SS_WHITEFRAME
-                  SS_WHITERECT
-                  SS_WORDELLIPSIS
-
-                  createStructure -> style & WS_BORDER           ? "WS_BORDER"           " | " : "",
-                  createStructure -> style & WS_CAPTION          ? "WS_CAPTION"          " | " : "",
-                  createStructure -> style & WS_CHILD            ? "WS_CHILD"            " | " : "",
-                  createStructure -> style & WS_CHILDWINDOW      ? "WS_CHILDWINDOW"      " | " : "",
-                  createStructure -> style & WS_CLIPCHILDREN     ? "WS_CLIPCHILDREN"     " | " : "",
-                  createStructure -> style & WS_CLIPSIBLINGS     ? "WS_CLIPSIBLINGS"     " | " : "",
-                  createStructure -> style & WS_DISABLED         ? "WS_DISABLED"         " | " : "",
-                  createStructure -> style & WS_DLGFRAME         ? "WS_DLGFRAME"         " | " : "",
-                  createStructure -> style & WS_GROUP            ? "WS_GROUP"            " | " : "",
-                  createStructure -> style & WS_HSCROLL          ? "WS_HSCROLL"          " | " : "",
-                  createStructure -> style & WS_ICONIC           ? "WS_ICONIC"           " | " : "",
-                  createStructure -> style & WS_MAXIMIZE         ? "WS_MAXIMIZE"         " | " : "",
-                  createStructure -> style & WS_MAXIMIZEBOX      ? "WS_MAXIMIZEBOX"      " | " : "",
-                  createStructure -> style & WS_MINIMIZE         ? "WS_MINIMIZE"         " | " : "",
-                  createStructure -> style & WS_MINIMIZEBOX      ? "WS_MINIMIZEBOX"      " | " : "",
-                  createStructure -> style & WS_OVERLAPPED       ? "WS_OVERLAPPED"       " | " : "",
-                  createStructure -> style & WS_OVERLAPPEDWINDOW ? "WS_OVERLAPPEDWINDOW" " | " : "",
-                  createStructure -> style & WS_POPUP            ? "WS_POPUP"            " | " : "",
-                  createStructure -> style & WS_POPUPWINDOW      ? "WS_POPUPWINDOW"      " | " : "",
-                  createStructure -> style & WS_SIZEBOX          ? "WS_SIZEBOX"          " | " : "",
-                  createStructure -> style & WS_SYSMENU          ? "WS_SYSMENU"          " | " : "",
-                  createStructure -> style & WS_TABSTOP          ? "WS_TABSTOP"          " | " : "",
-                  createStructure -> style & WS_THICKFRAME       ? "WS_THICKFRAME"       " | " : "",
-                  createStructure -> style & WS_TILED            ? "WS_TILED"            " | " : "",
-                  createStructure -> style & WS_TILEDWINDOW      ? "WS_TILEDWINDOW"      " | " : "",
-                  createStructure -> style & WS_VISIBLE          ? "WS_VISIBLE"          " | " : "",
-                  createStructure -> style & WS_VSCROLL          ? "WS_VSCROLL"          " | " : "",
-                createStructureUsesStyle ? "...0x00`" : "",                                    "," "\r\n",
-                "  " "text         : ", static_cast<void const*>(createStructure -> lpszName), "," "\r\n"
-                "  " "width        : ", (number) createStructure -> cx,                        "," "\r\n"
-                "  " "x            : ", (number) createStructure -> x,                         "," "\r\n"
-                "  " "y            : ", (number) createStructure -> y,                             "\r\n"
-                ""   "}]"
-              ));
-            } break;
-
-            // case WM_NCCALCSIZE: break; // TODO (Lapys)
-            // case WM_NCHITTEST: break; // TODO (Lapys)
-            // case WM_NCLBUTTONDOWN: break; // TODO (Lapys)
-            // case WM_MOUSELEAVE: break; // TODO (Lapys)
-            // case WM_NCMOUSEMOVE: break; // TODO (Lapys)
-            // case WM_NCPAINT: break; // TODO (Lapys)
-            // case WM_PAINT: break; // TODO (Lapys)
-
-            case WM_QUIT: switch (static_cast<int>(parameter)) {
-              case EXIT_FAILURE: messageTranslationMultilineFormat = not log::output(log::format("[EXIT_FAILURE"                                           ", ", static_cast<unused>(subparameter), "]")); break;
-              case EXIT_SUCCESS: messageTranslationMultilineFormat = not log::output(log::format("[EXIT_SUCCESS"                                           ", ", static_cast<unused>(subparameter), "]")); break;
-              default:           messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<undefined>(static_cast<int>(parameter)), ", ", static_cast<unused>(subparameter), "]")); break;
-            } break;
-
-            // case WM_SETCURSOR: break; // TODO (Lapys)
-            // case WM_SETFOCUS: break; // TODO (Lapys)
-            // case WM_SHOWWINDOW: break; // TODO (Lapys)
-            // case WM_SIZE: break; // TODO (Lapys)
-            // case WM_SYSCOMMAND: break; // TODO (Lapys)
-            // case WM_WINDOWPOSCHANGED: break; // TODO (Lapys)
-            // case WM_WINDOWPOSCHANGING: break; // TODO (Lapys)
-
-            // TODO (Lapys) -> The other messages
-            default: messageTranslationMultilineFormat = not log::output(log::format(
-              "[",
-                static_cast<undefined>(parameter), ", ",
-                static_cast<undefined>(subparameter),
-              "]"
-            )); break;
+                #endif
+                #ifdef HDS_BUTTONS
+                  createStructure -> style & HDS_BUTTONS ? "HDS_BUTTONS" " | " : "",
+                #endif
+                #ifdef HDS_CHECKBOXES
+                  createStructure -> style & HDS_CHECKBOXES ? "HDS_CHECKBOXES" " | " : "",
+                #endif
+                #ifdef HDS_DRAGDROP
+                  createStructure -> style & HDS_DRAGDROP ? "HDS_DRAGDROP" " | " : "",
+                #endif
+                #ifdef HDS_FILTERBAR
+                  createStructure -> style & HDS_FILTERBAR ? "HDS_FILTERBAR" " | " : "",
+                #endif
+                #ifdef HDS_FLAT
+                  createStructure -> style & HDS_FLAT ? "HDS_FLAT" " | " : "",
+                #endif
+                #ifdef HDS_FULLDRAG
+                  createStructure -> style & HDS_FULLDRAG ? "HDS_FULLDRAG" " | " : "",
+                #endif
+                #ifdef HDS_HIDDEN
+                  createStructure -> style & HDS_HIDDEN ? "HDS_HIDDEN" " | " : "",
+                #endif
+                #ifdef HDS_HORZ
+                  createStructure -> style & HDS_HORZ ? "HDS_HORZ" " | " : "",
+                #endif
+                #ifdef HDS_HOTTRACK
+                  createStructure -> style & HDS_HOTTRACK ? "HDS_HOTTRACK" " | " : "",
+                #endif
+                #ifdef HDS_NOSIZING
+                  createStructure -> style & HDS_NOSIZING ? "HDS_NOSIZING" " | " : "",
+                #endif
+                #ifdef HDS_OVERFLOW
+                  createStructure -> style & HDS_OVERFLOW ? "HDS_OVERFLOW" " | " : "",
+                #endif
+                #ifdef LBS_COMBOBOX
+                  createStructure -> style & LBS_COMBOBOX ? "LBS_COMBOBOX" " | " : "",
+                #endif
+                #ifdef LBS_DISABLENOSCROLL
+                  createStructure -> style & LBS_DISABLENOSCROLL ? "LBS_DISABLENOSCROLL" " | " : "",
+                #endif
+                #ifdef LBS_EXTENDEDSEL
+                  createStructure -> style & LBS_EXTENDEDSEL ? "LBS_EXTENDEDSEL" " | " : "",
+                #endif
+                #ifdef LBS_HASSTRINGS
+                  createStructure -> style & LBS_HASSTRINGS ? "LBS_HASSTRINGS" " | " : "",
+                #endif
+                #ifdef LBS_MULTICOLUMN
+                  createStructure -> style & LBS_MULTICOLUMN ? "LBS_MULTICOLUMN" " | " : "",
+                #endif
+                #ifdef LBS_MULTIPLESEL
+                  createStructure -> style & LBS_MULTIPLESEL ? "LBS_MULTIPLESEL" " | " : "",
+                #endif
+                #ifdef LBS_NODATA
+                  createStructure -> style & LBS_NODATA ? "LBS_NODATA" " | " : "",
+                #endif
+                #ifdef LBS_NOINTEGRALHEIGHT
+                  createStructure -> style & LBS_NOINTEGRALHEIGHT ? "LBS_NOINTEGRALHEIGHT" " | " : "",
+                #endif
+                #ifdef LBS_NOREDRAW
+                  createStructure -> style & LBS_NOREDRAW ? "LBS_NOREDRAW" " | " : "",
+                #endif
+                #ifdef LBS_NOSEL
+                  createStructure -> style & LBS_NOSEL ? "LBS_NOSEL" " | " : "",
+                #endif
+                #ifdef LBS_NOTIFY
+                  createStructure -> style & LBS_NOTIFY ? "LBS_NOTIFY" " | " : "",
+                #endif
+                #ifdef LBS_OWNERDRAWFIXED
+                  createStructure -> style & LBS_OWNERDRAWFIXED ? "LBS_OWNERDRAWFIXED" " | " : "",
+                #endif
+                #ifdef LBS_OWNERDRAWVARIABLE
+                  createStructure -> style & LBS_OWNERDRAWVARIABLE ? "LBS_OWNERDRAWVARIABLE" " | " : "",
+                #endif
+                #ifdef LBS_SORT
+                  createStructure -> style & LBS_SORT ? "LBS_SORT" " | " : "",
+                #endif
+                #ifdef LBS_STANDARD
+                  createStructure -> style & LBS_STANDARD ? "LBS_STANDARD" " | " : "",
+                #endif
+                #ifdef LBS_USETABSTOPS
+                  createStructure -> style & LBS_USETABSTOPS ? "LBS_USETABSTOPS" " | " : "",
+                #endif
+                #ifdef LBS_WANTKEYBOARDINPUT
+                  createStructure -> style & LBS_WANTKEYBOARDINPUT ? "LBS_WANTKEYBOARDINPUT" " | " : "",
+                #endif
+                #ifdef LVS_ALIGNLEFT
+                  createStructure -> style & LVS_ALIGNLEFT ? "LVS_ALIGNLEFT" " | " : "",
+                #endif
+                #ifdef LVS_ALIGNMASK
+                  createStructure -> style & LVS_ALIGNMASK ? "LVS_ALIGNMASK" " | " : "",
+                #endif
+                #ifdef LVS_ALIGNTOP
+                  createStructure -> style & LVS_ALIGNTOP ? "LVS_ALIGNTOP" " | " : "",
+                #endif
+                #ifdef LVS_AUTOARRANGE
+                  createStructure -> style & LVS_AUTOARRANGE ? "LVS_AUTOARRANGE" " | " : "",
+                #endif
+                #ifdef LVS_EDITLABELS
+                  createStructure -> style & LVS_EDITLABELS ? "LVS_EDITLABELS" " | " : "",
+                #endif
+                #ifdef LVS_ICON
+                  createStructure -> style & LVS_ICON ? "LVS_ICON" " | " : "",
+                #endif
+                #ifdef LVS_LIST
+                  createStructure -> style & LVS_LIST ? "LVS_LIST" " | " : "",
+                #endif
+                #ifdef LVS_NOCOLUMNHEADER
+                  createStructure -> style & LVS_NOCOLUMNHEADER ? "LVS_NOCOLUMNHEADER" " | " : "",
+                #endif
+                #ifdef LVS_NOLABELWRAP
+                  createStructure -> style & LVS_NOLABELWRAP ? "LVS_NOLABELWRAP" " | " : "",
+                #endif
+                #ifdef LVS_NOSCROLL
+                  createStructure -> style & LVS_NOSCROLL ? "LVS_NOSCROLL" " | " : "",
+                #endif
+                #ifdef LVS_NOSORTHEADER
+                  createStructure -> style & LVS_NOSORTHEADER ? "LVS_NOSORTHEADER" " | " : "",
+                #endif
+                #ifdef LVS_OWNERDATA
+                  createStructure -> style & LVS_OWNERDATA ? "LVS_OWNERDATA" " | " : "",
+                #endif
+                #ifdef LVS_OWNERDRAWFIXED
+                  createStructure -> style & LVS_OWNERDRAWFIXED ? "LVS_OWNERDRAWFIXED" " | " : "",
+                #endif
+                #ifdef LVS_REPORT
+                  createStructure -> style & LVS_REPORT ? "LVS_REPORT" " | " : "",
+                #endif
+                #ifdef LVS_SHAREIMAGELISTS
+                  createStructure -> style & LVS_SHAREIMAGELISTS ? "LVS_SHAREIMAGELISTS" " | " : "",
+                #endif
+                #ifdef LVS_SHOWSELALWAYS
+                  createStructure -> style & LVS_SHOWSELALWAYS ? "LVS_SHOWSELALWAYS" " | " : "",
+                #endif
+                #ifdef LVS_SINGLESEL
+                  createStructure -> style & LVS_SINGLESEL ? "LVS_SINGLESEL" " | " : "",
+                #endif
+                #ifdef LVS_SMALLICON
+                  createStructure -> style & LVS_SMALLICON ? "LVS_SMALLICON" " | " : "",
+                #endif
+                #ifdef LVS_SORTASCENDING
+                  createStructure -> style & LVS_SORTASCENDING ? "LVS_SORTASCENDING" " | " : "",
+                #endif
+                #ifdef LVS_SORTDESCENDING
+                  createStructure -> style & LVS_SORTDESCENDING ? "LVS_SORTDESCENDING" " | " : "",
+                #endif
+                #ifdef LVS_TYPEMASK
+                  createStructure -> style & LVS_TYPEMASK ? "LVS_TYPEMASK" " | " : "",
+                #endif
+                #ifdef LVS_TYPESTYLEMASK
+                  createStructure -> style & LVS_TYPESTYLEMASK ? "LVS_TYPESTYLEMASK" " | " : "",
+                #endif
+                #ifdef LWS_IGNORERETURN
+                  createStructure -> style & LWS_IGNORERETURN ? "LWS_IGNORERETURN" " | " : "",
+                #endif
+                #ifdef LWS_NOPREFIX
+                  createStructure -> style & LWS_NOPREFIX ? "LWS_NOPREFIX" " | " : "",
+                #endif
+                #ifdef LWS_RIGHT
+                  createStructure -> style & LWS_RIGHT ? "LWS_RIGHT" " | " : "",
+                #endif
+                #ifdef LWS_TRANSPARENT
+                  createStructure -> style & LWS_TRANSPARENT ? "LWS_TRANSPARENT" " | " : "",
+                #endif
+                #ifdef LWS_USECUSTOMTEXT
+                  createStructure -> style & LWS_USECUSTOMTEXT ? "LWS_USECUSTOMTEXT" " | " : "",
+                #endif
+                #ifdef LWS_USEVISUALSTYLE
+                  createStructure -> style & LWS_USEVISUALSTYLE ? "LWS_USEVISUALSTYLE" " | " : "",
+                #endif
+                #ifdef MCS_DAYSTATE
+                  createStructure -> style & MCS_DAYSTATE ? "MCS_DAYSTATE" " | " : "",
+                #endif
+                #ifdef MCS_MULTISELECT
+                  createStructure -> style & MCS_MULTISELECT ? "MCS_MULTISELECT" " | " : "",
+                #endif
+                #ifdef MCS_NOSELCHANGEONNAV
+                  createStructure -> style & MCS_NOSELCHANGEONNAV ? "MCS_NOSELCHANGEONNAV" " | " : "",
+                #endif
+                #ifdef MCS_NOTODAY
+                  createStructure -> style & MCS_NOTODAY ? "MCS_NOTODAY" " | " : "",
+                #endif
+                #ifdef MCS_NOTODAYCIRCLE
+                  createStructure -> style & MCS_NOTODAYCIRCLE ? "MCS_NOTODAYCIRCLE" " | " : "",
+                #endif
+                #ifdef MCS_NOTRAILINGDATES
+                  createStructure -> style & MCS_NOTRAILINGDATES ? "MCS_NOTRAILINGDATES" " | " : "",
+                #endif
+                #ifdef MCS_SHORTDAYSOFWEEK
+                  createStructure -> style & MCS_SHORTDAYSOFWEEK ? "MCS_SHORTDAYSOFWEEK" " | " : "",
+                #endif
+                #ifdef MCS_WEEKNUMBERS
+                  createStructure -> style & MCS_WEEKNUMBERS ? "MCS_WEEKNUMBERS" " | " : "",
+                #endif
+                #ifdef PBS_MARQUEE
+                  createStructure -> style & PBS_MARQUEE ? "PBS_MARQUEE" " | " : "",
+                #endif
+                #ifdef PBS_SMOOTH
+                  createStructure -> style & PBS_SMOOTH ? "PBS_SMOOTH" " | " : "",
+                #endif
+                #ifdef PBS_SMOOTHREVERSE
+                  createStructure -> style & PBS_SMOOTHREVERSE ? "PBS_SMOOTHREVERSE" " | " : "",
+                #endif
+                #ifdef PBS_VERTICAL
+                  createStructure -> style & PBS_VERTICAL ? "PBS_VERTICAL" " | " : "",
+                #endif
+                #ifdef PGS_AUTOSCROLL
+                  createStructure -> style & PGS_AUTOSCROLL ? "PGS_AUTOSCROLL" " | " : "",
+                #endif
+                #ifdef PGS_DRAGNDROP
+                  createStructure -> style & PGS_DRAGNDROP ? "PGS_DRAGNDROP" " | " : "",
+                #endif
+                #ifdef PGS_HORZ
+                  createStructure -> style & PGS_HORZ ? "PGS_HORZ" " | " : "",
+                #endif
+                #ifdef PGS_VERT
+                  createStructure -> style & PGS_VERT ? "PGS_VERT" " | " : "",
+                #endif
+                #ifdef RBS_AUTOSIZE
+                  createStructure -> style & RBS_AUTOSIZE ? "RBS_AUTOSIZE" " | " : "",
+                #endif
+                #ifdef RBS_BANDBORDERS
+                  createStructure -> style & RBS_BANDBORDERS ? "RBS_BANDBORDERS" " | " : "",
+                #endif
+                #ifdef RBS_DBLCLKTOGGLE
+                  createStructure -> style & RBS_DBLCLKTOGGLE ? "RBS_DBLCLKTOGGLE" " | " : "",
+                #endif
+                #ifdef RBS_FIXEDORDER
+                  createStructure -> style & RBS_FIXEDORDER ? "RBS_FIXEDORDER" " | " : "",
+                #endif
+                #ifdef RBS_REGISTERDROP
+                  createStructure -> style & RBS_REGISTERDROP ? "RBS_REGISTERDROP" " | " : "",
+                #endif
+                #ifdef RBS_TOOLTIPS
+                  createStructure -> style & RBS_TOOLTIPS ? "RBS_TOOLTIPS" " | " : "",
+                #endif
+                #ifdef RBS_VARHEIGHT
+                  createStructure -> style & RBS_VARHEIGHT ? "RBS_VARHEIGHT" " | " : "",
+                #endif
+                #ifdef RBS_VERTICALGRIPPER
+                  createStructure -> style & RBS_VERTICALGRIPPER ? "RBS_VERTICALGRIPPER" " | " : "",
+                #endif
+                #ifdef SBARS_SIZEGRIP
+                  createStructure -> style & SBARS_SIZEGRIP ? "SBARS_SIZEGRIP" " | " : "",
+                #endif
+                #ifdef SBARS_TOOLTIPS
+                  createStructure -> style & SBARS_TOOLTIPS ? "SBARS_TOOLTIPS" " | " : "",
+                #endif
+                #ifdef SBT_TOOLTIPS
+                  createStructure -> style & SBT_TOOLTIPS ? "SBT_TOOLTIPS" " | " : "",
+                #endif
+                #ifdef SBS_BOTTOMALIGN
+                  createStructure -> style & SBS_BOTTOMALIGN ? "SBS_BOTTOMALIGN" " | " : "",
+                #endif
+                #ifdef SBS_HORZ
+                  createStructure -> style & SBS_HORZ ? "SBS_HORZ" " | " : "",
+                #endif
+                #ifdef SBS_LEFTALIGN
+                  createStructure -> style & SBS_LEFTALIGN ? "SBS_LEFTALIGN" " | " : "",
+                #endif
+                #ifdef SBS_RIGHTALIGN
+                  createStructure -> style & SBS_RIGHTALIGN ? "SBS_RIGHTALIGN" " | " : "",
+                #endif
+                #ifdef SBS_SIZEBOX
+                  createStructure -> style & SBS_SIZEBOX ? "SBS_SIZEBOX" " | " : "",
+                #endif
+                #ifdef SBS_SIZEBOXBOTTOMRIGHTALIGN
+                  createStructure -> style & SBS_SIZEBOXBOTTOMRIGHTALIGN ? "SBS_SIZEBOXBOTTOMRIGHTALIGN" " | " : "",
+                #endif
+                #ifdef SBS_SIZEBOXTOPLEFTALIGN
+                  createStructure -> style & SBS_SIZEBOXTOPLEFTALIGN ? "SBS_SIZEBOXTOPLEFTALIGN" " | " : "",
+                #endif
+                #ifdef SBS_SIZEGRIP
+                  createStructure -> style & SBS_SIZEGRIP ? "SBS_SIZEGRIP" " | " : "",
+                #endif
+                #ifdef SBS_TOPALIGN
+                  createStructure -> style & SBS_TOPALIGN ? "SBS_TOPALIGN" " | " : "",
+                #endif
+                #ifdef SBS_VERT
+                  createStructure -> style & SBS_VERT ? "SBS_VERT" " | " : "",
+                #endif
+                #ifdef SS_BITMAP
+                  createStructure -> style & SS_BITMAP ? "SS_BITMAP" " | " : "",
+                #endif
+                #ifdef SS_BLACKFRAME
+                  createStructure -> style & SS_BLACKFRAME ? "SS_BLACKFRAME" " | " : "",
+                #endif
+                #ifdef SS_BLACKRECT
+                  createStructure -> style & SS_BLACKRECT ? "SS_BLACKRECT" " | " : "",
+                #endif
+                #ifdef SS_CENTER
+                  createStructure -> style & SS_CENTER ? "SS_CENTER" " | " : "",
+                #endif
+                #ifdef SS_CENTERIMAGE
+                  createStructure -> style & SS_CENTERIMAGE ? "SS_CENTERIMAGE" " | " : "",
+                #endif
+                #ifdef SS_EDITCONTROL
+                  createStructure -> style & SS_EDITCONTROL ? "SS_EDITCONTROL" " | " : "",
+                #endif
+                #ifdef SS_ENDELLIPSIS
+                  createStructure -> style & SS_ENDELLIPSIS ? "SS_ENDELLIPSIS" " | " : "",
+                #endif
+                #ifdef SS_ENHMETAFILE
+                  createStructure -> style & SS_ENHMETAFILE ? "SS_ENHMETAFILE" " | " : "",
+                #endif
+                #ifdef SS_ETCHEDFRAME
+                  createStructure -> style & SS_ETCHEDFRAME ? "SS_ETCHEDFRAME" " | " : "",
+                #endif
+                #ifdef SS_ETCHEDHORZ
+                  createStructure -> style & SS_ETCHEDHORZ ? "SS_ETCHEDHORZ" " | " : "",
+                #endif
+                #ifdef SS_ETCHEDVERT
+                  createStructure -> style & SS_ETCHEDVERT ? "SS_ETCHEDVERT" " | " : "",
+                #endif
+                #ifdef SS_GRAYFRAME
+                  createStructure -> style & SS_GRAYFRAME ? "SS_GRAYFRAME" " | " : "",
+                #endif
+                #ifdef SS_GRAYRECT
+                  createStructure -> style & SS_GRAYRECT ? "SS_GRAYRECT" " | " : "",
+                #endif
+                #ifdef SS_ICON
+                  createStructure -> style & SS_ICON ? "SS_ICON" " | " : "",
+                #endif
+                #ifdef SS_LEFT
+                  createStructure -> style & SS_LEFT ? "SS_LEFT" " | " : "",
+                #endif
+                #ifdef SS_LEFTNOWORDWRAP
+                  createStructure -> style & SS_LEFTNOWORDWRAP ? "SS_LEFTNOWORDWRAP" " | " : "",
+                #endif
+                #ifdef SS_NOPREFIX
+                  createStructure -> style & SS_NOPREFIX ? "SS_NOPREFIX" " | " : "",
+                #endif
+                #ifdef SS_NOTIFY
+                  createStructure -> style & SS_NOTIFY ? "SS_NOTIFY" " | " : "",
+                #endif
+                #ifdef SS_OWNERDRAW
+                  createStructure -> style & SS_OWNERDRAW ? "SS_OWNERDRAW" " | " : "",
+                #endif
+                #ifdef SS_PATHELLIPSIS
+                  createStructure -> style & SS_PATHELLIPSIS ? "SS_PATHELLIPSIS" " | " : "",
+                #endif
+                #ifdef SS_REALSIZECONTROL
+                  createStructure -> style & SS_REALSIZECONTROL ? "SS_REALSIZECONTROL" " | " : "",
+                #endif
+                #ifdef SS_REALSIZEIMAGE
+                  createStructure -> style & SS_REALSIZEIMAGE ? "SS_REALSIZEIMAGE" " | " : "",
+                #endif
+                #ifdef SS_RIGHT
+                  createStructure -> style & SS_RIGHT ? "SS_RIGHT" " | " : "",
+                #endif
+                #ifdef SS_RIGHTJUST
+                  createStructure -> style & SS_RIGHTJUST ? "SS_RIGHTJUST" " | " : "",
+                #endif
+                #ifdef SS_SIMPLE
+                  createStructure -> style & SS_SIMPLE ? "SS_SIMPLE" " | " : "",
+                #endif
+                #ifdef SS_SUNKEN
+                  createStructure -> style & SS_SUNKEN ? "SS_SUNKEN" " | " : "",
+                #endif
+                #ifdef SS_TYPEMASK
+                  createStructure -> style & SS_TYPEMASK ? "SS_TYPEMASK" " | " : "",
+                #endif
+                #ifdef SS_WHITEFRAME
+                  createStructure -> style & SS_WHITEFRAME ? "SS_WHITEFRAME" " | " : "",
+                #endif
+                #ifdef SS_WHITERECT
+                  createStructure -> style & SS_WHITERECT ? "SS_WHITERECT" " | " : "",
+                #endif
+                #ifdef SS_WORDELLIPSIS
+                  createStructure -> style & SS_WORDELLIPSIS ? "SS_WORDELLIPSIS" " | " : "",
+                #endif
+                #ifdef TBS_AUTOTICKS
+                  createStructure -> style & TBS_AUTOTICKS ? "TBS_AUTOTICKS" " | " : "",
+                #endif
+                #ifdef TBS_BOTH
+                  createStructure -> style & TBS_BOTH ? "TBS_BOTH" " | " : "",
+                #endif
+                ""
+            ))) (void) log::output(log::format(
+                #ifdef TBS_BOTTOM
+                  createStructure -> style & TBS_BOTTOM ? "TBS_BOTTOM" " | " : "",
+                #endif
+                #ifdef TBS_DOWNISLEFT
+                  createStructure -> style & TBS_DOWNISLEFT ? "TBS_DOWNISLEFT" " | " : "",
+                #endif
+                #ifdef TBS_ENABLESELRANGE
+                  createStructure -> style & TBS_ENABLESELRANGE ? "TBS_ENABLESELRANGE" " | " : "",
+                #endif
+                #ifdef TBS_FIXEDLENGTH
+                  createStructure -> style & TBS_FIXEDLENGTH ? "TBS_FIXEDLENGTH" " | " : "",
+                #endif
+                #ifdef TBS_HORZ
+                  createStructure -> style & TBS_HORZ ? "TBS_HORZ" " | " : "",
+                #endif
+                #ifdef TBS_LEFT
+                  createStructure -> style & TBS_LEFT ? "TBS_LEFT" " | " : "",
+                #endif
+                #ifdef TBS_NOTHUMB
+                  createStructure -> style & TBS_NOTHUMB ? "TBS_NOTHUMB" " | " : "",
+                #endif
+                #ifdef TBS_NOTICKS
+                  createStructure -> style & TBS_NOTICKS ? "TBS_NOTICKS" " | " : "",
+                #endif
+                #ifdef TBS_NOTIFYBEFOREMOVE
+                  createStructure -> style & TBS_NOTIFYBEFOREMOVE ? "TBS_NOTIFYBEFOREMOVE" " | " : "",
+                #endif
+                #ifdef TBS_REVERSED
+                  createStructure -> style & TBS_REVERSED ? "TBS_REVERSED" " | " : "",
+                #endif
+                #ifdef TBS_RIGHT
+                  createStructure -> style & TBS_RIGHT ? "TBS_RIGHT" " | " : "",
+                #endif
+                #ifdef TBS_TOOLTIPS
+                  createStructure -> style & TBS_TOOLTIPS ? "TBS_TOOLTIPS" " | " : "",
+                #endif
+                #ifdef TBS_TOP
+                  createStructure -> style & TBS_TOP ? "TBS_TOP" " | " : "",
+                #endif
+                #ifdef TBS_TRANSPARENTBKGND
+                  createStructure -> style & TBS_TRANSPARENTBKGND ? "TBS_TRANSPARENTBKGND" " | " : "",
+                #endif
+                #ifdef TBS_VERT
+                  createStructure -> style & TBS_VERT ? "TBS_VERT" " | " : "",
+                #endif
+                #ifdef TBSTYLE_ALTDRAG
+                  createStructure -> style & TBSTYLE_ALTDRAG ? "TBSTYLE_ALTDRAG" " | " : "",
+                #endif
+                #ifdef TBSTYLE_AUTOSIZE
+                  createStructure -> style & TBSTYLE_AUTOSIZE ? "TBSTYLE_AUTOSIZE" " | " : "",
+                #endif
+                #ifdef TBSTYLE_BUTTON
+                  createStructure -> style & TBSTYLE_BUTTON ? "TBSTYLE_BUTTON" " | " : "",
+                #endif
+                #ifdef TBSTYLE_CHECK
+                  createStructure -> style & TBSTYLE_CHECK ? "TBSTYLE_CHECK" " | " : "",
+                #endif
+                #ifdef TBSTYLE_CHECKGROUP
+                  createStructure -> style & TBSTYLE_CHECKGROUP ? "TBSTYLE_CHECKGROUP" " | " : "",
+                #endif
+                #ifdef TBSTYLE_CUSTOMERASE
+                  createStructure -> style & TBSTYLE_CUSTOMERASE ? "TBSTYLE_CUSTOMERASE" " | " : "",
+                #endif
+                #ifdef TBSTYLE_DROPDOWN
+                  createStructure -> style & TBSTYLE_DROPDOWN ? "TBSTYLE_DROPDOWN" " | " : "",
+                #endif
+                #ifdef TBSTYLE_FLAT
+                  createStructure -> style & TBSTYLE_FLAT ? "TBSTYLE_FLAT" " | " : "",
+                #endif
+                #ifdef TBSTYLE_GROUP
+                  createStructure -> style & TBSTYLE_GROUP ? "TBSTYLE_GROUP" " | " : "",
+                #endif
+                #ifdef TBSTYLE_LIST
+                  createStructure -> style & TBSTYLE_LIST ? "TBSTYLE_LIST" " | " : "",
+                #endif
+                #ifdef TBSTYLE_NOPREFIX
+                  createStructure -> style & TBSTYLE_NOPREFIX ? "TBSTYLE_NOPREFIX" " | " : "",
+                #endif
+                #ifdef TBSTYLE_REGISTERDROP
+                  createStructure -> style & TBSTYLE_REGISTERDROP ? "TBSTYLE_REGISTERDROP" " | " : "",
+                #endif
+                #ifdef TBSTYLE_SEP
+                  createStructure -> style & TBSTYLE_SEP ? "TBSTYLE_SEP" " | " : "",
+                #endif
+                #ifdef TBSTYLE_TOOLTIPS
+                  createStructure -> style & TBSTYLE_TOOLTIPS ? "TBSTYLE_TOOLTIPS" " | " : "",
+                #endif
+                #ifdef TBSTYLE_TRANSPARENT
+                  createStructure -> style & TBSTYLE_TRANSPARENT ? "TBSTYLE_TRANSPARENT" " | " : "",
+                #endif
+                #ifdef TBSTYLE_WRAPABLE
+                  createStructure -> style & TBSTYLE_WRAPABLE ? "TBSTYLE_WRAPABLE" " | " : "",
+                #endif
+                #ifdef TCS_BOTTOM
+                  createStructure -> style & TCS_BOTTOM ? "TCS_BOTTOM" " | " : "",
+                #endif
+                #ifdef TCS_BUTTONS
+                  createStructure -> style & TCS_BUTTONS ? "TCS_BUTTONS" " | " : "",
+                #endif
+                #ifdef TCS_FIXEDWIDTH
+                  createStructure -> style & TCS_FIXEDWIDTH ? "TCS_FIXEDWIDTH" " | " : "",
+                #endif
+                #ifdef TCS_FLATBUTTONS
+                  createStructure -> style & TCS_FLATBUTTONS ? "TCS_FLATBUTTONS" " | " : "",
+                #endif
+                #ifdef TCS_FOCUSNEVER
+                  createStructure -> style & TCS_FOCUSNEVER ? "TCS_FOCUSNEVER" " | " : "",
+                #endif
+                #ifdef TCS_FOCUSONBUTTONDOWN
+                  createStructure -> style & TCS_FOCUSONBUTTONDOWN ? "TCS_FOCUSONBUTTONDOWN" " | " : "",
+                #endif
+                #ifdef TCS_FORCEICONLEFT
+                  createStructure -> style & TCS_FORCEICONLEFT ? "TCS_FORCEICONLEFT" " | " : "",
+                #endif
+                #ifdef TCS_FORCELABELLEFT
+                  createStructure -> style & TCS_FORCELABELLEFT ? "TCS_FORCELABELLEFT" " | " : "",
+                #endif
+                #ifdef TCS_HOTTRACK
+                  createStructure -> style & TCS_HOTTRACK ? "TCS_HOTTRACK" " | " : "",
+                #endif
+                #ifdef TCS_MULTILINE
+                  createStructure -> style & TCS_MULTILINE ? "TCS_MULTILINE" " | " : "",
+                #endif
+                #ifdef TCS_MULTISELECT
+                  createStructure -> style & TCS_MULTISELECT ? "TCS_MULTISELECT" " | " : "",
+                #endif
+                #ifdef TCS_OWNERDRAWFIXED
+                  createStructure -> style & TCS_OWNERDRAWFIXED ? "TCS_OWNERDRAWFIXED" " | " : "",
+                #endif
+                #ifdef TCS_RAGGEDRIGHT
+                  createStructure -> style & TCS_RAGGEDRIGHT ? "TCS_RAGGEDRIGHT" " | " : "",
+                #endif
+                #ifdef TCS_RIGHT
+                  createStructure -> style & TCS_RIGHT ? "TCS_RIGHT" " | " : "",
+                #endif
+                #ifdef TCS_RIGHTJUSTIFY
+                  createStructure -> style & TCS_RIGHTJUSTIFY ? "TCS_RIGHTJUSTIFY" " | " : "",
+                #endif
+                #ifdef TCS_SCROLLOPPOSITE
+                  createStructure -> style & TCS_SCROLLOPPOSITE ? "TCS_SCROLLOPPOSITE" " | " : "",
+                #endif
+                #ifdef TCS_SINGLELINE
+                  createStructure -> style & TCS_SINGLELINE ? "TCS_SINGLELINE" " | " : "",
+                #endif
+                #ifdef TCS_TABS
+                  createStructure -> style & TCS_TABS ? "TCS_TABS" " | " : "",
+                #endif
+                #ifdef TCS_TOOLTIPS
+                  createStructure -> style & TCS_TOOLTIPS ? "TCS_TOOLTIPS" " | " : "",
+                #endif
+                #ifdef TCS_VERTICAL
+                  createStructure -> style & TCS_VERTICAL ? "TCS_VERTICAL" " | " : "",
+                #endif
+                #ifdef TTS_ALWAYSTIP
+                  createStructure -> style & TTS_ALWAYSTIP ? "TTS_ALWAYSTIP" " | " : "",
+                #endif
+                #ifdef TTS_BALLOON
+                  createStructure -> style & TTS_BALLOON ? "TTS_BALLOON" " | " : "",
+                #endif
+                #ifdef TTS_CLOSE
+                  createStructure -> style & TTS_CLOSE ? "TTS_CLOSE" " | " : "",
+                #endif
+                #ifdef TTS_NOANIMATE
+                  createStructure -> style & TTS_NOANIMATE ? "TTS_NOANIMATE" " | " : "",
+                #endif
+                #ifdef TTS_NOFADE
+                  createStructure -> style & TTS_NOFADE ? "TTS_NOFADE" " | " : "",
+                #endif
+                #ifdef TTS_NOPREFIX
+                  createStructure -> style & TTS_NOPREFIX ? "TTS_NOPREFIX" " | " : "",
+                #endif
+                #ifdef TTS_USEVISUALSTYLE
+                  createStructure -> style & TTS_USEVISUALSTYLE ? "TTS_USEVISUALSTYLE" " | " : "",
+                #endif
+                #ifdef TVS_CHECKBOXES
+                  createStructure -> style & TVS_CHECKBOXES ? "TVS_CHECKBOXES" " | " : "",
+                #endif
+                #ifdef TVS_DISABLEDRAGDROP
+                  createStructure -> style & TVS_DISABLEDRAGDROP ? "TVS_DISABLEDRAGDROP" " | " : "",
+                #endif
+                #ifdef TVS_EDITLABELS
+                  createStructure -> style & TVS_EDITLABELS ? "TVS_EDITLABELS" " | " : "",
+                #endif
+                #ifdef TVS_FULLROWSELECT
+                  createStructure -> style & TVS_FULLROWSELECT ? "TVS_FULLROWSELECT" " | " : "",
+                #endif
+                #ifdef TVS_HASBUTTONS
+                  createStructure -> style & TVS_HASBUTTONS ? "TVS_HASBUTTONS" " | " : "",
+                #endif
+                #ifdef TVS_HASLINES
+                  createStructure -> style & TVS_HASLINES ? "TVS_HASLINES" " | " : "",
+                #endif
+                #ifdef TVS_INFOTIP
+                  createStructure -> style & TVS_INFOTIP ? "TVS_INFOTIP" " | " : "",
+                #endif
+                #ifdef TVS_LINESATROOT
+                  createStructure -> style & TVS_LINESATROOT ? "TVS_LINESATROOT" " | " : "",
+                #endif
+                #ifdef TVS_NOHSCROLL
+                  createStructure -> style & TVS_NOHSCROLL ? "TVS_NOHSCROLL" " | " : "",
+                #endif
+                #ifdef TVS_NONEVENHEIGHT
+                  createStructure -> style & TVS_NONEVENHEIGHT ? "TVS_NONEVENHEIGHT" " | " : "",
+                #endif
+                #ifdef TVS_NOSCROLL
+                  createStructure -> style & TVS_NOSCROLL ? "TVS_NOSCROLL" " | " : "",
+                #endif
+                #ifdef TVS_NOTOOLTIPS
+                  createStructure -> style & TVS_NOTOOLTIPS ? "TVS_NOTOOLTIPS" " | " : "",
+                #endif
+                #ifdef TVS_RTLREADING
+                  createStructure -> style & TVS_RTLREADING ? "TVS_RTLREADING" " | " : "",
+                #endif
+                #ifdef TVS_SHOWSELALWAYS
+                  createStructure -> style & TVS_SHOWSELALWAYS ? "TVS_SHOWSELALWAYS" " | " : "",
+                #endif
+                #ifdef TVS_SINGLEEXPAND
+                  createStructure -> style & TVS_SINGLEEXPAND ? "TVS_SINGLEEXPAND" " | " : "",
+                #endif
+                #ifdef TVS_TRACKSELECT
+                  createStructure -> style & TVS_TRACKSELECT ? "TVS_TRACKSELECT" " | " : "",
+                #endif
+                #ifdef UDS_ALIGNLEFT
+                  createStructure -> style & UDS_ALIGNLEFT ? "UDS_ALIGNLEFT" " | " : "",
+                #endif
+                #ifdef UDS_ALIGNRIGHT
+                  createStructure -> style & UDS_ALIGNRIGHT ? "UDS_ALIGNRIGHT" " | " : "",
+                #endif
+                #ifdef UDS_ARROWKEYS
+                  createStructure -> style & UDS_ARROWKEYS ? "UDS_ARROWKEYS" " | " : "",
+                #endif
+                #ifdef UDS_AUTOBUDDY
+                  createStructure -> style & UDS_AUTOBUDDY ? "UDS_AUTOBUDDY" " | " : "",
+                #endif
+                #ifdef UDS_HORZ
+                  createStructure -> style & UDS_HORZ ? "UDS_HORZ" " | " : "",
+                #endif
+                #ifdef UDS_HOTTRACK
+                  createStructure -> style & UDS_HOTTRACK ? "UDS_HOTTRACK" " | " : "",
+                #endif
+                #ifdef UDS_NOTHOUSANDS
+                  createStructure -> style & UDS_NOTHOUSANDS ? "UDS_NOTHOUSANDS" " | " : "",
+                #endif
+                #ifdef UDS_SETBUDDYINT
+                  createStructure -> style & UDS_SETBUDDYINT ? "UDS_SETBUDDYINT" " | " : "",
+                #endif
+                #ifdef UDS_WRAP
+                  createStructure -> style & UDS_WRAP ? "UDS_WRAP" " | " : "",
+                #endif
+              createStructureUsesStyle ? "…0x00`" : "",                     "," "\r\n"
+              "  " "text         : " "\"", createStructure -> lpszName, "\"" "," "\r\n"
+              "  " "width        : ",      (number) createStructure -> cx,   "," "\r\n"
+              "  " "x            : ",      (number) createStructure -> x,    "," "\r\n"
+              "  " "y            : ",      (number) createStructure -> y,        "\r\n"
+              ""   "}]"
+            ));
           }
+
+          else if (WM_NCCALCSIZE == message) {
+            BOOL               const indicatesClientArea                    = parameter;
+            RECT              *const rectangle                              = FALSE == indicatesClientArea ? reinterpret_cast<RECT*>             (subparameter) : NULL; // --> std::launder(…)
+            NCCALCSIZE_PARAMS *const sizeCalculation                        = TRUE  == indicatesClientArea ? reinterpret_cast<NCCALCSIZE_PARAMS*>(subparameter) : NULL; // --> std::launder(…)
+            bool               const sizeCalculationWindowPositionUsesFlags = NULL != sizeCalculation ? (sizeCalculation -> lppos -> flags & SWP_DRAWFRAME) or (sizeCalculation -> lppos -> flags & SWP_FRAMECHANGED) or (sizeCalculation -> lppos -> flags & SWP_HIDEWINDOW) or (sizeCalculation -> lppos -> flags & SWP_NOACTIVATE) or (sizeCalculation -> lppos -> flags & SWP_NOCOPYBITS) or (sizeCalculation -> lppos -> flags & SWP_NOMOVE) or (sizeCalculation -> lppos -> flags & SWP_NOOWNERZORDER) or (sizeCalculation -> lppos -> flags & SWP_NOREDRAW) or (sizeCalculation -> lppos -> flags & SWP_NOREPOSITION) or (sizeCalculation -> lppos -> flags & SWP_NOSENDCHANGING) or (sizeCalculation -> lppos -> flags & SWP_NOSIZE) or (sizeCalculation -> lppos -> flags & SWP_NOZORDER) or (sizeCalculation -> lppos -> flags & SWP_SHOWWINDOW) : false;
+
+            // ...
+            messageTranslationMultilineFormat = true;
+
+            if (log::output(log::format(
+              "[" "\r\n",
+                "  ", static_cast<undefined>(static_cast<unsigned char>(parameter)), " {indicatesClientArea: ", static_cast<bool>(indicatesClientArea), "}" "," "\r\n"
+                "  ", reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)), " {"                                                                       "\r\n"
+            ))) (void) (indicatesClientArea ? log::output(log::format(
+                "    "   "windowPosition     : ", sizeCalculation -> lppos, " {" "\r\n"
+                "      " "flags      : ", static_cast<undefined>(sizeCalculation -> lppos -> flags), sizeCalculationWindowPositionUsesFlags ? " `" : "",
+                  sizeCalculation -> lppos -> flags & SWP_DRAWFRAME      ? "SWP_DRAWFRAME"      " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_FRAMECHANGED   ? "SWP_FRAMECHANGED"   " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_HIDEWINDOW     ? "SWP_HIDEWINDOW"     " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOACTIVATE     ? "SWP_NOACTIVATE"     " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOCOPYBITS     ? "SWP_NOCOPYBITS"     " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOMOVE         ? "SWP_NOMOVE"         " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOOWNERZORDER  ? "SWP_NOOWNERZORDER"  " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOREDRAW       ? "SWP_NOREDRAW"       " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOREPOSITION   ? "SWP_NOREPOSITION"   " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOSENDCHANGING ? "SWP_NOSENDCHANGING" " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOSIZE         ? "SWP_NOSIZE"         " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_NOZORDER       ? "SWP_NOZORDER"       " | " : "",
+                  sizeCalculation -> lppos -> flags & SWP_SHOWWINDOW     ? "SWP_SHOWWINDOW"     " | " : "",
+                sizeCalculationWindowPositionUsesFlags ? "…0x00`" : "",    "," "\r\n"
+                "      " "height     : ", (number) sizeCalculation -> lppos -> cy, "," "\r\n"
+                "      " "width      : ", (number) sizeCalculation -> lppos -> cx, "," "\r\n"
+                "      " "window     : ", sizeCalculation -> lppos -> hwnd,        "," "\r\n"
+            )) ? log::output(
+              HWND_BOTTOM    == sizeCalculation -> lppos -> hwndInsertAfter ? log::format("     " "windowOnTop: `HWND_BOTTOM`"    "," "\r\n") :
+              HWND_NOTOPMOST == sizeCalculation -> lppos -> hwndInsertAfter ? log::format("     " "windowOnTop: `HWND_NOTOPMOST`" "," "\r\n") :
+              HWND_TOP       == sizeCalculation -> lppos -> hwndInsertAfter ? log::format("     " "windowOnTop: `HWND_TOP`"       "," "\r\n") :
+              HWND_TOPMOST   == sizeCalculation -> lppos -> hwndInsertAfter ? log::format("     " "windowOnTop: `HWND_TOPMOST`"   "," "\r\n") :
+              log::format("      " "windowOnTop: ", sizeCalculation -> lppos -> hwndInsertAfter, "," "\r\n")
+            ) ? log::output(log::format(
+              "      " "x          : ", (number) sizeCalculation -> lppos -> x, "," "\r\n"
+              "      " "y          : ", (number) sizeCalculation -> lppos -> y, "," "\r\n"
+              "    "   "}"                                                      "," "\r\n"
+              "    "   "regionRectangles[3]: ["                                     "\r\n"
+              "      " "newRegionRectangle    : {bottom: ", (number) sizeCalculation -> rgrc[0].bottom, ", left: ", (number) sizeCalculation -> rgrc[0].left, ", right: ", (number) sizeCalculation -> rgrc[0].right, ", top: ", (number) sizeCalculation -> rgrc[0].top, "}" "," "\r\n"
+              "      " "oldRegionRectangle    : {bottom: ", (number) sizeCalculation -> rgrc[1].bottom, ", left: ", (number) sizeCalculation -> rgrc[1].left, ", right: ", (number) sizeCalculation -> rgrc[1].right, ", top: ", (number) sizeCalculation -> rgrc[1].top, "}" "," "\r\n"
+              "      " "oldClientAreaRectangle: {bottom: ", (number) sizeCalculation -> rgrc[2].bottom, ", left: ", (number) sizeCalculation -> rgrc[2].left, ", right: ", (number) sizeCalculation -> rgrc[2].right, ", top: ", (number) sizeCalculation -> rgrc[2].top, "}" "," "\r\n"
+              "    "   "]"                                                                                                                                                                                                                                                        "\r\n"
+              "  "     "}"                                                                                                                                                                                                                                                        "\r\n"
+              "]"
+            )) : false : false : log::output(log::format(
+              "    " "bottom: ", (number) rectangle -> bottom, "," "\r\n"
+              "    " "left  : ", (number) rectangle -> left,   "," "\r\n"
+              "    " "right : ", (number) rectangle -> right,  "," "\r\n"
+              "    " "top   : ", (number) rectangle -> top,    "," "\r\n"
+              "  "   "}"                                           "\r\n"
+              "]"
+            )));
+          }
+
+          // else if (WM_NCHITTEST == message) {} // TODO (Lapys)
+          // else if (WM_NCLBUTTONDOWN == message) {} // TODO (Lapys)
+          // else if (WM_MOUSELEAVE == message) {} // TODO (Lapys)
+          // else if (WM_NCMOUSEMOVE == message) {} // TODO (Lapys)
+          // else if (WM_NCPAINT == message) {} // TODO (Lapys)
+          // else if (WM_PAINT == message) {} // TODO (Lapys)
+
+          else if (WM_QUIT == message) switch (static_cast<int>(parameter)) {
+            case EXIT_FAILURE: messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<special>(parameter), " `EXIT_FAILURE`"   ", ", static_cast<unused>(subparameter), "]")); break;
+            case EXIT_SUCCESS: messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<special>(parameter), " `EXIT_SUCCESS`"   ", ", static_cast<unused>(subparameter), "]")); break;
+            default:           messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<undefined>(static_cast<int>(parameter)), ", ", static_cast<unused>(subparameter), "]")); break;
+          }
+
+          // else if (WM_SETCURSOR == message) {} // TODO (Lapys)
+          // else if (WM_SETFOCUS == message) {} // TODO (Lapys)
+          // else if (WM_SHOWWINDOW == message) {} // TODO (Lapys)
+          // else if (WM_SIZE == message) {} // TODO (Lapys)
+          // else if (WM_SYSCOMMAND == message) {} // TODO (Lapys)
+          // else if (WM_WINDOWPOSCHANGED == message) {} // TODO (Lapys)
+          // else if (WM_WINDOWPOSCHANGING == message) {} // TODO (Lapys)
+
+          // TODO (Lapys) -> The other messages
+          else
+            messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<undefined>(parameter), ", ", static_cast<undefined>(subparameter), ']'));
 
           (void) log::output(log::format("}" "\r\n", messageTranslationMultilineFormat ? "\n" : ""));
         }
@@ -6081,7 +8265,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
           break;
 
         case WM_QUIT:
-          ::DestroyWindow(windowHandle);
+          (void) ::DestroyWindow(windowHandle);
           break;
       }
 
@@ -6104,26 +8288,26 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
   threadMessage.time    = 0u;
   threadMessage.wParam  = EXIT_SUCCESS;
 
-  window.classTemplate               = WNDCLASSEXW();
-  window.classTemplate.cbClsExtra    = 0;
-  window.classTemplate.cbSize        = sizeof(WNDCLASSEX);
-  window.classTemplate.cbWndExtra    = 0;
-  window.classTemplate.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
-  window.classTemplate.hCursor       = ::LoadCursor      (static_cast<HINSTANCE>(NULL), IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED));
-  window.classTemplate.hIcon         = ::ExtractIconW    (static_cast<HINSTANCE>(::GetCurrentProcess()), moduleFileName, 0u);
-  window.classTemplate.hIconSm       = static_cast<HICON>(NULL);
-  window.classTemplate.hInstance     =  instanceHandle;
-  window.classTemplate.lpfnWndProc   = &window.procedure;
-  window.classTemplate.lpszClassName = L"window";
-  window.classTemplate.lpszMenuName  = static_cast<LPCWSTR>(NULL);
-  window.classTemplate.style         = CS_HREDRAW | CS_VREDRAW;
+  window.classInformation               = WNDCLASSEXW();
+  window.classInformation.cbClsExtra    = 0;
+  window.classInformation.cbSize        = sizeof(WNDCLASSEX);
+  window.classInformation.cbWndExtra    = 0;
+  window.classInformation.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+  window.classInformation.hCursor       = ::LoadCursor      (static_cast<HINSTANCE>(NULL), IDC_ARROW); // --> static_cast<HCURSOR>(::LoadImage(NULL, MAKEINTRESOURCE(OCR_NORMAL), IMAGE_CURSOR, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE | LR_SHARED));
+  window.classInformation.hIcon         = ::ExtractIconW    (static_cast<HINSTANCE>(::GetCurrentProcess()), moduleFileName, 0u);
+  window.classInformation.hIconSm       = static_cast<HICON>(NULL);
+  window.classInformation.hInstance     =  instanceHandle;
+  window.classInformation.lpfnWndProc   = &window.procedure;
+  window.classInformation.lpszClassName = L"window";
+  window.classInformation.lpszMenuName  = static_cast<LPCWSTR>(NULL);
+  window.classInformation.style         = CS_HREDRAW | CS_VREDRAW;
 
-  if (0x00u == ::RegisterClassExW(&window.classTemplate)) {
+  if (0x0000u == ::RegisterClassExW(&window.classInformation)) {
     (void) std::fputs("Unable to create window: Failed to register window class", stderr);
     return EXIT_FAILURE;
   }
 
-  window.handle = ::CreateWindowExW(0x00u, window.classTemplate.lpszClassName, L"Windows Event Messages", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 480, 320, static_cast<HWND>(NULL), static_cast<HMENU>(NULL), window.classTemplate.hInstance, static_cast<LPVOID>(NULL));
+  window.handle = ::CreateWindowExW(0x00u, window.classInformation.lpszClassName, L"Windows Event Messages", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 480, 320, static_cast<HWND>(NULL), static_cast<HMENU>(NULL), window.classInformation.hInstance, static_cast<LPVOID>(NULL));
 
   if (NULL == window.handle) {
     (void) std::fputs("Unable to create window", stderr);
@@ -6140,7 +8324,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
     }
   }
 
-  ::UnregisterClassW(window.classTemplate.lpszClassName, window.classTemplate.hInstance);
+  ::UnregisterClassW(window.classInformation.lpszClassName, window.classInformation.hInstance);
 
   // ...
   return threadMessage.wParam;
