@@ -6,11 +6,11 @@ constexpr inline int get_bit(int const value, std::size_t const index) noexcept 
   return ((value >> index) & 1u) ? 1u : 0u;
 }
 
-constexpr inline int get_high(int const value, std::size_t const bitcount = sizeof(int) / 2u) noexcept {
+constexpr inline int get_high(int const value, std::size_t const bitcount) noexcept {
   return value >> bitcount;
 }
 
-constexpr inline int get_low(int const value, std::size_t const bitcount = sizeof(int) / 2u) noexcept {
+constexpr inline int get_low(int const value, std::size_t const bitcount) noexcept {
   return value & ~(~0u << bitcount);
 }
 

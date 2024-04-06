@@ -5,6 +5,7 @@
 
 /* Import */
 #include <ciso646>
+#include <climits>
 #include <cstddef>
 #include <cstdio>
 #include <cwchar>
@@ -5341,12 +5342,10 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
 
       // ... ->> Log the `message`
       if (NULL == messageTranslation)
-        (void) log::output(log::format(
-          static_cast<undefined>(message), " {"
-            "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
-            "arguments" ": [", static_cast<undefined>(parameter), ", ", static_cast<undefined>(subparameter), "]"
-          "}" "\r\n"
-        ));
+        (void) log::output(log::format(static_cast<undefined>(message), " {"
+          "window"    ": ", windowHandle, windowTextAcquired ? " \"" : "", windowTextAcquired ? windowText : L"", windowTextAcquired ? "\"" : "", ", "
+          "arguments" ": [", static_cast<undefined>(parameter), ", ", static_cast<undefined>(subparameter), "]"
+        "}" "\r\n"));
 
       else while ('\0' != *messageTranslation) {
         char const *const messageConstantTranslation = messageTranslation;
@@ -5373,16 +5372,12 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
             BOOL const minimized         = HIWORD(parameter);
             HWND const windowHandle      = static_cast<HWND>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
 
-            // ...
-            messageTranslationMultilineFormat = true;
-
-            if (log::output(log::format('[', static_cast<bool>(minimized), " {state: ")))
-            if (log::output(
-              WA_ACTIVE      == minimizationState ? "`WA_ACTIVE`"      :
-              WA_CLICKACTIVE == minimizationState ? "`WA_CLICKACTIVE`" :
-              WA_INACTIVE    == minimizationState ? "`WA_INACTIVE`"    :
-              log::format(static_cast<special>(minimizationState))
-            )) (void) log::output(log::format("}, ", windowHandle, ']'));
+            messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<bool>(minimized), " {state: ", static_cast<special>(minimizationState),
+              WA_ACTIVE      == minimizationState ? " " "`WA_ACTIVE`"      : // ->>
+              WA_CLICKACTIVE == minimizationState ? " " "`WA_CLICKACTIVE`" : // ->>
+              WA_INACTIVE    == minimizationState ? " " "`WA_INACTIVE`"    : // ->>
+              "",
+            "}, ", windowHandle, ']'));
           }
 
           else if (WM_ACTIVATEAPP == message) {
@@ -5392,7 +5387,10 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
             messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<bool>(minimized), ", ", static_cast<special>(threadID), ']'));
           }
 
-          // else if (WM_CAPTURECHANGED == message) {} // TODO (Lapys)
+          else if (WM_CAPTURECHANGED == message) {
+            HWND const capturingWindowHandle = static_cast<HWND>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)));
+            messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<unused>(parameter), ", ", capturingWindowHandle, ']'));
+          }
 
           else if (
             WM_CLOSE         == message or
@@ -5401,8 +5399,22 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
             WM_NCDESTROY     == message
           ) messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<unused>(parameter), ", ", static_cast<unused>(subparameter), ']'));
 
-          // else if (WM_ERASEBKGND == message) {} // TODO (Lapys)
-          // else if (WM_GETICON == message) {} // TODO (Lapys)
+          else if (WM_ERASEBKGND == message) {
+            HDC const deviceContextHandle = static_cast<HDC>(reinterpret_cast<void*>(static_cast<uintptr_t>(parameter)));
+            messageTranslationMultilineFormat = not log::output(log::format('[', deviceContextHandle, ", ", static_cast<unused>(subparameter), ']'));
+          }
+
+          else if (WM_GETICON == message) {
+            LPARAM const iconDPI  = subparameter;
+            WPARAM const iconType = parameter;
+
+            messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<special>(iconType),
+              ICON_BIG    == iconType ? " " "`ICON_BIG`"    : // ->> Window's large icon
+              ICON_SMALL  == iconType ? " " "`ICON_SMALL`"  : // ->> Window's small icon
+              ICON_SMALL2 == iconType ? " " "`ICON_SMALL2`" : // ->> Window's small or otherwise system-generated icon
+              "",
+            ", ", (number) iconDPI, ']'));
+          }
 
           else if (WM_GETMINMAXINFO == message) {
             MINMAXINFO *const minimumMaximumInformation = static_cast<MINMAXINFO*>(reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter))); // --> std::launder(…)
@@ -5420,7 +5432,34 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
             ));
           }
 
-          // else if (WM_GETOBJECT == message) {} // TODO (Lapys)
+          else if (WM_GETOBJECT == message) {
+            DWORD const flags    = static_cast<WPARAM>(static_cast<DWORD>(parameter));
+            DWORD const objectID = static_cast<LPARAM>(static_cast<DWORD>(subparameter)); // ->> Must be casted to `DWORD` to prevent integer sign-extension issues
+
+            // ...
+            (void) flags;
+            messageTranslationMultilineFormat = not log::output(log::format('[', static_cast<special>(flags), ", ", static_cast<special>(objectID),
+              OBJID_ALERT             == objectID ? " " "`OBJID_ALERT`"             : // ->> Application or window's alert
+              OBJID_CARET             == objectID ? " " "`OBJID_CARET`"             : // ->> Window's caret
+              OBJID_CLIENT            == objectID ? " " "`OBJID_CLIENT`"            : // ->> Window's client area
+              OBJID_CURSOR            == objectID ? " " "`OBJID_CURSOR`"            : // ->> Mouse pointer
+              OBJID_HSCROLL           == objectID ? " " "`OBJID_HSCROLL`"           : // ->> Window's horizontal scroll bar
+              OBJID_NATIVEOM          == objectID ? " " "`OBJID_NATIVEOM`"          : // ->> Third-party object model
+              OBJID_MENU              == objectID ? " " "`OBJID_MENU`"              : // ->> Window's menu bar
+              OBJID_QUERYCLASSNAMEIDX == objectID ? " " "`OBJID_QUERYCLASSNAMEIDX`" : //
+              OBJID_SIZEGRIP          == objectID ? " " "`OBJID_SIZEGRIP`"          : // ->> Window's size grip
+              OBJID_SOUND             == objectID ? " " "`OBJID_SOUND`"             : // ->> Application's sound object
+              OBJID_SYSMENU           == objectID ? " " "`OBJID_SYSMENU`"           : // ->> Window's ystem menu
+              OBJID_TITLEBAR          == objectID ? " " "`OBJID_TITLEBAR`"          : // ->> Window's title bar
+              OBJID_VSCROLL           == objectID ? " " "`OBJID_VSCROLL`"           : // ->> Window's vertical scroll bar
+              OBJID_WINDOW            == objectID ? " " "`OBJID_WINDOW`"            : // ->> Window
+              "",
+            ']'));
+
+            // TODO (Lapys)
+            // static_cast<LPARAM>(objectID) == static_cast<LPARAM>(::UiaRootObjectId)
+          }
+
           else if (WM_GETTEXT == message)
             messageTranslationMultilineFormat = not log::output(log::format('[', (number) parameter, ", ", reinterpret_cast<void*>(static_cast<uintptr_t>(subparameter)), ']'));
 
@@ -8227,9 +8266,9 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
           // else if (WM_PAINT == message) {} // TODO (Lapys)
 
           else if (WM_QUIT == message) switch (static_cast<int>(parameter)) {
-            case EXIT_FAILURE: messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<special>(parameter), " `EXIT_FAILURE`"   ", ", static_cast<unused>(subparameter), "]")); break;
-            case EXIT_SUCCESS: messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<special>(parameter), " `EXIT_SUCCESS`"   ", ", static_cast<unused>(subparameter), "]")); break;
-            default:           messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<undefined>(static_cast<int>(parameter)), ", ", static_cast<unused>(subparameter), "]")); break;
+            case EXIT_FAILURE: messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<special>(parameter), " " "`EXIT_FAILURE`" ", ", static_cast<unused>(subparameter), "]")); break;
+            case EXIT_SUCCESS: messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<special>(parameter), " " "`EXIT_SUCCESS`" ", ", static_cast<unused>(subparameter), "]")); break;
+            default:           messageTranslationMultilineFormat = not log::output(log::format("[", static_cast<undefined>(static_cast<int>(parameter)),  ", ", static_cast<unused>(subparameter), "]")); break;
           }
 
           // else if (WM_SETCURSOR == message) {} // TODO (Lapys)
