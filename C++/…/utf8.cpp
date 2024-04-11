@@ -1,25 +1,28 @@
+#include <ciso646>
 #include <climits>
 #include <cstdio>
 #include <stdint.h>
 
-#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+#if defined __INTEL_COMPILER or defined __INTEL_LLVM_COMPILER
 # pragma warning(disable: 1418)
 #endif
 
 /* ... */
-unsigned char get_utf8_codepoint_length(char units[]) {
+unsigned char get_utf8_codepoint_length(char const units[]) {
   unsigned char const value = static_cast<unsigned char>(*units - '\0');
 
   // ...
-  if (/* value >= 0x00u && */ value <= 0x7Fu) return 1u;
-  else if  (value >= 0xC0u && value <= 0xDFu) return 2u;
-  else if  (value >= 0xE0u && value <= 0xEFu) return 3u;
-  else if  (value >= 0xF0u && value <= 0xF7u) return 4u;
+  if (/* value >= 0x00u and */ value <= 0x7Fu) return 1u;
+  else if  (value >= 0xC0u and value <= 0xDFu) return 2u;
+  else if  (value >= 0xE0u and value <= 0xEFu) return 3u;
+  else if  (value >= 0xF0u and value <= 0xF7u) return 4u;
+  else if  (value >= 0xF8u and value <= 0xFBu) return 5u;
+  else if  (value >= 0xFCu and value <= 0xFDu) return 6u;
 
   return static_cast<unsigned char>(-1);
 }
 
-uint_least32_t get_utf8_codepoint_value(char* units) {
+uint_least32_t get_utf8_codepoint_value(char const units[]) {
   unsigned char length = get_utf8_codepoint_length(units);
 
   // ...
@@ -35,7 +38,8 @@ uint_least32_t get_utf8_codepoint_value(char* units) {
     }
 
     for (++units; --length; ++units) { // ->> parse continuation bytes
-      if ((static_cast<unsigned char>(*units - '\0') & 0xC0u) != 0x80u) return static_cast<uint_least32_t>(-1);
+      if ((static_cast<unsigned char>(*units - '\0') & 0xC0u) != 0x80u)
+      return static_cast<uint_least32_t>(-1);
 
       value <<= 6u;
       value  |= static_cast<unsigned char>(*units - '\0') & 0x3Fu;
@@ -43,16 +47,16 @@ uint_least32_t get_utf8_codepoint_value(char* units) {
 
     if ( // ->> overlong-encoding protection (converts Unicode ID to bytes)
       value < 0x0800uL ?
-        static_cast<unsigned char>(units[-2] - '\0') != (0xC0u | ((value & 0x7C0uL) >> 6u * 1u)) ||
+        static_cast<unsigned char>(units[-2] - '\0') != (0xC0u | ((value & 0x7C0uL) >> 6u * 1u)) or
         static_cast<unsigned char>(units[-1] - '\0') != (0x80u | ((value & 0x03FuL) >> 6u * 0u)) :
       value < 0x10000uL ?
-        static_cast<unsigned char>(units[-3] - '\0') != (0xE0u | ((value & 0xF000uL) >> 6u * 2u)) ||
-        static_cast<unsigned char>(units[-2] - '\0') != (0x80u | ((value & 0x0FC0uL) >> 6u * 1u)) ||
+        static_cast<unsigned char>(units[-3] - '\0') != (0xE0u | ((value & 0xF000uL) >> 6u * 2u)) or
+        static_cast<unsigned char>(units[-2] - '\0') != (0x80u | ((value & 0x0FC0uL) >> 6u * 1u)) or
         static_cast<unsigned char>(units[-1] - '\0') != (0x80u | ((value & 0x003FuL) >> 6u * 0u)) :
       value < 0x110000uL ?
-        static_cast<unsigned char>(units[-4] - '\0') != (0xF0u | ((value & 0x1C0000uL) >> 6u * 3u)) ||
-        static_cast<unsigned char>(units[-3] - '\0') != (0x80u | ((value & 0x03F000uL) >> 6u * 2u)) ||
-        static_cast<unsigned char>(units[-2] - '\0') != (0x80u | ((value & 0x000FC0uL) >> 6u * 1u)) ||
+        static_cast<unsigned char>(units[-4] - '\0') != (0xF0u | ((value & 0x1C0000uL) >> 6u * 3u)) or
+        static_cast<unsigned char>(units[-3] - '\0') != (0x80u | ((value & 0x03F000uL) >> 6u * 2u)) or
+        static_cast<unsigned char>(units[-2] - '\0') != (0x80u | ((value & 0x000FC0uL) >> 6u * 1u)) or
         static_cast<unsigned char>(units[-1] - '\0') != (0x80u | ((value & 0x00003FuL) >> 6u * 0u)) :
       true
     ) return static_cast<uint_least32_t>(-1);

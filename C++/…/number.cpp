@@ -36,7 +36,7 @@ struct uint_t /* final */ {
       // ... ->> Represents a linear contiguous type able to completely store a `uint_t<…>`
       template <typename base>
       struct flatten /* final */ {
-        typedef base type[(subwidth / (CHAR_BIT * sizeof(base))) + (subwidth % (CHAR_BIT * sizeof(base)) ? 1u : 0u)];
+        static std::size_t const length = (subwidth / (CHAR_BIT * sizeof(base))) + (subwidth % (CHAR_BIT * sizeof(base)) ? 1u : 0u) + (0u == subwidth);
       };
 
       // ... ->> Determines how much `subwidth` remains after accounting for the leading "byte segment" type
@@ -158,42 +158,33 @@ struct uint_t /* final */ {
     }
 
     // ... --> flatten(…, …) ->> Little-endian sequenced
-    template <typename S>
-    /* constexpr */ inline static std::size_t flatten(value_t<0u> const&, S[], std::size_t, std::size_t) /* noexcept */ {
-      return 1u;
+    /* constexpr */ inline static void flatten(value_t<0u> const&, uintmax_t[], std::size_t, std::size_t) /* noexcept */ {
+      return 0u;
     }
 
-    /* constexpr */ inline static std::size_t flatten(value_t<width> const& integer, typename widthinfo<width>::template flatten<unsigned char>::type& value) /* noexcept */ {
-      typedef unsigned char S;
-
-      for (S *iterator = value + (sizeof value / sizeof(S)); iterator != value; )
+    /* constexpr */ inline static void flatten(value_t<width> const& integer, uintmax_t (&value)[widthinfo<width>::flatten<uintmax_t>::length]) /* noexcept */ {
+      for (uintmax_t *iterator = value + (sizeof value / sizeof(uintmax_t)); iterator != value; )
       *--iterator = 0u;
 
-      return uint_t::flatten(integer, value, integer.length, CHAR_BIT * sizeof(S));
+      uint_t::flatten(integer, value, integer.length, CHAR_BIT * sizeof(uintmax_t));
     }
 
-    template <typename S, std::size_t subwidth>
-    /* constexpr */ inline static std::size_t flatten(value_t<subwidth> const& integer, S value[], std::size_t integerLength, std::size_t valueLength) /* noexcept */ {
+    template <std::size_t subwidth>
+    /* constexpr */ inline static void flatten(value_t<subwidth> const& integer, uintmax_t value[], std::size_t integerLength, std::size_t valueLength) /* noexcept */ {
       if (integerLength > valueLength) {
-        std::printf("[A]: %zu | %zu %zu {%zu}" "\r\n", integer.length, integerLength, valueLength, (std::size_t) integer.value);
-        std::printf("[*]: %p %p" "\r\n", (void*) &integer, (void*) value);
         integerLength -= valueLength;
         *value       <<= valueLength;
         *value        |= integer.value >> integerLength;
 
-        std::puts("[*]: next");
-        return uint_t::flatten(integer, value + 1, integerLength, CHAR_BIT * sizeof(S)) + 1u;
+        uint_t::flatten(integer, value + 1, integerLength, CHAR_BIT * sizeof(uintmax_t)) + 1u;
       }
 
       else {
-        std::printf("[B]: %zu | %zu %zu {%zu}" "\r\n", integer.length, integerLength, valueLength, (std::size_t) integer.value);
-        std::printf("[*]: %p %p" "\r\n", (void*) &integer, (void*) value);
         *value     <<= integerLength;
         *value      |= integer.value & ((((1u << (integerLength - 1u)) - 1u) << 1u) + 1u);
         valueLength -= integerLength;
 
-        std::puts(0u == valueLength ? "[*]: next" : "[*]: same");
-        return uint_t::flatten(integer.next(), value + (0u == valueLength), integer.next().length, 0u == valueLength ? CHAR_BIT * sizeof(S) : valueLength) + (0u == valueLength);
+        uint_t::flatten(integer.next(), value + (0u == valueLength), integer.next().length, 0u == valueLength ? CHAR_BIT * sizeof(uintmax_t) : valueLength) + (0u == valueLength);
       }
     }
 
@@ -219,10 +210,39 @@ struct uint_t /* final */ {
 
     // ... --> shift(…, …)
     /* constexpr */ inline static void shift(value_t<width>& integer, uintmax_t shift) /* noexcept */ {
-      if (shift >= subwidth)
-        uint_t::zero(integer.valueof());
+      std::size_t const length = widthinfo<width>::flatten<uintmax_t>::length;
+      uintmax_t         shifted[length];
 
-      return integer;
+      // ...
+      if (shift >= width or shift >= CHAR_BIT * length * sizeof(uintmax_t))
+        uint_t::zero(integer);
+
+      else {
+        uint_t::flatten(integer, shifted);
+        (void) shifted;
+
+        for (uintmax_t *iteratorA = shifted, iteratorB = shifted + (shift / CHAR_BIT * sizeof(uintmax_t)); ; ++iteratorA, ++iteratorB) {
+          if (iteratorB == shifted + length) {
+            while (iteratorA != shifted + length)
+            *(iteratorA++) = 0u;
+
+            break;
+          }
+
+          *iteratorA = *iteratorB;
+        }
+
+        shift %= CHAR_BIT * sizeof(uintmax_t);
+
+        for (uintmax_t *iterator = shifted; ; ++iterator) {
+          *iterator <<= shift;
+
+          if (iterator == shifted + (length - 1u)) break;
+          iterator[0] |= iterator[1] >> ((CHAR_BIT * sizeof(uintmax_t)) - shift);
+        }
+
+        (void) shifted;
+      }
     }
 
     // ... --> zero(…)
@@ -294,32 +314,30 @@ struct uint_t /* final */ {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  typedef unsigned char S;
-  std::size_t const width = 16u + 9u;
+  std::size_t const width = 16u + 8u + 1u;
   union { uint_t<width> integer; };
-  uint_t<width>::widthinfo<width>::flatten<S>::type bytes;
 
   // ...
   integer = 1u;
-  (void) bytes;
   std::printf("[integer]: %zu" "\r\n", static_cast<std::size_t>(integer));
   uint_t<width>::shift(integer.valueof(), 1u);
   std::printf("[integer]: %zu" "\r\n", static_cast<std::size_t>(integer));
+
   // integer = 16777216u | 23412u; // 16800628u
   // std::size_t const length = uint_t<width>::flatten(integer.valueof(), bytes);
-
+  //
   // std::printf("[integer]: (%zu)" " ", static_cast<std::size_t>(integer)); uint_t<width>::diagnose(integer.valueof()); std::printf("\r\n");
   // std::printf("[bytes]: ");
-  //   for (S *iterator = bytes, *const end = bytes + length; iterator != end; ++iterator) {
-  //     char string[CHAR_BIT * sizeof(S)];
+  //   for (uintmax_t *iterator = bytes, *const end = bytes + length; iterator != end; ++iterator) {
+  //     char string[CHAR_BIT * sizeof(uintmax_t)];
   //     char *subiterator = string + (sizeof string / sizeof(char));
-
-  //     for (S value = *iterator; value; value >>= 1u)
+  //
+  //     for (uintmax_t value = *iterator; value; value >>= 1u)
   //       *--subiterator = value & 1u ? '1' : '0';
-
+  //
   //     while (subiterator != string)
   //       *--subiterator = '0';
-
+  //
   //     std::printf("(%zu:%u)" " " "%0.*s" " ", static_cast<std::size_t>(*iterator), static_cast<unsigned>(length), static_cast<int>(sizeof string / sizeof(char)), string);
   //   }
   // std::printf("\r\n");
