@@ -5456,7 +5456,7 @@ int WinMain(HINSTANCE const instanceHandle, HINSTANCE const, LPSTR const, int co
               "",
             ']'));
 
-            // TODO (Lapys)
+            // TODO (Lapys) -> https://learn.microsoft.com/en-us/windows/win32/winauto/handling-the-wm-getobject-message
             // static_cast<LPARAM>(objectID) == static_cast<LPARAM>(::UiaRootObjectId)
           }
 

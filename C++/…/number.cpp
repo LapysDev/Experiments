@@ -10,6 +10,7 @@
 
 template <std::size_t width>
 struct float_t /* final */ {
+  // CITE (Lapys) -> https://en.wikipedia.org/wiki/Single-precision_floating-point_format
   static std::size_t const radix = 2u;
 
   uintmax_t exponent   : 8;
@@ -134,7 +135,7 @@ struct uint_t /* final */ {
       for (uintmax_t const maximum = (((static_cast<uintmax_t>(1u) << (width - 1u)) - 1u) << 1u) + 1u; value > maximum; --value)
         value -= maximum; // ->> Truncate `value` due to possible overflow (faster algorithm unknown)
 
-      integer.value = value;
+      integer.value = value & ((((static_cast<uintmax_t>(1u) << (integer.length - 1u)) - 1u) << 1u) + 1u);
       uint_t::assign(integer.next(), value >> integer.length);
     }
 
@@ -219,7 +220,7 @@ struct uint_t /* final */ {
 
       else {
         uint_t::flatten(integer, shifted);
-        (void) shifted;
+        // (void) shifted; print this really
 
         for (uintmax_t *iteratorA = shifted, iteratorB = shifted + (shift / CHAR_BIT * sizeof(uintmax_t)); ; ++iteratorA, ++iteratorB) {
           if (iteratorB == shifted + length) {
