@@ -334,7 +334,7 @@ struct uintwidth /* final */ {
       // ... ->> Shift entire "byte sequence"s at a time
       for (; shift; shift = shift > minimumLength ? shift - minimumLength : 0u)
       for (std::size_t compositionIndex = 0u, *iterator = lengths + segment.extent; iterator != lengths; ) {
-        struct shifty /* final */ {
+        struct shift /* final */ {
           /* constexpr */ inline static void diagnose(S (&composition)[uintwidth::lengthof<S>::value], std::size_t index, std::size_t const length, S** const begin, std::size_t* const beginOffset, S** const end, std::size_t* const endOffset) /* noexcept */ {
             std::size_t const compositionElementWidth = CHAR_BIT * sizeof(S);
             S          *const compositionEnd          = composition + (lengthof<S>::value - 1u);

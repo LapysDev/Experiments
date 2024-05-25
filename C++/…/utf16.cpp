@@ -8,22 +8,22 @@
 
 // …
 unsigned char get_utf16_codepoint_length(char16_t units[]) {
-  return 1u + ((uint_fast16_t) *units > 0xD7FFu && (uint_fast16_t) *units < 0xE000u);
+  return 1u + (static_cast<uint_least16_t>(*units) > 0xD7FFu && static_cast<uint_least16_t>(*units) < 0xE000u);
 }
 
 uint_least32_t get_utf16_codepoint_value(char16_t units[]) {
   unsigned char length = get_utf16_codepoint_length(units);
 
   if (length == 1u)
-  return (uint_fast32_t) *units;
+  return static_cast<uint_least16_t>(*units);
 
   // …
   uint_fast32_t value = 0x10000uL + (
-    (((uint_fast16_t) units[1] - 0xDC00u)) +
-    (((uint_fast16_t) units[0] - 0xD800u) * 0x400u)
+    ((static_cast<uint_least16_t>(units[1]) - 0xDC00u)) +
+    ((static_cast<uint_least16_t>(units[0]) - 0xD800u) * 0x400u)
   );
 
-  return value > 0x10FFFFuL ? (uint_least32_t) -1 : value;
+  return value > 0x10FFFFuL ? static_cast<uint_least32_t>(-1) : value;
 }
 
 /* Main */

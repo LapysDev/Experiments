@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <new>
 #include <utility>
- 
+
 /* ... */
 template <typename base>
 struct array final {

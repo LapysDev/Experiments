@@ -2090,7 +2090,7 @@ struct $n<arity, $shorthand::format<$shorthand::nodestruct, states...>, extensio
       static bool        const is_trivial_lifetime = (opinfo::can<opinfo::constant_destruct, type>::value) and (opinfo::can<opinfo::copy, type>::value or opinfo::can<opinfo::move, type>::value);
 
       union {
-          alignas(type) typename conditional<is_trivial_lifetime, type, sfinaeptr_t>::type extended;   // ->> Elide extended-type that are constant-destructible objects and copy-/ move-constructible objects
+        alignas(type) typename conditional<is_trivial_lifetime, type, sfinaeptr_t>::type extended;   // ->> Elide extended-type that are constant-destructible objects and copy-/ move-constructible objects
         typename remove_reference<subextension>::type                                   *referrable; // ->> Elide pointer-/ reference-to-extended-type objects
         extvalue<subextensions...>                                                       subvalue;   // ->> Elide ...
       };
