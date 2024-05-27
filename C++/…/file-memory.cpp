@@ -17,20 +17,105 @@ namespace fstd {
   /* ...
       --- NOTE ---
         #Lapys:
-          - Allocations are stored within `fbuffer` as an array of non-padded `struct { std::FILE*; std::size_t; }`
+          - Allocations are stored within `fbuffer` as an array of non-padded `struct { bool; std::size_t; unsigned char[]; }`
           - No alignment concerns due to serialized object representations
+          - No guarantee for allocations to always be zeroed-out
   */
-  extern "C" void* falloc(std::size_t const size) {
-    std::FILE        *allocationFile                                            = NULL == fbuffer ? std::tmpfile() : frecent;
-    std::size_t const allocationSize                                            = size;
-    unsigned char     allocation[sizeof allocationFile + sizeof allocationSize] = {};
-    std::size_t const offset                                                    = fsize % sizeof allocation;
+  extern "C" void* falloc(std::size_t size) {
+    bool              allocationReserved                                            = false;
+    std::size_t       allocationSize                                                = 0u;
+    unsigned char     allocation[sizeof allocationReserved + sizeof allocationSize] = {};
+    unsigned char     fill[1024]                                                    = {}; // ->> … (preferably the file system block size)
+    std::size_t const offset                                                        = fsize % sizeof allocation;
 
     // ...
+    if (NULL == fbuffer)
+      fbuffer = std::tmpfile();
+
     if (NULL == fbuffer)
       return NULL;
 
     // ...
+    (void) std::memset(fill, static_cast<unsigned char>(0x00u), sizeof fill);
+    std::rewind(fbuffer);
+
+    for (std::size_t count = 0u; count != size; ) {
+      // ... ->> Parse all (`bool` (reserved) and `std::size_t` (size)) data members of iterated allocation
+      allocationReserved = false;
+
+      for (struct { void *value; std::size_t size; } const allocationInformation[] = {
+        {&allocationReserved, sizeof allocationReserved},
+        {&allocationSize,     sizeof allocationSize}
+      }, *iterator = allocationInformation; iterator != allocationInformation + (sizeof allocationInformation / sizeof *allocationInformation); ++iterator) {
+        if (std::fread(iterator -> value, iterator -> size, 1u, fbuffer) == 1u) {
+          if (0 == std::ferror(fbuffer))
+          return NULL;
+        }
+
+        fseek
+      }
+
+      // ... ->> Re-use the possibly un-reserved allocation
+      if (not allocationReserved and allocationSize >= size) {
+        std::size_t allocationSplitSize = 64u; // ->> Minimum allocation size from split (preferably the file system block size)
+        bool        allocationSplit     = allocationSize - size >= allocationSplitSize + sizeof allocation;
+
+        // ... ->> Attempt to split the un-reserved allocation into multiples
+        if (allocationSplit) {
+          allocationSplitSize = size - (sizeof fill * std::fwrite(fill, sizeof fill, size / sizeof fill, fbuffer));
+          allocationSplit     = allocationSplitSize < sizeof fill and std::fwrite(fill, allocationSplitSize, 1u, fbuffer) == 1u;
+
+          if (allocationSplit) {
+            allocationSplitSize = allocationSize - size - sizeof allocation;
+
+            (void) std::memcpy(allocation + 0u,                        &static_cast<bool const&>(false), sizeof allocationReserved);
+            (void) std::memcpy(allocation + sizeof allocationReserved, &allocationSplitSize,             sizeof allocationSize);
+
+            // ...
+            if (std::fwrite(allocation, sizeof allocation, 1u, fbuffer) != 1u)
+              allocationSplit = false;
+
+            else {
+              for (allocationSplitSize = size + (sizeof allocation * 2u); allocationSplitSize; allocationSplitSize -= LONG_MAX < allocationSplitSize ? LONG_MAX : allocationSplitSize)
+              if (0 != std::fseek(fbuffer, -static_cast<long>(LONG_MAX < allocationSplitSize ? LONG_MAX : allocationSplitSize), SEEK_CUR)) {
+                allocationSplit = false;
+                break;
+              }
+
+              // (void) std::memcpy(allocation + 0u,                        &static_cast<bool        const&>(true), sizeof allocationReserved);
+              // (void) std::memcpy(allocation + sizeof allocationReserved, &static_cast<std::size_t const&>(size), sizeof allocationSize);
+
+              // if (std::fwrite(allocation, sizeof allocation, 1u, fbuffer) != 1u)
+              // return NULL;
+            }
+          }
+
+          if (not allocationSplit) {}
+        }
+
+        // ... ->> — otherwise completely re-use the un-reserved allocation
+        if (not allocationSplit) {
+          if (0 != std::fseek(fbuffer, -static_cast<long>(sizeof allocation), SEEK_CUR))
+          return NULL;
+
+          (void) std::memcpy(allocation + 0,                         &static_cast<bool        const&>(true),           sizeof allocationReserved);
+          (void) std::memcpy(allocation + sizeof allocationReserved, &static_cast<std::size_t const&>(allocationSize), sizeof allocationSize);
+
+          if (std::fwrite(allocation, sizeof allocation, 1u, fbuffer) != 1u)
+          return NULL;
+        }
+
+        // ...
+        return reinterpret_cast<void*>(count + reinterpret_cast<uintptr_t>(fbuffer));
+      }
+
+      // ... ->> Iterate next allocation
+      if (0 != std::fseek(fbuffer, static_cast<long>(allocationSize), SEEK_CUR))
+      return NULL;
+
+      count += sizeof allocation + allocationSize;
+    }
+
     if (0u == offset)
       allocationFile = std::tmpfile();
 
@@ -43,7 +128,8 @@ namespace fstd {
         unsigned char fill[1024] = {};
 
         // ...
-        (void) std::memset(fill, 0x00, sizeof fill / sizeof(unsigned char)); // ->> Same as `fill`
+        std::fwrite(, allocationFile);
+        (void) std::memset(fill, static_cast<unsigned char>(0x00u), sizeof fill / sizeof(unsigned char)); // ->> Same as `fill`
         while (size) {
           std::size_t const subcount = std::fwrite(fill, sizeof fill < size * sizeof(unsigned char) ? sizeof fill : (size * sizeof(unsigned char)), 1u, allocationFile);
 
@@ -77,7 +163,9 @@ namespace fstd {
     return allocationFile;
   }
 
-  extern "C" void ffree(void* const) /* TODO */ {}
+  extern "C" void ffree(void* const) /* TODO */ {
+    // Try to zero, then free
+  }
 
   std::size_t fread(void* const buffer, std::size_t const size, std::size_t const count, std::FILE* stream) {
     if (NULL != fbuffer) {
