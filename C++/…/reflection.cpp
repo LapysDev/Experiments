@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <functional>
 #include <new>
 
 /* … */
@@ -17,24 +18,24 @@ struct refl {
   public:
     typedef void (*id_t)();
 
-    void*     (*const construct)(void*, reflval, ...);
-    void      (*const destruct) (void*,          ...);
-    reflproxy (*const proxy)    (void*, void*);
-    id_t        const id;
-    void             *value;
-    /* TODO */
-    // std::size_t const length;      → Number of elements in array type or parameters in function type, otherwise `1zu`
-    // std::size_t const size;        → Numbers of bytes occupied by type, otherwise `0zu`
-    // bool        const is_bounded;  → Bounded/ unbounded array type, otherwise `false`
-    // bool        const is_const;    → `const` type qualification
-    // bool        const is_lvalue;   → lvalue reference type qualification
-    // bool        const is_function; → Function pointer/ reference type
-    // bool        const is_member;   → Member pointer type
-    // bool        const is_pointer;  → Function/ object pointer type
-    // bool        const is_rvalue;   → rvalue reference type qualification
-    // bool        const is_trivial;  → Trivial constructor, destructor, and layout of type
-    // bool        const is_union;    → `union` class type
-    // bool        const is_volatile; → `volatile` type qualification
+    // TODO -> std::less<id_t>
+    void*     (*const construct)(void*, reflval, ...); // → Instanced copy constructor; TODO -> Figure if this can be template?
+    void      (*const destruct) (void*,          ...); // → Instanced destructor
+    reflproxy (*const proxy)    (void*, void*);        // → Instanced operator blah blah overload; should make out optional via hiding
+    id_t        const id;                              //
+    void             *value;                           //
+    std::size_t const length;                          // → Number of elements in array type or parameters in function type, otherwise `1zu`
+    std::size_t const size;                            // → Numbers of bytes occupied by type, otherwise `0zu`
+    bool        const is_bounded;                      // → Bounded/ unbounded array type, otherwise `false`
+    bool        const is_const;                        // → `const` type qualification
+    bool        const is_lvalue;                       // → lvalue reference type qualification
+    bool        const is_function;                     // → Function pointer/ reference type
+    bool        const is_member;                       // → Member pointer type
+    bool        const is_pointer;                      // → Function/ object pointer type
+    bool        const is_rvalue;                       // → rvalue reference type qualification
+    bool        const is_trivial;                      // → Trivial constructor, destructor, and layout of type
+    bool        const is_union;                        // → `union` class type
+    bool        const is_volatile;                     // → `volatile` type qualification
 
   private:
     template <typename> static void*     constructorof(void* const, reflval const, ...); //
@@ -184,8 +185,8 @@ struct reflproxy {
   template <typename type>
   reflproxy refl::proxyof(void* const source, void* const destination) {
     reflproxy const proxy = {{NULL, NULL, NULL, &refl::identityof<type>, NULL}, {
-      &reflproxy::assignof <reflproxy::template can<reflproxy::assignof <>, type>::value>::template value<type>,
-      &reflproxy::postincof<reflproxy::template can<reflproxy::postincof<>, type>::value>::template value<type>
+      &reflproxy::assignof <reflproxy::can<reflproxy::assignof <>, type>::value>::template value<type>,
+      &reflproxy::postincof<reflproxy::can<reflproxy::postincof<>, type>::value>::template value<type>
     }, NULL, NULL, destination, source};
 
     return proxy;
