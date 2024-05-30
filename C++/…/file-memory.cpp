@@ -43,16 +43,25 @@ namespace fstd {
       // ... ->> Parse all (`bool` (reserved) and `std::size_t` (size)) data members of iterated allocation
       allocationReserved = false;
 
-      for (struct { void *value; std::size_t size; } const allocationInformation[] = {
-        {&allocationReserved, sizeof allocationReserved},
-        {&allocationSize,     sizeof allocationSize}
+      for (struct { void *value; std::size_t size; void const *fallback; } const allocationInformation[] = {
+        {&allocationReserved, sizeof allocationReserved, &static_cast<bool const&>(false)},
+        {&allocationSize,     sizeof allocationSize,     NULL}
       }, *iterator = allocationInformation; iterator != allocationInformation + (sizeof allocationInformation / sizeof *allocationInformation); ++iterator) {
-        if (std::fread(iterator -> value, iterator -> size, 1u, fbuffer) == 1u) {
-          if (0 == std::ferror(fbuffer))
+        std::size_t const count = std::fread(iterator -> value, iterator -> size, 1u, fbuffer);
+
+        // ...
+        if (0 == std::ferror(fbuffer))
+        return NULL;
+
+        if (count != 1u) {
+          if (NULL == iterator -> fallback)
+          return NULL;
+
+          (void) std::memcpy(iterator -> value, iterator -> fallback, iterator -> size);
+
+          if (0 != std::fseek(fbuffer, static_cast<long>(iterator -> size), SEEK_CUR))
           return NULL;
         }
-
-        fseek
       }
 
       // ... ->> Re-use the possibly un-reserved allocation
