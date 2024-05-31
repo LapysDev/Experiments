@@ -1,16 +1,9 @@
 #include <cfloat>
 #include <cmath>
-#include <cstddef>
 #include <cstdio>
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  float max = std::pow(FLT_RADIX, FLT_MAX_EXP - 1.0f);
-
-  // ...
-  while (max == max - 1.0f || max == max + 1.0f)
-    max /= 2.0f;
-
-  max += max - 1.0f;
-  std::printf("%f", (double) max);
+  long double const maximum = std::pow(FLT_RADIX, LDBL_MANT_DIG - 1.0L);
+  std::printf("%Lf", (maximum - 0.0L) + (maximum - 1.0L));
 }

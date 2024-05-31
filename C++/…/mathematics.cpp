@@ -101,7 +101,7 @@ type imaxof();
 
 template <>
 long double imaxof<long double>() {
-  long double const maximum = pow(FLT_RADIX, LDBL_MANT_DIG - 1.0L);
+  long double const maximum = ipow<long double>(FLT_RADIX, LDBL_MANT_DIG - 1.0L);
   return (maximum - 0.0L) + (maximum - 1.0L);
 }
 
