@@ -58,7 +58,7 @@
 • head       → Contains machine-readable information (metadata) about the document
 • header     → Represents introductory content
 • hgroup     → Group of headings
-• hr         → Thematic break between paragraph-level elements
+• hr         → Horizontal rule: Thematic break between paragraph-level elements
 • html       → Top-level element of an HTML document
 • i          → Represents text that is set off from normal text
 • iframe     → Nested DOM within the current DOM
