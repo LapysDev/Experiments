@@ -3,7 +3,6 @@
 #include <climits>
 #include <cstddef>
 #include <cstdio>
-#include <stdint.h>
 
 #if defined __STDC_IEC_559__
 # include <cstring>
@@ -25,48 +24,73 @@
 # define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 #endif
 
-#define DBL_MANT_DIG  __DBL_MANT_DIG__
-#define DBL_MAX       __DBL_MAX__
-#define FLT_MANT_DIG  __FLT_MANT_DIG__
-#define FLT_MAX       __FLT_MAX__
-#define FLT_RADIX     __FLT_RADIX__
-#define LDBL_EPSILON  __LDBL_EPSILON__
-#define LDBL_MANT_DIG __LDBL_MANT_DIG__
-#define LDBL_MAX      __LDBL_MAX__
-#define LDBL_MIN      __LDBL_MIN__
+// #define DBL_MANT_DIG  __DBL_MANT_DIG__
+// #define FLT_MANT_DIG  __FLT_MANT_DIG__
+// #define FLT_MAX       __FLT_MAX__
+// #define FLT_RADIX     __FLT_RADIX__
+// #define LDBL_EPSILON  __LDBL_EPSILON__
+// #define LDBL_MANT_DIG __LDBL_MANT_DIG__
+// #define LDBL_MAX      __LDBL_MAX__
+// #define LDBL_MIN      __LDBL_MIN__
 
 /* … → Functions evaluate to numeral base 10 */
 namespace {
-  uintmax_t   abs        (intmax_t), abs(long double), abs(uintmax_t);
-  long double compute_nan();
-  std::size_t countof    (intmax_t), countof(long double), countof(uintmax_t);
-  long double fract      (long double);
-  bool        is_infinite(long double);
-  bool        is_nan     (long double);
-  long double next       (long double);
-  long double prev       (long double);
-  signed char sign       (intmax_t, signed char = 0), sign(long double, signed char = 0), sign(uintmax_t, signed char = 0);
-  long double trunc      (long double);
+  double             abs        (double);
+  float              abs        (float);
+  long double        abs        (long double);
+  unsigned char      abs        (signed   char);
+  unsigned int       abs        (signed   int);
+  unsigned long      abs        (signed   long);
+  unsigned long long abs        (signed   long long);
+  unsigned short     abs        (signed   short);
+  unsigned char      abs        (unsigned char);
+  unsigned int       abs        (unsigned int);
+  unsigned long      abs        (unsigned long);
+  unsigned long long abs        (unsigned long long);
+  unsigned short     abs        (unsigned short);
+  long double        compute_nan();
+  long double        fract      (long double);
+  bool               is_infinite(long double);
+  bool               is_nan     (long double);
+  long double        next       (long double);
+  long double        prev       (long double);
+  signed char        sign       (intmax_t,    signed char = 0);
+  signed char        sign       (long double, signed char = 0);
+  signed char        sign       (uintmax_t,   signed char = 0);
+  long double        trunc      (long double);
 
-  template <typename type> type ifactorial(type, bool* = NULL);
-  template <typename type> type imaxof    ();
-  template <typename type> type ipow      (type, type, bool* = NULL);
-  template <typename type> type maxprecof (type);
+  template <typename type> std::size_t countof   (type);
+  template <typename type> type        ifactorial(type, bool* = NULL);
+  template <typename type> type        imaxof    ();
+  template <typename type> type        ipow      (type, type, bool* = NULL);
+  template <typename type> type        maxof     ();
+  template <typename type> type        maxprecof (type);
 
   /* … */
   // … → abs(𝙭) - Absolute value of 𝙭
-  uintmax_t abs(intmax_t const number) {
-    // → `INTMAX_MIN` not representable as positive `|number|` using `intmax_t`
-    return sign(number) == -1 ? -number : +number;
-  }
-
   long double abs(long double const number) {
     return -0.0L == number ? +0.0L : sign(number) == -1 ? -number : +number;
   }
 
-  uintmax_t abs(uintmax_t const number) {
+  unsigned long long abs(signed long long const number) {
+    // → `LLONG_MIN` not representable as positive `|number|` using `signed long long`
+    return sign(number) == -1 ? -number : +number;
+  }
+
+  unsigned long long abs(unsigned long long const number) {
     return number;
   }
+
+  double         abs(double         const number) { return abs(static_cast<long double>       (number)); }
+  float          abs(float          const number) { return abs(static_cast<long double>       (number)); }
+  unsigned char  abs(signed   char  const number) { return abs(static_cast<signed   long long>(number)); }
+  unsigned int   abs(signed   int   const number) { return abs(static_cast<signed   long long>(number)); }
+  unsigned long  abs(signed   long  const number) { return abs(static_cast<signed   long long>(number)); }
+  unsigned short abs(signed   short const number) { return abs(static_cast<signed   long long>(number)); }
+  unsigned char  abs(unsigned char  const number) { return abs(static_cast<unsigned long long>(number)); }
+  unsigned int   abs(unsigned int   const number) { return abs(static_cast<unsigned long long>(number)); }
+  unsigned long  abs(unsigned long  const number) { return abs(static_cast<unsigned long long>(number)); }
+  unsigned short abs(unsigned short const number) { return abs(static_cast<unsigned long long>(number)); }
 
   // … → compute_nan() - Non-numeral floating-point representative
   long double compute_nan() {
@@ -85,20 +109,6 @@ namespace {
   }
 
   // … → countof(𝙭) - Number of denary digits representing 𝙭
-  std::size_t countof(uintmax_t integer) {
-    std::size_t count = 0u;
-
-    // …
-    for (; integer; integer /= 10u)
-    ++count;
-
-    return count + (0u == count);
-  }
-
-  std::size_t countof(intmax_t const integer) {
-    return countof(abs(integer));
-  }
-
   std::size_t countof(long double const number) {
     long double characteristics = trunc(number); //
     std::size_t count           = 0u;            // → Number of significant digits
@@ -132,6 +142,30 @@ namespace {
     return count + (0u == count);
   }
 
+  std::size_t countof(signed long long const number) {
+    return countof(abs(number));
+  }
+
+  std::size_t countof(unsigned long long number) {
+    std::size_t count = 0u;
+
+    // …
+    for (; number; number /= 10uLL)
+    ++count;
+
+    return count + (0u == count);
+  }
+
+  std::size_t countof(double const);
+  std::size_t countof(signed   char  const number) { return countof(static_cast<signed   long long>(number)); }
+  std::size_t countof(signed   int   const number) { return countof(static_cast<signed   long long>(number)); }
+  std::size_t countof(signed   long  const number) { return countof(static_cast<signed   long long>(number)); }
+  std::size_t countof(signed   short const number) { return countof(static_cast<signed   long long>(number)); }
+  std::size_t countof(unsigned char  const number) { return countof(static_cast<unsigned long long>(number)); }
+  std::size_t countof(unsigned int   const number) { return countof(static_cast<unsigned long long>(number)); }
+  std::size_t countof(unsigned long  const number) { return countof(static_cast<unsigned long long>(number)); }
+  std::size_t countof(unsigned short const number) { return countof(static_cast<unsigned long long>(number)); }
+
   // … → fract(𝙭) - Fractional value of 𝙭 without its characteristics
   long double fract(long double const number) {
     return number - trunc(number);
@@ -157,7 +191,7 @@ namespace {
       precision *= 2.0L;
 
     next += precision;
-    return not is_infinite(next) ? next * (number < 0.0L ? -1.0L : +1.0L) : number;
+    return is_infinite(next) ? number : next;
   }
 
   // … → prev(𝙭) - Previous normalized floating-point value before 𝙭
@@ -208,9 +242,9 @@ namespace {
 
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
-    float       counter    = 1.0L;
-    float const signedness = number < +0.0 ? -1.0L : +1.0L;
-    float       truncation = 0.0L;
+    long double       counter    = 1.0L;
+    long double const signedness = sign(number, +1);
+    long double       truncation = 0.0L;
 
     // … → Aggregate sum of `number`'s characteristics using powers of two, which normally matches the base of its floating-point type `FLT_RADIX`
     number *= signedness;
@@ -231,11 +265,11 @@ namespace {
   template <typename type>
   type ifactorial(type integer, bool* const representable) {
     type       factorial = 1;
-    type const maximum   = imaxof<type>();
+    type const maximum   = maxof<type>();
 
     // …
     while (integer >= 1) {
-      if (representable and is_infinite(factorial)) {
+      if (representable and factorial > maximum / integer) {
         *representable = false;
         return 0;
       }
@@ -247,8 +281,8 @@ namespace {
   }
 
   // … → imaxof<T>() - Maximum integer value of `T` with complete integer precision; Equivalent to `maxprecof<T>(1)`
-  template <typename type>
-  type /* → double | float | long double */ imaxof() {
+  template <typename type> // → double | float | long double
+  type imaxof() {
     type maximum = 1;
 
     // … → Simplified form of `maximum = ipow<type>(FLT_RADIX, *_MANT_DIG - 1.0L)`
@@ -280,15 +314,15 @@ namespace {
   // … → ipow(𝙭, 𝙣) - Integer 𝙣th power of 𝙭
   template <typename type>
   type ipow(type const base, type exponent, bool* const representable) {
-    bool const inverse = exponent < 0;
+    bool const inverse = sign(static_cast<long double>(exponent)) == -1;
     type       power   = 1;
 
     // …
-    exponent = inverse ? abs(exponent) : exponent;
+    exponent = abs(static_cast<long double>(exponent));
 
-    for (struct iterator { type count; struct types { enum { maximum = 32u } type values[maximum]; std::size_t length; } multipliers; } iteration = {1, {{base}, 1u}}; exponent; ) {
+    for (struct iterator { type count; struct types { enum { maximum = 32u }; type values[maximum]; std::size_t length; } multipliers; } iteration = {1, {{base}, 1u}}; exponent; ) {
       type            &count       = iteration.count;
-      iterator::types &multipliers = iteration.multipliers;
+      typename iterator::types &multipliers = iteration.multipliers;
       type             multiplier  = multipliers.values[multipliers.length - 1u];
 
       // …
@@ -320,10 +354,31 @@ namespace {
     return inverse ? static_cast<type>(1) / power : power;
   }
 
-  // … → maxprecof(𝙭) - Previous floating-point value before 𝙭
+  // … → maxof(𝙭) - Previous floating-point value before 𝙭
+  template <>
+  float maxof() {
+    return FLT_MAX;
+  }
+
+  template <>
+  intmax_t maxof() {
+    return imaxof<intmax_t>();
+  }
+
+  template <>
+  long double maxof() {
+    return LDBL_MAX;
+  }
+
+  template <>
+  uintmax_t maxof() {
+    return imaxof<uintmax_t>();
+  }
+
+  // … → maxprecof(𝙭) - Maximum normalized floating-point value with precision 𝙭
   template <typename type>
   type maxprecof(type const precision) {
-    type maximum = sizeof(type) == sizeof(double) ? DBL_MAX : sizeof(type) == sizeof(float) ? FLT_MAX : sizeof(type) == sizeof(long double) ? LDBL_MAX : 0;
+    type maximum = maxof<type>();
 
     // …
     while (precision != maximum - (maximum - precision))
