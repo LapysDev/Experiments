@@ -3,6 +3,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdio>
+#include <stdint.h>
 
 #if defined __STDC_IEC_559__
 # include <cstring>
@@ -35,29 +36,19 @@
 
 /* … → Functions evaluate to numeral base 10 */
 namespace {
-  double             abs        (double);
-  float              abs        (float);
-  long double        abs        (long double);
-  unsigned char      abs        (signed   char);
-  unsigned int       abs        (signed   int);
-  unsigned long      abs        (signed   long);
-  unsigned long long abs        (signed   long long);
-  unsigned short     abs        (signed   short);
-  unsigned char      abs        (unsigned char);
-  unsigned int       abs        (unsigned int);
-  unsigned long      abs        (unsigned long);
-  unsigned long long abs        (unsigned long long);
-  unsigned short     abs        (unsigned short);
-  long double        compute_nan();
-  long double        fract      (long double);
-  bool               is_infinite(long double);
-  bool               is_nan     (long double);
-  long double        next       (long double);
-  long double        prev       (long double);
-  signed char        sign       (intmax_t,    signed char = 0);
-  signed char        sign       (long double, signed char = 0);
-  signed char        sign       (uintmax_t,   signed char = 0);
-  long double        trunc      (long double);
+  uintmax_t   abs        (intmax_t);
+  long double abs        (long double);
+  uintmax_t   abs        (uintmax_t);
+  long double compute_nan();
+  long double fract      (long double);
+  bool        is_infinite(long double);
+  bool        is_nan     (long double);
+  long double next       (long double);
+  long double prev       (long double);
+  signed char sign       (intmax_t,    signed char = 0);
+  signed char sign       (long double, signed char = 0);
+  signed char sign       (uintmax_t,   signed char = 0);
+  long double trunc      (long double);
 
   template <typename type> std::size_t countof   (type);
   template <typename type> type        ifactorial(type, bool* = NULL);
@@ -68,29 +59,18 @@ namespace {
 
   /* … */
   // … → abs(𝙭) - Absolute value of 𝙭
+  uintmax_t abs(intmax_t const number) {
+    // → `INTMAX_MIN` not representable as positive `|number|` using `intmax_t`
+    return sign(number) == -1 ? -number : +number;
+  }
+
   long double abs(long double const number) {
     return -0.0L == number ? +0.0L : sign(number) == -1 ? -number : +number;
   }
 
-  unsigned long long abs(signed long long const number) {
-    // → `LLONG_MIN` not representable as positive `|number|` using `signed long long`
-    return sign(number) == -1 ? -number : +number;
-  }
-
-  unsigned long long abs(unsigned long long const number) {
+  uintmax_t abs(uintmax_t const number) {
     return number;
   }
-
-  double         abs(double         const number) { return abs(static_cast<long double>       (number)); }
-  float          abs(float          const number) { return abs(static_cast<long double>       (number)); }
-  unsigned char  abs(signed   char  const number) { return abs(static_cast<signed   long long>(number)); }
-  unsigned int   abs(signed   int   const number) { return abs(static_cast<signed   long long>(number)); }
-  unsigned long  abs(signed   long  const number) { return abs(static_cast<signed   long long>(number)); }
-  unsigned short abs(signed   short const number) { return abs(static_cast<signed   long long>(number)); }
-  unsigned char  abs(unsigned char  const number) { return abs(static_cast<unsigned long long>(number)); }
-  unsigned int   abs(unsigned int   const number) { return abs(static_cast<unsigned long long>(number)); }
-  unsigned long  abs(unsigned long  const number) { return abs(static_cast<unsigned long long>(number)); }
-  unsigned short abs(unsigned short const number) { return abs(static_cast<unsigned long long>(number)); }
 
   // … → compute_nan() - Non-numeral floating-point representative
   long double compute_nan() {
