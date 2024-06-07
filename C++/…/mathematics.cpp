@@ -25,7 +25,6 @@
 # define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 #endif
 
-// #define DBL_MANT_DIG  __DBL_MANT_DIG__
 // #define FLT_MANT_DIG  __FLT_MANT_DIG__
 // #define FLT_MAX       __FLT_MAX__
 // #define FLT_RADIX     __FLT_RADIX__
@@ -40,6 +39,10 @@ namespace {
   long double abs        (long double);
   uintmax_t   abs        (uintmax_t);
   long double compute_nan();
+  float       compute_pi (std::size_t, bool* = NULL);
+  std::size_t countof    (intmax_t);
+  std::size_t countof    (long double);
+  std::size_t countof    (uintmax_t);
   long double fract      (long double);
   bool        is_infinite(long double);
   bool        is_nan     (long double);
@@ -50,12 +53,11 @@ namespace {
   signed char sign       (uintmax_t,   signed char = 0);
   long double trunc      (long double);
 
-  template <typename type> std::size_t countof   (type);
-  template <typename type> type        ifactorial(type, bool* = NULL);
-  template <typename type> type        imaxof    ();
-  template <typename type> type        ipow      (type, type, bool* = NULL);
-  template <typename type> type        maxof     ();
-  template <typename type> type        maxprecof (type);
+  template <typename type> type ifactorial(type, bool* = NULL);
+  template <typename type> type imaxof    ();
+  template <typename type> type ipow      (type, type, bool* = NULL);
+  template <typename type> type maxof     ();
+  template <typename type> type maxprecof (type);
 
   /* … */
   // … → abs(𝙭) - Absolute value of 𝙭
@@ -72,7 +74,7 @@ namespace {
     return number;
   }
 
-  // … → compute_nan() - Non-numeral floating-point representative
+  // … → compute_nan() - Non-numeral floating-point representative i.e. NaN
   long double compute_nan() {
     #if SUPPORTS_IEEE754_FLOAT
       if (SUPPORTS_IEEE754_FLOAT) {
@@ -88,7 +90,56 @@ namespace {
     return zero / zero;
   }
 
+  // … → `https://en.wikipedia.org/wiki/Chudnovsky_algorithm`
+  float compute_pi(std::size_t iterationCount, bool* const representable) {
+    float const maximum          = FLT_MAX; // maxprecof<float>(1.0L);
+    float       pi               = 0.0f;
+    bool        subrepresentable = true;
+
+    /* TODO */
+    // … → `Σₖ₌₀((-1)ᵏ(6k)!(545140134k + 13591409) ÷ (3k)!(k!)³(640320)³ᵏ⁺³ᐟ²)`
+    for (std::size_t index = 0u; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
+      float iteration[2] = {1.0f, 1.0f};
+      float term;
+
+      // …
+      iteration[0] *= term = ipow<float>(-1.0f, index, &subrepresentable);
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+      iteration[0] *= term = ifactorial<float>(index * 6.0L, &subrepresentable);
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+      iteration[0] *= term = 13591409.0f + (index * 545140134.0f);
+      subrepresentable = subrepresentable and term <= maximum;
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+
+      iteration[1] *= term = ifactorial<float>(index * 3.0f, &subrepresentable);
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+      iteration[1] *= term = ipow<float>(ifactorial<float>(index, &subrepresentable), 3.0f, &subrepresentable);
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+      iteration[1] *= term = /* → `640320³ᐟ²` */ 512384047.996f * /* → 640320³ᵏ */ ipow<float>(640320.0f, index * 3.0f, &subrepresentable); // → j-function of negated Heegner number
+      subrepresentable = subrepresentable and term <= maximum;
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+
+      subrepresentable = subrepresentable and iteration[0] <= maximum and iteration[1] <= maximum;
+      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
+
+      if (representable and not subrepresentable) {
+        *representable = false;
+        // return iterationCount != static_cast<std::size_t>(-1) ? 0.0L : pi;
+      }
+
+      // …
+      pi += iteration[0] / iteration[1];
+      std::printf("[...]: %f / %f => %f" "\r\n\n", iteration[0], iteration[1], pi);
+    }
+
+    return 1.0f / (pi * 12.0f);
+  }
+
   // … → countof(𝙭) - Number of denary digits representing 𝙭
+  std::size_t countof(intmax_t const number) {
+    return countof(abs(number));
+  }
+
   std::size_t countof(long double const number) {
     long double characteristics = trunc(number); //
     std::size_t count           = 0u;            // → Number of significant digits
@@ -122,11 +173,7 @@ namespace {
     return count + (0u == count);
   }
 
-  std::size_t countof(signed long long const number) {
-    return countof(abs(number));
-  }
-
-  std::size_t countof(unsigned long long number) {
+  std::size_t countof(uintmax_t const number) {
     std::size_t count = 0u;
 
     // …
@@ -135,16 +182,6 @@ namespace {
 
     return count + (0u == count);
   }
-
-  std::size_t countof(double const);
-  std::size_t countof(signed   char  const number) { return countof(static_cast<signed   long long>(number)); }
-  std::size_t countof(signed   int   const number) { return countof(static_cast<signed   long long>(number)); }
-  std::size_t countof(signed   long  const number) { return countof(static_cast<signed   long long>(number)); }
-  std::size_t countof(signed   short const number) { return countof(static_cast<signed   long long>(number)); }
-  std::size_t countof(unsigned char  const number) { return countof(static_cast<unsigned long long>(number)); }
-  std::size_t countof(unsigned int   const number) { return countof(static_cast<unsigned long long>(number)); }
-  std::size_t countof(unsigned long  const number) { return countof(static_cast<unsigned long long>(number)); }
-  std::size_t countof(unsigned short const number) { return countof(static_cast<unsigned long long>(number)); }
 
   // … → fract(𝙭) - Fractional value of 𝙭 without its characteristics
   long double fract(long double const number) {
@@ -261,12 +298,12 @@ namespace {
   }
 
   // … → imaxof<T>() - Maximum integer value of `T` with complete integer precision; Equivalent to `maxprecof<T>(1)`
-  template <typename type> // → double | float | long double
+  template <typename type> // → float | long double
   type imaxof() {
     type maximum = 1;
 
     // … → Simplified form of `maximum = ipow<type>(FLT_RADIX, *_MANT_DIG - 1.0L)`
-    for (struct { unsigned count, exponent; type multiplier; } iteration = {1u, (sizeof(type) == sizeof(double) ? DBL_MANT_DIG : sizeof(type) == sizeof(float) ? FLT_MANT_DIG : sizeof(type) == sizeof(long double) ? LDBL_MANT_DIG : 0u) - 1u, FLT_RADIX}; iteration.exponent; ) {
+    for (struct { unsigned count, exponent; type multiplier; } iteration = {1u, (sizeof(type) == sizeof(float) ? FLT_MANT_DIG : sizeof(type) == sizeof(long double) ? LDBL_MANT_DIG : 0u) - 1u, FLT_RADIX}; iteration.exponent; ) {
       if (iteration.count > iteration.exponent) {
         iteration.count      = 1u;
         iteration.multiplier = FLT_RADIX;
@@ -295,34 +332,32 @@ namespace {
   template <typename type>
   type ipow(type const base, type exponent, bool* const representable) {
     bool const inverse = sign(static_cast<long double>(exponent)) == -1;
+    type const maximum = maxof<type>();
     type       power   = 1;
 
     // …
     exponent = abs(static_cast<long double>(exponent));
 
-    for (struct iterator { type count; struct types { enum { maximum = 32u }; type values[maximum]; std::size_t length; } multipliers; } iteration = {1, {{base}, 1u}}; exponent; ) {
-      type            &count       = iteration.count;
-      typename iterator::types &multipliers = iteration.multipliers;
-      type             multiplier  = multipliers.values[multipliers.length - 1u];
+    for (struct iterator { type count; struct types { enum { maximum = LDBL_MAX_EXP /* → Possibly heavy on storage; otherwise check `.length`s… */ }; type values[maximum]; std::size_t length; } multipliers; } iteration = {1, {{base}, 1u}}; exponent; ) {
+      typedef struct iterator::types types;
+      type  &count       = iteration  .count;
+      types &multipliers = iteration  .multipliers;
+      type   multiplier  = multipliers.values[multipliers.length - 1u];
 
       // …
       if (count != exponent) {
-        if (multipliers.length != multipliers.maximum and not is_infinite(count * 2) and not is_infinite(multiplier * multiplier)) {
-          count      *= 2;
-          multiplier *= multiplier;
+        count                                   *= 2;          //
+        multiplier                              *= multiplier; // → May overflow
+        multipliers.values[multipliers.length++] = multiplier; // → Memoize `multiplier` since `isqrt(…)` would otherwise be slower
 
-          multipliers.values[multipliers.length++] = multiplier;
-        }
-
-        while (count > exponent /* and multipliers.length != 1u */) {
-          count     /= 2; // → Could also be memoized with some `counts` list analogous to the `multipliers` list
-          multiplier = multipliers.values[multipliers.length - 2u];
-
-          multipliers.length -= 1u;
+        while (count > exponent) {
+          count              /= 2;                                           // → Could also be memoized with a `.counts` list analogous to the `.multipliers` list
+          multiplier          = multipliers.values[multipliers.length - 2u]; // → `isqrt(multiplier)`
+          multipliers.length -= 2u;                                          //
         }
       }
 
-      if (representable and is_infinite(power * multiplier)) {
+      if (representable and power > maximum / multiplier) {
         *representable = false;
         return 0;
       }
@@ -356,7 +391,7 @@ namespace {
   }
 
   // … → maxprecof(𝙭) - Maximum normalized floating-point value with precision 𝙭
-  template <typename type>
+  template <typename type> // → float | long double
   type maxprecof(type const precision) {
     type maximum = maxof<type>();
 
@@ -365,50 +400,6 @@ namespace {
     maximum /= FLT_RADIX;
 
     return maximum;
-  }
-
-  // … → `https://en.wikipedia.org/wiki/Chudnovsky_algorithm`
-  float compute_pi(std::size_t iterationCount, bool* const representable) {
-    float const maximum          = FLT_MAX; // maxprecof<float>(1.0L);
-    float       pi               = 0.0f;
-    bool        subrepresentable = true;
-
-    // … → `Σₖ₌₀((-1)ᵏ(6k)!(545140134k + 13591409) ÷ (3k)!(k!)³(640320)³ᵏ⁺³ᐟ²)`
-    for (std::size_t index = 0u; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
-      float iteration[2] = {1.0f, 1.0f};
-      float term;
-
-      // …
-      iteration[0] *= term = ipow<float>(-1.0f, index, &subrepresentable);
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-      iteration[0] *= term = ifactorial<float>(index * 6.0L, &subrepresentable);
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-      iteration[0] *= term = 13591409.0f + (index * 545140134.0f);
-      subrepresentable = subrepresentable and term <= maximum;
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-
-      iteration[1] *= term = ifactorial<float>(index * 3.0f, &subrepresentable);
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-      iteration[1] *= term = ipow<float>(ifactorial<float>(index, &subrepresentable), 3.0f, &subrepresentable);
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-      iteration[1] *= term = /* → `640320³ᐟ²` */ 512384047.996f * /* → 640320³ᵏ */ ipow<float>(640320.0f, index * 3.0f, &subrepresentable); // → j-function of negated Heegner number
-      subrepresentable = subrepresentable and term <= maximum;
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-
-      subrepresentable = subrepresentable and iteration[0] <= maximum and iteration[1] <= maximum;
-      std::printf("[{%zu}]: %f <= %f == %4.5s" "\r\n", index, term, maximum, subrepresentable ? "true" : "false");
-
-      if (representable and not subrepresentable) {
-        *representable = false;
-        // return iterationCount != static_cast<std::size_t>(-1) ? 0.0L : pi;
-      }
-
-      // …
-      pi += iteration[0] / iteration[1];
-      std::printf("[...]: %f / %f => %f" "\r\n\n", iteration[0], iteration[1], pi);
-    }
-
-    return 1.0f / (pi * 12.0f);
   }
 }
 
