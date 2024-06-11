@@ -46,6 +46,7 @@ namespace {
   long double compute_nan            ();
   long double compute_pi             (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double compute_tau            (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  long double cos                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   std::size_t countof                (intmax_t);
   std::size_t countof                (long double);
   std::size_t countof                (uintmax_t);
@@ -107,6 +108,7 @@ namespace {
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
   long double sin                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  long double tan                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double trunc                  (long double);
 
   long double acos                   (long double);
@@ -167,7 +169,6 @@ namespace {
   long double clamp                  (long double, long double, long double);
   uintmax_t   clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
   long double compute_euler          (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
-  long double cos                    (long double);
   long double cot                    (long double);
   long double coth                   (long double);
   long double csc                    (long double);
@@ -178,7 +179,7 @@ namespace {
   long double divide                 (long double, long double);
   uintmax_t   divide                 (uintmax_t,   uintmax_t);
   long double ellint                 (long double, long double, long double, bool);
-  long double exp                    (long double);
+  long double exp                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double expint                 (long double);
   intmax_t    floor                  (intmax_t);
   long double floor                  (long double);
@@ -245,7 +246,6 @@ namespace {
   intmax_t    subtract               (intmax_t,    intmax_t,    bool* = NULL);
   long double subtract               (long double, long double, bool* = NULL);
   uintmax_t   subtract               (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double tan                    (long double);
   long double tanh                   (long double);
   intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t);
   long double wrap                   (long double, long double, long double);
@@ -393,6 +393,36 @@ namespace {
 
   long double compute_tau(std::size_t iterationCount, bool* const representable) {
     return compute_pi(iterationCount, representable) * 2.00L;
+  }
+
+  // … → cos(𝙭) - Cosine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine`)
+  long double cos(long double const angle, std::size_t iterationCount, bool* const representable) {
+    long double value = 0.0L;
+
+    // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ) ÷ (2n)!)`
+    for (long double index = 0.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
+      long double iteration[2]     = {1.0L, 1.0L};
+      bool        subrepresentable = index <= imaxof();
+
+      // …
+      iteration[0] *= ipow(-1.0L, index, &subrepresentable);
+      iteration[0] *= ipow(angle, index * 2.0L, &subrepresentable);
+
+      iteration[1] *= ifactorial(index * 2.0L, &subrepresentable);
+
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
+
+        if (iterationCount == static_cast<std::size_t>(-1)) break;
+        if (representable) return 0.0L;
+      }
+
+      // …
+      value += iteration[0] / iteration[1];
+    }
+
+    return value;
   }
 
   // … → countof(𝙭) - Number of denary digits representing 𝙭
@@ -939,6 +969,22 @@ namespace {
     return value;
   }
 
+  // … → tan(𝙭) - Tangent of 𝙭 radians
+  long double tan(long double const angle, std::size_t iterationCount, bool* const representable) {
+    bool              subrepresentable = true;
+    long double const value[2]         = {sin(angle, iterationCount, &subrepresentable), cos(angle, iterationCount, &subrepresentable)};
+
+    // …
+    if (representable and not subrepresentable)
+    *representable = false;
+
+    if (not subrepresentable and iterationCount != static_cast<std::size_t>(-1))
+    return 0.0L;
+
+    // …
+    return value[0] / value[1];
+  }
+
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
     if (is_infinite(number) or is_nan(number)) {
@@ -964,7 +1010,6 @@ namespace {
     return number;
   }
 
-  long double cos (long double)                     { return 0.00L; }
   long double pow (long double, long double, bool*) { return 0.00L; }
   long double sqrt(long double)                     { return 0.00L; }
 }
