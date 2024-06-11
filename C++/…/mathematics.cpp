@@ -1,6 +1,7 @@
 #include <cfloat>
 #include <ciso646>
 #include <climits>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <stdint.h>
@@ -34,39 +35,234 @@
 
 /* … → Functions evaluate to numeral base 10 */
 namespace {
-  uintmax_t   abs             (intmax_t);
-  long double abs             (long double);
-  uintmax_t   abs             (uintmax_t);
-  long double compute_infinity();
-  long double compute_nan     ();
-  long double compute_pi      (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
-  std::size_t countof         (intmax_t);
-  std::size_t countof         (long double);
-  std::size_t countof         (uintmax_t);
-  long double fract           (long double);
-  long double ifactorial      (long double, bool* = NULL);
-  uintmax_t   ifactorial      (uintmax_t,   bool* = NULL);
-  long double imaxof          ();
-  intmax_t    ipow            (intmax_t,    intmax_t,    bool* = NULL);
-  long double ipow            (long double, long double, bool* = NULL);
-  uintmax_t   ipow            (uintmax_t,   uintmax_t,   bool* = NULL);
-  bool        is_denormal     (long double);
-  bool        is_infinite     (long double);
-  bool        is_nan          (long double);
-  bool        is_subnormal    (long double);
-  long double maxprecof       (long double);
-  intmax_t    multiply        (intmax_t,    intmax_t,    bool* = NULL);
-  long double multiply        (long double, long double, bool* = NULL);
-  uintmax_t   multiply        (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double next            (long double);
-  bool        parity          (intmax_t);
-  bool        parity          (long double);
-  bool        parity          (uintmax_t);
-  long double prev            (long double);
-  signed char sign            (intmax_t,    signed char = 0);
-  signed char sign            (long double, signed char = 0);
-  signed char sign            (uintmax_t,   signed char = 0);
-  long double trunc           (long double);
+  uintmax_t   abs                    (intmax_t);
+  long double abs                    (long double);
+  uintmax_t   abs                    (uintmax_t);
+  long double bézier                 (std::size_t, long double, ...);
+  long double bézier_cubic           (long double, long double, long double, long double, long double);
+  long double bézier_linear          (long double, long double, long double);
+  long double bézier_quadratic       (long double, long double, long double, long double);
+  long double compute_infinity       ();
+  long double compute_nan            ();
+  long double compute_pi             (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  long double compute_tau            (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  std::size_t countof                (intmax_t);
+  std::size_t countof                (long double);
+  std::size_t countof                (uintmax_t);
+  long double ease                   (long double);
+  long double ease_in                (long double);
+  long double ease_in_back           (long double);
+  long double ease_in_bounce         (long double);
+  long double ease_in_circular       (long double);
+  long double ease_in_cubic          (long double);
+  long double ease_in_elastic        (long double);
+  long double ease_in_exponential    (long double);
+  long double ease_in_out            (long double);
+  long double ease_in_out_back       (long double);
+  long double ease_in_out_bounce     (long double);
+  long double ease_in_out_circular   (long double);
+  long double ease_in_out_cubic      (long double);
+  long double ease_in_out_elastic    (long double);
+  long double ease_in_out_exponential(long double);
+  long double ease_in_out_quadratic  (long double);
+  long double ease_in_out_quartic    (long double);
+  long double ease_in_out_quintic    (long double);
+  long double ease_in_out_sine       (long double);
+  long double ease_in_quadratic      (long double);
+  long double ease_in_quartic        (long double);
+  long double ease_in_quintic        (long double);
+  long double ease_in_sine           (long double);
+  long double ease_out               (long double);
+  long double ease_out_back          (long double);
+  long double ease_out_bounce        (long double);
+  long double ease_out_circular      (long double);
+  long double ease_out_cubic         (long double);
+  long double ease_out_elastic       (long double);
+  long double ease_out_exponential   (long double);
+  long double ease_out_quadratic     (long double);
+  long double ease_out_quartic       (long double);
+  long double ease_out_quintic       (long double);
+  long double ease_out_sine          (long double);
+  long double fract                  (long double);
+  long double ifactorial             (long double, bool* = NULL);
+  uintmax_t   ifactorial             (uintmax_t,   bool* = NULL);
+  long double imaxof                 ();
+  intmax_t    ipow                   (intmax_t,    intmax_t,    bool* = NULL);
+  long double ipow                   (long double, long double, bool* = NULL);
+  uintmax_t   ipow                   (uintmax_t,   uintmax_t,   bool* = NULL);
+  bool        is_denormal            (long double);
+  bool        is_infinite            (long double);
+  bool        is_nan                 (long double);
+  bool        is_subnormal           (long double);
+  long double maxprecof              (long double);
+  intmax_t    multiply               (intmax_t,    intmax_t,    bool* = NULL);
+  long double multiply               (long double, long double, bool* = NULL);
+  uintmax_t   multiply               (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double next                   (long double);
+  bool        parity                 (intmax_t);
+  bool        parity                 (long double);
+  bool        parity                 (uintmax_t);
+  long double prev                   (long double);
+  signed char sign                   (intmax_t,    signed char = 0);
+  signed char sign                   (long double, signed char = 0);
+  signed char sign                   (uintmax_t,   signed char = 0);
+  long double sin                    (long double);
+  long double trunc                  (long double);
+
+  long double acos                   (long double);
+  long double acosh                  (long double);
+  long double acot                   (long double);
+  long double acoth                  (long double);
+  long double acsc                   (long double);
+  long double acsch                  (long double);
+  intmax_t    add                    (intmax_t,    intmax_t);
+  long double add                    (long double, long double);
+  uintmax_t   add                    (uintmax_t,   uintmax_t);
+  long double asec                   (long double);
+  long double asech                  (long double);
+  long double asin                   (long double);
+  long double asinh                  (long double);
+  long double atan                   (long double);
+  long double atanh                  (long double);
+  long double beta                   (long double);
+  long double bitceil                (long double);
+  uintmax_t   bitceil                (uintmax_t);
+  intmax_t    bitclear               (intmax_t,    std::size_t);
+  long double bitclear               (long double, std::size_t);
+  uintmax_t   bitclear               (uintmax_t,   std::size_t);
+  intmax_t    bitflip                (intmax_t,    std::size_t = static_cast<std::size_t>(-1));
+  long double bitflip                (long double, std::size_t = static_cast<std::size_t>(-1));
+  uintmax_t   bitflip                (uintmax_t);
+  long double bitfloor               (long double);
+  uintmax_t   bitfloor               (uintmax_t);
+  std::size_t bitpopcount            (intmax_t);
+  std::size_t bitpopcount            (long double);
+  std::size_t bitpopcount            (uintmax_t);
+  intmax_t    bitrotleft             (intmax_t,    std::size_t = 1u);
+  long double bitrotleft             (long double, std::size_t = 1u);
+  uintmax_t   bitrotleft             (uintmax_t,   std::size_t = 1u);
+  intmax_t    bitrotright            (intmax_t,    std::size_t = 1u);
+  long double bitrotright            (long double, std::size_t = 1u);
+  uintmax_t   bitrotright            (uintmax_t,   std::size_t = 1u);
+  intmax_t    bitset                 (intmax_t,    std::size_t);
+  long double bitset                 (long double, std::size_t);
+  uintmax_t   bitset                 (uintmax_t,   std::size_t);
+  intmax_t    bitshiftleft           (intmax_t,    std::size_t = 1u);
+  long double bitshiftleft           (long double, std::size_t = 1u);
+  uintmax_t   bitshiftleft           (uintmax_t,   std::size_t = 1u);
+  intmax_t    bitshiftright          (intmax_t,    std::size_t = 1u);
+  long double bitshiftright          (long double, std::size_t = 1u);
+  uintmax_t   bitshiftright          (uintmax_t,   std::size_t = 1u);
+  intmax_t    bitswap                (intmax_t);
+  long double bitswap                (long double);
+  uintmax_t   bitswap                (uintmax_t);
+  std::size_t bitwidth               (uintmax_t);
+  intmax_t    cbrt                   (intmax_t);
+  long double cbrt                   (long double);
+  uintmax_t   cbrt                   (uintmax_t);
+  intmax_t    ceil                   (intmax_t);
+  long double ceil                   (long double);
+  uintmax_t   ceil                   (uintmax_t);
+  intmax_t    clamp                  (intmax_t,    intmax_t,    intmax_t);
+  long double clamp                  (long double, long double, long double);
+  uintmax_t   clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
+  long double compute_euler          (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  long double cos                    (long double);
+  long double cot                    (long double);
+  long double coth                   (long double);
+  long double csc                    (long double);
+  long double csch                   (long double);
+  long double cyl_bessel             (long double, long double, long double);
+  long double cyl_neumann            (long double, long double);
+  intmax_t    divide                 (intmax_t,    intmax_t);
+  long double divide                 (long double, long double);
+  uintmax_t   divide                 (uintmax_t,   uintmax_t);
+  long double ellint                 (long double, long double, long double, bool);
+  long double exp                    (long double);
+  long double expint                 (long double);
+  intmax_t    floor                  (intmax_t);
+  long double floor                  (long double);
+  uintmax_t   floor                  (uintmax_t);
+  long double hermite                (long double, std::size_t);
+  long double herp                   (long double, long double, long double);
+  intmax_t    icbrt                  (intmax_t);
+  long double icbrt                  (long double);
+  uintmax_t   icbrt                  (uintmax_t);
+  intmax_t    iroot                  (intmax_t);
+  long double iroot                  (long double);
+  uintmax_t   iroot                  (uintmax_t);
+  intmax_t    isqrt                  (intmax_t);
+  long double isqrt                  (long double);
+  uintmax_t   isqrt                  (uintmax_t);
+  long double jsf                    (long double);
+  long double laguerre               (long double, std::size_t, std::size_t, bool);
+  long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
+  long double legendre               (long double, std::size_t, std::size_t, bool);
+  long double lerp                   (long double, long double);
+  long double ln                     (long double);
+  long double log                    (long double, std::size_t);
+  long double log2                   (long double);
+  long double log8                   (long double);
+  long double log10                  (long double);
+  long double log16                  (long double);
+  intmax_t    max                    (intmax_t,    intmax_t);
+  long double max                    (long double, long double);
+  uintmax_t   max                    (uintmax_t,   uintmax_t);
+  intmax_t    min                    (intmax_t,    intmax_t);
+  long double min                    (long double, long double);
+  uintmax_t   min                    (uintmax_t,   uintmax_t);
+  intmax_t    modulo                 (intmax_t,    intmax_t);
+  long double modulo                 (long double, long double);
+  uintmax_t   modulo                 (uintmax_t,   uintmax_t);
+  long double mt                     (long double);
+  long double mt32                   (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
+  long double mt64                   (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
+  long double mulberry               (long double);
+  long double mulberry32             (long double);
+  intmax_t    pow                    (intmax_t,    intmax_t,    bool* = NULL);
+  long double pow                    (long double, long double, bool* = NULL);
+  uintmax_t   pow                    (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t    remainder              (intmax_t,    intmax_t);
+  long double remainder              (long double, long double);
+  uintmax_t   remainder              (uintmax_t,   uintmax_t);
+  long double riemann_zeta           (long double);
+  intmax_t    root                   (intmax_t,    intmax_t);
+  long double root                   (long double, long double);
+  uintmax_t   root                   (uintmax_t,   uintmax_t);
+  intmax_t    round                  (intmax_t);
+  long double round                  (long double);
+  uintmax_t   round                  (uintmax_t);
+  long double sec                    (long double);
+  long double sech                   (long double);
+  long double sinh                   (long double);
+  long double slerp                  (long double, long double);
+  long double sph_bessel             (long double, std::size_t);
+  long double sph_legendre           (long double, std::size_t, std::size_t);
+  long double sph_neumann            (long double, std::size_t);
+  intmax_t    sqrt                   (intmax_t);
+  long double sqrt                   (long double);
+  uintmax_t   sqrt                   (uintmax_t);
+  intmax_t    subtract               (intmax_t,    intmax_t,    bool* = NULL);
+  long double subtract               (long double, long double, bool* = NULL);
+  uintmax_t   subtract               (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double tan                    (long double);
+  long double tanh                   (long double);
+  intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t);
+  long double wrap                   (long double, long double, long double);
+  uintmax_t   wrap                   (uintmax_t,   uintmax_t,   uintmax_t);
+  long double xorshift               (long double);
+  long double xorshift_s             (long double);
+  long double xorshift128            (long double);
+  long double xorshift128_s          (long double);
+  long double xorshift256_p          (long double);
+  long double xorshift_p             (long double);
+  long double xorshift128_p          (long double);
+  long double xorshift_ss            (long double);
+  long double xorshift256            (long double);
+  long double xorshift256_ss         (long double);
+  long double xorwow                 (long double);
+
+  template <std::size_t size> long double knuth(long double);
 
   /* … */
   // … → abs(𝙭) - Absolute value of 𝙭
@@ -81,6 +277,59 @@ namespace {
 
   uintmax_t abs(uintmax_t const number) {
     return number;
+  }
+
+  // … → bézier(𝙩, 𝙥0, …, 𝙥n) - Point 𝙩 on parametric multi-point curve, where all points lie between 0.0 and 1.0
+  long double bézier(std::size_t const order, long double const percent, ...) {
+    long double  point = 0.0L;
+    std::va_list points;
+
+    // …
+    va_start(points, percent);
+
+    for (std::size_t index = 0u; index <= order; ++index) {
+      long double iteration = 1.0L;
+
+      // …
+      iteration *= ifactorial(static_cast<long double>(order)) / (ifactorial(static_cast<long double>(index)) * ifactorial(static_cast<long double>(order - index)));
+      iteration *= ipow(1.0L - percent, static_cast<long double>(order - index));
+      iteration *= ipow(percent,        static_cast<long double>(index));
+      iteration *= va_arg(points, long double);
+
+      point += iteration;
+    }
+
+    va_end(points);
+
+    // …
+    return point;
+  }
+
+  // … → bézier_cubic(𝙩, 𝙥0, 𝙥1, 𝙥2, 𝙥n) - Point 𝙩 on parametric 4-point curve i.e. bézier(3, 𝙩, 𝙥0, 𝙥1, 𝙥2, 𝙥n)
+  long double bézier_cubic(long double const percent, long double const pointBegin, long double const midpointA, long double const midpointB, long double const pointEnd) {
+    return (
+      (pointBegin *                           ipow(1.0L - percent, 3.0L)) +
+      (midpointA  * percent          * 3.0L * ipow(1.0L - percent, 2.0L)) +
+      (midpointB  * (1.0L - percent) * 3.0L * ipow(percent,        2.0L)) +
+      (pointEnd   *                           ipow(percent,        3.0L))
+    );
+  }
+
+  // … → bézier_linear(𝙩, 𝙥0, 𝙥n) - Point 𝙩 on parametric 2-point curve (line) i.e. bézier(1, 𝙩, 𝙥0, 𝙥n)
+  long double bézier_linear(long double const percent, long double const pointBegin, long double const pointEnd) {
+    return (
+      (pointBegin * ipow(1.0L - percent, 1.0L)) +
+      (pointEnd   * ipow(percent,        1.0L))
+    );
+  }
+
+  // … → bézier_quadratic(𝙩, 𝙥0, 𝙥1, 𝙥n) - Point 𝙩 on parametric 3-point curve i.e. bézier(2, 𝙩, 𝙥0, 𝙥1, 𝙥n)
+  long double bézier_quadratic(long double const percent, long double const pointBegin, long double const midpoint, long double const pointEnd) {
+    return (
+      (pointBegin *                  ipow(1.0L - percent, 2.0L)) +
+      (midpoint   * percent * 2.0L * ipow(1.0L - percent, 1.0L)) +
+      (pointEnd   *                  ipow(percent,        2.0L))
+    );
   }
 
   // … → compute_infinity() - Infinity floating-point representative
@@ -144,6 +393,10 @@ namespace {
     return 1.0L / (pi * 12.0L);
   }
 
+  long double compute_tau(std::size_t iterationCount, bool* const representable) {
+    return compute_pi(iterationCount, representable) * 2.00L;
+  }
+
   // … → countof(𝙭) - Number of denary digits representing 𝙭
   std::size_t countof(intmax_t const number) {
     return countof(abs(number));
@@ -192,6 +445,176 @@ namespace {
     return count + (0u == count);
   }
 
+  // … → ease(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.25, 0.10, 0.25, 1.00)
+  long double ease(long double const time) {
+    return bézier_cubic(time, 0.25L, 0.10L, 0.25L, 1.00L);
+  }
+
+  // … → ease_in(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.42, 0.00, 1.00, 1.00)
+  long double ease_in(long double const time) {
+    return bézier_cubic(time, 0.42L, 0.00L, 1.00L, 1.00L);
+  }
+
+  // … → ease_in_back(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.36, 0.00, 0.66, -0.56)
+  long double ease_in_back(long double const time) {
+    return (ipow(time, 3.00000L) * 2.70158L) - (ipow(time, 2.00000L) * 1.70158L);
+  }
+
+  // … → ease_in_bounce(𝙩) - Easing animation function at relative time 𝙩
+  long double ease_in_bounce(long double const time) {
+    return 1.0L - ease_out_bounce(1.0L - time);
+  }
+
+  // … → ease_in_circular(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.55, 0.00, 1.00, 0.45)
+  long double ease_in_circular(long double const time) {
+    return 1.0L - sqrt(1.0L - ipow(time, 2.0L));
+  }
+
+  // … → ease_in_cubic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.32, 0.00, 0.67, 0.00)
+  long double ease_in_cubic(long double const time) {
+    return ipow(time, 3.0L);
+  }
+
+  // … → ease_in_elastic(𝙩) - Easing animation function at relative time 𝙩
+  long double ease_in_elastic(long double const time) {
+    return 0.00L != time and time != 1.00L ? -pow(2.00L, (time * 10.00L) - 10.00L) * sin(((time * 10.00L) - 10.75L) * (compute_tau() / 3.00L)) : time;
+  }
+
+  // … → ease_in_exponential(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.70, 0.00, 0.84, 0.00)
+  long double ease_in_exponential(long double const time) {
+    return 0.0L != time ? pow(2.0L, (time * 10.0L) - 10.0L) : 0.0L;
+  }
+
+  // … → ease_in_quadratic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.11, 0.00, 0.50, 0.00)
+  long double ease_in_quadratic(long double const time) {
+    return ipow(time, 2.0L);
+  }
+
+  // … → ease_in_quartic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.50, 0.00, 0.75, 0.00)
+  long double ease_in_quartic(long double const time) {
+    return ipow(time, 4.0L);
+  }
+
+  // … → ease_in_quintic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.64, 0.00, 0.78, 0.00)
+  long double ease_in_quintic(long double const time) {
+    return ipow(time, 5.0L);
+  }
+
+  // … → ease_in_sine(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.12, 0.00, 0.39, 0.00)
+  long double ease_in_sine(long double const time) {
+    return 1.0L - cos((compute_pi() * time) / 2.0L);
+  }
+
+  // … → ease_in_out(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.42, 0.00, 0.58, 1.00)
+  long double ease_in_out(long double const time) {
+    return bézier_cubic(time, 0.42L, 0.00L, 0.58L, 1.00L);
+  }
+
+  // … → ease_in_out_back(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.68, -0.60, 0.32, 1.60)
+  long double ease_in_out_back(long double const time) {
+    return (time < 0.5000000L ? ipow(time * 2.00000000L, 2.0000000L) * ((time * 7.1898190L) - 2.5949095L) : ((ipow((time * 2.0000000L) - 2.0000000L, 2.0000000L) * ((((time * 2.0000000L) - 2.0000000L) * 3.5949095L) + 2.5949095L)) + 2.0000000L)) / 2.0000000L;
+  }
+
+  // … → ease_in_out_bounce(𝙩) - Easing animation function at relative time 𝙩
+  long double ease_in_out_bounce(long double const time) {
+    return (time < 0.5L ? 1.0L - ease_out_bounce(1.0L - (time * 2.0L)) : (1.0L + ease_out_bounce((time * 2.0L) - 1.0L))) / 2.0L;
+  }
+
+  // … → ease_in_out_circular(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.85, 0.00, 0.15, 1.00)
+  long double ease_in_out_circular(long double const time) {
+    return (time < 0.5L ? 1.0L - sqrt(1.0L - ipow(time * 2.0L, 2.0L)) : (1.0L + sqrt(1.0L - ipow((time * -2.0L) + 2.0L, 2.0L)))) / 2.0L;
+  }
+
+  // … → ease_in_out_cubic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.65, 0.00, 0.35, 1.00)
+  long double ease_in_out_cubic(long double const time) {
+    return time < 0.5L ? ipow(time, 3.0L) * 4.0L : (1.0L - (ipow((time * -2.0L) + 2.0L, 3.0L) / 2.0L));
+  }
+
+  // … → ease_in_out_elastic(𝙩) - Easing animation function at relative time 𝙩
+  long double ease_in_out_elastic(long double const time) {
+    return 0.000L != time and time != 1.000L ? time < 0.500L ? -(pow(2.000L, (time * 20.000L) - 10.000L) * sin(((time * 20.000L) - 11.125L) * (compute_tau() / 4.500L))) / 2.000L : ((pow(2.000L, (time * -20.000L) + 10.000L) * sin(((time * 20.000L) - 11.125L) * (compute_tau() / 4.500L))) / 2.000L + 1.000L) : time;
+  }
+
+  // … → ease_in_out_exponential(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.87, 0.00, 0.13, 1.00)
+  long double ease_in_out_exponential(long double const time) {
+    return 0.0L != time and time != 1.0L ? (time < 0.5L ? pow(2.0L, (time * 20.0L) - 10.0L) : (2.0L - pow(2.0L, (time * -20.0L) + 10.0L))) / 2.0L : time;
+  }
+
+  // … → ease_in_out_quadratic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.45, 0.00, 0.55, 1.00)
+  long double ease_in_out_quadratic(long double const time) {
+    return time < 0.5L ? ipow(time, 2.0L) * 2.0L : (1.0L - (ipow((time * -2.0L) + 2.0L, 2.0L) / 2.0L));
+  }
+
+  // … → ease_in_out_quartic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.76, 0.00, 0.24, 1.00)
+  long double ease_in_out_quartic(long double const time) {
+    return time < 0.5L ? ipow(time, 4.0L) * 8.0L : (1.0L - (ipow((time * -2.0L) + 2.0L, 4.0L) / 2.0L));
+  }
+
+  // … → ease_in_out_quintic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.83, 0.00, 0.17, 1.00)
+  long double ease_in_out_quintic(long double const time) {
+    return time < 0.5L ? ipow(time, 5.0L) * 16.0L : (1.0L - (ipow((time * -2.0L) + 2.0L, 5.0L) / 2.0L));
+  }
+
+  // … → ease_in_out_sine(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.37, 0.00, 0.63, 1.00)
+  long double ease_in_out_sine(long double const time) {
+    return -(cos(compute_pi() * time) - 1.0L) / 2.0L;
+  }
+
+  // … → ease_out(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.00, 0.00, 0.58, 1.00)
+  long double ease_out(long double const time) {
+    return bézier_cubic(time, 0.00L, 0.00L, 0.58L, 1.00L);
+  }
+
+  // … → ease_out_back(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.34, 1.56, 0.64, 1.00)
+  long double ease_out_back(long double const time) {
+    return 1.00000L + (2.70158L * ipow(time - 1.00000L, 3.00000L)) + (1.70158L * ipow(time - 1.00000L, 2.00000L));
+  }
+
+  // … → ease_out_bounce(𝙩) - Easing animation function at relative time 𝙩
+  long double ease_out_bounce(long double const time) {
+    return time < 1.000000L / 2.750000L ? 7.562500L * pow(time, 2.000000L) : time < 2.000000L / 2.750000L ? (7.562500L * ipow(time - (1.500000L / 2.750000L), 2.000000L)) + 0.750000L : time < 2.500000L / 2.750000L ? (7.562500L * ipow(time - (2.250000L / 2.750000L), 2.000000L)) + 0.937500L : (7.562500L * ipow(time - (2.625000L / 2.750000L), 2.000000L)) + 0.984375L;
+  }
+
+  // … → ease_out_circular(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.00, 0.55, 0.45, 1.00)
+  long double ease_out_circular(long double const time) {
+    return sqrt(1.0L - ipow(time - 1.0L, 2.0L));
+  }
+
+  // … → ease_out_cubic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.33, 1.00, 0.68, 1.00)
+  long double ease_out_cubic(long double const time) {
+    return 1.0L - ipow(1.0L - time, 3.0L);
+  }
+
+  // … → ease_out_elastic(𝙩) - Easing animation function at relative time 𝙩
+  long double ease_out_elastic(long double const time) {
+    return 0.00L != time and time != 1.00L ? (pow(2.00L, time * -10.00L) * sin(((time * 10.00L) - 0.75L) * (compute_tau() / 3.00L))) + 1.00L : time;
+  }
+
+  // … → ease_out_exponential(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.16, 1.00, 0.30, 1.00)
+  long double ease_out_exponential(long double const time) {
+    return time != 1.0L ? 1.0L - pow(2.0L, time * -10.0L) : 1.0L;
+  }
+
+  // … → ease_out_quadratic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.50, 1.00, 0.89, 1.00)
+  long double ease_out_quadratic(long double const time) {
+    return 1.0L - ipow(1.0L - time, 2.0L);
+  }
+
+  // … → ease_out_quartic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.25, 1.00, 0.5, 1.00)
+  long double ease_out_quartic(long double const time) {
+    return 1.0L - ipow(1.0L - time, 4.0L);
+  }
+
+  // … → ease_out_quintic(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.22, 1.00, 0.36, 1.00)
+  long double ease_out_quintic(long double const time) {
+    return 1.0L - ipow(1.0L - time, 5.0L);
+  }
+
+  // … → ease_out_sine(𝙩) - Easing animation function at relative time 𝙩 i.e. bézier_cubic(𝙩, 0.61, 1.00, 0.88, 1.00)
+  long double ease_out_sine(long double const time) {
+    return sin((compute_pi() * time) / 2.0L);
+  }
+
   // … → fract(𝙭) - Fractional value of 𝙭 without its characteristics
   long double fract(long double const number) {
     return number - trunc(number);
@@ -230,7 +653,7 @@ namespace {
     return factorial;
   }
 
-  // … → imaxof() - Maximum integer value of floating-point type with complete integer precision; Equivalent to `maxprecof(1.0L)`
+  // … → imaxof() - Maximum integer value of floating-point type with complete integer precision i.e. maxprecof(1)
   long double imaxof() {
     long double maximum = 1;
 
@@ -499,6 +922,9 @@ namespace {
     return number > 0u ? 1 : signedness;
   }
 
+  // … → sin(𝙭) - Sine of 𝙭 radians
+  long double sin(long double const angle) {}
+
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
     if (is_infinite(number) or is_nan(number)) {
@@ -527,5 +953,6 @@ namespace {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("[...]: %Lf", compute_pi());
+  std::printf("[...]: %Lf" "\r\n", bézier  (3u, 0.50L, 0.0L, 0.25L, 0.75L, 1.0L));
+  std::printf("[...]: %Lf" "\r\n", bézier_cubic(0.50L, 0.0L, 0.25L, 0.75L, 1.0L));
 }
