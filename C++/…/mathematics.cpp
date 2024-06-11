@@ -106,7 +106,7 @@ namespace {
   signed char sign                   (intmax_t,    signed char = 0);
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
-  long double sin                    (long double);
+  long double sin                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double trunc                  (long double);
 
   long double acos                   (long double);
@@ -279,7 +279,7 @@ namespace {
     return number;
   }
 
-  // … → bézier(𝙩, 𝙥0, …, 𝙥n) - Point 𝙩 on parametric multi-point curve, where all points lie between 0.0 and 1.0
+  // … → bézier(𝙩, 𝙥0, …, 𝙥n) - Point 𝙩 on parametric multi-point curve, where all points lie between 0.0 and 1.0 (`https://en.wikipedia.org/wiki/Bézier_curve`)
   long double bézier(std::size_t const order, long double const percent, ...) {
     long double  point = 0.0L;
     std::va_list points;
@@ -290,7 +290,7 @@ namespace {
     for (std::size_t index = 0u; index <= order; ++index) {
       long double iteration = 1.0L;
 
-      // …
+      // … → `Σᵢ₌₀bᵢ,ₙ(𝙩)𝙋ᵢ where 0 ≤ 𝙩 ≤1`
       iteration *= ifactorial(static_cast<long double>(order)) / (ifactorial(static_cast<long double>(index)) * ifactorial(static_cast<long double>(order - index)));
       iteration *= ipow(1.0L - percent, static_cast<long double>(order - index));
       iteration *= ipow(percent,        static_cast<long double>(index));
@@ -353,7 +353,7 @@ namespace {
     return zero / zero;
   }
 
-  // … → `https://en.wikipedia.org/wiki/Chudnovsky_algorithm` (or alternatively `https://en.wikipedia.org/wiki/Ramanujan–Sato_series` for a different formula)
+  // … → compute_pi(…) - Archimedes' constant (`https://en.wikipedia.org/wiki/Chudnovsky_algorithm`, or alternatively `https://en.wikipedia.org/wiki/Ramanujan–Sato_series` for a different formula)
   long double compute_pi(std::size_t iterationCount, bool* const representable) {
     long double pi = 0.0L;
 
@@ -377,13 +377,11 @@ namespace {
       iteration[1] *= term = multiply(512384047.996L /* → `640320³ᐟ²` */, ipow(640320.0L, index * 3.0L, &subrepresentable) /* → `640320³ᵏ` */); // → j-function of negated Heegner number
 
       if (not subrepresentable) {
-        if (iterationCount == static_cast<std::size_t>(-1))
-        break;
+        if (representable)
+        *representable = false;
 
-        if (representable) {
-          *representable = false;
-          return 0.0L;
-        }
+        if (iterationCount == static_cast<std::size_t>(-1)) break;
+        if (representable) return 0.0L;
       }
 
       // …
@@ -722,33 +720,22 @@ namespace {
   }
 
   uintmax_t ipow(uintmax_t const base, uintmax_t exponent, bool* const representable) {
-    uintmax_t power = 1u;
+    uintmax_t multiplier = base;
+    uintmax_t power      = 1u;
 
     // …
-    for (struct { uintmax_t count; struct { uintmax_t values[CHAR_BIT * sizeof(uintmax_t)]; std::size_t length; } multipliers; } iteration = {1u, {{base}, 1u}}; exponent; ) {
-      uintmax_t &count      = iteration.count;
-      uintmax_t  multiplier = iteration.multipliers.values[iteration.multipliers.length - 1u];
+    while (exponent) {
+      if (exponent % 2u) {
+        if (representable and power > UINTMAX_MAX / multiplier) {
+          *representable = false;
+          return 0.0L;
+        }
 
-      // …
-      if (count < exponent and multiplier < UINTMAX_MAX / multiplier) {
-        count      *= 2u;
-        multiplier *= multiplier;
-
-        iteration.multipliers.values[iteration.multipliers.length++] = multiplier; // → Memoize `multiplier` since `isqrt(…)` could otherwise be slower
+        power *= multiplier;
       }
 
-      while (count > exponent) {
-        count     /= 2u;                                                                // → Could also be memoized with a `.counts` list analogous to `.multipliers`
-        multiplier = iteration.multipliers.values[--iteration.multipliers.length - 1u]; // → `isqrt(multiplier)`
-      }
-
-      if (representable and power > UINTMAX_MAX / multiplier) {
-        *representable = false;
-        return 0.0L;
-      }
-
-      exponent -= count;
-      power    *= multiplier;
+      exponent   /= 2u;
+      multiplier *= multiplier;
     }
 
     return power;
@@ -922,8 +909,35 @@ namespace {
     return number > 0u ? 1 : signedness;
   }
 
-  // … → sin(𝙭) - Sine of 𝙭 radians
-  long double sin(long double const angle) {}
+  // … → sin(𝙭) - Sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine`)
+  long double sin(long double const angle, std::size_t iterationCount, bool* const representable) {
+    long double value = 0.0L;
+
+    // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ⁺¹) ÷ (2n + 1)!)`
+    for (long double index = 0.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
+      long double iteration[2]     = {1.0L, 1.0L};
+      bool        subrepresentable = index <= imaxof();
+
+      // …
+      iteration[0] *= ipow(-1.0L, index, &subrepresentable);
+      iteration[0] *= ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
+
+      iteration[1] *= ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
+
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
+
+        if (iterationCount == static_cast<std::size_t>(-1)) break;
+        if (representable) return 0.0L;
+      }
+
+      // …
+      value += iteration[0] / iteration[1];
+    }
+
+    return value;
+  }
 
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
@@ -949,10 +963,11 @@ namespace {
 
     return number;
   }
+
+  long double cos (long double)                     { return 0.00L; }
+  long double pow (long double, long double, bool*) { return 0.00L; }
+  long double sqrt(long double)                     { return 0.00L; }
 }
 
 /* Main */
-int main(int, char*[]) /* noexcept */ {
-  std::printf("[...]: %Lf" "\r\n", bézier  (3u, 0.50L, 0.0L, 0.25L, 0.75L, 1.0L));
-  std::printf("[...]: %Lf" "\r\n", bézier_cubic(0.50L, 0.0L, 0.25L, 0.75L, 1.0L));
-}
+int main(int, char*[]) /* noexcept */ {}
