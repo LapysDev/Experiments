@@ -3,9 +3,7 @@
 #include <climits>
 #include <cstdarg>
 #include <cstddef>
-#include <cstdio>
 #include <stdint.h>
-
 #if defined __STDC_IEC_559__
 # include <cstring>
 # define SUPPORTS_IEEE754_FLOAT true
@@ -25,15 +23,25 @@
 # include <limits>
 # define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 #endif
+#include <cstdio>
+#include <inttypes.h>
 
-#define FLT_RADIX     __FLT_RADIX__
-#define LDBL_EPSILON  __LDBL_EPSILON__
-#define LDBL_MANT_DIG __LDBL_MANT_DIG__
-#define LDBL_MAX      __LDBL_MAX__
-#define LDBL_MAX_EXP  __LDBL_MAX_EXP__
-#define LDBL_MIN      __LDBL_MIN__
+#define FLT_RADIX       __FLT_RADIX__
+#define LDBL_EPSILON    __LDBL_EPSILON__
+#define LDBL_MANT_DIG   __LDBL_MANT_DIG__
+#define LDBL_MAX        __LDBL_MAX__
+#define LDBL_MAX_10_EXP __LDBL_MAX_10_EXP__
+#define LDBL_MAX_EXP    __LDBL_MAX_EXP__
+#define LDBL_MIN        __LDBL_MIN__
 
 /* … → Functions evaluate to numeral base 10 */
+typedef struct _ {
+  long double const _[2];
+
+  inline operator long double const*         () const          { return _; }
+  inline operator long double const volatile*() const volatile { return _; }
+} division_t, fraction_t;
+
 namespace {
   uintmax_t   abs                    (intmax_t);
   long double abs                    (long double);
@@ -84,18 +92,25 @@ namespace {
   long double ease_out_quartic       (long double);
   long double ease_out_quintic       (long double);
   long double ease_out_sine          (long double);
-  long double fract                  (long double);
+  fraction_t  fract                  (long double);
   long double ifactorial             (long double, bool* = NULL);
   uintmax_t   ifactorial             (uintmax_t,   bool* = NULL);
   long double imaxof                 ();
   intmax_t    ipow                   (intmax_t,    intmax_t,    bool* = NULL);
   long double ipow                   (long double, long double, bool* = NULL);
   uintmax_t   ipow                   (uintmax_t,   uintmax_t,   bool* = NULL);
+  uintmax_t   iroot                  (intmax_t,    intmax_t,    bool* = NULL);
+  long double iroot                  (long double, long double, bool* = NULL);
+  uintmax_t   iroot                  (uintmax_t,   uintmax_t,   bool* = NULL);
   bool        is_denormal            (long double);
   bool        is_infinite            (long double);
+  bool        is_integer             (long double);
   bool        is_nan                 (long double);
   bool        is_subnormal           (long double);
   long double maxprecof              (long double);
+  intmax_t    modulus                (intmax_t,    intmax_t);
+  long double modulus                (long double, long double);
+  uintmax_t   modulus                (uintmax_t,   uintmax_t);
   intmax_t    multiply               (intmax_t,    intmax_t,    bool* = NULL);
   long double multiply               (long double, long double, bool* = NULL);
   uintmax_t   multiply               (uintmax_t,   uintmax_t,   bool* = NULL);
@@ -104,6 +119,10 @@ namespace {
   bool        parity                 (long double);
   bool        parity                 (uintmax_t);
   long double prev                   (long double);
+  intmax_t    remainder              (intmax_t,    intmax_t,    bool* = NULL);
+  long double remainder              (long double, long double, bool* = NULL);
+  uintmax_t   remainder              (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double round                  (long double);
   signed char sign                   (intmax_t,    signed char = 0);
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
@@ -189,9 +208,6 @@ namespace {
   intmax_t    icbrt                  (intmax_t);
   long double icbrt                  (long double);
   uintmax_t   icbrt                  (uintmax_t);
-  intmax_t    iroot                  (intmax_t);
-  long double iroot                  (long double);
-  uintmax_t   iroot                  (uintmax_t);
   intmax_t    isqrt                  (intmax_t);
   long double isqrt                  (long double);
   uintmax_t   isqrt                  (uintmax_t);
@@ -212,9 +228,6 @@ namespace {
   intmax_t    min                    (intmax_t,    intmax_t);
   long double min                    (long double, long double);
   uintmax_t   min                    (uintmax_t,   uintmax_t);
-  intmax_t    modulo                 (intmax_t,    intmax_t);
-  long double modulo                 (long double, long double);
-  uintmax_t   modulo                 (uintmax_t,   uintmax_t);
   long double mt                     (long double);
   long double mt32                   (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
   long double mt64                   (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
@@ -223,16 +236,10 @@ namespace {
   intmax_t    pow                    (intmax_t,    intmax_t,    bool* = NULL);
   long double pow                    (long double, long double, bool* = NULL);
   uintmax_t   pow                    (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t    remainder              (intmax_t,    intmax_t);
-  long double remainder              (long double, long double);
-  uintmax_t   remainder              (uintmax_t,   uintmax_t);
   long double riemann_zeta           (long double);
-  intmax_t    root                   (intmax_t,    intmax_t);
-  long double root                   (long double, long double);
-  uintmax_t   root                   (uintmax_t,   uintmax_t);
-  intmax_t    round                  (intmax_t);
-  long double round                  (long double);
-  uintmax_t   round                  (uintmax_t);
+  intmax_t    root                   (intmax_t,    intmax_t,    bool* = NULL);
+  long double root                   (long double, long double, bool* = NULL);
+  uintmax_t   root                   (uintmax_t,   uintmax_t,   bool* = NULL);
   long double sec                    (long double);
   long double sech                   (long double);
   long double sinh                   (long double);
@@ -431,10 +438,10 @@ namespace {
   }
 
   std::size_t countof(long double const number) {
-    long double characteristics = trunc(number); //
-    std::size_t count           = 0u;            // → Number of significant digits
-    long double mantissa        = fract(number); //
-    std::size_t subcount        = 0u;            // → Number of significant/ trailing zero digits
+    long double characteristics = trunc(number);          //
+    std::size_t count           = 0u;                     // → Number of significant digits
+    long double mantissa        = number - trunc(number); //
+    std::size_t subcount        = 0u;                     // → Number of significant/ trailing zero digits
 
     // → Unsure how to interpret the denary mantissa of `number`
     for (long double base = LDBL_MIN; base != base + LDBL_EPSILON; base *= 10.0L) {
@@ -643,10 +650,56 @@ namespace {
     return sin((compute_pi() * time) / 2.0L);
   }
 
-  // … → fract(𝙭) - Fractional value of 𝙭 without its characteristics
-  long double fract(long double const number) {
-    return number - trunc(number);
+  // … → fract(𝙭) - Split value of 𝙭 as its numerator and denominator
+  fraction_t fract(long double const number) {
+    std::puts("[..f1]");
+    long double const characteristics = trunc(number);
+    long double       denominator     = 1.0L;
+    long double const mantissa        = number - characteristics;
+    long double       numerator       = characteristics;
+
+    // …
+    if (0.0L != mantissa) {
+      long double       divisor   = 1.0L;
+      long double const precision = ipow(10.0L, static_cast<long double>(LDBL_MAX_10_EXP));
+
+      // …
+      for (long double term[2] = {precision, round(precision * mantissa)}; 0.0L != term[0] and 0.0L != term[1]; ) {
+        std::printf("[..f2]: {divisor: %Le, term: {%Le, %Le}}" "\r\n", divisor, term[0], term[1]);
+
+        term[term[0] < term[1]] = remainder(term[term[0] < term[1]], term[term[0] >= term[1]]); // → `term[term[0] < term[1]] %= term[term[0] >= term[1]]`
+        divisor                 = term[0.0L == term[0]];
+
+        std::printf("[..f3]: {divisor: %Le, term: {%Le, %Le}}" "\r\n", divisor, term[0], term[1]);
+      }
+
+      // …
+      denominator = precision / divisor;
+      numerator   = round(denominator * mantissa) + (denominator * characteristics);
+    }
+
+    fraction_t const fraction = {numerator, denominator};
+    return fraction;
   }
+
+  // Functions.numberToFraction = function numberToFraction(number) {
+  //   var fraction = new Fraction(LDKM.trunc(number), .numerator = +0, .denominator = 1);
+  //   var mantissa = number - fraction.whole;
+
+  //   if (0.0 !== mantissa) {
+  //     var divisor, precision = 1e15;
+
+  //     for (var a = precision, b = LDKM.round(mantissa * precision); ; divisor = a ? a : b) {
+  //       if (+0 === a || +0 === b) break;
+  //       a < b ? b %= a : a %= b
+  //     }
+
+  //     fraction.denominator = precision / divisor;
+  //     fraction.numerator = LDKM.round(fraction.denominator * mantissa)
+  //   }
+
+  //   return fraction
+  // };
 
   // … → ifactorial(𝙭) - Factorial of integer 𝙭
   long double ifactorial(long double integer, bool* const representable) {
@@ -703,12 +756,23 @@ namespace {
 
   // … → ipow(𝙭, 𝙣) - Integer 𝙣th power of 𝙭
   intmax_t ipow(intmax_t const base, intmax_t const exponent, bool* const representable) {
+    uintmax_t      power      = 1u;
+    intmax_t const signedness = not parity(exponent) and sign(base) == -1 ? -1 : +1;
+
+    // …
     if (representable and (0 == base and sign(exponent) == -1)) {
       *representable = false;
       return 0;
     }
 
-    return ipow(abs(base), abs(exponent), representable) * (not parity(exponent) and sign(base) == -1 ? -1 : +1);
+    power = ipow(abs(base), abs(exponent), representable);
+
+    if (representable and power > abs(signedness ? INTMAX_MIN : INTMAX_MAX)) {
+      *representable = false;
+      return 0;
+    }
+
+    return static_cast<intmax_t>(power) * signedness;
   }
 
   long double ipow(long double const base, long double exponent, bool* const representable) {
@@ -771,6 +835,58 @@ namespace {
     return power;
   }
 
+  // … → ipow(𝙭, 𝙣) - Integer 𝙣th root of 𝙭
+  uintmax_t iroot(intmax_t const base, intmax_t const exponent, bool* const representable) {
+    uintmax_t root = 0u;
+
+    // …
+    if (representable and (0 == exponent or sign(base) == -1)) {
+      *representable = false;
+      return 0;
+    }
+
+    root = iroot(abs(base), abs(exponent), representable);
+
+    return root and sign(exponent) == -1 ? 1u / root : root;
+  }
+
+  long double iroot(long double const base, long double exponent, bool* const representable) {
+    bool const  inverse = exponent and sign(exponent) == -1;
+    long double root    = 0.0L;
+
+    // …
+    if (representable and (0.0L == exponent or sign(base) == -1)) {
+      *representable = false;
+      return 0.0L;
+    }
+
+    exponent = abs(exponent);
+
+    for (long double next = 1.0L; ; next = root) {
+      root = ((next * (exponent - 1.0L)) + (base / ipow(next, exponent - 1.0L))) / exponent;
+      if (LDBL_EPSILON >= abs(root - next)) break;
+    }
+
+    return inverse ? 1.0L / root : root;
+  }
+
+  uintmax_t iroot(uintmax_t const base, uintmax_t const exponent, bool* const representable) {
+    uintmax_t root = 0u;
+
+    // …
+    if (representable and 0u == exponent) {
+      *representable = false;
+      return 0u;
+    }
+
+    for (uintmax_t next = 1u; ; next = root) {
+      root = ((next * (exponent - 1u)) + (base / ipow(next, exponent - 1u))) / exponent;
+      if (0u == root - next) break;
+    }
+
+    return root;
+  }
+
   // … → is_denormal(𝙭) - Determines if 𝙭 is a denormalized floating-point value
   bool is_denormal(long double const number) {
     // → All subnormals are denormals, but not all denormals are subnormals
@@ -780,6 +896,11 @@ namespace {
   // … → is_infinite(𝙭) - Determines if 𝙭 is a negative/ positive infinity floating-point value
   bool is_infinite(long double const number) {
     return number == (number + 0.0L) * (number + 1.0L);
+  }
+
+  // … → is_integer(𝙭) - Determines if 𝙭 is an integer value
+  bool is_integer(long double const number) {
+    return number == trunc(number);
   }
 
   // … → is_nan(𝙭) - Determines if 𝙭 is a NaN floating-point value
@@ -799,7 +920,7 @@ namespace {
 
   // … → maxprecof(𝙭) - Maximum normalized floating-point value with precision 𝙭
   long double maxprecof(long double const precision) {
-    if (is_infinite(precision) or is_nan(precision)) {
+    if (not (is_infinite(precision) or is_nan(precision))) {
       long double maximum = LDBL_MAX;
 
       // …
@@ -810,6 +931,19 @@ namespace {
     }
 
     return precision;
+  }
+
+  // … → modulus(𝙭) - Modulus of 𝙭 and 𝙮 ¯\_(ツ)_/¯
+  intmax_t modulus(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
+    return remainder(dividend, divisor, representable);
+  }
+
+  long double modulus(long double const dividend, long double const divisor, bool* const representable) {
+    return remainder(dividend, divisor, representable);
+  }
+
+  uintmax_t modulus(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
+    return remainder(dividend, divisor, representable);
   }
 
   // … → multiply(𝙭, 𝙮) - Scalar multiplication of 𝙭 and 𝙮
@@ -906,6 +1040,76 @@ namespace {
     return number;
   }
 
+  // … → remainder(𝙭, 𝙮) - Remainder of 𝙭 divided by 𝙮
+  intmax_t remainder(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
+    if (representable and 0 == divisor) {
+      *representable = false;
+      return 0;
+    }
+
+    return dividend % divisor;
+  }
+
+  long double remainder(long double dividend, long double divisor, bool* const representable) {
+    long double const signedness = sign(dividend, +1);
+
+    // …
+    if (0.0L == divisor or is_infinite(dividend) or is_nan(dividend) or is_nan(divisor)) {
+      if (representable) {
+        *representable = false;
+        return 0.0L;
+      }
+
+      return compute_nan();
+    }
+
+    dividend = abs(dividend);
+    divisor  = abs(divisor);
+
+    if (dividend >= divisor) {
+      for (long double const multipliers[] = {divisor, FLT_RADIX}, *multiplier = multipliers; multiplier != multipliers + (sizeof multipliers / sizeof(long double)); ++multiplier) {
+        long double subdivisor = 0.0L;
+
+        // … prevent FE_OVERFLOW, pls?
+        for (long double value = divisor; value <= dividend; value *= divisor == *multiplier ? value : *multiplier)
+        subdivisor = value;
+
+        std::printf("[..r1]: %Le %Le" "\r\n", dividend, subdivisor);
+        dividend -= subdivisor;
+      }
+
+      std::printf("[..r2]: %Le %Le" "\r\n", dividend, divisor);
+
+      while (dividend >= divisor) {
+        std::printf("[..r3]: %Le" "\r\n", dividend);
+        dividend -= divisor;
+      }
+    }
+
+    return dividend * signedness;
+  }
+
+  uintmax_t remainder(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
+    if (representable and 0 == divisor) {
+      *representable = false;
+      return 0;
+    }
+
+    return dividend % divisor;
+  }
+
+  // … → round(𝙭) - Rounded value of 𝙭
+  long double round(long double const number) {
+    long double const characteristics = trunc(number);
+    long double const mantissa        = number - characteristics;
+
+    // …
+    if (mantissa >= 0.5L) return characteristics + 1.0L;
+    if (mantissa < -0.5L) return characteristics - 1.0L;
+
+    return characteristics;
+  }
+
   // … → sign(𝙭) - Signedness of 𝙭
   signed char sign(intmax_t const number, signed char const signedness) {
     return number > 0 ? +1 : number < 0 ? -1 : signedness;
@@ -987,21 +1191,25 @@ namespace {
 
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
-    if (is_infinite(number) or is_nan(number)) {
+    if (not (is_infinite(number) or is_nan(number))) {
       long double       counter    = 1.0L;
       long double const signedness = sign(number, +1);
       long double       truncation = 0.0L;
 
       // … → Aggregate sum of `number`'s characteristics using powers of `2`, which normally matches the base of its floating-point type `FLT_RADIX`
-      number *= signedness;
+      number = abs(number);
 
       while (number > counter)
         counter *= 2.0L;
+
+      std::printf("[..tA]: %Le %Le" "\r\n", counter, number);
 
       while (counter >= 1.0L) {
         truncation += counter * (number >= counter + truncation);
         counter    /= 2.0L;
       }
+
+      std::puts("[..tB]");
 
       // …
       return truncation * signedness;
@@ -1010,9 +1218,52 @@ namespace {
     return number;
   }
 
+  /* TODO */
   long double pow (long double, long double, bool*) { return 0.00L; }
   long double sqrt(long double)                     { return 0.00L; }
+
+  intmax_t    root(intmax_t,  intmax_t,  bool*) { return 0; }
+  uintmax_t   root(uintmax_t, uintmax_t, bool*) { return 0; }
+  long double root(long double const base, long double const exponent, bool* const representable) {
+    if (is_integer(1.0L / exponent))
+    return ipow(base, 1.0L / exponent);
+
+    if (is_integer(exponent))
+    return iroot(base, exponent);
+
+    // iroot(ipow(base, exponent.denominator), exponent.numerator)
+    (void) representable;
+    return 0.0L;
+  }
+
+  // Mathematics.root = function root(number, exponent) {
+  //   if (+0 === ((1 / exponent) % 1)) return LDKM.ipow(number, 1 / exponent);
+  //   else if (exponent % 1) {
+  //     with (LDKF.numberToFraction(exponent).toImproper())
+  //     while (true) {
+  //       var evaluation = LDKM.ipow(number, denominator);
+  //       if (Infinity !== evaluation) return LDKM.iroot(evaluation, numerator);
+
+  //       denominator = LDKM.trunc(denominator / 10);
+  //       numerator = LDKM.trunc(numerator / 10)
+  //     }
+  //   }
+
+  //   return LDKM.iroot(number, exponent)
+  // };
 }
 
 /* Main */
-int main(int, char*[]) /* noexcept */ {}
+#include <cstdlib>
+#include <ctime>
+
+int main(int, char*[]) /* noexcept */ {
+  std::srand(std::time(NULL));
+
+  // …
+  long double const decimal = static_cast<long double>(std::rand() % RAND_MAX) / RAND_MAX;
+  std::printf("%Lf ~= ", decimal);
+
+  fraction_t const fraction = fract(decimal);
+  std::printf("%Lf / %Lf" "\r\n", fraction[0], fraction[1]);
+}
