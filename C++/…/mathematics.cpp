@@ -35,14 +35,15 @@
 #define LDBL_MIN        __LDBL_MIN__
 
 /* … → Functions evaluate to numeral base 10 */
-typedef struct _ {
-  long double const _[2];
-
-  inline operator long double const*         () const          { return _; }
-  inline operator long double const volatile*() const volatile { return _; }
-} division_t, fraction_t;
-
 namespace {
+  typedef struct _ {
+    long double const _[2];
+
+    inline operator long double const*         () const          { return _; }
+    inline operator long double const volatile*() const volatile { return _; }
+  } division_t, fraction_t;
+
+  /* … */
   uintmax_t   abs                    (intmax_t);
   long double abs                    (long double);
   uintmax_t   abs                    (uintmax_t);
@@ -652,7 +653,6 @@ namespace {
 
   // … → fract(𝙭) - Split value of 𝙭 as its numerator and denominator
   fraction_t fract(long double const number) {
-    std::puts("[..f1]");
     long double const characteristics = trunc(number);
     long double       denominator     = 1.0L;
     long double const mantissa        = number - characteristics;
@@ -665,15 +665,10 @@ namespace {
 
       // …
       for (long double term[2] = {precision, round(precision * mantissa)}; 0.0L != term[0] and 0.0L != term[1]; ) {
-        std::printf("[..f2]: {divisor: %Le, term: {%Le, %Le}}" "\r\n", divisor, term[0], term[1]);
-
         term[term[0] < term[1]] = remainder(term[term[0] < term[1]], term[term[0] >= term[1]]); // → `term[term[0] < term[1]] %= term[term[0] >= term[1]]`
         divisor                 = term[0.0L == term[0]];
-
-        std::printf("[..f3]: {divisor: %Le, term: {%Le, %Le}}" "\r\n", divisor, term[0], term[1]);
       }
 
-      // …
       denominator = precision / divisor;
       numerator   = round(denominator * mantissa) + (denominator * characteristics);
     }
@@ -681,25 +676,6 @@ namespace {
     fraction_t const fraction = {numerator, denominator};
     return fraction;
   }
-
-  // Functions.numberToFraction = function numberToFraction(number) {
-  //   var fraction = new Fraction(LDKM.trunc(number), .numerator = +0, .denominator = 1);
-  //   var mantissa = number - fraction.whole;
-
-  //   if (0.0 !== mantissa) {
-  //     var divisor, precision = 1e15;
-
-  //     for (var a = precision, b = LDKM.round(mantissa * precision); ; divisor = a ? a : b) {
-  //       if (+0 === a || +0 === b) break;
-  //       a < b ? b %= a : a %= b
-  //     }
-
-  //     fraction.denominator = precision / divisor;
-  //     fraction.numerator = LDKM.round(fraction.denominator * mantissa)
-  //   }
-
-  //   return fraction
-  // };
 
   // … → ifactorial(𝙭) - Factorial of integer 𝙭
   long double ifactorial(long double integer, bool* const representable) {
@@ -895,7 +871,7 @@ namespace {
 
   // … → is_infinite(𝙭) - Determines if 𝙭 is a negative/ positive infinity floating-point value
   bool is_infinite(long double const number) {
-    return number == (number + 0.0L) * (number + 1.0L);
+    return number and number == (number + 0.0L) * (number + 1.0L);
   }
 
   // … → is_integer(𝙭) - Determines if 𝙭 is an integer value
@@ -975,19 +951,19 @@ namespace {
   }
 
   // … → next(𝙭) - Next normalized floating-point value after 𝙭
-  long double next(long double const number) {
-    if (not is_infinite(number) and not is_nan(number)) {
-      long double       next      = abs(number);
-      long double const maximum   = LDBL_MAX;
-      long double       precision = LDBL_EPSILON;
+  long double next(long double number) {
+    if (not (is_infinite(number) or is_nan(number))) {
+      long double       precision  = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
+      long double const signedness = sign(number, +1);
 
       // …
-      for (; next == next + precision; precision *= 2.0L) {
-        if (maximum != maximum - precision)
-        return number;
-      }
+      number = abs(number);
 
-      return next + precision;
+      while (number == number + precision)
+      precision *= 2.0L;
+
+      // …
+      return (number + (number > LDBL_MAX - precision ? 0.0L : precision)) * signedness;
     }
 
     return number;
@@ -1021,20 +997,20 @@ namespace {
     return integer % 2u == 0;
   }
 
-  // … → prev(𝙭) - Previous normalized floating-point value before 𝙭
-  long double prev(long double const number) {
-    if (not is_infinite(number) and not is_nan(number)) {
-      long double const maximum   = LDBL_MAX;
-      long double       precision = LDBL_EPSILON;
-      long double       previous  = abs(number);
+  // … → prev(𝙭) - Absolute previous normalized floating-point value before 𝙭
+  long double prev(long double number) {
+    if (not (is_infinite(number) or is_nan(number))) {
+      long double       precision  = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
+      long double const signedness = sign(number, +1);
 
       // …
-      for (; previous == previous - precision; precision *= 2.0L) {
-        if (maximum != maximum - precision)
-        return number;
-      }
+      number = abs(number);
 
-      return previous - precision;
+      while (number == number - precision)
+      precision *= 2.0L;
+
+      // …
+      return (number + (number > LDBL_MAX - precision ? 0.0L : precision)) * signedness;
     }
 
     return number;
@@ -1067,23 +1043,29 @@ namespace {
     divisor  = abs(divisor);
 
     if (dividend >= divisor) {
-      for (long double const multipliers[] = {divisor, FLT_RADIX}, *multiplier = multipliers; multiplier != multipliers + (sizeof multipliers / sizeof(long double)); ++multiplier) {
+      for (enum _ /* : unsigned char */ { EXPONENTIAL, MULTIPLICATIVE, LOGARITHMIC, ADDITIVE } operation = EXPONENTIAL; operation <= ADDITIVE; ) {
         long double subdivisor = 0.0L;
 
-        // … prevent FE_OVERFLOW, pls?
-        for (long double value = divisor; value <= dividend; value *= divisor == *multiplier ? value : *multiplier)
-        subdivisor = value;
+        // …
+        for (long double value = divisor; value and value <= dividend; ) {
+          subdivisor = value;
 
-        std::printf("[..r1]: %Le %Le" "\r\n", dividend, subdivisor);
+          switch (operation) {
+            case ADDITIVE      : value = value <= LDBL_MAX - divisor ? value + divisor : 0.0L; break;
+            case EXPONENTIAL   : value = value <= LDBL_MAX / value   ? value * value   : 0.0L; break;
+            case LOGARITHMIC   : value = value <= LDBL_MAX / divisor ? value * divisor : 0.0L; break;
+            case MULTIPLICATIVE: value = value <= LDBL_MAX - value   ? value + value   : 0.0L; break;
+          }
+
+          subdivisor *= 0.0L != value;
+        }
+
+        operation = static_cast<enum _>(operation + (0.0L == subdivisor));
         dividend -= subdivisor;
       }
 
-      std::printf("[..r2]: %Le %Le" "\r\n", dividend, divisor);
-
-      while (dividend >= divisor) {
-        std::printf("[..r3]: %Le" "\r\n", dividend);
-        dividend -= divisor;
-      }
+      while (dividend >= divisor)
+      dividend -= divisor;
     }
 
     return dividend * signedness;
@@ -1191,25 +1173,23 @@ namespace {
 
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
-    if (not (is_infinite(number) or is_nan(number))) {
-      long double       counter    = 1.0L;
-      long double const signedness = sign(number, +1);
-      long double       truncation = 0.0L;
+    long double const signedness = sign(number, +1);
+
+    // …
+    number = abs(number);
+
+    if (next(number) < 1.0L) {
+      long double counter    = 1.0L;
+      long double truncation = 0.0L;
 
       // … → Aggregate sum of `number`'s characteristics using powers of `2`, which normally matches the base of its floating-point type `FLT_RADIX`
-      number = abs(number);
-
-      while (number > counter)
-        counter *= 2.0L;
-
-      std::printf("[..tA]: %Le %Le" "\r\n", counter, number);
+      while (counter < number)
+      counter *= 2.0L;
 
       while (counter >= 1.0L) {
         truncation += counter * (number >= counter + truncation);
         counter    /= 2.0L;
       }
-
-      std::puts("[..tB]");
 
       // …
       return truncation * signedness;
@@ -1231,6 +1211,7 @@ namespace {
     if (is_integer(exponent))
     return iroot(base, exponent);
 
+    // TODO
     // iroot(ipow(base, exponent.denominator), exponent.numerator)
     (void) representable;
     return 0.0L;
@@ -1254,16 +1235,4 @@ namespace {
 }
 
 /* Main */
-#include <cstdlib>
-#include <ctime>
-
-int main(int, char*[]) /* noexcept */ {
-  std::srand(std::time(NULL));
-
-  // …
-  long double const decimal = static_cast<long double>(std::rand() % RAND_MAX) / RAND_MAX;
-  std::printf("%Lf ~= ", decimal);
-
-  fraction_t const fraction = fract(decimal);
-  std::printf("%Lf / %Lf" "\r\n", fraction[0], fraction[1]);
-}
+int main(int, char*[]) /* noexcept */ {}
