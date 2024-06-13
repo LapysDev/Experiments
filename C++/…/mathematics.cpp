@@ -1060,8 +1060,8 @@ namespace {
           subdivisor *= 0.0L != value;
         }
 
-        operation = static_cast<enum _>(operation + (0.0L == subdivisor));
         dividend -= subdivisor;
+        operation = static_cast<enum _>(operation + (0.0L == subdivisor));
       }
 
       while (dividend >= divisor)
@@ -1206,15 +1206,15 @@ namespace {
   uintmax_t   root(uintmax_t, uintmax_t, bool*) { return 0; }
   long double root(long double const base, long double const exponent, bool* const representable) {
     if (is_integer(1.0L / exponent))
-    return ipow(base, 1.0L / exponent);
+    return ipow(base, 1.0L / exponent, NULL);
 
     if (is_integer(exponent))
-    return iroot(base, exponent);
+    return iroot(base, exponent, NULL);
 
-    // TODO
-    // iroot(ipow(base, exponent.denominator), exponent.numerator)
-    (void) representable;
-    return 0.0L;
+    // …
+    long double *const subexponent = fract(exponent);
+    // divide `subexponent[1]` by 10 if non-representable?
+    return iroot(ipow(base, subexponent[1], NULL), subexponent[0], NULL);
   }
 
   // Mathematics.root = function root(number, exponent) {
