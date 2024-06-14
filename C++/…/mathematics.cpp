@@ -37,10 +37,14 @@
 /* … → Functions evaluate to numeral base 10 */
 namespace {
   typedef struct _ {
-    long double const _[2];
+    private:
+      typedef long double const (type)[2];
 
-    inline operator long double const*         () const          { return _; }
-    inline operator long double const volatile*() const volatile { return _; }
+    public:
+      type const _;
+
+      inline operator type const&         () const          { return _; }
+      inline operator type const volatile&() const volatile { return _; }
   } division_t, fraction_t;
 
   /* … */
@@ -51,6 +55,10 @@ namespace {
   long double bézier_cubic           (long double, long double, long double, long double, long double);
   long double bézier_linear          (long double, long double, long double);
   long double bézier_quadratic       (long double, long double, long double, long double);
+  intmax_t    cbrt                   (intmax_t,    bool* = NULL);
+  long double cbrt                   (long double, bool* = NULL);
+  uintmax_t   cbrt                   (uintmax_t,   bool* = NULL);
+  long double compute_euler          (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double compute_infinity       ();
   long double compute_nan            ();
   long double compute_pi             (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
@@ -94,6 +102,9 @@ namespace {
   long double ease_out_quintic       (long double);
   long double ease_out_sine          (long double);
   fraction_t  fract                  (long double);
+  intmax_t    icbrt                  (intmax_t,    bool* = NULL);
+  long double icbrt                  (long double, bool* = NULL);
+  uintmax_t   icbrt                  (uintmax_t,   bool* = NULL);
   long double ifactorial             (long double, bool* = NULL);
   uintmax_t   ifactorial             (uintmax_t,   bool* = NULL);
   long double imaxof                 ();
@@ -103,6 +114,9 @@ namespace {
   uintmax_t   iroot                  (intmax_t,    intmax_t,    bool* = NULL);
   long double iroot                  (long double, long double, bool* = NULL);
   uintmax_t   iroot                  (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t    isqrt                  (intmax_t,    bool* = NULL);
+  long double isqrt                  (long double, bool* = NULL);
+  uintmax_t   isqrt                  (uintmax_t,   bool* = NULL);
   bool        is_denormal            (long double);
   bool        is_infinite            (long double);
   bool        is_integer             (long double);
@@ -119,15 +133,24 @@ namespace {
   bool        parity                 (intmax_t);
   bool        parity                 (long double);
   bool        parity                 (uintmax_t);
+  intmax_t    pow                    (intmax_t,    intmax_t,    bool* = NULL);
+  long double pow                    (long double, long double, bool* = NULL);
+  uintmax_t   pow                    (uintmax_t,   uintmax_t,   bool* = NULL);
   long double prev                   (long double);
   intmax_t    remainder              (intmax_t,    intmax_t,    bool* = NULL);
   long double remainder              (long double, long double, bool* = NULL);
   uintmax_t   remainder              (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t    root                   (intmax_t,    intmax_t,    bool* = NULL);
+  long double root                   (long double, long double, bool* = NULL);
+  uintmax_t   root                   (uintmax_t,   uintmax_t,   bool* = NULL);
   long double round                  (long double);
   signed char sign                   (intmax_t,    signed char = 0);
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
   long double sin                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  intmax_t    sqrt                   (intmax_t,    bool* = NULL);
+  long double sqrt                   (long double, bool* = NULL);
+  uintmax_t   sqrt                   (uintmax_t,   bool* = NULL);
   long double tan                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double trunc                  (long double);
 
@@ -179,16 +202,12 @@ namespace {
   long double bitswap                (long double);
   uintmax_t   bitswap                (uintmax_t);
   std::size_t bitwidth               (uintmax_t);
-  intmax_t    cbrt                   (intmax_t);
-  long double cbrt                   (long double);
-  uintmax_t   cbrt                   (uintmax_t);
   intmax_t    ceil                   (intmax_t);
   long double ceil                   (long double);
   uintmax_t   ceil                   (uintmax_t);
   intmax_t    clamp                  (intmax_t,    intmax_t,    intmax_t);
   long double clamp                  (long double, long double, long double);
   uintmax_t   clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
-  long double compute_euler          (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double cot                    (long double);
   long double coth                   (long double);
   long double csc                    (long double);
@@ -206,12 +225,6 @@ namespace {
   uintmax_t   floor                  (uintmax_t);
   long double hermite                (long double, std::size_t);
   long double herp                   (long double, long double, long double);
-  intmax_t    icbrt                  (intmax_t);
-  long double icbrt                  (long double);
-  uintmax_t   icbrt                  (uintmax_t);
-  intmax_t    isqrt                  (intmax_t);
-  long double isqrt                  (long double);
-  uintmax_t   isqrt                  (uintmax_t);
   long double jsf                    (long double);
   long double laguerre               (long double, std::size_t, std::size_t, bool);
   long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
@@ -234,13 +247,7 @@ namespace {
   long double mt64                   (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
   long double mulberry               (long double);
   long double mulberry32             (long double);
-  intmax_t    pow                    (intmax_t,    intmax_t,    bool* = NULL);
-  long double pow                    (long double, long double, bool* = NULL);
-  uintmax_t   pow                    (uintmax_t,   uintmax_t,   bool* = NULL);
   long double riemann_zeta           (long double);
-  intmax_t    root                   (intmax_t,    intmax_t,    bool* = NULL);
-  long double root                   (long double, long double, bool* = NULL);
-  uintmax_t   root                   (uintmax_t,   uintmax_t,   bool* = NULL);
   long double sec                    (long double);
   long double sech                   (long double);
   long double sinh                   (long double);
@@ -248,9 +255,6 @@ namespace {
   long double sph_bessel             (long double, std::size_t);
   long double sph_legendre           (long double, std::size_t, std::size_t);
   long double sph_neumann            (long double, std::size_t);
-  intmax_t    sqrt                   (intmax_t);
-  long double sqrt                   (long double);
-  uintmax_t   sqrt                   (uintmax_t);
   intmax_t    subtract               (intmax_t,    intmax_t,    bool* = NULL);
   long double subtract               (long double, long double, bool* = NULL);
   uintmax_t   subtract               (uintmax_t,   uintmax_t,   bool* = NULL);
@@ -340,6 +344,48 @@ namespace {
     );
   }
 
+  // … → cbrt(𝙭) - Cubed root of 𝙭
+  intmax_t cbrt(intmax_t const number, bool* const representable) {
+    return root(number, 3, representable);
+  }
+
+  long double cbrt(long double const number, bool* const representable) {
+    return root(number, 3.0L, representable);
+  }
+
+  uintmax_t cbrt(uintmax_t const number, bool* const representable) {
+    return root(number, 3u, representable);
+  }
+
+  // … → compute_euler(…) - Mathematical constant (`https://en.wikipedia.org/wiki/E_(mathematical_constant)`)
+  long double compute_euler(std::size_t iterationCount, bool* const representable) {
+    long double euler = 0.0L;
+
+    // …
+    if (0u == iterationCount)
+    return euler;
+
+    // … → `Σₙ₌₀(1 ÷ n!)`
+    for (long double index = 0.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
+      bool              subrepresentable = index <= imaxof();
+      long double const iteration        = ifactorial(index, &subrepresentable);
+
+      // …
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
+
+        if (iterationCount == static_cast<std::size_t>(-1)) break;
+        if (representable) return 0.0L;
+      }
+
+      // …
+      euler += 1.0L / iteration;
+    }
+
+    return euler;
+  }
+
   // … → compute_infinity() - Infinity floating-point representative
   long double compute_infinity() {
     return 1.0L / 0.0L;
@@ -373,16 +419,15 @@ namespace {
     for (long double index = 0.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
       long double iteration[2]     = {1.0L, 1.0L};
       bool        subrepresentable = index <= imaxof();
-      long double term;
 
       // …
-      iteration[0] *= term = ipow(-1.0L, index, &subrepresentable);
-      iteration[0] *= term = ifactorial(index * 6.0L, &subrepresentable);
-      iteration[0] *= term = multiply(545140134.0L, index, &subrepresentable) + 13591409.0L;
+      iteration[0] *= ipow(-1.0L, index, &subrepresentable);
+      iteration[0] *= ifactorial(index * 6.0L, &subrepresentable);
+      iteration[0] *= multiply(545140134.0L, index, &subrepresentable) + 13591409.0L;
 
-      iteration[1] *= term = ifactorial(index * 3.0L, &subrepresentable);
-      iteration[1] *= term = ipow(ifactorial(index, &subrepresentable), 3.0L, &subrepresentable);
-      iteration[1] *= term = multiply(512384047.996L /* → `640320³ᐟ²` */, ipow(640320.0L, index * 3.0L, &subrepresentable) /* → `640320³ᵏ` */); // → j-function of negated Heegner number
+      iteration[1] *= ifactorial(index * 3.0L, &subrepresentable);
+      iteration[1] *= ipow(ifactorial(index, &subrepresentable), 3.0L, &subrepresentable);
+      iteration[1] *= multiply(512384047.996L /* → `640320³ᐟ²` */, ipow(640320.0L, index * 3.0L, &subrepresentable) /* → `640320³ᵏ` */); // → j-function of negated Heegner number
 
       if (not subrepresentable) {
         if (representable)
@@ -677,6 +722,19 @@ namespace {
     return fraction;
   }
 
+  // … → icbrt(𝙭) - Integer cubed root of 𝙭
+  intmax_t icbrt(intmax_t const number, bool* const representable) {
+    return root(number, 3, representable);
+  }
+
+  long double icbrt(long double const number, bool* const representable) {
+    return root(number, 3.0L, representable);
+  }
+
+  uintmax_t icbrt(uintmax_t const number, bool* const representable) {
+    return root(number, 3u, representable);
+  }
+
   // … → ifactorial(𝙭) - Factorial of integer 𝙭
   long double ifactorial(long double integer, bool* const representable) {
     long double factorial = 1.0L;
@@ -863,6 +921,19 @@ namespace {
     return root;
   }
 
+  // … → isqrt(𝙭) - Integer squared root of 𝙭
+  intmax_t isqrt(intmax_t const number, bool* const representable) {
+    return root(number, 3, representable);
+  }
+
+  long double isqrt(long double const number, bool* const representable) {
+    return root(number, 3.0L, representable);
+  }
+
+  uintmax_t isqrt(uintmax_t const number, bool* const representable) {
+    return root(number, 3u, representable);
+  }
+
   // … → is_denormal(𝙭) - Determines if 𝙭 is a denormalized floating-point value
   bool is_denormal(long double const number) {
     // → All subnormals are denormals, but not all denormals are subnormals
@@ -997,6 +1068,19 @@ namespace {
     return integer % 2u == 0;
   }
 
+  // … → pow(𝙭, 𝙣) - 𝙣th power of 𝙭 where 𝙣 ≥ 0 is a positive integer
+  intmax_t pow(intmax_t const base, intmax_t const exponent, bool* const representable) {
+    return ipow(base, exponent, representable);
+  }
+
+  long double pow(long double const base, long double const exponent, bool* const representable) {
+    return is_integer(exponent) ? ipow(base, exponent, representable) : root(base, 1.0L / exponent, representable);
+  }
+
+  uintmax_t pow(uintmax_t const base, uintmax_t const exponent, bool* const representable) {
+    return ipow(base, exponent, representable);
+  }
+
   // … → prev(𝙭) - Absolute previous normalized floating-point value before 𝙭
   long double prev(long double number) {
     if (not (is_infinite(number) or is_nan(number))) {
@@ -1080,6 +1164,38 @@ namespace {
     return dividend % divisor;
   }
 
+  // … → root(𝙭, 𝙣) - 𝙣th root of 𝙭 where 𝙣 ≥ 0 is a positive integer
+  intmax_t root(intmax_t const base, intmax_t const exponent, bool* const representable) {
+    return iroot(base, exponent, representable);
+  }
+
+  long double root(long double const base, long double exponent, bool* const representable) {
+    if (is_integer(1.0L / exponent))
+    return ipow(base, 1.0L / exponent, representable);
+
+    if (is_integer(exponent))
+    return iroot(base, exponent, representable);
+
+    /* … */
+    bool                subrepresentable = true;
+    long double const (&subexponent)[2]  = fract(exponent);
+    long double const   root             = iroot(ipow(base, subexponent[1], &subrepresentable), subexponent[0], &subrepresentable);
+
+    // …
+    if (not subrepresentable) {
+      if (representable)
+      *representable = false;
+
+      return 0.0L;
+    }
+
+    return root;
+  }
+
+  uintmax_t root(uintmax_t const base, uintmax_t const exponent, bool* const representable) {
+    return iroot(base, exponent, representable);
+  }
+
   // … → round(𝙭) - Rounded value of 𝙭
   long double round(long double const number) {
     long double const characteristics = trunc(number);
@@ -1155,6 +1271,19 @@ namespace {
     return value;
   }
 
+  // … → sqrt(𝙭) - Squared root of 𝙭
+  intmax_t sqrt(intmax_t const number, bool* const representable) {
+    return root(number, 2, representable);
+  }
+
+  long double sqrt(long double const number, bool* const representable) {
+    return root(number, 2.0L, representable);
+  }
+
+  uintmax_t sqrt(uintmax_t const number, bool* const representable) {
+    return root(number, 2u, representable);
+  }
+
   // … → tan(𝙭) - Tangent of 𝙭 radians
   long double tan(long double const angle, std::size_t iterationCount, bool* const representable) {
     bool              subrepresentable = true;
@@ -1197,42 +1326,9 @@ namespace {
 
     return number;
   }
-
-  /* TODO */
-  long double pow (long double, long double, bool*) { return 0.00L; }
-  long double sqrt(long double)                     { return 0.00L; }
-
-  intmax_t    root(intmax_t,  intmax_t,  bool*) { return 0; }
-  uintmax_t   root(uintmax_t, uintmax_t, bool*) { return 0; }
-  long double root(long double const base, long double const exponent, bool* const representable) {
-    if (is_integer(1.0L / exponent))
-    return ipow(base, 1.0L / exponent, NULL);
-
-    if (is_integer(exponent))
-    return iroot(base, exponent, NULL);
-
-    // …
-    long double *const subexponent = fract(exponent);
-    // divide `subexponent[1]` by 10 if non-representable?
-    return iroot(ipow(base, subexponent[1], NULL), subexponent[0], NULL);
-  }
-
-  // Mathematics.root = function root(number, exponent) {
-  //   if (+0 === ((1 / exponent) % 1)) return LDKM.ipow(number, 1 / exponent);
-  //   else if (exponent % 1) {
-  //     with (LDKF.numberToFraction(exponent).toImproper())
-  //     while (true) {
-  //       var evaluation = LDKM.ipow(number, denominator);
-  //       if (Infinity !== evaluation) return LDKM.iroot(evaluation, numerator);
-
-  //       denominator = LDKM.trunc(denominator / 10);
-  //       numerator = LDKM.trunc(numerator / 10)
-  //     }
-  //   }
-
-  //   return LDKM.iroot(number, exponent)
-  // };
 }
 
 /* Main */
-int main(int, char*[]) /* noexcept */ {}
+int main(int, char*[]) /* noexcept */ {
+  std::printf("%Lf", compute_euler());
+}
