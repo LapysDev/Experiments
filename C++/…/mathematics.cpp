@@ -970,34 +970,31 @@ namespace {
     return false;
   }
 
-  // … → ln(𝙭) - Natural logarithm of 𝙭
+  // … → ln(𝙭) - Natural logarithm of 𝙭 (`https://en.wikipedia.org/wiki/Natural_logarithm`)
   long double ln(long double const number, std::size_t iterationCount, bool* const representable) {
-    // long double value = 0.0L;
+    long double logarithm = 1.0L;
 
-    // // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ⁺¹) ÷ (2n + 1)!)`
-    // for (long double index = 0.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
-    //   long double iteration[2]     = {1.0L, 1.0L};
-    //   bool        subrepresentable = index <= imaxof();
+    // … → `Πₖ₌₁(2 ÷ (1 + 2ᵏ√𝙭))`
+    for (long double index = 1.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
+      long double iteration;
+      bool        subrepresentable = index <= imaxof();
 
-    //   // …
-    //   iteration[0] *= ipow(-1.0L, index, &subrepresentable);
-    //   iteration[0] *= ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
+      // …
+      iteration = iroot(number, ipow(2.0L, index, &subrepresentable), &subrepresentable) + 1.0L;
+      iteration = multiply(logarithm, 2.0L / iteration, &subrepresentable);
 
-    //   iteration[1] *= ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
 
-    //   if (not subrepresentable) {
-    //     if (representable)
-    //     *representable = false;
+        if (iterationCount == static_cast<std::size_t>(-1)) break;
+        if (representable) return 0.0L;
+      }
 
-    //     if (iterationCount == static_cast<std::size_t>(-1)) break;
-    //     if (representable) return 0.0L;
-    //   }
+      logarithm = iteration;
+    }
 
-    //   // …
-    //   value += iteration[0] / iteration[1];
-    // }
-
-    // return value;
+    return logarithm * (number - 1.0L);
   }
 
   // … → log(𝙭, 𝙣) - 𝙣-radix logarithm of 𝙭
@@ -1400,5 +1397,6 @@ namespace {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("%Lf", compute_euler());
+  // CHECK IF IT'S TOO SLOW..? (when `HandBrake.exe` is done)
+  std::printf("%Lf", ln(69.42L));
 }
