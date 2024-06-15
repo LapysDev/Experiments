@@ -55,14 +55,14 @@ namespace {
   long double bézier_cubic           (long double, long double, long double, long double, long double);
   long double bézier_linear          (long double, long double, long double);
   long double bézier_quadratic       (long double, long double, long double, long double);
-  intmax_t    cbrt                   (intmax_t,    bool* = NULL);
-  long double cbrt                   (long double, bool* = NULL);
-  uintmax_t   cbrt                   (uintmax_t,   bool* = NULL);
+  intmax_t    cbrt                   (intmax_t,                                   bool* = NULL);
+  long double cbrt                   (long double,                                bool* = NULL);
+  uintmax_t   cbrt                   (uintmax_t,                                  bool* = NULL);
   long double compute_euler          (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double compute_infinity       ();
   long double compute_nan            ();
-  long double compute_pi             (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
-  long double compute_tau            (std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
+  long double compute_pi             (std::size_t = static_cast<std::size_t>(-1),              bool* = NULL);
+  long double compute_tau            (std::size_t = static_cast<std::size_t>(-1),              bool* = NULL);
   long double cos                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   std::size_t countof                (intmax_t);
   std::size_t countof                (long double);
@@ -101,6 +101,7 @@ namespace {
   long double ease_out_quartic       (long double);
   long double ease_out_quintic       (long double);
   long double ease_out_sine          (long double);
+  long double exp                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   fraction_t  fract                  (long double);
   intmax_t    icbrt                  (intmax_t,    bool* = NULL);
   long double icbrt                  (long double, bool* = NULL);
@@ -114,9 +115,9 @@ namespace {
   uintmax_t   iroot                  (intmax_t,    intmax_t,    bool* = NULL);
   long double iroot                  (long double, long double, bool* = NULL);
   uintmax_t   iroot                  (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t    isqrt                  (intmax_t,    bool* = NULL);
-  long double isqrt                  (long double, bool* = NULL);
-  uintmax_t   isqrt                  (uintmax_t,   bool* = NULL);
+  intmax_t    isqrt                  (intmax_t,                 bool* = NULL);
+  long double isqrt                  (long double,              bool* = NULL);
+  uintmax_t   isqrt                  (uintmax_t,                bool* = NULL);
   bool        is_denormal            (long double);
   bool        is_infinite            (long double);
   bool        is_integer             (long double);
@@ -148,9 +149,9 @@ namespace {
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
   long double sin                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
-  intmax_t    sqrt                   (intmax_t,    bool* = NULL);
-  long double sqrt                   (long double, bool* = NULL);
-  uintmax_t   sqrt                   (uintmax_t,   bool* = NULL);
+  intmax_t    sqrt                   (intmax_t,                                                bool* = NULL);
+  long double sqrt                   (long double,                                             bool* = NULL);
+  uintmax_t   sqrt                   (uintmax_t,                                               bool* = NULL);
   long double tan                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double trunc                  (long double);
 
@@ -218,7 +219,6 @@ namespace {
   long double divide                 (long double, long double);
   uintmax_t   divide                 (uintmax_t,   uintmax_t);
   long double ellint                 (long double, long double, long double, bool);
-  long double exp                    (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double expint                 (long double);
   intmax_t    floor                  (intmax_t);
   long double floor                  (long double);
@@ -230,7 +230,7 @@ namespace {
   long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
   long double legendre               (long double, std::size_t, std::size_t, bool);
   long double lerp                   (long double, long double);
-  long double ln                     (long double);
+  long double ln                     (long double, std::size_t = static_cast<std::size_t>(-1), bool* = NULL);
   long double log                    (long double, std::size_t);
   long double log2                   (long double);
   long double log8                   (long double);
@@ -696,6 +696,11 @@ namespace {
     return sin((compute_pi() * time) / 2.0L);
   }
 
+  // … → exp(𝙭) - 𝙭th power of Euler’s number
+  long double exp(long double const number, std::size_t iterationCount, bool* const representable) {
+    return pow(compute_euler(iterationCount, representable), number, representable);
+  }
+
   // … → fract(𝙭) - Split value of 𝙭 as its numerator and denominator
   fraction_t fract(long double const number) {
     long double const characteristics = trunc(number);
@@ -964,6 +969,51 @@ namespace {
     (void) number;
     return false;
   }
+
+  // … → ln(𝙭) - Natural logarithm of 𝙭
+  long double ln(long double const number, std::size_t iterationCount, bool* const representable) {
+    // long double value = 0.0L;
+
+    // // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ⁺¹) ÷ (2n + 1)!)`
+    // for (long double index = 0.0L; iterationCount; ++index, iterationCount -= iterationCount != static_cast<std::size_t>(-1)) {
+    //   long double iteration[2]     = {1.0L, 1.0L};
+    //   bool        subrepresentable = index <= imaxof();
+
+    //   // …
+    //   iteration[0] *= ipow(-1.0L, index, &subrepresentable);
+    //   iteration[0] *= ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
+
+    //   iteration[1] *= ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
+
+    //   if (not subrepresentable) {
+    //     if (representable)
+    //     *representable = false;
+
+    //     if (iterationCount == static_cast<std::size_t>(-1)) break;
+    //     if (representable) return 0.0L;
+    //   }
+
+    //   // …
+    //   value += iteration[0] / iteration[1];
+    // }
+
+    // return value;
+  }
+
+  // … → log(𝙭, 𝙣) - 𝙣-radix logarithm of 𝙭
+  long double log(long double const number, std::size_t const base = static_cast<std::size_t>(-1));
+
+  // … → log2(𝙭) - Binary logarithm of 𝙭
+  long double log2(long double);
+
+  // … → log8(𝙭) - Octonary logarithm of 𝙭
+  long double log8(long double);
+
+  // … → log10(𝙭) - Common (decimal) logarithm of 𝙭
+  long double log10(long double);
+
+  // … → log16(𝙭) - Hexadecimal logarithm of 𝙭
+  long double log16(long double);
 
   // … → maxprecof(𝙭) - Maximum normalized floating-point value with precision 𝙭
   long double maxprecof(long double const precision) {
@@ -1326,6 +1376,26 @@ namespace {
 
     return number;
   }
+
+  /* ... */
+  // long double acos(long double const number, std::size_t iterationCount, bool* const representable);
+  // long double acosh(long double const number, std::size_t iterationCount, bool* const representable);
+  // long double acot(long double const number, std::size_t iterationCount, bool* const representable);
+  // long double acoth(long double const number, std::size_t iterationCount, bool* const representable);
+  // long double acsc(long double const number, std::size_t iterationCount, bool* const representable);
+  // long double acsch(long double const number, std::size_t iterationCount, bool* const representable) {
+  //   return ln((sqrt((number + 1.0L) * (number + 1.0L), representable) + 1.0L) / number, ...);
+  // }
+
+  // Mathematics.acos = function acos(number) { return LDKM.ETA - LDKM.asin(number) };
+  // Mathematics.acosh = function acosh(number) { return LDKM.ln(number + LDKM.sqrt((number * number) - 1)) };
+  // Mathematics.acot = function acot(number) { return LDKM.ETA - LDKM.atan(number) };
+  // Mathematics.acoth = function acoth(number) { return LDKM.ln((number + 1) / (number - 1)) / 2 };
+  // Mathematics.acsc = function acsc(number) { return LDKM.ETA - LDKM.asec(number) };
+  // Mathematics.asec = function asec(number) { return LDKM.acos(1 / number) };
+  // Mathematics.asech = function asech(number) { return LDKM.ln((1 + LDKM.sqrt((1 - number) * (1 - number))) / number) };
+
+  // long double asin(long double const number, std::size_t iterationCount, bool* const representable);
 }
 
 /* Main */
