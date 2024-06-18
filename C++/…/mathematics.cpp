@@ -34,7 +34,10 @@
 #define LDBL_MAX_EXP    __LDBL_MAX_EXP__
 #define LDBL_MIN        __LDBL_MIN__
 
-/* … → Functions evaluate to numeral base 10 */
+/* …
+    → Functions evaluate denary numbers (comprised of bits) and only handle values within their expected domains: edge cases like NaN are not considered unless otherwise
+    → Functions that optionally evaluate the `representable`-ness of their result typically determine it to be `false` for repeating decimals that are infinitely computed e.g.: `compute_pi()` is only finitely `representable` unlike `ipow()`
+*/
 namespace {
   typedef struct _ {
     private:
@@ -51,6 +54,9 @@ namespace {
   uintmax_t   abs                    (intmax_t);
   long double abs                    (long double);
   uintmax_t   abs                    (uintmax_t);
+  long double acos                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double atan                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double atan                   (long double, long double, std::size_t = 0u, bool* = NULL);
   long double bézier                 (std::size_t, long double, ...);
   long double bézier_cubic           (long double, long double, long double, long double, long double);
   long double bézier_linear          (long double, long double, long double);
@@ -165,7 +171,6 @@ namespace {
   long double tan                    (long double, std::size_t = 0u, bool* = NULL);
   long double trunc                  (long double);
 
-  long double acos                   (long double);
   long double acosh                  (long double);
   long double acot                   (long double);
   long double acoth                  (long double);
@@ -178,7 +183,6 @@ namespace {
   long double asech                  (long double);
   long double asin                   (long double);
   long double asinh                  (long double);
-  long double atan                   (long double, std::size_t = 0u, bool* = NULL);
   long double atanh                  (long double);
   long double beta                   (long double);
   long double bitceil                (long double);
@@ -292,6 +296,86 @@ namespace {
     return number;
   }
 
+  // … → acos(𝙭) - Arc cosine of 𝙭 (`https://people.math.sc.edu/girardi/m142/handouts/10sTaylorPolySeries.pdf`)
+  /* TODO */
+  // long double acos(long double number, std::size_t const iterationCount, bool* const representable) {
+  //   compute_eta(iterationCount) - asin();
+
+  //   // asin(x) = atan2 (x, sqrt ((1.0 + x) * (1.0 - x)))
+  //   // acos(x) = atan2 (sqrt ((1.0 + x) * (1.0 - x)), x)
+  // }
+
+  // … → atan(𝙭) - Arc tangent of 𝙭 (`https://people.math.sc.edu/girardi/m142/handouts/10sTaylorPolySeries.pdf`, `https://en.wikipedia.org/wiki/Atan2#Definition_and_computation`)
+  long double atan(long double number, std::size_t const iterationCount, bool* const representable) {
+    std::size_t       count      = iterationCount;
+    signed char const signedness = number > +1.0L ? +1 : number < -1.0L ? -1 : 0;
+    long double       ratio      = 0.0L; // → Adjacent ÷ Opposite
+
+    // … → `Σₙ₌₀(-1)ⁿ(𝙭²ⁿ⁺¹ ÷ (2n + 1))`
+    number = 0 != signedness ? 1.0L / number : number;
+
+    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+      long double iteration[2]     = {1.0L, 1.0L};
+      long double preiteration     = ratio;
+      bool        subrepresentable = index <= imaxof();
+
+      // …
+      iteration[1] *= multiply(index, 2.0L, &subrepresentable) + 1.0L;
+
+      iteration[0] *= ipow(-1.0L,  index,        &subrepresentable);
+      iteration[0] *= ipow(number, iteration[1], &subrepresentable);
+
+      // …
+      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      subrepresentable = subrepresentable and ratio != preiteration;
+
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
+
+        if (not iterationCount) break;
+        if (representable)      return 0.0L;
+      }
+
+      ratio = preiteration;
+    }
+
+    switch (signedness) {
+      case +1: ratio = +compute_eta(iterationCount) - ratio; break;
+      case -1: ratio = -compute_eta(iterationCount) + ratio; break;
+    }
+
+    return ratio;
+  }
+
+  long double atan(long double const x, long double const y, std::size_t const iterationCount, bool* const representable) {
+    // … → Adjacent ÷ Opposite
+    switch (sign(x)) {
+      case +1: {
+        return atan(y / x, iterationCount, representable);
+      } break;
+
+      case -1: {
+        bool              subrepresentable = true;
+        long double const ratio            = atan(y / x, iterationCount, &subrepresentable);
+
+        // …
+        if (not iterationCount or subrepresentable)
+        return ratio + (compute_pi(iterationCount) * sign(y, +1));
+      } break;
+
+      case 0: {
+        if (sign(y))
+        return 0.0L + (compute_eta(iterationCount) * sign(y, 0));
+      } break;
+    }
+
+    if (representable)
+    *representable = false;
+
+    return 0.0L;
+  }
+
   // … → bézier(𝙩, 𝙥0, …, 𝙥n) - Point 𝙩 on parametric multi-point curve, where all points lie between 0.0 and 1.0 (`https://en.wikipedia.org/wiki/Bézier_curve`)
   long double bézier(std::size_t const order, long double const percent, ...) {
     long double  point = 0.0L;
@@ -307,7 +391,7 @@ namespace {
       iteration *= ifactorial(static_cast<long double>(order)) / (ifactorial(static_cast<long double>(index)) * ifactorial(static_cast<long double>(order - index)));
       iteration *= ipow      (1.0L - percent, static_cast<long double>(order - index));
       iteration *= ipow      (percent,        static_cast<long double>(index));
-      iteration *= va_arg(points, long double);
+      iteration *= va_arg    (points,         long double);
 
       point += iteration;
     }
@@ -553,8 +637,10 @@ namespace {
   }
 
   long double divide(long double const numberA, long double const numberB, bool* const representable) {
-    if (0.0L == numberB or is_infinite(numberA) or is_infinite(numberB) or is_nan(numberA) or is_nan(numberB)) {
+    if (0.0L == numberB) {
+      if (representable)
       *representable = false;
+
       return 0.0L;
     }
 
@@ -850,8 +936,10 @@ namespace {
 
     power = ipow(abs(base), abs(exponent), representable);
 
-    if (representable and power > abs(signedness ? INTMAX_MIN : INTMAX_MAX)) {
+    if (power > abs(signedness ? INTMAX_MIN : INTMAX_MAX)) {
+      if (representable)
       *representable = false;
+
       return 0;
     }
 
@@ -883,8 +971,10 @@ namespace {
           multiplier = iteration.multipliers.values[--iteration.multipliers.length - 1u]; // → `isqrt(multiplier)`
         }
 
-        if (representable and power > LDBL_MAX / multiplier) {
+        if (power > LDBL_MAX / multiplier) {
+          if (representable)
           *representable = false;
+
           return 0.0L;
         }
 
@@ -903,9 +993,11 @@ namespace {
     // …
     while (exponent) {
       if (exponent % 2u) {
-        if (representable and power > UINTMAX_MAX / multiplier) {
+        if (power > UINTMAX_MAX / multiplier) {
+          if (representable)
           *representable = false;
-          return 0.0L;
+
+          return 0u;
         }
 
         power *= multiplier;
@@ -923,8 +1015,10 @@ namespace {
     uintmax_t root = 0u;
 
     // …
-    if (representable and (0 == exponent or sign(base) == -1)) {
+    if (0 == exponent or sign(base) == -1) {
+      if (representable)
       *representable = false;
+
       return 0;
     }
 
@@ -938,8 +1032,10 @@ namespace {
     long double root    = 0.0L;
 
     // …
-    if (representable and (0.0L == exponent or sign(base) == -1)) {
+    if (0.0L == exponent or sign(base) == -1) {
+      if (representable)
       *representable = false;
+
       return 0.0L;
     }
 
@@ -947,7 +1043,9 @@ namespace {
 
     for (long double next = 1.0L; ; next = root) {
       root = ((next * (exponent - 1.0L)) + (base / ipow(next, exponent - 1.0L))) / exponent;
-      if (LDBL_EPSILON >= abs(root - next)) break;
+
+      if (LDBL_EPSILON >= abs(root - next))
+      break;
     }
 
     return inverse ? 1.0L / root : root;
@@ -957,14 +1055,18 @@ namespace {
     uintmax_t root = 0u;
 
     // …
-    if (representable and 0u == exponent) {
+    if (0u == exponent) {
+      if (representable)
       *representable = false;
+
       return 0u;
     }
 
     for (uintmax_t next = 1u; ; next = root) {
       root = ((next * (exponent - 1u)) + (base / ipow(next, exponent - 1u))) / exponent;
-      if (0u == root - next) break;
+
+      if (0u == root - next)
+      break;
     }
 
     return root;
@@ -1007,7 +1109,9 @@ namespace {
   // … → is_subnormal(𝙭) - Determines if 𝙭 is a subnormal floating-point value
   bool is_subnormal(long double const number) {
     #ifdef LDBL_HAS_SUBNORM
+    # if LDBL_HAS_SUBNORM+0 == 1
       return not is_nan(number) and number < LDBL_MIN;
+    # endif
     #endif
 
     (void) number;
@@ -1049,7 +1153,7 @@ namespace {
 
   // … → log(𝙭, 𝙣) - 𝙣-radix logarithm of 𝙭
   long double log(long double const number, long double const base, std::size_t const iterationCount, bool* const representable) {
-    return ln(number, iterationCount, representable) / /* → `1.0L` where `base == compute_euler()` */ ln(base, iterationCount, representable);
+    return divide(ln(number, iterationCount, representable), ln(base, iterationCount, representable), representable);
   }
 
   // … → log2(𝙭) - Binary logarithm of 𝙭
@@ -1074,17 +1178,13 @@ namespace {
 
   // … → maxprecof(𝙭) - Maximum normalized floating-point value with precision 𝙭
   long double maxprecof(long double const precision) {
-    if (not (is_infinite(precision) or is_nan(precision))) {
-      long double maximum = LDBL_MAX;
+    long double maximum = LDBL_MAX;
 
-      // …
-      while (precision != maximum - (maximum - precision))
-      maximum /= FLT_RADIX;
+    // …
+    while (precision != maximum - (maximum - precision))
+    maximum /= FLT_RADIX;
 
-      return maximum;
-    }
-
-    return precision;
+    return maximum;
   }
 
   // … → modulus(𝙭) - Modulus of 𝙭 and 𝙮 ¯\_(ツ)_/¯
@@ -1111,8 +1211,10 @@ namespace {
   }
 
   long double multiply(long double const numberA, long double const numberB, bool* const representable) {
-    if (representable and abs(numberA) > LDBL_MAX / abs(numberB)) {
+    if (abs(numberA) > LDBL_MAX / abs(numberB)) {
+      if (representable)
       *representable = false;
+
       return 0.0L;
     }
 
@@ -1120,15 +1222,17 @@ namespace {
   }
 
   uintmax_t multiply(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
-    if (representable and numberA > UINTMAX_MAX / numberB) {
+    if (numberA > UINTMAX_MAX / numberB) {
+      if (representable)
       *representable = false;
+
       return 0u;
     }
 
     return numberA * numberB;
   }
 
-  // … → next(𝙭) - Next normalized floating-point value after 𝙭
+  // … → next(𝙭) - Absolute next (normalized) floating-point value after 𝙭
   long double next(long double number) {
     if (not (is_infinite(number) or is_nan(number))) {
       long double       precision  = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
@@ -1188,7 +1292,7 @@ namespace {
     return ipow(base, exponent, representable);
   }
 
-  // … → prev(𝙭) - Absolute previous normalized floating-point value before 𝙭
+  // … → prev(𝙭) - Absolute previous (normalized) floating-point value before 𝙭
   long double prev(long double number) {
     if (not (is_infinite(number) or is_nan(number))) {
       long double       precision  = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
@@ -1209,8 +1313,10 @@ namespace {
 
   // … → remainder(𝙭, 𝙮) - Remainder of 𝙭 divided by 𝙮
   intmax_t remainder(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
-    if (representable and 0 == divisor) {
+    if (0 == divisor) {
+      if (representable)
       *representable = false;
+
       return 0;
     }
 
@@ -1221,13 +1327,11 @@ namespace {
     long double const signedness = sign(dividend, +1);
 
     // …
-    if (0.0L == divisor or is_infinite(dividend) or is_nan(dividend) or is_nan(divisor)) {
-      if (representable) {
-        *representable = false;
-        return 0.0L;
-      }
+    if (0.0L == divisor) {
+      if (representable)
+      *representable = false;
 
-      return compute_nan();
+      return 0.0L;
     }
 
     dividend = abs(dividend);
@@ -1263,8 +1367,10 @@ namespace {
   }
 
   uintmax_t remainder(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
-    if (representable and 0 == divisor) {
+    if (0 == divisor) {
+      if (representable)
       *representable = false;
+
       return 0;
     }
 
@@ -1402,10 +1508,12 @@ namespace {
     long double const ratio[2]         = {sin(angle, iterationCount, &subrepresentable), cos(angle, iterationCount, &subrepresentable)}; // → Opposite ÷ Adjacent
 
     // …
-    if (representable and not subrepresentable)
-    *representable = false;
+    if (not subrepresentable) {
+      if (representable) *representable = false;
+      if (iterationCount) return 0.0L;
+    }
 
-    return not iterationCount or subrepresentable ? ratio[0] / ratio[1] : 0.0L;
+    return divide(ratio[0], ratio[1], representable);
   }
 
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
@@ -1434,76 +1542,9 @@ namespace {
 
     return number;
   }
-
-  /* ... */
-  // long double acos(long double const number, std::size_t const iterationCount, bool* const representable) {
-  //   bool              subrepresentable = true;
-  //   long double const value            = compute_eta(iterationCount, &subrepresentable) - asin(number, iterationCount, &subrepresentable);
-
-  //   // …
-  //   if (representable and not subrepresentable)
-  //   *representable = false;
-
-  //   return subrepresentable ? value : 0.0L;
-  // }
-
-  // … → atan(𝙭) - Arc tangent of 𝙭
-  long double atan(long double number, std::size_t const iterationCount, bool* const representable) {
-    if (not (is_infinite(number) or is_nan(number))) {
-      std::size_t       count            = iterationCount;
-      signed char const signedness       = number > +1.0L ? +1 : number < -1.0L ? -1 : 0;
-      bool              subrepresentable = true;
-      long double       ratio            = 0.0L;
-
-      // … → `Σₙ₌₀(-1)ⁿ(𝙭²ⁿ⁺¹ ÷ (2n + 1))`
-      number = 0 != signedness ? 1.0L / number : number;
-
-      for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
-        long double iteration[2]     = {1.0L, 1.0L};
-        long double preiteration     = ratio;
-        bool        subrepresentable = index <= imaxof();
-
-        // …
-        iteration[1] *= multiply(index, 2.0L, &subrepresentable) + 1.0L;
-
-        iteration[0] *= ipow(-1.0L,  index,        &subrepresentable);
-        iteration[0] *= ipow(number, iteration[1], &subrepresentable);
-
-        // …
-        preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
-        subrepresentable = subrepresentable and ratio != preiteration;
-
-        if (not subrepresentable) {
-          if (representable)
-          *representable = false;
-
-          if (not iterationCount) break;
-          if (representable)      return 0.0L;
-        }
-
-        ratio = preiteration;
-      }
-
-      switch (signedness) {
-        case +1: ratio = +compute_eta(iterationCount) - ratio; break;
-        case -1: ratio = -compute_eta(iterationCount) + ratio; break;
-      }
-
-      if (not subrepresentable) {
-        if (representable)
-        *representable = false;
-
-        return 0.0L;
-      }
-
-      return ratio;
-    }
-
-    return number;
-  }
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("%Lf" "\r\n", atan(5.0L));
+  std::printf("[]: %.64Lf" "\r\n", atan(-5.0L, 3.0L));
 }
