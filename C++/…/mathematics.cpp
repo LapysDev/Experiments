@@ -55,6 +55,10 @@ namespace {
   long double abs                    (long double);
   uintmax_t   abs                    (uintmax_t);
   long double acos                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double acot                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double acsc                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double asec                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double asin                   (long double,              std::size_t = 0u, bool* = NULL);
   long double atan                   (long double,              std::size_t = 0u, bool* = NULL);
   long double atan                   (long double, long double, std::size_t = 0u, bool* = NULL);
   long double bézier                 (std::size_t, long double, ...);
@@ -71,12 +75,14 @@ namespace {
   long double compute_pi             (std::size_t = 0u,              bool* = NULL);
   long double compute_tau            (std::size_t = 0u,              bool* = NULL);
   long double cos                    (long double, std::size_t = 0u, bool* = NULL);
+  long double cot                    (long double, std::size_t = 0u, bool* = NULL);
   std::size_t countof                (intmax_t);
   std::size_t countof                (long double);
   std::size_t countof                (uintmax_t);
-  intmax_t    divide                 (intmax_t,    intmax_t,    bool* = NULL);
-  long double divide                 (long double, long double, bool* = NULL);
-  uintmax_t   divide                 (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double csc                    (long double, std::size_t = 0u, bool* = NULL);
+  intmax_t    divide                 (intmax_t,    intmax_t,         bool* = NULL);
+  long double divide                 (long double, long double,      bool* = NULL);
+  uintmax_t   divide                 (uintmax_t,   uintmax_t,        bool* = NULL);
   long double ease                   (long double);
   long double ease_in                (long double);
   long double ease_in_back           (long double);
@@ -161,6 +167,7 @@ namespace {
   long double root                   (long double, long double, bool* = NULL);
   uintmax_t   root                   (uintmax_t,   uintmax_t,   bool* = NULL);
   long double round                  (long double);
+  long double sec                    (long double, std::size_t = 0u, bool* = NULL);
   signed char sign                   (intmax_t,    signed char = 0);
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
@@ -172,16 +179,12 @@ namespace {
   long double trunc                  (long double);
 
   long double acosh                  (long double);
-  long double acot                   (long double);
   long double acoth                  (long double);
-  long double acsc                   (long double);
   long double acsch                  (long double);
   intmax_t    add                    (intmax_t,    intmax_t);
   long double add                    (long double, long double);
   uintmax_t   add                    (uintmax_t,   uintmax_t);
-  long double asec                   (long double);
   long double asech                  (long double);
-  long double asin                   (long double);
   long double asinh                  (long double);
   long double atanh                  (long double);
   long double beta                   (long double);
@@ -296,21 +299,41 @@ namespace {
     return number;
   }
 
-  // … → acos(𝙭) - Arc cosine of 𝙭 (`https://people.math.sc.edu/girardi/m142/handouts/10sTaylorPolySeries.pdf`)
-  /* TODO */
-  // long double acos(long double number, std::size_t const iterationCount, bool* const representable) {
-  //   compute_eta(iterationCount) - asin();
+  // … → acos(𝙭) - Arc cosine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
+  long double acos(long double number, std::size_t const iterationCount, bool* const representable) {
+    return atan2(number, sqrt((1.0L + number) * (1.0L - number), representable), iterationCount, representable);
+  }
 
-  //   // asin(x) = atan2 (x, sqrt ((1.0 + x) * (1.0 - x)))
-  //   // acos(x) = atan2 (sqrt ((1.0 + x) * (1.0 - x)), x)
-  // }
+  // … → acot(𝙭) - Arc cotangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
+  long double acot(long double number, std::size_t const iterationCount, bool* const representable) {
+    return atan(1.0L / number, iterationCount, representable);
+  }
 
-  // … → atan(𝙭) - Arc tangent of 𝙭 (`https://people.math.sc.edu/girardi/m142/handouts/10sTaylorPolySeries.pdf`, `https://en.wikipedia.org/wiki/Atan2#Definition_and_computation`)
+  // … → acsc(𝙭) - Arc cosecant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
+  long double acsc(long double number, std::size_t const iterationCount, bool* const representable) {
+    return asin(1.0L / number, iterationCount, representable);
+  }
+
+  // … → asec(𝙭) - Arc secant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
+  long double asec(long double number, std::size_t const iterationCount, bool* const representable) {
+    return acos(1.0L / number, iterationCount, representable);
+  }
+
+  // … → asin(𝙭) - Arc sine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
+  long double asin(long double number, std::size_t const iterationCount, bool* const representable) {
+    return atan2(sqrt((1.0L + number) * (1.0L - number)), number, iterationCount, representable);
+  }
+
+  // … → atan(𝙭) - Arc tangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Infinite_series`, `https://en.wikipedia.org/wiki/Atan2#Definition_and_computation`)
   long double atan(long double number, std::size_t const iterationCount, bool* const representable) {
     std::size_t       count      = iterationCount;
     signed char const signedness = number > +1.0L ? +1 : number < -1.0L ? -1 : 0;
     long double       ratio      = 0.0L; // → Adjacent ÷ Opposite
 
+    // TODO
+    // TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions
+    // TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Inverse_functions_as_logarithms
+    // TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations
     // … → `Σₙ₌₀(-1)ⁿ(𝙭²ⁿ⁺¹ ÷ (2n + 1))`
     number = 0 != signedness ? 1.0L / number : number;
 
@@ -578,6 +601,11 @@ namespace {
     return ratio;
   }
 
+  // … → cot(𝙭) - Cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Trigonometric_functions`)
+  long double cot(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    return divide(1.0L, tan(angle, iterationCount, representable), representable);
+  }
+
   // … → countof(𝙭) - Number of denary digits representing 𝙭
   std::size_t countof(intmax_t const number) {
     return countof(abs(number));
@@ -624,6 +652,11 @@ namespace {
     ++count;
 
     return count + (0u == count);
+  }
+
+  // … → csc(𝙭) - Cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Cosecant_(trigonometry)`)
+  long double csc(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    return divide(1.0L, sin(angle, iterationCount, representable), representable);
   }
 
   // … → divide(𝙭, 𝙮) - Scalar division of 𝙭 and 𝙮
@@ -926,7 +959,7 @@ namespace {
   // … → ipow(𝙭, 𝙣) - Integer 𝙣th power of 𝙭
   intmax_t ipow(intmax_t const base, intmax_t const exponent, bool* const representable) {
     uintmax_t      power      = 1u;
-    intmax_t const signedness = not parity(exponent) and sign(base) == -1 ? -1 : +1;
+    intmax_t const signedness = parity(exponent) and sign(base) == -1 ? -1 : +1;
 
     // …
     if (representable and (0 == base and sign(exponent) == -1)) {
@@ -1253,7 +1286,7 @@ namespace {
 
   // … → parity(𝙭) - Parity (evenness) of integer 𝙭
   bool parity(intmax_t const integer) {
-    return integer % 2 == 0;
+    return 0 != integer % 2;
   }
 
   bool parity(long double integer) {
@@ -1272,11 +1305,11 @@ namespace {
     }
 
     // …
-    return integer - truncation < 1.0L;
+    return integer - truncation >= 1.0L;
   }
 
   bool parity(uintmax_t const integer) {
-    return integer % 2u == 0;
+    return 0u != integer % 2u;
   }
 
   // … → pow(𝙭, 𝙣) - 𝙣th power of 𝙭 where 𝙣 ≥ 0 is a positive integer
@@ -1452,6 +1485,11 @@ namespace {
 
   signed char sign(uintmax_t const number, signed char const signedness) {
     return number > 0u ? 1 : signedness;
+  }
+
+  // … → sec(𝙭) - Secant of 𝙭 radians (`https://en.wikipedia.org/wiki/Secant_(trigonometry)`)
+  long double sec(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    return divide(1.0L, cos(angle, iterationCount, representable), representable);
   }
 
   // … → sin(𝙭) - Sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine`)
