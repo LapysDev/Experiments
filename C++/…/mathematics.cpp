@@ -63,6 +63,9 @@ namespace {
   long double acoth                  (long double,              std::size_t = 0u, bool* = NULL);
   long double acsc                   (long double,              std::size_t = 0u, bool* = NULL);
   long double acsch                  (long double,              std::size_t = 0u, bool* = NULL);
+  intmax_t    add                    (intmax_t,    intmax_t,                      bool* = NULL);
+  long double add                    (long double, long double,                   bool* = NULL);
+  uintmax_t   add                    (uintmax_t,   uintmax_t,                     bool* = NULL);
   long double asec                   (long double,              std::size_t = 0u, bool* = NULL);
   long double asech                  (long double,              std::size_t = 0u, bool* = NULL);
   long double asin                   (long double,              std::size_t = 0u, bool* = NULL);
@@ -187,13 +190,13 @@ namespace {
   intmax_t    sqrt                   (intmax_t,                      bool* = NULL);
   long double sqrt                   (long double,                   bool* = NULL);
   uintmax_t   sqrt                   (uintmax_t,                     bool* = NULL);
+  intmax_t    subtract               (intmax_t,    intmax_t,         bool* = NULL);
+  long double subtract               (long double, long double,      bool* = NULL);
+  uintmax_t   subtract               (uintmax_t,   uintmax_t,        bool* = NULL);
   long double tan                    (long double, std::size_t = 0u, bool* = NULL);
   long double tanh                   (long double, std::size_t = 0u, bool* = NULL);
   long double trunc                  (long double);
 
-  intmax_t    add                    (intmax_t,    intmax_t);
-  long double add                    (long double, long double);
-  uintmax_t   add                    (uintmax_t,   uintmax_t);
   long double beta                   (long double);
   long double bitceil                (long double);
   uintmax_t   bitceil                (uintmax_t);
@@ -267,9 +270,6 @@ namespace {
   long double sph_bessel             (long double, std::size_t);
   long double sph_legendre           (long double, std::size_t, std::size_t);
   long double sph_neumann            (long double, std::size_t);
-  intmax_t    subtract               (intmax_t,    intmax_t,    bool* = NULL);
-  long double subtract               (long double, long double, bool* = NULL);
-  uintmax_t   subtract               (uintmax_t,   uintmax_t,   bool* = NULL);
   intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t);
   long double wrap                   (long double, long double, long double);
   uintmax_t   wrap                   (uintmax_t,   uintmax_t,   uintmax_t);
@@ -330,6 +330,34 @@ namespace {
   // … → acsch(𝙭) → Area hyperbolic cosecant of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
   long double acsch(long double const number, std::size_t const iterationCount, bool* const representable) {
     return asinh(divide(1.0L, number, representable), iterationCount, representable);
+  }
+
+  // … → add(𝙭, 𝙮) - Scalar addition of 𝙭 and 𝙮
+  intmax_t add(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
+    if (representable and (sign(numberA) == sign(numberB) ? abs(numberA) > INTMAX_MAX - abs(numberB) : false)) {
+      *representable = false;
+      return 0;
+    }
+
+    return numberA + numberB;
+  }
+
+  long double add(long double const numberA, long double const numberB, bool* const representable) {
+    if (representable and (sign(numberA) == sign(numberB) ? abs(numberA) > LDBL_MAX - abs(numberB) : false)) {
+      *representable = false;
+      return 0.0L;
+    }
+
+    return numberA + numberB;
+  }
+
+  uintmax_t add(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
+    if (representable and numberA > UINTMAX_MAX - numberB) {
+      *representable = false;
+      return 0u;
+    }
+
+    return numberA + numberB;
   }
 
   // … → asec(𝙭) - Arc secant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
@@ -1655,6 +1683,34 @@ namespace {
 
   uintmax_t sqrt(uintmax_t const number, bool* const representable) {
     return root(number, 2u, representable);
+  }
+
+  // … → subtract(𝙭, 𝙮) - Scalar addition of 𝙭 and 𝙮
+  intmax_t subtract(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
+    if (representable and (sign(numberA) == sign(numberB) ? abs(numberA) < INTMAX_MAX - abs(numberB) : false)) {
+      *representable = false;
+      return 0;
+    }
+
+    return numberA + numberB;
+  }
+
+  long double subtract(long double const numberA, long double const numberB, bool* const representable) {
+    if (representable and (sign(numberA) == sign(numberB) ? abs(numberA) < LDBL_MAX - abs(numberB) : false)) {
+      *representable = false;
+      return 0.0L;
+    }
+
+    return numberA + numberB;
+  }
+
+  uintmax_t subtract(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
+    if (representable and numberB > numberA) {
+      *representable = false;
+      return 0u;
+    }
+
+    return numberA + numberB;
   }
 
   // … → tan(𝙭) - Tangent of 𝙭 radians
