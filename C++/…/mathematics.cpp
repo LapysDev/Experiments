@@ -38,6 +38,9 @@
     → Functions evaluate denary numbers (comprised of bits) and only handle values within their expected domains: edge cases like NaN are not considered unless otherwise
     → Functions that optionally evaluate the `representable`-ness of their result typically determine it to be `false` for repeating decimals that are infinitely computed e.g.: `compute_pi()` is only finitely `representable` unlike `ipow()`
 */
+// TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions
+// TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Inverse_functions_as_logarithms
+// TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations
 namespace {
   typedef struct _ {
     private:
@@ -55,12 +58,18 @@ namespace {
   long double abs                    (long double);
   uintmax_t   abs                    (uintmax_t);
   long double acos                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double acosh                  (long double,              std::size_t = 0u, bool* = NULL);
   long double acot                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double acoth                  (long double,              std::size_t = 0u, bool* = NULL);
   long double acsc                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double acsch                  (long double,              std::size_t = 0u, bool* = NULL);
   long double asec                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double asech                  (long double,              std::size_t = 0u, bool* = NULL);
   long double asin                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double asinh                  (long double,              std::size_t = 0u, bool* = NULL);
   long double atan                   (long double,              std::size_t = 0u, bool* = NULL);
   long double atan                   (long double, long double, std::size_t = 0u, bool* = NULL);
+  long double atanh                  (long double,              std::size_t = 0u, bool* = NULL);
   long double bézier                 (std::size_t, long double, ...);
   long double bézier_cubic           (long double, long double, long double, long double, long double);
   long double bézier_linear          (long double, long double, long double);
@@ -75,6 +84,7 @@ namespace {
   long double compute_pi             (std::size_t = 0u,              bool* = NULL);
   long double compute_tau            (std::size_t = 0u,              bool* = NULL);
   long double cos                    (long double, std::size_t = 0u, bool* = NULL);
+  long double cosh                   (long double, std::size_t = 0u, bool* = NULL);
   long double cot                    (long double, std::size_t = 0u, bool* = NULL);
   std::size_t countof                (intmax_t);
   std::size_t countof                (long double);
@@ -168,25 +178,22 @@ namespace {
   uintmax_t   root                   (uintmax_t,   uintmax_t,   bool* = NULL);
   long double round                  (long double);
   long double sec                    (long double, std::size_t = 0u, bool* = NULL);
+  long double sech                   (long double, std::size_t = 0u, bool* = NULL);
   signed char sign                   (intmax_t,    signed char = 0);
   signed char sign                   (long double, signed char = 0);
   signed char sign                   (uintmax_t,   signed char = 0);
   long double sin                    (long double, std::size_t = 0u, bool* = NULL);
+  long double sinh                   (long double, std::size_t = 0u, bool* = NULL);
   intmax_t    sqrt                   (intmax_t,                      bool* = NULL);
   long double sqrt                   (long double,                   bool* = NULL);
   uintmax_t   sqrt                   (uintmax_t,                     bool* = NULL);
   long double tan                    (long double, std::size_t = 0u, bool* = NULL);
+  long double tanh                   (long double, std::size_t = 0u, bool* = NULL);
   long double trunc                  (long double);
 
-  long double acosh                  (long double);
-  long double acoth                  (long double);
-  long double acsch                  (long double);
   intmax_t    add                    (intmax_t,    intmax_t);
   long double add                    (long double, long double);
   uintmax_t   add                    (uintmax_t,   uintmax_t);
-  long double asech                  (long double);
-  long double asinh                  (long double);
-  long double atanh                  (long double);
   long double beta                   (long double);
   long double bitceil                (long double);
   uintmax_t   bitceil                (uintmax_t);
@@ -256,9 +263,6 @@ namespace {
   long double mulberry               (long double);
   long double mulberry32             (long double);
   long double riemann_zeta           (long double);
-  long double sec                    (long double);
-  long double sech                   (long double);
-  long double sinh                   (long double);
   long double slerp                  (long double, long double);
   long double sph_bessel             (long double, std::size_t);
   long double sph_legendre           (long double, std::size_t, std::size_t);
@@ -266,7 +270,6 @@ namespace {
   intmax_t    subtract               (intmax_t,    intmax_t,    bool* = NULL);
   long double subtract               (long double, long double, bool* = NULL);
   uintmax_t   subtract               (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double tanh                   (long double);
   intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t);
   long double wrap                   (long double, long double, long double);
   uintmax_t   wrap                   (uintmax_t,   uintmax_t,   uintmax_t);
@@ -300,56 +303,86 @@ namespace {
   }
 
   // … → acos(𝙭) - Arc cosine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double acos(long double number, std::size_t const iterationCount, bool* const representable) {
-    return atan2(number, sqrt((1.0L + number) * (1.0L - number), representable), iterationCount, representable);
+  long double acos(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return atan(number, sqrt((1.0L + number) * (1.0L - number), representable), iterationCount, representable);
+  }
+
+  // … → acosh(𝙭) → Area hyperbolic cosine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Conversions`)
+  long double acosh(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return abs(asinh(sqrt(ipow(number, 2.0L, representable) - 1.0L, representable), iterationCount, representable));
   }
 
   // … → acot(𝙭) - Arc cotangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double acot(long double number, std::size_t const iterationCount, bool* const representable) {
-    return atan(1.0L / number, iterationCount, representable);
+  long double acot(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return atan(divide(1.0L, number, representable), iterationCount, representable);
+  }
+
+  // … → acoth(𝙭) → Area hyperbolic cotangent of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
+  long double acoth(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return atanh(divide(1.0L, number, representable), iterationCount, representable);
   }
 
   // … → acsc(𝙭) - Arc cosecant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double acsc(long double number, std::size_t const iterationCount, bool* const representable) {
-    return asin(1.0L / number, iterationCount, representable);
+  long double acsc(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return asin(divide(1.0L, number, representable), iterationCount, representable);
+  }
+
+  // … → acsch(𝙭) → Area hyperbolic cosecant of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
+  long double acsch(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return asinh(divide(1.0L, number, representable), iterationCount, representable);
   }
 
   // … → asec(𝙭) - Arc secant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double asec(long double number, std::size_t const iterationCount, bool* const representable) {
-    return acos(1.0L / number, iterationCount, representable);
+  long double asec(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return acos(divide(1.0L, number, representable), iterationCount, representable);
+  }
+
+  // … → asech(𝙭) → Area hyperbolic secant of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
+  long double asech(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return acosh(divide(1.0L, number, representable), iterationCount, representable);
   }
 
   // … → asin(𝙭) - Arc sine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double asin(long double number, std::size_t const iterationCount, bool* const representable) {
-    return atan2(sqrt((1.0L + number) * (1.0L - number)), number, iterationCount, representable);
+  long double asin(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return atan(sqrt((1.0L + number) * (1.0L - number)), number, iterationCount, representable);
+  }
+
+  // … → asinh(𝙭) → Area hyperbolic sine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Definitions_in_terms_of_logarithms`)
+  long double asinh(long double const number, std::size_t const iterationCount, bool* const representable) {
+    bool              subrepresentable = true;
+    long double const ratio            = ipow(number, 2.0L, &subrepresentable);
+
+    // …
+    subrepresentable = subrepresentable and ratio > imaxof();
+
+    if (not subrepresentable) {
+      if (representable) *representable = false;
+      if (iterationCount) return 0.0L;
+    }
+
+    return ln(number + sqrt(ratio + 1.0L, representable), iterationCount, representable);
   }
 
   // … → atan(𝙭) - Arc tangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Infinite_series`, `https://en.wikipedia.org/wiki/Atan2#Definition_and_computation`)
-  long double atan(long double number, std::size_t const iterationCount, bool* const representable) {
-    std::size_t       count      = iterationCount;
-    signed char const signedness = number > +1.0L ? +1 : number < -1.0L ? -1 : 0;
-    long double       ratio      = 0.0L; // → Adjacent ÷ Opposite
+  long double atan(long double const number, std::size_t const iterationCount, bool* const representable) {
+    std::size_t count = iterationCount;
+    long double ratio = 0.0L; // → Adjacent ÷ Opposite
 
-    // TODO
-    // TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions
-    // TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Inverse_functions_as_logarithms
-    // TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations
-    // … → `Σₙ₌₀(-1)ⁿ(𝙭²ⁿ⁺¹ ÷ (2n + 1))`
-    number = 0 != signedness ? 1.0L / number : number;
-
+    // … → `Σₙ₌₀(2²ⁿ(n!)² ÷ (2n + 1)!)(𝙭²ⁿ⁺¹ ÷ (1 + 𝙭²)ⁿ⁺¹)`
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
-      long double iteration[2]     = {1.0L, 1.0L};
+      long double iteration[2][2]  = {{1.0L, 1.0L}, {1.0L, 1.0L}};
       long double preiteration     = ratio;
-      bool        subrepresentable = index <= imaxof();
+      bool        subrepresentable = index * 2.0L <= imaxof();
 
       // …
-      iteration[1] *= multiply(index, 2.0L, &subrepresentable) + 1.0L;
+      iteration[0][0] = multiply  (ipow(2.0L, index * 2.0L, &subrepresentable), ipow(ifactorial(index, &subrepresentable), 2.0L, &subrepresentable), &subrepresentable);
+      iteration[0][1] = ifactorial((index * 2.0L) + 1.0L,                                                                                            &subrepresentable);
 
-      iteration[0] *= ipow(-1.0L,  index,        &subrepresentable);
-      iteration[0] *= ipow(number, iteration[1], &subrepresentable);
+      iteration[1][0] = ipow(number,                                       (index * 2.0L) + 1.0L, &subrepresentable);
+      iteration[1][1] = ipow(ipow(number, 2.0L, &subrepresentable) + 1.0L, (index * 1.0L) + 1.0L, &subrepresentable);
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      preiteration    += multiply(divide(iteration[0][0], iteration[0][1], &subrepresentable), divide(iteration[1][0], iteration[1][1], &subrepresentable), &subrepresentable);
       subrepresentable = subrepresentable and ratio != preiteration;
 
       if (not subrepresentable) {
@@ -363,20 +396,14 @@ namespace {
       ratio = preiteration;
     }
 
-    switch (signedness) {
-      case +1: ratio = +compute_eta(iterationCount) - ratio; break;
-      case -1: ratio = -compute_eta(iterationCount) + ratio; break;
-    }
-
     return ratio;
   }
 
   long double atan(long double const x, long double const y, std::size_t const iterationCount, bool* const representable) {
     // … → Adjacent ÷ Opposite
     switch (sign(x)) {
-      case +1: {
+      case +1:
         return atan(y / x, iterationCount, representable);
-      } break;
 
       case -1: {
         bool              subrepresentable = true;
@@ -387,16 +414,20 @@ namespace {
         return ratio + (compute_pi(iterationCount) * sign(y, +1));
       } break;
 
-      case 0: {
+      case 0:
         if (sign(y))
         return 0.0L + (compute_eta(iterationCount) * sign(y, 0));
-      } break;
     }
 
     if (representable)
     *representable = false;
 
     return 0.0L;
+  }
+
+  // … → atanh(𝙭) → Area hyperbolic tangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Conversions`)
+  long double atanh(long double const number, std::size_t const iterationCount, bool* const representable) {
+    return asinh(divide(number, sqrt(1.0L - ipow(number, 2.0L, representable), representable), representable), iterationCount, representable);
   }
 
   // … → bézier(𝙩, 𝙥0, …, 𝙥n) - Point 𝙩 on parametric multi-point curve, where all points lie between 0.0 and 1.0 (`https://en.wikipedia.org/wiki/Bézier_curve`)
@@ -479,10 +510,10 @@ namespace {
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = euler;
-      bool        subrepresentable = index <= imaxof();
+      bool        subrepresentable = true;
 
       // …
-      iteration[1] *= ifactorial(index, &subrepresentable);
+      iteration[1] = ifactorial(index, &subrepresentable);
 
       // …
       preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
@@ -532,7 +563,7 @@ namespace {
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = pi;
-      bool        subrepresentable = index <= imaxof();
+      bool        subrepresentable = true;
 
       // …
       iteration[0] *= ifactorial(index * 6.0L,        &subrepresentable);
@@ -575,13 +606,11 @@ namespace {
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = ratio;
-      bool        subrepresentable = index <= imaxof();
+      bool        subrepresentable = true;
 
       // …
-      iteration[0] *= ipow(-1.0L, index * 1.0L, &subrepresentable);
-      iteration[0] *= ipow(angle, index * 2.0L, &subrepresentable);
-
-      iteration[1] *= ifactorial(index * 2.0L, &subrepresentable);
+      iteration[0] = ipow(-1.0L, index) * ipow(angle, index * 2.0L, &subrepresentable);
+      iteration[1] = ifactorial(index * 2.0L, &subrepresentable);
 
       // …
       preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
@@ -601,9 +630,47 @@ namespace {
     return ratio;
   }
 
-  // … → cot(𝙭) - Cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Trigonometric_functions`)
+  // … → cosh(𝙭) - Hyperbolic cosine of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions`)
+  long double cosh(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    std::size_t count = iterationCount;
+    long double ratio = 0.0L; // → Opposite ÷ Hypotenuse
+
+    // … → `Σₙ₌₀(𝙭²ⁿ ÷ (2n)!)`
+    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+      long double iteration[2]     = {1.0L, 1.0L};
+      long double preiteration     = ratio;
+      bool        subrepresentable = true;
+
+      // …
+      iteration[0] = ipow(angle, index * 2.0L, &subrepresentable);
+      iteration[1] = ifactorial(index * 2.0L, &subrepresentable);
+
+      // …
+      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      subrepresentable = subrepresentable and ratio != preiteration;
+
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
+
+        if (not iterationCount) break;
+        if (representable)      return 0.0L;
+      }
+
+      ratio = preiteration;
+    }
+
+    return ratio;
+  }
+
+  // … → cot(𝙭) - Cotangent of 𝙭 radians (`https://en.wikipedia.org/wiki/Trigonometric_functions`)
   long double cot(long double const angle, std::size_t const iterationCount, bool* const representable) {
     return divide(1.0L, tan(angle, iterationCount, representable), representable);
+  }
+
+  // … → coth(𝙭) - Hyperbolic cotangent of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Exponential_definitions`)
+  long double coth(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    return divide(1.0L, tanh(angle, iterationCount, representable), representable);
   }
 
   // … → countof(𝙭) - Number of denary digits representing 𝙭
@@ -657,6 +724,11 @@ namespace {
   // … → csc(𝙭) - Cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Cosecant_(trigonometry)`)
   long double csc(long double const angle, std::size_t const iterationCount, bool* const representable) {
     return divide(1.0L, sin(angle, iterationCount, representable), representable);
+  }
+
+  // … → csch(𝙭) - Hyperbolic cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Exponential_definitions`)
+  long double csch(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    return divide(1.0L, sinh(angle, iterationCount, representable), representable);
   }
 
   // … → divide(𝙭, 𝙮) - Scalar division of 𝙭 and 𝙮
@@ -938,7 +1010,7 @@ namespace {
 
   // … → imaxof() - Maximum integer value of floating-point type with complete integer precision i.e. maxprecof(1)
   long double imaxof() {
-    long double maximum = 1;
+    long double maximum = 1.0L;
 
     // … → Simplified form of `maximum = ipow(FLT_RADIX, LDBL_MANT_DIG - 1.0L)`
     for (struct { unsigned count, exponent; long double multiplier; } iteration = {1u, LDBL_MANT_DIG - 1u, FLT_RADIX}; iteration.exponent; ) {
@@ -1065,6 +1137,9 @@ namespace {
     long double root    = 0.0L;
 
     // …
+    if (0.0L == base)
+    return 0.0L;
+
     if (0.0L == exponent or sign(base) == -1) {
       if (representable)
       *representable = false;
@@ -1156,15 +1231,21 @@ namespace {
     std::size_t count     = iterationCount;
     long double logarithm = 1.0L;
 
+    // …
+    if (0.0L == number) {
+      if (representable) *representable = false;
+      if (iterationCount) return 0.0L;
+    }
+
     // … → `Πₖ₌₁(2 ÷ (1 + 2ᵏ√𝙭))`
     for (long double index = 1.0L; count or not iterationCount; --count, ++index) {
       long double iteration        = 1.0L;
       long double preiteration     = logarithm;
-      bool        subrepresentable = index <= imaxof();
+      bool        subrepresentable = true;
 
       // …
-      iteration *= iroot (number, ipow(2.0L, index, &subrepresentable), &subrepresentable) + 1.0L;
-      iteration  = divide(2.0L,   iteration,                            &subrepresentable);
+      iteration = iroot (number, ipow(2.0L, index, &subrepresentable), &subrepresentable) + 1.0L;
+      iteration = divide(2.0L,   iteration,                            &subrepresentable);
 
       // …
       preiteration     = multiply(preiteration, iteration, &subrepresentable); // → preiteration *= iteration;
@@ -1284,7 +1365,7 @@ namespace {
     return number;
   }
 
-  // … → parity(𝙭) - Parity (evenness) of integer 𝙭
+  // … → parity(𝙭) - Parity (oddness) of integer 𝙭
   bool parity(intmax_t const integer) {
     return 0 != integer % 2;
   }
@@ -1492,6 +1573,11 @@ namespace {
     return divide(1.0L, cos(angle, iterationCount, representable), representable);
   }
 
+  // … → sech(𝙭) - Hyperbolic secant of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Exponential_definitions`)
+  long double sech(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    return divide(1.0L, cosh(angle, iterationCount, representable), representable);
+  }
+
   // … → sin(𝙭) - Sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine`)
   long double sin(long double const angle, std::size_t const iterationCount, bool* const representable) {
     std::size_t count = iterationCount;
@@ -1501,13 +1587,44 @@ namespace {
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = ratio;
-      bool        subrepresentable = index <= imaxof();
+      bool        subrepresentable = true;
 
       // …
-      iteration[0] *= ipow(-1.0L, (index * 1.0L) + 0.0L, &subrepresentable);
-      iteration[0] *= ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
+      iteration[0] = ipow(-1.0L, index) * ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
+      iteration[1] = ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
 
-      iteration[1] *= ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
+      // …
+      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      subrepresentable = subrepresentable and ratio != preiteration;
+
+      if (not subrepresentable) {
+        if (representable)
+        *representable = false;
+
+        if (not iterationCount) break;
+        if (representable)      return 0.0L;
+      }
+
+      ratio = preiteration;
+    }
+
+    return ratio;
+  }
+
+  // … → sinh(𝙭) - Hyperbolic sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions`)
+  long double sinh(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    std::size_t count = iterationCount;
+    long double ratio = 0.0L; // → Opposite ÷ Hypotenuse
+
+    // … → `Σₙ₌₀(𝙭²ⁿ⁺¹ ÷ (2n + 1)!)`
+    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+      long double iteration[2]     = {1.0L, 1.0L};
+      long double preiteration     = ratio;
+      bool        subrepresentable = index * 2.0L <= imaxof();
+
+      // …
+      iteration[0] = ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
+      iteration[1] = ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
 
       // …
       preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
@@ -1554,6 +1671,20 @@ namespace {
     return divide(ratio[0], ratio[1], representable);
   }
 
+  // … → tanh(𝙭) - Hyperbolic tangent of 𝙭 radians
+  long double tanh(long double const angle, std::size_t const iterationCount, bool* const representable) {
+    bool              subrepresentable = true;
+    long double const ratio[2]         = {sinh(angle, iterationCount, &subrepresentable), cosh(angle, iterationCount, &subrepresentable)}; // → Opposite ÷ Adjacent
+
+    // …
+    if (not subrepresentable) {
+      if (representable) *representable = false;
+      if (iterationCount) return 0.0L;
+    }
+
+    return divide(ratio[0], ratio[1], representable);
+  }
+
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
   long double trunc(long double number) {
     long double const signedness = sign(number, +1);
@@ -1584,5 +1715,5 @@ namespace {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("[]: %.64Lf" "\r\n", atan(-5.0L, 3.0L));
+  std::printf("[]: %.64Lf" "\r\n", asinh(0.0L));
 }
