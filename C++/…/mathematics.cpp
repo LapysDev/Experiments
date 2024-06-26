@@ -37,21 +37,24 @@
 /* …
     → Functions evaluate denary numbers (comprised of bits) and only handle values within their expected domains: edge cases like NaN are not considered unless otherwise
     → Functions that optionally evaluate the `representable`-ness of their result typically determine it to be `false` for repeating decimals that are infinitely computed e.g.: `compute_pi()` is only finitely `representable` unlike `ipow()`
+    → `representable`-ness could be denoted by `FE_*` floating-point exception constants instead of a `bool` value
 */
-// TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions
-// TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Inverse_functions_as_logarithms
-// TODO https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations
 namespace {
-  typedef struct _ {
+  /* … → Only intended as return types due to C++'s inexpressiveness with return-by-value arrays */
+  template <typename base, std::size_t length>
+  union _ {
     private:
-      typedef long double const (type)[2];
+      typedef base const (type)[length];
 
     public:
       type const _;
 
       inline operator type const&         () const          { return _; }
       inline operator type const volatile&() const volatile { return _; }
-  } division_t, fraction_t;
+  };
+
+  typedef union _<long double, 2u> fraction_t;
+  typedef union _<uintmax_t,   4u> jsfstate_t;
 
   /* … */
   uintmax_t   abs                    (intmax_t);
@@ -80,6 +83,10 @@ namespace {
   intmax_t    cbrt                   (intmax_t,         bool* = NULL);
   long double cbrt                   (long double,      bool* = NULL);
   uintmax_t   cbrt                   (uintmax_t,        bool* = NULL);
+  long double ceil                   (long double);
+  intmax_t    clamp                  (intmax_t,    intmax_t,    intmax_t);
+  long double clamp                  (long double, long double, long double);
+  uintmax_t   clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
   long double compute_eta            (std::size_t = 0u, bool* = NULL);
   long double compute_euler          (std::size_t = 0u, bool* = NULL);
   long double compute_infinity       ();
@@ -131,7 +138,11 @@ namespace {
   long double ease_out_quintic       (long double);
   long double ease_out_sine          (long double);
   long double exp                    (long double, std::size_t = 0u, bool* = NULL);
+  long double floor                  (long double);
   fraction_t  fract                  (long double);
+  intmax_t    gcd                    (intmax_t,    intmax_t);
+  long double gcd                    (long double, long double);
+  uintmax_t   gcd                    (uintmax_t,   uintmax_t);
   intmax_t    icbrt                  (intmax_t,    bool* = NULL);
   long double icbrt                  (long double, bool* = NULL);
   uintmax_t   icbrt                  (uintmax_t,   bool* = NULL);
@@ -152,6 +163,12 @@ namespace {
   bool        is_integer             (long double);
   bool        is_nan                 (long double);
   bool        is_subnormal           (long double);
+  jsfstate_t  jsf                    (std::size_t, uintmax_t = 0xCAFE5EED00000001uLL);
+  jsfstate_t  jsf                    (std::size_t, uintmax_t const (&)[4]); // → Result in `jsfstate_t[3]`
+  jsfstate_t  jsf                    (std::size_t, uintmax_t const (&)[4], std::size_t, std::size_t, std::size_t);
+  intmax_t    lcm                    (intmax_t,    intmax_t);
+  long double lcm                    (long double, long double);
+  uintmax_t   lcm                    (uintmax_t,   uintmax_t);
   long double ln                     (long double,              std::size_t = 0u, bool* = NULL);
   long double log                    (long double, long double, std::size_t = 0u, bool* = NULL);
   long double log2                   (long double,              std::size_t = 0u, bool* = NULL);
@@ -159,6 +176,7 @@ namespace {
   long double log10                  (long double,              std::size_t = 0u, bool* = NULL);
   long double log16                  (long double,              std::size_t = 0u, bool* = NULL);
   long double maxprecof              (long double,              std::size_t = 0u, bool* = NULL);
+  uintmax_t   maxwidthof             (std::size_t);
   intmax_t    modulus                (intmax_t,    intmax_t);
   long double modulus                (long double, long double);
   uintmax_t   modulus                (uintmax_t,   uintmax_t);
@@ -196,8 +214,10 @@ namespace {
   long double tan                    (long double, std::size_t = 0u, bool* = NULL);
   long double tanh                   (long double, std::size_t = 0u, bool* = NULL);
   long double trunc                  (long double);
+  intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t,    bool = false);
+  long double wrap                   (long double, long double, long double, bool = false);
+  uintmax_t   wrap                   (uintmax_t,   uintmax_t,   uintmax_t,   bool = false);
 
-  long double beta                   (long double);
   long double bitceil                (long double);
   uintmax_t   bitceil                (uintmax_t);
   intmax_t    bitclear               (intmax_t,    std::size_t);
@@ -230,29 +250,8 @@ namespace {
   long double bitswap                (long double);
   uintmax_t   bitswap                (uintmax_t);
   std::size_t bitwidth               (uintmax_t);
-  intmax_t    ceil                   (intmax_t);
-  long double ceil                   (long double);
-  uintmax_t   ceil                   (uintmax_t);
-  intmax_t    clamp                  (intmax_t,    intmax_t,    intmax_t);
-  long double clamp                  (long double, long double, long double);
-  uintmax_t   clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
-  long double cot                    (long double);
-  long double coth                   (long double);
-  long double csc                    (long double);
-  long double csch                   (long double);
-  long double cyl_bessel             (long double, long double, long double);
-  long double cyl_neumann            (long double, long double);
-  long double ellint                 (long double, long double, long double, bool);
-  long double expint                 (long double);
-  intmax_t    floor                  (intmax_t);
-  long double floor                  (long double);
-  uintmax_t   floor                  (uintmax_t);
-  long double hermite                (long double, std::size_t);
   long double herp                   (long double, long double, long double);
-  long double jsf                    (long double);
-  long double laguerre               (long double, std::size_t, std::size_t, bool);
   long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
-  long double legendre               (long double, std::size_t, std::size_t, bool);
   long double lerp                   (long double, long double);
   intmax_t    max                    (intmax_t,    intmax_t);
   long double max                    (long double, long double);
@@ -265,17 +264,13 @@ namespace {
   long double mt64                   (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
   long double mulberry               (long double);
   long double mulberry32             (long double);
-  long double riemann_zeta           (long double);
+  long double sfc32                  (long double);
   long double slerp                  (long double, long double);
-  long double sph_bessel             (long double, std::size_t);
-  long double sph_legendre           (long double, std::size_t, std::size_t);
-  long double sph_neumann            (long double, std::size_t);
-  intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t);
-  long double wrap                   (long double, long double, long double);
-  uintmax_t   wrap                   (uintmax_t,   uintmax_t,   uintmax_t);
+  long double splitmix32             (long double);
   long double xorshift               (long double);
   long double xorshift_s             (long double);
   long double xorshift128            (long double);
+  long double xorshift128_p          (long double);
   long double xorshift128_s          (long double);
   long double xorshift256_p          (long double);
   long double xorshift_p             (long double);
@@ -283,6 +278,7 @@ namespace {
   long double xorshift_ss            (long double);
   long double xorshift256            (long double);
   long double xorshift256_ss         (long double);
+  long double xorshiro128_ss         (long double);
   long double xorwow                 (long double);
 
   template <std::size_t size> long double knuth(long double);
@@ -522,6 +518,25 @@ namespace {
 
   uintmax_t cbrt(uintmax_t const number, bool* const representable) {
     return root(number, 3u, representable);
+  }
+
+  // … → ceil(𝙭) - Rounded-up value of 𝙭
+  long double ceil(long double const number) {
+    long double const truncation = trunc(number);
+    return truncation + (number > truncation);
+  }
+
+  // … → clamp(𝙭, 𝙖, 𝙗) - Constrained value of 𝙭 between an 𝙖–𝙗 number line
+  intmax_t clamp(intmax_t const number, intmax_t const begin, intmax_t const end) {
+    return number < begin ? begin : number > end ? end : number;
+  }
+
+  long double clamp(long double const number, long double const begin, long double const end) {
+    return number <= begin ? begin : number >= end ? end : number;
+  }
+
+  uintmax_t clamp(uintmax_t const number, uintmax_t const begin, uintmax_t const end) {
+    return number < begin ? begin : number > end ? end : number;
   }
 
   // … → compute_eta(…)
@@ -964,6 +979,12 @@ namespace {
     return pow(compute_euler(iterationCount, representable), number, representable);
   }
 
+  // … → floor(𝙭) - Rounded-down value of 𝙭
+  long double floor(long double const number) {
+    long double const truncation = trunc(number);
+    return truncation - (number <= truncation);
+  }
+
   // … → fract(𝙭) - Split value of 𝙭 as its numerator and denominator
   fraction_t fract(long double const number) {
     long double const characteristics = trunc(number);
@@ -988,6 +1009,43 @@ namespace {
 
     fraction_t const fraction = {numerator, denominator};
     return fraction;
+  }
+
+  // … → gcd(𝙭, 𝙮) - Greatest common divisor of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Euclidean_algorithm#Implementations`)
+  intmax_t gcd(intmax_t integerA, intmax_t integerB) {
+    while (integerB) {
+      intmax_t const value = integerB;
+
+      // …
+      integerB = modulus(integerA, integerB);
+      integerA = value;
+    }
+
+    return integerA;
+  }
+
+  long double gcd(long double integerA, long double integerB) {
+    while (integerB) {
+      long double const value = integerB;
+
+      // …
+      integerB = modulus(integerA, integerB);
+      integerA = value;
+    }
+
+    return integerA;
+  }
+
+  uintmax_t gcd(uintmax_t integerA, uintmax_t integerB) {
+    while (integerB) {
+      uintmax_t const value = integerB;
+
+      // …
+      integerB = modulus(integerA, integerB);
+      integerA = value;
+    }
+
+    return integerA;
   }
 
   // … → icbrt(𝙭) - Integer cubed root of 𝙭
@@ -1254,6 +1312,66 @@ namespace {
     return false;
   }
 
+  // … → jsf(𝙭) - Jenkins' Small Fast pseudo-random number generator with seed 𝙭 (FLEA++ or Fast Little Encryption Algorithm, `http://burtleburtle.net/bob/rand/smallprng.html`)
+  jsfstate_t jsf(std::size_t const width, uintmax_t const (&seeded)[4]) {
+    switch (width) {
+      case 8u : return jsf(width, seeded, 1u,  4u,  0u);  //
+      case 16u: return jsf(width, seeded, 13u, 8u,  0u);  //
+      case 32u: return jsf(width, seeded, 27u, 17u, 0u);  // → (3u,  14u, 24u), (3u, 25u, 15u), (4u, 15u, 24u), (6u, 16u, 28u), (7u, 16u, 27u), (8u, 14u, 3u), (9u, 16u, 0u), (9u, 24u, 0u), (10u, 16u, 0u), (10u, 24u, 0u), (11u, 16u, 0u), (11u, 16u, 23u), (11u, 24u, 0u), (12u, 16u, 22u), (12u, 17u, 23u), (13u, 16u, 22u), (15u, 25u, 3u), (16u, 9u, 3u), (17u, 27u, 7u), (17u, 9u, 3u), (19u, 7u, 3u), (23u, 15u, 11u), (23u, 16u, 11u), (23u, 17u, 11u), (24u, 3u, 16u), (24u, 4u, 16u), (25u, 14u, 3u), (25u, 16u, 0u), (25u, 8u, 0u), (26u, 16u, 0u), (26u, 17u, 0u), (26u, 8u, 0u), (27u, 16u, 0u), (27u, 16u, 6u), (27u, 16u, 7u)
+      case 64u: return jsf(width, seeded, 7u,  13u, 37u); // → (39u, 11u, 0u)
+    }
+
+    jsfstate_t const state = {};
+    return state;
+  }
+
+  jsfstate_t jsf(std::size_t const width, uintmax_t const (&seeded)[4], std::size_t const shiftA, std::size_t const shiftB, std::size_t const shiftC) {
+    uintmax_t  const value = seeded[0] - ((seeded[1] << shiftA) | (seeded[1] >> (width - shiftA)));
+    jsfstate_t const state = {
+      seeded [1] ^ ((seeded[2] << shiftB) | (seeded[2] >> (width - shiftB))),
+      seeded [2] + ((seeded[3] << shiftC) | (seeded[3] >> (width - shiftC))),
+      seeded [3] + value,
+      state._[0] + value
+    };
+
+    return state;
+  }
+
+  jsfstate_t jsf(std::size_t const width, uintmax_t const seed) {
+    uintmax_t const mask        = maxwidthof(width);
+    uintmax_t       substate[4] = {0xF1EA5EEDu, seed, seed, seed};
+
+    // …
+    for (unsigned char index = 0u; index != 4u; ++index)
+    substate[index] &= mask; // → `uint16_t seed` and `0x5EEDu` constant for `width == 16u`
+
+    for (unsigned char count = 0u; count != 20u; ++count) {
+      uintmax_t const (&next)[4] = jsf(width, substate);
+
+      substate[0] = next[0];
+      substate[1] = next[1];
+      substate[2] = next[2];
+      substate[3] = next[3];
+    }
+
+    // …
+    jsfstate_t const state = {substate[0], substate[1], substate[2], substate[3]};
+    return state;
+  }
+
+  // … → lcm(𝙭, 𝙮) - Least common multiple of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Least_common_multiple#Calculation`)
+  intmax_t lcm(intmax_t const integerA, intmax_t const integerB) {
+    return integerA + integerB ? min(abs(integerA), abs(integerB)) * (max(abs(integerA), abs(integerB)) / gcd(integerA, integerB)) : 0;
+  }
+
+  long double lcm(long double const integerA, long double const integerB) {
+    return integerA + integerB ? abs(integerA) * (abs(integerB) / gcd(integerA, integerB)) : 0.0L;
+  }
+
+  uintmax_t lcm(uintmax_t const integerA, uintmax_t const integerB) {
+    return integerA + integerB ? min(integerA, integerB) * (max(integerA, integerB) / gcd(integerA, integerB)) : 0u;
+  }
+
   // … → ln(𝙭) - Natural logarithm of 𝙭 (`https://en.wikipedia.org/wiki/Natural_logarithm`)
   long double ln(long double const number, std::size_t const iterationCount, bool* const representable) {
     std::size_t count     = iterationCount;
@@ -1318,7 +1436,7 @@ namespace {
     return log(number, 16.0L, iterationCount, representable);
   }
 
-  // … → maxprecof(𝙭) - Maximum normalized floating-point value with precision 𝙭
+  // … → maxprecof(𝙭) - Maximum normalized floating-point value of precision 𝙭
   long double maxprecof(long double const precision) {
     long double maximum = LDBL_MAX;
 
@@ -1327,6 +1445,11 @@ namespace {
     maximum /= FLT_RADIX;
 
     return maximum;
+  }
+
+  // … → maxwidthof(𝙭) - Completely set bitwise value of width 𝙭 where 𝙭 = 0 is non-representable
+  uintmax_t maxwidthof(std::size_t const width) {
+    return (((1u << (width - 1u)) - 1u) << 1u) + 1u;
   }
 
   // … → modulus(𝙭) - Modulus of 𝙭 and 𝙮 ¯\_(ツ)_/¯
@@ -1767,9 +1890,70 @@ namespace {
 
     return number;
   }
+
+  // … → wrap(𝙭, 𝙖, 𝙗) - Modularized value of 𝙭 between an 𝙖–𝙗 number line (`https://stackoverflow.com/a/3057774/7364573`)
+  intmax_t wrap(intmax_t const number, intmax_t const begin, intmax_t const end, bool const inclusive) {
+    intmax_t interval = end - begin;
+    intmax_t value    = number;
+
+    // …
+    if (0 == interval)
+    return begin;
+
+    if (not inclusive) {
+      value = (value - begin) % ++interval;
+      return value + begin + (interval * (value < 0));
+    }
+
+    if (value < begin or value > end) {
+      value %= interval;
+      value += interval * (value < begin ? +1 : value > end ? -1 : 0);
+    }
+
+    if (value < begin) value = end   - (value + begin);
+    if (value > end)   value = begin + (value - end);
+
+    return value;
+  }
+
+  long double wrap(long double const number, long double const begin, long double const end, bool const inclusive) {
+    long double interval = end - begin;
+    long double value    = number;
+
+    // …
+    if (0.0L == interval)
+    return begin;
+
+    if (not inclusive) {
+      value = remainder(value - begin, ++interval);
+      return value + begin + (interval * (sign(value, +1) == -1));
+    }
+
+    if (value < begin or value > end) {
+      value  = remainder(value, interval);
+      value += interval * (value < begin ? +1.0L : value > end ? -1.0L : 0.0L);
+    }
+
+    if (value < begin) value = end   - (value + begin);
+    if (value > end)   value = begin + (value - end);
+
+    return value;
+  }
+
+  uintmax_t wrap(uintmax_t const number, uintmax_t const begin, uintmax_t const end, bool const inclusive) {
+    uintmax_t interval = end - begin;
+    uintmax_t value    = number;
+
+    // …
+    if (not inclusive) {
+      value = (value - begin) % ++interval;
+      return value + begin + (interval * (value < 0u));
+    }
+
+    return (value % end) + begin;
+  }
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("[]: %.64Lf" "\r\n", asinh(0.0L));
 }
