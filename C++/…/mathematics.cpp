@@ -169,14 +169,21 @@ namespace {
   intmax_t    lcm                    (intmax_t,    intmax_t);
   long double lcm                    (long double, long double);
   uintmax_t   lcm                    (uintmax_t,   uintmax_t);
+  long double lerp                   (long double, long double, long double);
   long double ln                     (long double,              std::size_t = 0u, bool* = NULL);
   long double log                    (long double, long double, std::size_t = 0u, bool* = NULL);
   long double log2                   (long double,              std::size_t = 0u, bool* = NULL);
   long double log8                   (long double,              std::size_t = 0u, bool* = NULL);
   long double log10                  (long double,              std::size_t = 0u, bool* = NULL);
   long double log16                  (long double,              std::size_t = 0u, bool* = NULL);
+  intmax_t    max                    (intmax_t,    intmax_t);
+  long double max                    (long double, long double);
+  uintmax_t   max                    (uintmax_t,   uintmax_t);
   long double maxprecof              (long double,              std::size_t = 0u, bool* = NULL);
   uintmax_t   maxwidthof             (std::size_t);
+  intmax_t    min                    (intmax_t,    intmax_t);
+  long double min                    (long double, long double);
+  uintmax_t   min                    (uintmax_t,   uintmax_t);
   intmax_t    modulus                (intmax_t,    intmax_t);
   long double modulus                (long double, long double);
   uintmax_t   modulus                (uintmax_t,   uintmax_t);
@@ -205,6 +212,7 @@ namespace {
   signed char sign                   (uintmax_t,   signed char = 0);
   long double sin                    (long double, std::size_t = 0u, bool* = NULL);
   long double sinh                   (long double, std::size_t = 0u, bool* = NULL);
+  long double slerp                  (long double, long double, long double);
   intmax_t    sqrt                   (intmax_t,                      bool* = NULL);
   long double sqrt                   (long double,                   bool* = NULL);
   uintmax_t   sqrt                   (uintmax_t,                     bool* = NULL);
@@ -252,20 +260,12 @@ namespace {
   std::size_t bitwidth               (uintmax_t);
   long double herp                   (long double, long double, long double);
   long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
-  long double lerp                   (long double, long double);
-  intmax_t    max                    (intmax_t,    intmax_t);
-  long double max                    (long double, long double);
-  uintmax_t   max                    (uintmax_t,   uintmax_t);
-  intmax_t    min                    (intmax_t,    intmax_t);
-  long double min                    (long double, long double);
-  uintmax_t   min                    (uintmax_t,   uintmax_t);
   long double mt                     (long double);
   long double mt32                   (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
   long double mt64                   (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
   long double mulberry               (long double);
   long double mulberry32             (long double);
   long double sfc32                  (long double);
-  long double slerp                  (long double, long double);
   long double splitmix32             (long double);
   long double xorshift               (long double);
   long double xorshift_s             (long double);
@@ -1334,7 +1334,7 @@ namespace {
       state._[0] + value
     };
 
-    return state;
+    return state; // → Result in `jsfstate_t[3]`
   }
 
   jsfstate_t jsf(std::size_t const width, uintmax_t const seed) {
@@ -1370,6 +1370,11 @@ namespace {
 
   uintmax_t lcm(uintmax_t const integerA, uintmax_t const integerB) {
     return integerA + integerB ? min(integerA, integerB) * (max(integerA, integerB) / gcd(integerA, integerB)) : 0u;
+  }
+
+  // … → lerp(𝙩, 𝙖, 𝙗) - Linearly-interpolated value 𝙩 between 𝙖 and 𝙗
+  long double lerp(long double const percent, long double const begin, long double const end) {
+    return begin + (percent * (end - begin));
   }
 
   // … → ln(𝙭) - Natural logarithm of 𝙭 (`https://en.wikipedia.org/wiki/Natural_logarithm`)
@@ -1436,6 +1441,20 @@ namespace {
     return log(number, 16.0L, iterationCount, representable);
   }
 
+  // … → max(𝙭, 𝙮) - Greatest-valued number of 𝙭 and 𝙮
+  intmax_t max(intmax_t const numberA, intmax_t const numberB) {
+    return numberA > numberB ? numberA : numberB;
+  }
+
+  long double max(long double const numberA, long double const numberB) {
+    // → Fails to correctly evaluate `max(-0.0L, +0.0L)`
+    return numberA >= numberB ? numberA : numberB;
+  }
+
+  uintmax_t max(uintmax_t const numberA, uintmax_t const numberB) {
+    return numberA > numberB ? numberA : numberB;
+  }
+
   // … → maxprecof(𝙭) - Maximum normalized floating-point value of precision 𝙭
   long double maxprecof(long double const precision) {
     long double maximum = LDBL_MAX;
@@ -1450,6 +1469,20 @@ namespace {
   // … → maxwidthof(𝙭) - Completely set bitwise value of width 𝙭 where 𝙭 = 0 is non-representable
   uintmax_t maxwidthof(std::size_t const width) {
     return (((1u << (width - 1u)) - 1u) << 1u) + 1u;
+  }
+
+  // … → min(𝙭, 𝙮) - Least-valued number of 𝙭 and 𝙮
+  intmax_t min(intmax_t const numberA, intmax_t const numberB) {
+    return numberA < numberB ? numberA : numberB;
+  }
+
+  long double min(long double const numberA, long double const numberB) {
+    // → Fails to correctly evaluate `min(+0.0L, -0.0L)`
+    return numberA <= numberB ? numberA : numberB;
+  }
+
+  uintmax_t min(uintmax_t const numberA, uintmax_t const numberB) {
+    return numberA < numberB ? numberA : numberB;
   }
 
   // … → modulus(𝙭) - Modulus of 𝙭 and 𝙮 ¯\_(ツ)_/¯
@@ -1795,6 +1828,11 @@ namespace {
     return ratio;
   }
 
+  // … → slerp(𝙩, 𝙖, 𝙗) - Spherical linearly-interpolated value 𝙩 between 𝙖 and 𝙗
+  long double slerp(long double const percent, long double const begin, long double const end) {
+    return begin * pow(begin ? end / begin : 0.0L, percent);
+  }
+
   // … → sqrt(𝙭) - Squared root of 𝙭
   intmax_t sqrt(intmax_t const number, bool* const representable) {
     return root(number, 2, representable);
@@ -1952,6 +1990,9 @@ namespace {
 
     return (value % end) + begin;
   }
+
+  /* ... Circular interpolation? (`https://en.wikipedia.org/wiki/Midpoint_circle_algorithm`) */
+  long double clerp(long double, long double, long double);
 }
 
 /* Main */
