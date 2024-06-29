@@ -258,7 +258,6 @@ namespace {
   long double bitswap                (long double);
   uintmax_t   bitswap                (uintmax_t);
   std::size_t bitwidth               (uintmax_t);
-  long double herp                   (long double, long double, long double);
   long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
   long double mt                     (long double);
   long double mt32                   (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
@@ -1990,11 +1989,9 @@ namespace {
 
     return (value % end) + begin;
   }
-
-  /* ... Circular interpolation? (`https://en.wikipedia.org/wiki/Midpoint_circle_algorithm`) */
-  long double clerp(long double, long double, long double);
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
+  /* TODO - Consider special functions and other mathematics constants (like an optimized √2) */
 }
