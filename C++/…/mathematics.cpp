@@ -3,28 +3,26 @@
 #include <climits>
 #include <cstdarg>
 #include <cstddef>
+#include <cstring>
 #include <stdint.h>
 #if defined __STDC_IEC_559__
-# include <cstring>
 # define SUPPORTS_IEEE754_FLOAT true
 #elif defined __GNUC__ or defined __GNUC_MINOR__ or defined __GNUC_PATCHLEVEL__
 # ifdef __GCC_IEC_559
 #   if __GCC_IEC_559
-#     include <cstring>
 #     define SUPPORTS_IEEE754_FLOAT true
 #   else
 #     define SUPPORTS_IEEE754_FLOAT false
 #   endif
 # else
-#   define SUPPORTS_IEEE754_FLOAT false
+#   include <limits>
+#   define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 # endif
 #else
-# include <cstring>
 # include <limits>
 # define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 #endif
 #include <cstdio>
-#include <inttypes.h>
 
 #define FLT_RADIX       __FLT_RADIX__
 #define LDBL_EPSILON    __LDBL_EPSILON__
@@ -33,6 +31,8 @@
 #define LDBL_MAX_10_EXP __LDBL_MAX_10_EXP__
 #define LDBL_MAX_EXP    __LDBL_MAX_EXP__
 #define LDBL_MIN        __LDBL_MIN__
+#include <bitset>
+#include <iostream>
 
 /* …
     → Functions evaluate denary numbers (comprised of bits) and only handle values within their expected domains: edge cases like NaN are not considered unless otherwise
@@ -40,224 +40,222 @@
     → `representable`-ness could be denoted by `FE_*` floating-point exception constants instead of a `bool` value
 */
 namespace {
-  /* … → Only intended as return types due to C++'s inexpressiveness with return-by-value arrays */
-  template <typename base, std::size_t length>
+  template <typename base>
   union _ {
-    private:
-      typedef base const (type)[length];
+    base const _;
 
-    public:
-      type const _;
-
-      inline operator type const&         () const          { return _; }
-      inline operator type const volatile&() const volatile { return _; }
+    inline operator base const&         () const          { return _; }
+    inline operator base const volatile&() const volatile { return _; }
   };
 
-  typedef union _<long double, 2u> fraction_t;
-  typedef union _<uintmax_t,   4u> jsfstate_t;
-
   /* … */
-  uintmax_t   abs                    (intmax_t);
-  long double abs                    (long double);
-  uintmax_t   abs                    (uintmax_t);
-  long double acos                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double acosh                  (long double,              std::size_t = 0u, bool* = NULL);
-  long double acot                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double acoth                  (long double,              std::size_t = 0u, bool* = NULL);
-  long double acsc                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double acsch                  (long double,              std::size_t = 0u, bool* = NULL);
-  intmax_t    add                    (intmax_t,    intmax_t,                      bool* = NULL);
-  long double add                    (long double, long double,                   bool* = NULL);
-  uintmax_t   add                    (uintmax_t,   uintmax_t,                     bool* = NULL);
-  long double asec                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double asech                  (long double,              std::size_t = 0u, bool* = NULL);
-  long double asin                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double asinh                  (long double,              std::size_t = 0u, bool* = NULL);
-  long double atan                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double atan                   (long double, long double, std::size_t = 0u, bool* = NULL);
-  long double atanh                  (long double,              std::size_t = 0u, bool* = NULL);
-  long double bézier                 (std::size_t, long double, ...);
-  long double bézier_cubic           (long double, long double, long double, long double, long double);
-  long double bézier_linear          (long double, long double, long double);
-  long double bézier_quadratic       (long double, long double, long double, long double);
-  intmax_t    cbrt                   (intmax_t,         bool* = NULL);
-  long double cbrt                   (long double,      bool* = NULL);
-  uintmax_t   cbrt                   (uintmax_t,        bool* = NULL);
-  long double ceil                   (long double);
-  intmax_t    clamp                  (intmax_t,    intmax_t,    intmax_t);
-  long double clamp                  (long double, long double, long double);
-  uintmax_t   clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
-  long double compute_eta            (std::size_t = 0u, bool* = NULL);
-  long double compute_euler          (std::size_t = 0u, bool* = NULL);
-  long double compute_infinity       ();
-  long double compute_nan            ();
-  long double compute_pi             (std::size_t = 0u,              bool* = NULL);
-  long double compute_tau            (std::size_t = 0u,              bool* = NULL);
-  long double cos                    (long double, std::size_t = 0u, bool* = NULL);
-  long double cosh                   (long double, std::size_t = 0u, bool* = NULL);
-  long double cot                    (long double, std::size_t = 0u, bool* = NULL);
-  std::size_t countof                (intmax_t);
-  std::size_t countof                (long double);
-  std::size_t countof                (uintmax_t);
-  long double csc                    (long double, std::size_t = 0u, bool* = NULL);
-  intmax_t    divide                 (intmax_t,    intmax_t,         bool* = NULL);
-  long double divide                 (long double, long double,      bool* = NULL);
-  uintmax_t   divide                 (uintmax_t,   uintmax_t,        bool* = NULL);
-  long double ease                   (long double);
-  long double ease_in                (long double);
-  long double ease_in_back           (long double);
-  long double ease_in_bounce         (long double);
-  long double ease_in_circular       (long double);
-  long double ease_in_cubic          (long double);
-  long double ease_in_elastic        (long double);
-  long double ease_in_exponential    (long double);
-  long double ease_in_out            (long double);
-  long double ease_in_out_back       (long double);
-  long double ease_in_out_bounce     (long double);
-  long double ease_in_out_circular   (long double);
-  long double ease_in_out_cubic      (long double);
-  long double ease_in_out_elastic    (long double);
-  long double ease_in_out_exponential(long double);
-  long double ease_in_out_quadratic  (long double);
-  long double ease_in_out_quartic    (long double);
-  long double ease_in_out_quintic    (long double);
-  long double ease_in_out_sine       (long double);
-  long double ease_in_quadratic      (long double);
-  long double ease_in_quartic        (long double);
-  long double ease_in_quintic        (long double);
-  long double ease_in_sine           (long double);
-  long double ease_out               (long double);
-  long double ease_out_back          (long double);
-  long double ease_out_bounce        (long double);
-  long double ease_out_circular      (long double);
-  long double ease_out_cubic         (long double);
-  long double ease_out_elastic       (long double);
-  long double ease_out_exponential   (long double);
-  long double ease_out_quadratic     (long double);
-  long double ease_out_quartic       (long double);
-  long double ease_out_quintic       (long double);
-  long double ease_out_sine          (long double);
-  long double exp                    (long double, std::size_t = 0u, bool* = NULL);
-  long double floor                  (long double);
-  fraction_t  fract                  (long double);
-  intmax_t    gcd                    (intmax_t,    intmax_t);
-  long double gcd                    (long double, long double);
-  uintmax_t   gcd                    (uintmax_t,   uintmax_t);
-  intmax_t    icbrt                  (intmax_t,    bool* = NULL);
-  long double icbrt                  (long double, bool* = NULL);
-  uintmax_t   icbrt                  (uintmax_t,   bool* = NULL);
-  long double ifactorial             (long double, bool* = NULL);
-  uintmax_t   ifactorial             (uintmax_t,   bool* = NULL);
-  long double imaxof                 ();
-  intmax_t    ipow                   (intmax_t,    intmax_t,    bool* = NULL);
-  long double ipow                   (long double, long double, bool* = NULL);
-  uintmax_t   ipow                   (uintmax_t,   uintmax_t,   bool* = NULL);
-  uintmax_t   iroot                  (intmax_t,    intmax_t,    bool* = NULL);
-  long double iroot                  (long double, long double, bool* = NULL);
-  uintmax_t   iroot                  (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t    isqrt                  (intmax_t,                 bool* = NULL);
-  long double isqrt                  (long double,              bool* = NULL);
-  uintmax_t   isqrt                  (uintmax_t,                bool* = NULL);
-  bool        is_denormal            (long double);
-  bool        is_infinite            (long double);
-  bool        is_integer             (long double);
-  bool        is_nan                 (long double);
-  bool        is_subnormal           (long double);
-  jsfstate_t  jsf                    (std::size_t, uintmax_t = 0xCAFE5EED00000001uLL);
-  jsfstate_t  jsf                    (std::size_t, uintmax_t const (&)[4]); // → Result in `jsfstate_t[3]`
-  jsfstate_t  jsf                    (std::size_t, uintmax_t const (&)[4], std::size_t, std::size_t, std::size_t);
-  intmax_t    lcm                    (intmax_t,    intmax_t);
-  long double lcm                    (long double, long double);
-  uintmax_t   lcm                    (uintmax_t,   uintmax_t);
-  long double lerp                   (long double, long double, long double);
-  long double ln                     (long double,              std::size_t = 0u, bool* = NULL);
-  long double log                    (long double, long double, std::size_t = 0u, bool* = NULL);
-  long double log2                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double log8                   (long double,              std::size_t = 0u, bool* = NULL);
-  long double log10                  (long double,              std::size_t = 0u, bool* = NULL);
-  long double log16                  (long double,              std::size_t = 0u, bool* = NULL);
-  intmax_t    max                    (intmax_t,    intmax_t);
-  long double max                    (long double, long double);
-  uintmax_t   max                    (uintmax_t,   uintmax_t);
-  long double maxprecof              (long double,              std::size_t = 0u, bool* = NULL);
-  uintmax_t   maxwidthof             (std::size_t);
-  intmax_t    min                    (intmax_t,    intmax_t);
-  long double min                    (long double, long double);
-  uintmax_t   min                    (uintmax_t,   uintmax_t);
-  intmax_t    modulus                (intmax_t,    intmax_t);
-  long double modulus                (long double, long double);
-  uintmax_t   modulus                (uintmax_t,   uintmax_t);
-  intmax_t    multiply               (intmax_t,    intmax_t,    bool* = NULL);
-  long double multiply               (long double, long double, bool* = NULL);
-  uintmax_t   multiply               (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double next                   (long double);
-  bool        parity                 (intmax_t);
-  bool        parity                 (long double);
-  bool        parity                 (uintmax_t);
-  intmax_t    pow                    (intmax_t,    intmax_t,    bool* = NULL);
-  long double pow                    (long double, long double, bool* = NULL);
-  uintmax_t   pow                    (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double prev                   (long double);
-  intmax_t    remainder              (intmax_t,    intmax_t,    bool* = NULL);
-  long double remainder              (long double, long double, bool* = NULL);
-  uintmax_t   remainder              (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t    root                   (intmax_t,    intmax_t,    bool* = NULL);
-  long double root                   (long double, long double, bool* = NULL);
-  uintmax_t   root                   (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double round                  (long double);
-  long double sec                    (long double, std::size_t = 0u, bool* = NULL);
-  long double sech                   (long double, std::size_t = 0u, bool* = NULL);
-  signed char sign                   (intmax_t,    signed char = 0);
-  signed char sign                   (long double, signed char = 0);
-  signed char sign                   (uintmax_t,   signed char = 0);
-  long double sin                    (long double, std::size_t = 0u, bool* = NULL);
-  long double sinh                   (long double, std::size_t = 0u, bool* = NULL);
-  long double slerp                  (long double, long double, long double);
-  intmax_t    sqrt                   (intmax_t,                      bool* = NULL);
-  long double sqrt                   (long double,                   bool* = NULL);
-  uintmax_t   sqrt                   (uintmax_t,                     bool* = NULL);
-  intmax_t    subtract               (intmax_t,    intmax_t,         bool* = NULL);
-  long double subtract               (long double, long double,      bool* = NULL);
-  uintmax_t   subtract               (uintmax_t,   uintmax_t,        bool* = NULL);
-  long double tan                    (long double, std::size_t = 0u, bool* = NULL);
-  long double tanh                   (long double, std::size_t = 0u, bool* = NULL);
-  long double trunc                  (long double);
-  intmax_t    wrap                   (intmax_t,    intmax_t,    intmax_t,    bool = false);
-  long double wrap                   (long double, long double, long double, bool = false);
-  uintmax_t   wrap                   (uintmax_t,   uintmax_t,   uintmax_t,   bool = false);
+  uintmax_t         abs                    (intmax_t);
+  long double       abs                    (long double);
+  uintmax_t         abs                    (uintmax_t);
+  long double       acos                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       acosh                  (long double,              std::size_t = 0u, bool* = NULL);
+  long double       acot                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       acoth                  (long double,              std::size_t = 0u, bool* = NULL);
+  long double       acsc                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       acsch                  (long double,              std::size_t = 0u, bool* = NULL);
+  intmax_t          add                    (intmax_t,    intmax_t,                      bool* = NULL);
+  long double       add                    (long double, long double,                   bool* = NULL);
+  uintmax_t         add                    (uintmax_t,   uintmax_t,                     bool* = NULL);
+  long double       asec                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       asech                  (long double,              std::size_t = 0u, bool* = NULL);
+  long double       asin                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       asinh                  (long double,              std::size_t = 0u, bool* = NULL);
+  long double       atan                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       atan                   (long double, long double, std::size_t = 0u, bool* = NULL);
+  long double       atanh                  (long double,              std::size_t = 0u, bool* = NULL);
+  long double       bézier                 (std::size_t, long double, ...);
+  long double       bézier_cubic           (long double, long double, long double, long double, long double);
+  long double       bézier_linear          (long double, long double, long double);
+  long double       bézier_quadratic       (long double, long double, long double, long double);
+  intmax_t          bitceil                (intmax_t,         bool* = NULL);
+  long double       bitceil                (long double,      bool* = NULL);
+  uintmax_t         bitceil                (uintmax_t,        bool* = NULL);
+  intmax_t          bitclear               (intmax_t,    std::size_t);
+  long double       bitclear               (long double, std::size_t);
+  uintmax_t         bitclear               (uintmax_t,   std::size_t);
+  intmax_t          bitflip                (intmax_t);
+  long double       bitflip                (long double);
+  uintmax_t         bitflip                (uintmax_t);
+  intmax_t          bitflip                (intmax_t,    std::size_t);
+  long double       bitflip                (long double, std::size_t);
+  uintmax_t         bitflip                (uintmax_t,   std::size_t);
+  intmax_t          bitfloor               (intmax_t,         bool* = NULL);
+  long double       bitfloor               (long double,      bool* = NULL);
+  uintmax_t         bitfloor               (uintmax_t,        bool* = NULL);
+  std::size_t       bitpopcount            (intmax_t);
+  std::size_t       bitpopcount            (long double);
+  std::size_t       bitpopcount            (uintmax_t);
+  intmax_t          bitrotleft             (intmax_t,    std::size_t = 1u);
+  long double       bitrotleft             (long double, std::size_t = 1u);
+  uintmax_t         bitrotleft             (uintmax_t,   std::size_t = 1u);
+  intmax_t          bitrotright            (intmax_t,    std::size_t = 1u);
+  long double       bitrotright            (long double, std::size_t = 1u);
+  uintmax_t         bitrotright            (uintmax_t,   std::size_t = 1u);
+  intmax_t          bitset                 (intmax_t,    std::size_t);
+  long double       bitset                 (long double, std::size_t);
+  uintmax_t         bitset                 (uintmax_t,   std::size_t);
+  intmax_t          bitshiftleft           (intmax_t,    std::size_t = 1u);
+  long double       bitshiftleft           (long double, std::size_t = 1u);
+  uintmax_t         bitshiftleft           (uintmax_t,   std::size_t = 1u);
+  intmax_t          bitshiftright          (intmax_t,    std::size_t = 1u);
+  long double       bitshiftright          (long double, std::size_t = 1u);
+  uintmax_t         bitshiftright          (uintmax_t,   std::size_t = 1u);
+  intmax_t          bitswap                (intmax_t);
+  long double       bitswap                (long double);
+  uintmax_t         bitswap                (uintmax_t);
+  std::size_t       bitwidth               (uintmax_t);
+  intmax_t          cbrt                   (intmax_t,         bool* = NULL);
+  long double       cbrt                   (long double,      bool* = NULL);
+  uintmax_t         cbrt                   (uintmax_t,        bool* = NULL);
+  long double       ceil                   (long double);
+  intmax_t          clamp                  (intmax_t,    intmax_t,    intmax_t);
+  long double       clamp                  (long double, long double, long double);
+  uintmax_t         clamp                  (uintmax_t,   uintmax_t,   uintmax_t);
+  _<long double[2]> clerp                  (long double, long double const (&)[2], long double const (&)[2]);
+  long double       compute_eta            (std::size_t = 0u, bool* = NULL);
+  long double       compute_euler          (std::size_t = 0u, bool* = NULL);
+  long double       compute_infinity       ();
+  long double       compute_nan            ();
+  long double       compute_pi             (std::size_t = 0u,              bool* = NULL);
+  long double       compute_tau            (std::size_t = 0u,              bool* = NULL);
+  long double       cos                    (long double, std::size_t = 0u, bool* = NULL);
+  long double       cosh                   (long double, std::size_t = 0u, bool* = NULL);
+  long double       cot                    (long double, std::size_t = 0u, bool* = NULL);
+  std::size_t       countof                (intmax_t);
+  std::size_t       countof                (long double);
+  std::size_t       countof                (uintmax_t);
+  long double       csc                    (long double, std::size_t = 0u, bool* = NULL);
+  intmax_t          divide                 (intmax_t,    intmax_t,         bool* = NULL);
+  long double       divide                 (long double, long double,      bool* = NULL);
+  uintmax_t         divide                 (uintmax_t,   uintmax_t,        bool* = NULL);
+  long double       ease                   (long double);
+  long double       ease_in                (long double);
+  long double       ease_in_back           (long double);
+  long double       ease_in_bounce         (long double);
+  long double       ease_in_circular       (long double);
+  long double       ease_in_cubic          (long double);
+  long double       ease_in_elastic        (long double);
+  long double       ease_in_exponential    (long double);
+  long double       ease_in_out            (long double);
+  long double       ease_in_out_back       (long double);
+  long double       ease_in_out_bounce     (long double);
+  long double       ease_in_out_circular   (long double);
+  long double       ease_in_out_cubic      (long double);
+  long double       ease_in_out_elastic    (long double);
+  long double       ease_in_out_exponential(long double);
+  long double       ease_in_out_quadratic  (long double);
+  long double       ease_in_out_quartic    (long double);
+  long double       ease_in_out_quintic    (long double);
+  long double       ease_in_out_sine       (long double);
+  long double       ease_in_quadratic      (long double);
+  long double       ease_in_quartic        (long double);
+  long double       ease_in_quintic        (long double);
+  long double       ease_in_sine           (long double);
+  long double       ease_out               (long double);
+  long double       ease_out_back          (long double);
+  long double       ease_out_bounce        (long double);
+  long double       ease_out_circular      (long double);
+  long double       ease_out_cubic         (long double);
+  long double       ease_out_elastic       (long double);
+  long double       ease_out_exponential   (long double);
+  long double       ease_out_quadratic     (long double);
+  long double       ease_out_quartic       (long double);
+  long double       ease_out_quintic       (long double);
+  long double       ease_out_sine          (long double);
+  long double       exp                    (long double, std::size_t = 0u, bool* = NULL);
+  long double       floor                  (long double);
+  _<long double[2]> fract                  (long double);
+  intmax_t          gcd                    (intmax_t,    intmax_t);
+  long double       gcd                    (long double, long double);
+  uintmax_t         gcd                    (uintmax_t,   uintmax_t);
+  intmax_t          icbrt                  (intmax_t,    bool* = NULL);
+  long double       icbrt                  (long double, bool* = NULL);
+  uintmax_t         icbrt                  (uintmax_t,   bool* = NULL);
+  long double       ifactorial             (long double, bool* = NULL);
+  uintmax_t         ifactorial             (uintmax_t,   bool* = NULL);
+  long double       imaxof                 ();
+  intmax_t          ipow                   (intmax_t,    intmax_t,    bool* = NULL);
+  long double       ipow                   (long double, long double, bool* = NULL);
+  uintmax_t         ipow                   (uintmax_t,   uintmax_t,   bool* = NULL);
+  uintmax_t         iroot                  (intmax_t,    intmax_t,    bool* = NULL);
+  long double       iroot                  (long double, long double, bool* = NULL);
+  uintmax_t         iroot                  (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t          isqrt                  (intmax_t,                 bool* = NULL);
+  long double       isqrt                  (long double,              bool* = NULL);
+  uintmax_t         isqrt                  (uintmax_t,                bool* = NULL);
+  bool              is_denormal            (long double);
+  bool              is_infinite            (long double);
+  bool              is_integer             (long double);
+  bool              is_nan                 (long double);
+  bool              is_subnormal           (long double);
+  _<uintmax_t[4]>   jsf                    (std::size_t, uintmax_t = 0xCAFE5EED00000001uLL);
+  _<uintmax_t[4]>   jsf                    (std::size_t, uintmax_t const (&)[4]); // → Result in `_[3]`
+  _<uintmax_t[4]>   jsf                    (std::size_t, uintmax_t const (&)[4], std::size_t, std::size_t, std::size_t);
+  intmax_t          lcm                    (intmax_t,    intmax_t);
+  long double       lcm                    (long double, long double);
+  uintmax_t         lcm                    (uintmax_t,   uintmax_t);
+  long double       lerp                   (long double, long double, long double);
+  long double       ln                     (long double,              std::size_t = 0u, bool* = NULL);
+  long double       log                    (long double, long double, std::size_t = 0u, bool* = NULL);
+  long double       log2                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       log8                   (long double,              std::size_t = 0u, bool* = NULL);
+  long double       log10                  (long double,              std::size_t = 0u, bool* = NULL);
+  long double       log16                  (long double,              std::size_t = 0u, bool* = NULL);
+  intmax_t          max                    (intmax_t,    intmax_t);
+  long double       max                    (long double, long double);
+  uintmax_t         max                    (uintmax_t,   uintmax_t);
+  long double       maxprecof              (long double,              std::size_t = 0u, bool* = NULL);
+  uintmax_t         maxwidthof             (std::size_t);
+  intmax_t          min                    (intmax_t,    intmax_t);
+  long double       min                    (long double, long double);
+  uintmax_t         min                    (uintmax_t,   uintmax_t);
+  intmax_t          modulus                (intmax_t,    intmax_t,    bool* = NULL);
+  long double       modulus                (long double, long double, bool* = NULL);
+  uintmax_t         modulus                (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t          multiply               (intmax_t,    intmax_t,    bool* = NULL);
+  long double       multiply               (long double, long double, bool* = NULL);
+  uintmax_t         multiply               (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double       next                   (long double);
+  bool              parity                 (intmax_t);
+  bool              parity                 (long double);
+  bool              parity                 (uintmax_t);
+  intmax_t          pow                    (intmax_t,    intmax_t,    bool* = NULL);
+  long double       pow                    (long double, long double, bool* = NULL);
+  uintmax_t         pow                    (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double       prev                   (long double);
+  intmax_t          remainder              (intmax_t,    intmax_t,    bool* = NULL);
+  long double       remainder              (long double, long double, bool* = NULL);
+  uintmax_t         remainder              (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t          root                   (intmax_t,    intmax_t,    bool* = NULL);
+  long double       root                   (long double, long double, bool* = NULL);
+  uintmax_t         root                   (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double       round                  (long double);
+  long double       sec                    (long double, std::size_t = 0u, bool* = NULL);
+  long double       sech                   (long double, std::size_t = 0u, bool* = NULL);
+  signed char       sign                   (intmax_t,    signed char = 0);
+  signed char       sign                   (long double, signed char = 0);
+  signed char       sign                   (uintmax_t,   signed char = 0);
+  long double       sin                    (long double, std::size_t = 0u, bool* = NULL);
+  long double       sinh                   (long double, std::size_t = 0u, bool* = NULL);
+  long double       slerp                  (long double, long double, long double);
+  intmax_t          sqrt                   (intmax_t,                      bool* = NULL);
+  long double       sqrt                   (long double,                   bool* = NULL);
+  uintmax_t         sqrt                   (uintmax_t,                     bool* = NULL);
+  intmax_t          subtract               (intmax_t,    intmax_t,         bool* = NULL);
+  long double       subtract               (long double, long double,      bool* = NULL);
+  uintmax_t         subtract               (uintmax_t,   uintmax_t,        bool* = NULL);
+  long double       tan                    (long double, std::size_t = 0u, bool* = NULL);
+  long double       tanh                   (long double, std::size_t = 0u, bool* = NULL);
+  long double       trunc                  (long double);
+  intmax_t          wrap                   (intmax_t,    intmax_t,    intmax_t,    bool = false);
+  long double       wrap                   (long double, long double, long double, bool = false);
+  uintmax_t         wrap                   (uintmax_t,   uintmax_t,   uintmax_t,   bool = false);
 
-  long double bitceil                (long double);
-  uintmax_t   bitceil                (uintmax_t);
-  intmax_t    bitclear               (intmax_t,    std::size_t);
-  long double bitclear               (long double, std::size_t);
-  uintmax_t   bitclear               (uintmax_t,   std::size_t);
-  intmax_t    bitflip                (intmax_t,    std::size_t = 0u);
-  long double bitflip                (long double, std::size_t = 0u);
-  uintmax_t   bitflip                (uintmax_t);
-  long double bitfloor               (long double);
-  uintmax_t   bitfloor               (uintmax_t);
-  std::size_t bitpopcount            (intmax_t);
-  std::size_t bitpopcount            (long double);
-  std::size_t bitpopcount            (uintmax_t);
-  intmax_t    bitrotleft             (intmax_t,    std::size_t = 1u);
-  long double bitrotleft             (long double, std::size_t = 1u);
-  uintmax_t   bitrotleft             (uintmax_t,   std::size_t = 1u);
-  intmax_t    bitrotright            (intmax_t,    std::size_t = 1u);
-  long double bitrotright            (long double, std::size_t = 1u);
-  uintmax_t   bitrotright            (uintmax_t,   std::size_t = 1u);
-  intmax_t    bitset                 (intmax_t,    std::size_t);
-  long double bitset                 (long double, std::size_t);
-  uintmax_t   bitset                 (uintmax_t,   std::size_t);
-  intmax_t    bitshiftleft           (intmax_t,    std::size_t = 1u);
-  long double bitshiftleft           (long double, std::size_t = 1u);
-  uintmax_t   bitshiftleft           (uintmax_t,   std::size_t = 1u);
-  intmax_t    bitshiftright          (intmax_t,    std::size_t = 1u);
-  long double bitshiftright          (long double, std::size_t = 1u);
-  uintmax_t   bitshiftright          (uintmax_t,   std::size_t = 1u);
-  intmax_t    bitswap                (intmax_t);
-  long double bitswap                (long double);
-  uintmax_t   bitswap                (uintmax_t);
-  std::size_t bitwidth               (uintmax_t);
   long double lcg                    (long double, std::size_t = 16807u, std::size_t = 0u, std::size_t = 2147483647u);
   long double mt                     (long double);
   long double mt32                   (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
@@ -285,7 +283,7 @@ namespace {
   /* … */
   // … → abs(𝙭) - Absolute value of 𝙭
   uintmax_t abs(intmax_t const number) {
-    // → `INTMAX_MIN` not representable as positive `|number|` using `intmax_t`
+    // → `INTMAX_MIN` possibly not representable as positive `|number|` using `intmax_t`
     return sign(number) == -1 ? -number : +number;
   }
 
@@ -424,7 +422,7 @@ namespace {
 
   long double atan(long double const x, long double const y, std::size_t const iterationCount, bool* const representable) {
     // … → Adjacent ÷ Opposite
-    switch (sign(x)) {
+    switch (0.0L == x ? 0 : sign(x)) {
       case +1:
         return atan(y / x, iterationCount, representable);
 
@@ -438,7 +436,7 @@ namespace {
       } break;
 
       case 0:
-        if (sign(y))
+        if (0.0L != y and sign(y))
         return 0.0L + (compute_eta(iterationCount) * sign(y, 0));
     }
 
@@ -506,6 +504,343 @@ namespace {
     );
   }
 
+  // … → bitceil(𝙭) - Next square of 𝙭
+  intmax_t bitceil(intmax_t const number, bool* const representable) {
+    intmax_t   ceiling    = sign(number, +1);
+    bool const signedness = ceiling == +1;
+
+    // …
+    for (; signedness ? (ceiling < number) : (ceiling > number); ceiling <<= 1)
+    if (signedness ? (ceiling > INTMAX_MAX >> 1) : (ceiling < INTMAX_MIN >> 1)) {
+      if (representable) {
+        *representable = false;
+        return 0;
+      }
+
+      break;
+    }
+
+    return ceiling;
+  }
+
+  long double bitceil(long double number, bool* const representable) {
+    long double       ceiling    = 1.0L;
+    signed char const signedness = sign(number, +1);
+
+    // …
+    for (number = abs(number); ceiling < number; ceiling *= 2.0L)
+    if (ceiling > LDBL_MAX / 2.0L) {
+      if (representable) {
+        *representable = false;
+        return 0.0L;
+      }
+
+      break;
+    }
+
+    return ceiling * signedness;
+  }
+
+  uintmax_t bitceil(uintmax_t const number, bool* const representable) {
+    uintmax_t ceiling = 1u;
+
+    // …
+    for (; ceiling < number; ceiling <<= 1u)
+    if (ceiling > UINTMAX_MAX >> 1u) {
+      if (representable) {
+        *representable = false;
+        return 0u;
+      }
+
+      break;
+    }
+
+    return ceiling;
+  }
+
+  // … → bitclear(𝙭, 𝙣) - Zeroed 𝙣th bit of 𝙭
+  intmax_t bitclear(intmax_t const number, std::size_t const index) {
+    return number & ~(1u << index);
+  }
+
+  long double bitclear(long double number, std::size_t const index) {
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index / CHAR_BIT] &= ~(1u << (index % CHAR_BIT));
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitclear(uintmax_t const number, std::size_t const index) {
+    return number & ~(1u << index);
+  }
+
+  // … → bitflip(𝙭) - Toggled bits of 𝙭
+  intmax_t bitflip(intmax_t const number) {
+    return ~number;
+  }
+
+  long double bitflip(long double number) {
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    for (unsigned char *iterator = *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))), *const end = iterator + sizeof(long double); end != iterator; ++iterator)
+    *iterator = ~*iterator;
+
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitflip(uintmax_t const number) {
+    return ~number;
+  }
+
+  // … → bitflip(𝙭, 𝙣) - Toggled 𝙣th bit of 𝙭
+  intmax_t bitflip(intmax_t const number, std::size_t const index) {
+    return number ^ (1u << index);
+  }
+
+  long double bitflip(long double number, std::size_t const index) {
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index / CHAR_BIT] ^= ~(1u << (index % CHAR_BIT));
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitflip(uintmax_t const number, std::size_t const index) {
+    return number ^ (1u << index);
+  }
+
+  // … → bitfloor(𝙭) - Previous square of 𝙭
+  intmax_t bitfloor(intmax_t const number, bool* const representable) {
+    return static_cast<intmax_t>(bitfloor(static_cast<uintmax_t>(abs(number)), representable)) * sign(number, +1);
+  }
+
+  long double bitfloor(long double number, bool* const) {
+    long double       floor      = 0.0L != number;
+    signed char const signedness = sign(number, +1);
+
+    // …
+    for (number = abs(number) / 2.0L; floor < number; floor *= 2.0L)
+    continue;
+
+    return floor * signedness;
+  }
+
+  uintmax_t bitfloor(uintmax_t number, bool* const) {
+    uintmax_t floor = 0u != number;
+
+    // …
+    for (number >>= 1u; floor < number; floor <<= 1u)
+    continue;
+
+    return floor;
+  }
+
+  // … → bitpopcount(𝙭) - Number of bits of 𝙭 set active to 1
+  std::size_t bitpopcount(intmax_t number) {
+    std::size_t count = 0u;
+
+    // … → Two's complement representation standardized since C++11
+    #if __cplusplus >= 201103L
+      for (; number; number >>= 1)
+      count += number & 1 ? 1u : 0u;
+    #else
+      for (unsigned char width = CHAR_BIT * sizeof number; width; --width, number >>= 1)
+      count += number & 1 ? 1u : 0u;
+    #endif
+
+    return count;
+  }
+
+  std::size_t bitpopcount(long double number) {
+    std::size_t   count = 0u;
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    for (unsigned char *iterator = *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))), *const end = iterator + sizeof(long double); end != iterator; ++iterator) {
+      for (; *iterator; *iterator >>= 1u)
+      count += *iterator & 1u ? 1u : 0u;
+    }
+
+    return count;
+  }
+
+  std::size_t bitpopcount(uintmax_t number) {
+    std::size_t count = 0u;
+
+    // … → Assumed representation is base -2, offset binary, one's complement, sign–magnitude, or two's complement
+    for (; number; number >>= 1u)
+    count += number & 1u ? 1u : 0u;
+
+    return count;
+  }
+
+  // … → bitset(𝙭, 𝙣) - Zeroed 𝙣th bit of 𝙭
+  intmax_t bitset(intmax_t const number, std::size_t const index) {
+    return number | (1u << index);
+  }
+
+  long double bitset(long double number, std::size_t const index) {
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index / CHAR_BIT] |= 1u << (index % CHAR_BIT);
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitset(uintmax_t const number, std::size_t const index) {
+    return number | (1u << index);
+  }
+
+  // intmax_t    bitrotleft   (intmax_t,    std::size_t = 1u);
+  // long double bitrotleft   (long double, std::size_t = 1u);
+  // uintmax_t   bitrotleft   (uintmax_t,   std::size_t = 1u);
+  // intmax_t    bitrotright  (intmax_t,    std::size_t = 1u);
+  // long double bitrotright  (long double, std::size_t = 1u);
+
+  // … → bitrotright(𝙭, 𝙣) - Rightward bitwise rotation of 𝙭
+  intmax_t bitrotright(intmax_t const number, std::size_t const count) {
+    return bitshiftright(number) | ((number & maxwidthof(count)) << ((CHAR_BIT * sizeof(intmax_t)) - count));
+  }
+
+  long double bitrotright(long double number, std::size_t const count) {
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    (void) layout;
+    (void) number;
+    (void) count;
+    return 0.0L;
+    // layout[count / CHAR_BIT]
+    // std::memcpy(std::memcpy(layout, &static_cast<long double const&>(bitshiftright(number, count)), sizeof(long double)), )
+  }
+
+  uintmax_t bitrotright(uintmax_t const number, std::size_t const count) {
+    return bitshiftright(number) | ((number & maxwidthof(count)) << ((CHAR_BIT * sizeof(uintmax_t)) - count));
+  }
+
+  // … → bitshiftleft(𝙭, 𝙣) - Leftward bitwise shift of 𝙭
+  intmax_t bitshiftleft(intmax_t const number, std::size_t const count) {
+    return number << count;
+  }
+
+  long double bitshiftleft(long double number, std::size_t const count) {
+    unsigned char     layout[sizeof(long double)];
+    std::size_t const offset    = count / CHAR_BIT;
+    std::size_t const suboffset = count % CHAR_BIT;
+
+    // …
+    if (count >= CHAR_BIT * sizeof(long double))
+    return 0.0L;
+
+    for (unsigned char *iterators[2] = {
+      *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))),
+      static_cast<unsigned char*>(std::memset(static_cast<unsigned char*>(std::memmove(*iterators, *iterators + offset, sizeof(long double) - offset)) + (sizeof(long double) - offset), 0x00u, offset)) - (sizeof(long double) - offset)
+    }; ; ) {
+      *(iterators[1]++) <<= suboffset;
+
+      if (iterators[1] == iterators[0] + sizeof(long double))
+      break;
+
+      *(iterators[1] + 0) |= *(iterators[1] + 1) & (maxwidthof(suboffset) << (CHAR_BIT - suboffset));
+    }
+
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitshiftleft(uintmax_t const number, std::size_t const count) {
+    return number << count;
+  }
+
+  // … → bitshiftright(𝙭, 𝙣) - Rightward bitwise shift of 𝙭
+  intmax_t bitshiftright(intmax_t const number, std::size_t const count) {
+    return number >> count;
+  }
+
+  long double bitshiftright(long double number, std::size_t const count) {
+    unsigned char     layout[sizeof(long double)];
+    std::size_t const offset    = count / CHAR_BIT;
+    std::size_t const suboffset = count % CHAR_BIT;
+
+    // …
+    if (count >= CHAR_BIT * sizeof(long double))
+    return 0.0L;
+
+    for (unsigned char *iterators[2] = {
+      *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))),
+      static_cast<unsigned char*>(std::memset(static_cast<unsigned char*>(std::memmove(*iterators + offset, *iterators, sizeof(long double) - offset)) - offset, 0x00u, offset)) + sizeof(long double)
+    }; ; ) {
+      *--iterators[1] >>= suboffset;
+
+      if (iterators[1] == iterators[0])
+      break;
+
+      *(iterators[1] - 0) |= (*(iterators[1] - 1) & maxwidthof(CHAR_BIT - suboffset)) << (CHAR_BIT - suboffset);
+    }
+
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitshiftright(uintmax_t const number, std::size_t const count) {
+    return number >> count;
+  }
+
+  // … → bitswap(𝙭) - Reversed bits of 𝙭
+  intmax_t bitswap(intmax_t number) {
+    intmax_t swapped = 0;
+
+    // …
+    for (std::size_t width = CHAR_BIT * sizeof(intmax_t); width--; number >>= 1u)
+    swapped = (number & 1u) | (swapped << 1u);
+
+    return swapped;
+  }
+
+  long double bitswap(long double number) {
+    unsigned char layout[sizeof(long double)];
+
+    // …
+    for (unsigned char *iterators[2] = {
+      *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))),
+      *iterators + (sizeof(long double) - 1u)
+    }; iterators[0] <= iterators[1]; ++iterators[0], iterators[1] -= layout != iterators[1]) {
+      unsigned char swapped[2] = {0x00u, 0x00u};
+
+      // …
+      for (unsigned char index = 2u - (iterators[0] == iterators[1]); index-- != 0u; ) {
+        for (unsigned char width = CHAR_BIT; width--; *(iterators[index]) >>= 1u)
+        swapped[2u - index - 1u] = (*(iterators[index]) & 1u) | (swapped[2u - index - 1u] << 1u);
+      }
+
+      for (unsigned char index = 0u + (iterators[0] == iterators[1]); index != 2u; ++index)
+      *(iterators[index]) = swapped[index];
+    }
+
+    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+  }
+
+  uintmax_t bitswap(uintmax_t number) {
+    uintmax_t swapped = 0u;
+
+    // …
+    for (std::size_t width = CHAR_BIT * sizeof(uintmax_t); width--; number >>= 1u)
+    swapped = (number & 1u) | (swapped << 1u);
+
+    return swapped;
+  }
+
+  // … → bitwidth(𝙭) - Number of complete representational bits of 𝙭 (remiss to parse the versions for `intmax_t` and `long double`)
+  std::size_t bitwidth(uintmax_t number) {
+    std::size_t count = 0u;
+
+    // …
+    for (; number; number >>= 1u)
+    ++count;
+
+    return count;
+  }
+
   // … → cbrt(𝙭) - Cubed root of 𝙭
   intmax_t cbrt(intmax_t const number, bool* const representable) {
     return root(number, 3, representable);
@@ -536,6 +871,17 @@ namespace {
 
   uintmax_t clamp(uintmax_t const number, uintmax_t const begin, uintmax_t const end) {
     return number < begin ? begin : number > end ? end : number;
+  }
+
+  // … → clerp(𝙩, 𝙖, 𝙗) - Circular linearly-interpolated value 𝙩 between 𝙖 and 𝙗
+  _<long double[2]> clerp(long double const percent, long double const (&begin)[2], long double const (&end)[2]) {
+    long double       const size    []    = {(end[0] / 2.0L) - (begin[0] / 2.0L), (end[1] / 2.0L) - (begin[1] / 2.0L)};
+    long double       const midpoint[]    = {(end[0] / 2.0L) + (begin[0] / 2.0L), (end[1] / 2.0L) + (begin[1] / 2.0L)};
+    long double       const angle   []    = {atan(begin[0] - midpoint[0], begin[1] - midpoint[1]), atan(end[0] - midpoint[0], end[1] - midpoint[1])};
+    long double       const interpolation = angle[0] + (percent * (angle[1] - angle[0]));
+    _<long double[2]> const value         = {midpoint[0] + (size[0] * cos(interpolation)), midpoint[1] + (size[1] * sin(interpolation))};
+
+    return value;
   }
 
   // … → compute_eta(…)
@@ -582,14 +928,12 @@ namespace {
 
   // … → compute_nan() - Non-numeral floating-point representative i.e. NaN
   long double compute_nan() {
-    #if SUPPORTS_IEEE754_FLOAT
-      if (SUPPORTS_IEEE754_FLOAT) {
-        long double   nan;
-        unsigned char nan_layout[sizeof(long double)];
+    if (SUPPORTS_IEEE754_FLOAT) {
+      unsigned char layout[sizeof(long double)];
+      long double   nan = 0.0L;
 
-        return *static_cast<long double*>(std::memcpy(&nan, std::memset(nan_layout, UCHAR_MAX, sizeof(long double)), sizeof(long double))); // → `nan` or `std::launder(…)`
-      }
-    #endif
+      return *static_cast<long double*>(std::memcpy(&nan, std::memset(layout, UCHAR_MAX, sizeof(long double)), sizeof(long double))); // → `nan` or `*std::launder(…)`
+    }
 
     // … → Attempt to avoid a signaling NaN
     long double const volatile zero = 0.0L;
@@ -717,7 +1061,7 @@ namespace {
 
   // … → countof(𝙭) - Number of denary digits representing 𝙭
   std::size_t countof(intmax_t const number) {
-    return countof(abs(number));
+    return countof(static_cast<uintmax_t>(abs(number)));
   }
 
   std::size_t countof(long double const number) {
@@ -985,7 +1329,7 @@ namespace {
   }
 
   // … → fract(𝙭) - Split value of 𝙭 as its numerator and denominator
-  fraction_t fract(long double const number) {
+  _<long double[2]> fract(long double const number) {
     long double const characteristics = trunc(number);
     long double       denominator     = 1.0L;
     long double const mantissa        = number - characteristics;
@@ -1006,7 +1350,7 @@ namespace {
       numerator   = round(denominator * mantissa) + (denominator * characteristics);
     }
 
-    fraction_t const fraction = {numerator, denominator};
+    _<long double[2]> const fraction = {numerator, denominator};
     return fraction;
   }
 
@@ -1124,7 +1468,7 @@ namespace {
       return 0;
     }
 
-    power = ipow(abs(base), abs(exponent), representable);
+    power = ipow(static_cast<uintmax_t>(abs(base)), static_cast<uintmax_t>(abs(exponent)), representable);
 
     if (power > abs(signedness ? INTMAX_MIN : INTMAX_MAX)) {
       if (representable)
@@ -1169,7 +1513,7 @@ namespace {
         }
 
         exponent -= count;
-        power    *= multiplier * (count == 1.0L and sign(base) == -1 ? -1.0L : +1.0L);
+        power    *= multiplier * (count == 1.0L and sign(base, +1) != -1 ? +1.0L : -1.0L);
       }
     }
 
@@ -1212,7 +1556,7 @@ namespace {
       return 0;
     }
 
-    root = iroot(abs(base), abs(exponent), representable);
+    root = iroot(static_cast<uintmax_t>(abs(base)), static_cast<uintmax_t>(abs(exponent)), representable);
 
     return root and sign(exponent) == -1 ? 1u / root : root;
   }
@@ -1312,7 +1656,7 @@ namespace {
   }
 
   // … → jsf(𝙭) - Jenkins' Small Fast pseudo-random number generator with seed 𝙭 (FLEA++ or Fast Little Encryption Algorithm, `http://burtleburtle.net/bob/rand/smallprng.html`)
-  jsfstate_t jsf(std::size_t const width, uintmax_t const (&seeded)[4]) {
+  _<uintmax_t[4]> jsf(std::size_t const width, uintmax_t const (&seeded)[4]) {
     switch (width) {
       case 8u : return jsf(width, seeded, 1u,  4u,  0u);  //
       case 16u: return jsf(width, seeded, 13u, 8u,  0u);  //
@@ -1320,23 +1664,23 @@ namespace {
       case 64u: return jsf(width, seeded, 7u,  13u, 37u); // → (39u, 11u, 0u)
     }
 
-    jsfstate_t const state = {};
+    _<uintmax_t[4]> const state = {};
     return state;
   }
 
-  jsfstate_t jsf(std::size_t const width, uintmax_t const (&seeded)[4], std::size_t const shiftA, std::size_t const shiftB, std::size_t const shiftC) {
+  _<uintmax_t[4]> jsf(std::size_t const width, uintmax_t const (&seeded)[4], std::size_t const shiftA, std::size_t const shiftB, std::size_t const shiftC) {
     uintmax_t  const value = seeded[0] - ((seeded[1] << shiftA) | (seeded[1] >> (width - shiftA)));
-    jsfstate_t const state = {
+    _<uintmax_t[4]> const state = {
       seeded [1] ^ ((seeded[2] << shiftB) | (seeded[2] >> (width - shiftB))),
       seeded [2] + ((seeded[3] << shiftC) | (seeded[3] >> (width - shiftC))),
       seeded [3] + value,
       state._[0] + value
     };
 
-    return state; // → Result in `jsfstate_t[3]`
+    return state;
   }
 
-  jsfstate_t jsf(std::size_t const width, uintmax_t const seed) {
+  _<uintmax_t[4]> jsf(std::size_t const width, uintmax_t const seed) {
     uintmax_t const mask        = maxwidthof(width);
     uintmax_t       substate[4] = {0xF1EA5EEDu, seed, seed, seed};
 
@@ -1354,13 +1698,13 @@ namespace {
     }
 
     // …
-    jsfstate_t const state = {substate[0], substate[1], substate[2], substate[3]};
+    _<uintmax_t[4]> const state = {substate[0], substate[1], substate[2], substate[3]};
     return state;
   }
 
   // … → lcm(𝙭, 𝙮) - Least common multiple of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Least_common_multiple#Calculation`)
   intmax_t lcm(intmax_t const integerA, intmax_t const integerB) {
-    return integerA + integerB ? min(abs(integerA), abs(integerB)) * (max(abs(integerA), abs(integerB)) / gcd(integerA, integerB)) : 0;
+    return integerA + integerB ? min(static_cast<uintmax_t>(abs(integerA)), static_cast<uintmax_t>(abs(integerB))) * (max(static_cast<uintmax_t>(abs(integerA)), static_cast<uintmax_t>(abs(integerB))) / gcd(integerA, integerB)) : 0;
   }
 
   long double lcm(long double const integerA, long double const integerB) {
@@ -1724,25 +2068,30 @@ namespace {
   }
 
   signed char sign(long double const number, signed char const signedness) {
-    #if SUPPORTS_IEEE754_FLOAT
-      if (SUPPORTS_IEEE754_FLOAT) {
-        unsigned char layout[sizeof(long double)];
+    if (SUPPORTS_IEEE754_FLOAT) {
+      std::ptrdiff_t    index = 0;
+      unsigned char     layout[sizeof(long double)];
+      unsigned char     mask          = 0x00u;
+      long double const signs     [2] = {+1.0L, -1.0L};
+      unsigned char     sublayouts[2][sizeof(long double)];
 
-        // …
-        if (0.0L != number) {
-          unsigned char const (&sublayout)[sizeof(long double)] = static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &static_cast<long double const&>(-1.0L), sizeof(long double)));
+      // … -> Assume only a single bit represents signedness
+      if (0.0L == number and 0 != signedness)
+      return signedness;
 
-          // …
-          if (0x00u != sublayout[0])
-          return 0x00u != static_cast<unsigned char*>(std::memcpy(layout, &number, sizeof(long double)))[0] ? -1 : +1;
+      for (unsigned char const *iterators[2] = {
+        *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(sublayouts[0], signs + 0, sizeof(long double))) + sizeof(long double),
+        *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(sublayouts[1], signs + 1, sizeof(long double))) + sizeof(long double)
+      }; iterators[0] != sublayouts[0] and iterators[1] != sublayouts[1]; )
+      if (*--iterators[0] != *--iterators[1]) {
+        index = (iterators[0] - sublayouts[0]) | (iterators[1] - sublayouts[1]);
+        mask  = *(iterators[0]) ^ *(iterators[1]);
 
-          if (0x00u != sublayout[sizeof(long double) - 1u])
-          return 0x00u != static_cast<unsigned char*>(std::memcpy(layout, &number, sizeof(long double)))[sizeof(long double) - 1u] ? -1 : +1;
-        }
-
-        return signedness;
+        break;
       }
-    #endif
+
+      return (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index] & mask ? -1 : +1;
+    }
 
     return is_nan(number) ? signedness : number > -0.0L ? +1 : number < +0.0L ? -1 : signedness;
   }
@@ -1989,9 +2338,19 @@ namespace {
 
     return (value % end) + begin;
   }
+
+  /* ... */
+  _<unsigned char[sizeof(long double)]> bytesof(long double const number) {
+    // frexp?
+    (void) number;
+
+    // …
+    _<unsigned char[sizeof(long double)]> const bytes = {};
+    return bytes;
+  }
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  /* TODO - Consider special functions and other mathematics constants (like an optimized √2) */
+  /* TODO - Consider special functions and other mathematics constants (like an optimized √2), also bytesof(long double) */
 }
