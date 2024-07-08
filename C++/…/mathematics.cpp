@@ -33,6 +33,7 @@
 #define LDBL_MIN        __LDBL_MIN__
 #include <bitset>
 #include <iostream>
+#include <new>
 
 /* …
     → Functions evaluate denary numbers (comprised of bits) and only handle values within their expected domains: edge cases like NaN are not considered unless otherwise
@@ -75,43 +76,43 @@ namespace {
   intmax_t          bitceil                (intmax_t,         bool* = NULL);
   long double       bitceil                (long double,      bool* = NULL);
   uintmax_t         bitceil                (uintmax_t,        bool* = NULL);
-  intmax_t          bitclear               (intmax_t,    std::size_t);
-  long double       bitclear               (long double, std::size_t);
-  uintmax_t         bitclear               (uintmax_t,   std::size_t);
+  intmax_t          bitclear               (intmax_t,           std::size_t);
+  long double       bitclear               (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitclear               (uintmax_t,          std::size_t);
   intmax_t          bitflip                (intmax_t);
-  long double       bitflip                (long double);
+  long double       bitflip                (long double const&, unsigned char (*)[sizeof(long double)] = NULL);
   uintmax_t         bitflip                (uintmax_t);
-  intmax_t          bitflip                (intmax_t,    std::size_t);
-  long double       bitflip                (long double, std::size_t);
-  uintmax_t         bitflip                (uintmax_t,   std::size_t);
-  intmax_t          bitfloor               (intmax_t,         bool* = NULL);
-  long double       bitfloor               (long double,      bool* = NULL);
-  uintmax_t         bitfloor               (uintmax_t,        bool* = NULL);
+  intmax_t          bitflip                (intmax_t,           std::size_t);
+  long double       bitflip                (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitflip                (uintmax_t,          std::size_t);
+  intmax_t          bitfloor               (intmax_t,    bool* = NULL);
+  long double       bitfloor               (long double, bool* = NULL);
+  uintmax_t         bitfloor               (uintmax_t,   bool* = NULL);
   std::size_t       bitpopcount            (intmax_t);
-  std::size_t       bitpopcount            (long double);
+  std::size_t       bitpopcount            (long double const&);
   std::size_t       bitpopcount            (uintmax_t);
-  intmax_t          bitrotleft             (intmax_t,    std::size_t = 1u);
-  long double       bitrotleft             (long double, std::size_t = 1u);
-  uintmax_t         bitrotleft             (uintmax_t,   std::size_t = 1u);
-  intmax_t          bitrotright            (intmax_t,    std::size_t = 1u);
-  long double       bitrotright            (long double, std::size_t = 1u);
-  uintmax_t         bitrotright            (uintmax_t,   std::size_t = 1u);
-  intmax_t          bitset                 (intmax_t,    std::size_t);
-  long double       bitset                 (long double, std::size_t);
-  uintmax_t         bitset                 (uintmax_t,   std::size_t);
-  intmax_t          bitshiftleft           (intmax_t,    std::size_t = 1u);
-  long double       bitshiftleft           (long double, std::size_t = 1u);
-  uintmax_t         bitshiftleft           (uintmax_t,   std::size_t = 1u);
-  intmax_t          bitshiftright          (intmax_t,    std::size_t = 1u);
-  long double       bitshiftright          (long double, std::size_t = 1u);
-  uintmax_t         bitshiftright          (uintmax_t,   std::size_t = 1u);
+  intmax_t          bitrotleft             (intmax_t,           std::size_t = 1u);
+  long double       bitrotleft             (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitrotleft             (uintmax_t,          std::size_t = 1u);
+  intmax_t          bitrotright            (intmax_t,           std::size_t = 1u);
+  long double       bitrotright            (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitrotright            (uintmax_t,          std::size_t = 1u);
+  intmax_t          bitset                 (intmax_t,           std::size_t);
+  long double       bitset                 (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitset                 (uintmax_t,          std::size_t);
+  intmax_t          bitshiftleft           (intmax_t,           std::size_t = 1u);
+  long double       bitshiftleft           (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitshiftleft           (uintmax_t,          std::size_t = 1u);
+  intmax_t          bitshiftright          (intmax_t,           std::size_t = 1u);
+  long double       bitshiftright          (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  uintmax_t         bitshiftright          (uintmax_t,          std::size_t = 1u);
   intmax_t          bitswap                (intmax_t);
-  long double       bitswap                (long double);
+  long double       bitswap                (long double const&, unsigned char (*)[sizeof(long double)] = NULL);
   uintmax_t         bitswap                (uintmax_t);
   std::size_t       bitwidth               (uintmax_t);
-  intmax_t          cbrt                   (intmax_t,         bool* = NULL);
-  long double       cbrt                   (long double,      bool* = NULL);
-  uintmax_t         cbrt                   (uintmax_t,        bool* = NULL);
+  intmax_t          cbrt                   (intmax_t,    bool* = NULL);
+  long double       cbrt                   (long double, bool* = NULL);
+  uintmax_t         cbrt                   (uintmax_t,   bool* = NULL);
   long double       ceil                   (long double);
   intmax_t          clamp                  (intmax_t,    intmax_t,    intmax_t);
   long double       clamp                  (long double, long double, long double);
@@ -563,12 +564,18 @@ namespace {
     return number & ~(1u << index);
   }
 
-  long double bitclear(long double number, std::size_t const index) {
-    unsigned char layout[sizeof(long double)];
+  long double bitclear(long double const& number, std::size_t const index, unsigned char (*const representation)[sizeof(long double)]) {
+    unsigned char cleared[sizeof(long double)];
+    unsigned char layout [sizeof(long double)];
 
     // …
     (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index / CHAR_BIT] &= ~(1u << (index % CHAR_BIT));
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(cleared, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitclear(uintmax_t const number, std::size_t const index) {
@@ -580,14 +587,19 @@ namespace {
     return ~number;
   }
 
-  long double bitflip(long double number) {
-    unsigned char layout[sizeof(long double)];
+  long double bitflip(long double const& number, unsigned char (*const representation)[sizeof(long double)]) {
+    unsigned char flipped[sizeof(long double)];
+    unsigned char layout [sizeof(long double)];
 
     // …
     for (unsigned char *iterator = *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))), *const end = iterator + sizeof(long double); end != iterator; ++iterator)
     *iterator = ~*iterator;
 
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(flipped, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitflip(uintmax_t const number) {
@@ -599,12 +611,18 @@ namespace {
     return number ^ (1u << index);
   }
 
-  long double bitflip(long double number, std::size_t const index) {
-    unsigned char layout[sizeof(long double)];
+  long double bitflip(long double const& number, std::size_t const index, unsigned char (*const representation)[sizeof(long double)]) {
+    unsigned char flipped[sizeof(long double)];
+    unsigned char layout [sizeof(long double)];
 
     // …
     (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index / CHAR_BIT] ^= ~(1u << (index % CHAR_BIT));
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(flipped, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitflip(uintmax_t const number, std::size_t const index) {
@@ -653,7 +671,7 @@ namespace {
     return count;
   }
 
-  std::size_t bitpopcount(long double number) {
+  std::size_t bitpopcount(long double const& number) {
     std::size_t   count = 0u;
     unsigned char layout[sizeof(long double)];
 
@@ -681,12 +699,18 @@ namespace {
     return number | (1u << index);
   }
 
-  long double bitset(long double number, std::size_t const index) {
+  long double bitset(long double const& number, std::size_t const index, unsigned char (*const representation)[sizeof(long double)]) {
     unsigned char layout[sizeof(long double)];
+    unsigned char set   [sizeof(long double)];
 
     // …
     (*static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))))[index / CHAR_BIT] |= 1u << (index % CHAR_BIT);
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(set, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitset(uintmax_t const number, std::size_t const index) {
@@ -696,28 +720,43 @@ namespace {
   // intmax_t    bitrotleft   (intmax_t,    std::size_t = 1u);
   // long double bitrotleft   (long double, std::size_t = 1u);
   // uintmax_t   bitrotleft   (uintmax_t,   std::size_t = 1u);
-  // intmax_t    bitrotright  (intmax_t,    std::size_t = 1u);
-  // long double bitrotright  (long double, std::size_t = 1u);
 
   // … → bitrotright(𝙭, 𝙣) - Rightward bitwise rotation of 𝙭
   intmax_t bitrotright(intmax_t const number, std::size_t const count) {
-    return bitshiftright(number) | ((number & maxwidthof(count)) << ((CHAR_BIT * sizeof(intmax_t)) - count));
+    return bitshiftright(number, count % (CHAR_BIT * sizeof(intmax_t))) | ((number & maxwidthof(count % (CHAR_BIT * sizeof(intmax_t)))) << ((CHAR_BIT * sizeof(intmax_t)) - (count % (CHAR_BIT * sizeof(intmax_t)))));
   }
 
-  long double bitrotright(long double number, std::size_t const count) {
-    unsigned char layout[sizeof(long double)];
+  long double bitrotright(long double const& number, std::size_t const count, unsigned char (*const representation)[sizeof(long double)]) {
+    unsigned char         layouts[2][sizeof(long double)];
+    std::size_t const     offset                          = (count % (CHAR_BIT * sizeof(long double))) / CHAR_BIT;
+    unsigned char         rotated   [sizeof(long double)] = {};
+    unsigned char (*const sublayout)[sizeof(long double)] = static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layouts[0], &number, sizeof(long double)));
+    std::size_t const     suboffset                       = (count % (CHAR_BIT * sizeof(long double))) % CHAR_BIT;
 
     // …
-    (void) layout;
-    (void) number;
-    (void) count;
-    return 0.0L;
-    // layout[count / CHAR_BIT]
-    // std::memcpy(std::memcpy(layout, &static_cast<long double const&>(bitshiftright(number, count)), sizeof(long double)), )
+    if (0u == count % (CHAR_BIT * sizeof(long double)))
+    return number;
+
+    (void) bitshiftright(number, count % (CHAR_BIT * sizeof(long double)), layouts + 1);
+    layouts[1][offset] <<= suboffset;
+
+    for (unsigned char carry = (*sublayout)[sizeof(long double) - (offset + 1u)] & maxwidthof(suboffset), *iterator = *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layouts[1], *sublayout + (sizeof(long double) - (0u == offset ? 1u : offset)), offset)) + offset; ; --iterator) {
+      unsigned char const subcarry = iterator != layouts[1] ? iterator[-1] & maxwidthof(suboffset) : carry;
+
+      // …
+      *iterator = (*iterator >> suboffset) | (subcarry << (CHAR_BIT - suboffset));
+      if (iterator == layouts[1]) break;
+    }
+
+    if (representation)
+    (void) std::memcpy(*representation, layouts[1], sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(rotated, layouts[1], sizeof(long double))); // → `*std::launder(…)`
   }
 
-  uintmax_t bitrotright(uintmax_t const number, std::size_t const count) {
-    return bitshiftright(number) | ((number & maxwidthof(count)) << ((CHAR_BIT * sizeof(uintmax_t)) - count));
+  uintmax_t bitrotright(uintmax_t const number, std::size_t count) {
+    return bitshiftright(number, count % (CHAR_BIT * sizeof(uintmax_t))) | ((number & maxwidthof(count % (CHAR_BIT * sizeof(uintmax_t)))) << ((CHAR_BIT * sizeof(uintmax_t)) - (count % (CHAR_BIT * sizeof(uintmax_t)))));
   }
 
   // … → bitshiftleft(𝙭, 𝙣) - Leftward bitwise shift of 𝙭
@@ -725,14 +764,15 @@ namespace {
     return number << count;
   }
 
-  long double bitshiftleft(long double number, std::size_t const count) {
+  long double bitshiftleft(long double const& number, std::size_t const count, unsigned char (*const representation)[sizeof(long double)]) {
     unsigned char     layout[sizeof(long double)];
-    std::size_t const offset    = count / CHAR_BIT;
+    std::size_t const offset = count / CHAR_BIT;
+    unsigned char     shifted[sizeof(long double)];
     std::size_t const suboffset = count % CHAR_BIT;
 
     // …
     if (count >= CHAR_BIT * sizeof(long double))
-    return 0.0L;
+    return 0.0L; // TODO return actual nil
 
     for (unsigned char *iterators[2] = {
       *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))),
@@ -746,7 +786,11 @@ namespace {
       *(iterators[1] + 0) |= *(iterators[1] + 1) & (maxwidthof(suboffset) << (CHAR_BIT - suboffset));
     }
 
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(shifted, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitshiftleft(uintmax_t const number, std::size_t const count) {
@@ -758,14 +802,15 @@ namespace {
     return number >> count;
   }
 
-  long double bitshiftright(long double number, std::size_t const count) {
+  long double bitshiftright(long double const& number, std::size_t const count, unsigned char (*const representation)[sizeof(long double)]) {
     unsigned char     layout[sizeof(long double)];
-    std::size_t const offset    = count / CHAR_BIT;
+    std::size_t const offset = count / CHAR_BIT;
+    unsigned char     shifted[sizeof(long double)];
     std::size_t const suboffset = count % CHAR_BIT;
 
     // …
     if (count >= CHAR_BIT * sizeof(long double))
-    return 0.0L;
+    return 0.0L; // TODO return actual nil
 
     for (unsigned char *iterators[2] = {
       *static_cast<unsigned char (*)[sizeof(long double)]>(std::memcpy(layout, &number, sizeof(long double))),
@@ -779,7 +824,11 @@ namespace {
       *(iterators[1] - 0) |= (*(iterators[1] - 1) & maxwidthof(CHAR_BIT - suboffset)) << (CHAR_BIT - suboffset);
     }
 
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(shifted, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitshiftright(uintmax_t const number, std::size_t const count) {
@@ -797,8 +846,9 @@ namespace {
     return swapped;
   }
 
-  long double bitswap(long double number) {
-    unsigned char layout[sizeof(long double)];
+  long double bitswap(long double const& number, unsigned char (*const representation)[sizeof(long double)]) {
+    unsigned char layout [sizeof(long double)];
+    unsigned char swapped[sizeof(long double)];
 
     // …
     for (unsigned char *iterators[2] = {
@@ -817,7 +867,11 @@ namespace {
       *(iterators[index]) = swapped[index];
     }
 
-    return *static_cast<long double*>(std::memcpy(&number, layout, sizeof(long double))); // → `number` or `*std::launder(…)`
+    if (representation)
+    (void) std::memcpy(*representation, layout, sizeof(long double));
+
+    // …
+    return *static_cast<long double*>(std::memcpy(swapped, layout, sizeof(long double))); // → `*std::launder(…)`
   }
 
   uintmax_t bitswap(uintmax_t number) {
@@ -2352,5 +2406,14 @@ namespace {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
+  long double number = 0.0L;
+
+  // ...
+  for (unsigned char *iterator = *static_cast<unsigned char (*)[sizeof(long double)]>(std::memmove(&number, &number, sizeof(long double))); iterator != reinterpret_cast<unsigned char*>(&number) + sizeof(long double); ++iterator)
+  *iterator = (iterator - reinterpret_cast<unsigned char*>(&number)) | (1u << (CHAR_BIT - 1u));
+
+  (void) number;
+  std::printf("%Lf %Lf" "\r\n", 65536.0L, bitshiftright(65536.0L, 2u));
+  // bitrotright(number, (CHAR_BIT * 1u) + 3u);
   /* TODO - Consider special functions and other mathematics constants (like an optimized √2), also bytesof(long double) */
 }
