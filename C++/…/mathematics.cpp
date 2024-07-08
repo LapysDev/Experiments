@@ -31,9 +31,6 @@
 #define LDBL_MAX_10_EXP __LDBL_MAX_10_EXP__
 #define LDBL_MAX_EXP    __LDBL_MAX_EXP__
 #define LDBL_MIN        __LDBL_MIN__
-#include <bitset>
-#include <iostream>
-#include <new>
 
 /* …
     → Functions evaluate denary numbers (comprised of bits) and only handle values within their expected domains: edge cases like NaN are not considered unless otherwise
