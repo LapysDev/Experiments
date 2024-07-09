@@ -258,7 +258,6 @@ namespace {
   /* TODO
       Mathematical constants `https://en.wikipedia.org/wiki/List_of_mathematical_constants`
       Physics solvers?
-      Special functions like `beta(…)` or `bytesof(long double)`
   */
   long double                           alaguerre              (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre
   long double                           alegendre              (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre
