@@ -22,6 +22,7 @@
 # include <limits>
 # define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 #endif
+#include <cmath>
 #include <cstdio>
 
 #define FLT_RADIX       __FLT_RADIX__
@@ -177,6 +178,7 @@ namespace {
   long double                           ifactorial                  (long double, bool* = NULL);
   uintmax_t                             ifactorial                  (uintmax_t,   bool* = NULL);
   long double                           imaxof                      ();
+  long double                           integrate                   (long double (*)(long double, long double const[]), long double, long double, long double const[] = NULL, std::size_t = 1536u);
   intmax_t                              ipow                        (intmax_t,    intmax_t,    bool* = NULL);
   long double                           ipow                        (long double, long double, bool* = NULL);
   uintmax_t                             ipow                        (uintmax_t,   uintmax_t,   bool* = NULL);
@@ -259,21 +261,16 @@ namespace {
       Mathematical constants `https://en.wikipedia.org/wiki/List_of_mathematical_constants`
       Physics solvers?
   */
-  C       // Speed of Light
-  CBRT2   //
-  CBRT3   //
-  DDRT2   // 12 root of 2
-  HERM    // Second Hermite constant
-  G       // Gravitational constant
-  LN2     //
-  ONE     //
-  PLANCK  // Planck constant
-  RPLANCK // Reduced Planck constant
-  SQRT2   //
-  SQRT3   //
-  SQRT5   //
-  ZERO    //
-
+  // CBRT2   //
+  // CBRT3   //
+  // DDRT2   // 12 root of 2
+  // HERM    // Second Hermite constant
+  // LN2     //
+  // ONE     //
+  // SQRT2   //
+  // SQRT3   //
+  // SQRT5   //
+  // ZERO    //
   long double                           agm                         (long double, long double);                           // TODO (Lapys) → https://en.wikipedia.org/wiki/Arithmetic%E2%80%93geometric_mean
   long double                           alaguerre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre
   long double                           alegendre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre
@@ -289,8 +286,9 @@ namespace {
   long double                           cbessel_irr                 (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_k
   long double                           cbessel_reg                 (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_i
   long double                           cneumannn                   (std::size_t,              long double);                                    // TODO (Lapys) → `cbessel(2u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_neumann
-  _<long double[2]>                     clamp                       (long double const (&)[2], long double const);                              // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.ClampMagnitude.html
-  _<long double[3]>                     clamp                       (long double const (&)[3], long double const);                              // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.ClampMagnitude.html
+  _<long double[2]>                     clamp                       (long double const (&)[2], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.ClampMagnitude.html
+  _<long double[3]>                     clamp                       (long double const (&)[3], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.ClampMagnitude.html
+  long double                           complete_ellint             (std::size_t, long double, ...);                                            // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_3
   long double                           compute_apéry               (std::size_t = 0u, bool* = NULL);                                           //
   long double                           compute_artin               (std::size_t = 0u, bool* = NULL);                                           //
   long double                           compute_bernstein           (std::size_t = 0u, bool* = NULL);                                           //
@@ -365,7 +363,7 @@ namespace {
   _<long double[2]>                     dot                         (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
   _<long double[3]>                     dot                         (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Dot.html
   _<long double[4]>                     dot                         (long double const (&)[4], long double const (&)[4]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Dot.html
-  long double                           ellint                      (std::size_t, bool, long double, ...);                                      // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_3, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_3
+  long double                           ellint                      (std::size_t, long double, long double, ...);                               // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_3
   long double                           expint                      (long double);                                                              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/expint
   long double                           gmean                       (long double, ...);                                                         // TODO (Lapys) → https://en.wikipedia.org/wiki/Geometric_mean
   long double                           hermite                     (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/hermite
@@ -520,9 +518,15 @@ namespace {
   }
 
   // … → atan(𝙭) - Arc tangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Infinite_series`, `https://en.wikipedia.org/wiki/Atan2#Definition_and_computation`)
-  long double atan(long double const number, std::size_t const iterationCount, bool* const representable) {
+  long double atan(long double const angle, std::size_t const iterationCount, bool* const representable) {
     std::size_t count = iterationCount;
     long double ratio = 0.0L; // → Adjacent ÷ Opposite
+
+    // …
+    if (abs(angle) > 1.0L) {
+      ratio = atan(1.0L / angle);
+      return (+compute_eta() * sign(ratio, +1)) - ratio;
+    }
 
     // … → `Σₙ₌₀(2²ⁿ(n!)² ÷ (2n + 1)!)(𝙭²ⁿ⁺¹ ÷ (1 + 𝙭²)ⁿ⁺¹)`
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
@@ -534,8 +538,8 @@ namespace {
       iteration[0][0] = multiply  (ipow(2.0L, index * 2.0L, &subrepresentable), ipow(ifactorial(index, &subrepresentable), 2.0L, &subrepresentable), &subrepresentable);
       iteration[0][1] = ifactorial((index * 2.0L) + 1.0L,                                                                                            &subrepresentable);
 
-      iteration[1][0] = ipow(number,                                       (index * 2.0L) + 1.0L, &subrepresentable);
-      iteration[1][1] = ipow(ipow(number, 2.0L, &subrepresentable) + 1.0L, (index * 1.0L) + 1.0L, &subrepresentable);
+      iteration[1][0] = ipow(angle,                                       (index * 2.0L) + 1.0L, &subrepresentable);
+      iteration[1][1] = ipow(ipow(angle, 2.0L, &subrepresentable) + 1.0L, (index * 1.0L) + 1.0L, &subrepresentable);
 
       // …
       preiteration    += multiply(divide(iteration[0][0], iteration[0][1], &subrepresentable), divide(iteration[1][0], iteration[1][1], &subrepresentable), &subrepresentable);
@@ -567,12 +571,12 @@ namespace {
 
         // …
         if (not iterationCount or subrepresentable)
-        return ratio + (compute_pi(iterationCount) * sign(y, +1));
+        return ratio + (compute_pi() * sign(y, +1));
       } break;
 
       case 0:
         if (0.0L != y and sign(y))
-        return 0.0L + (compute_eta(iterationCount) * sign(y, 0));
+        return 0.0L + (compute_eta() * sign(y, 0));
     }
 
     if (representable)
@@ -1199,7 +1203,7 @@ namespace {
       pi = preiteration;
     }
 
-    return 1.0L / (pi * 12.0L);
+    return 1.0L / (abs(pi) * 12.0L);
   }
 
   // … → compute_tau(…) - Circle constant
@@ -1207,10 +1211,20 @@ namespace {
     return compute_pi(iterationCount, representable) * 2.00L;
   }
 
-  // … → cos(𝙭) - Cosine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine`)
-  long double cos(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
-    long double ratio = 0.0L; // → Adjacent ÷ Hypotenuse
+  // … → cos(𝙭) - Cosine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine#Series_definitions`)
+  long double cos(long double angle, std::size_t const iterationCount, bool* const representable) {
+    std::size_t       count = iterationCount;
+    long double const pi    = compute_pi(), eta = pi / 2.00L, tau = pi * 2.00L;
+    long double       ratio = 0.0L; // → Adjacent ÷ Hypotenuse
+
+    // …
+    angle = remainder(angle, tau);
+
+    if      (angle > +pi) angle -= tau;
+    else if (angle < -pi) angle += tau;
+
+    if      (angle > +eta) angle = +pi - angle;
+    else if (angle < -eta) angle = -pi - angle;
 
     // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ) ÷ (2n)!)`
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
@@ -1617,15 +1631,15 @@ namespace {
 
   // … → icbrt(𝙭) - Integer cubed root of 𝙭
   intmax_t icbrt(intmax_t const number, bool* const representable) {
-    return root(number, 3, representable);
+    return iroot(number, 3, representable);
   }
 
   long double icbrt(long double const number, bool* const representable) {
-    return root(number, 3.0L, representable);
+    return iroot(number, 3.0L, representable);
   }
 
   uintmax_t icbrt(uintmax_t const number, bool* const representable) {
-    return root(number, 3u, representable);
+    return iroot(number, 3u, representable);
   }
 
   // … → ifactorial(𝙭) - Factorial of integer 𝙭
@@ -1681,6 +1695,18 @@ namespace {
     return (maximum - 0.0L) + (maximum - 1.0L);
   }
 
+  // … → integrate(𝙛, 𝙖, 𝙗, …, 𝙣) → Numerical integration of ∫ₐᵇ 𝙛(…)𝙙𝙭 using a closed Newton-Cotes quadrature: the composite Simpson's 1/3 rule (`https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_1/3_rule`)
+  long double integrate(long double (*const integrand)(long double, long double const[]), long double const begin, long double const end, long double const values[], std::size_t precisionCount /* → Must be even and non-zero */) {
+    long double       integrated = (*integrand)(begin, values) + (*integrand)(end, values);
+    long double const width      = (end - begin) / precisionCount; // → 𝙝
+
+    // … → `⅓𝙝(𝙛(𝙖) + 4Σᵢ₌₁ⁿᐟ²𝙛(𝙭₂ᵢ₋₁) + 2Σᵢ₌₁ⁿᐟ²⁻¹𝙛(𝙭₂ᵢ) + 𝙛(𝙗))`
+    while (--precisionCount)
+    integrated += (*integrand)(begin + (precisionCount * width), values) * (parity(precisionCount) ? 4.0L : 2.0L);
+
+    return integrated * (width / 3.0L);
+  }
+
   // … → ipow(𝙭, 𝙣) - Integer 𝙣th power of 𝙭
   intmax_t ipow(intmax_t const base, intmax_t const exponent, bool* const representable) {
     uintmax_t      power      = 1u;
@@ -1712,21 +1738,27 @@ namespace {
     if (exponent) {
       exponent = abs(exponent);
 
-      for (struct { long double count; struct { long double values[LDBL_MAX_EXP]; std::size_t length; } multipliers; } iteration = {1.0L, {{abs(base)}, 1u}}; exponent; ) {
-        long double &count      = iteration.count;
-        long double  multiplier = iteration.multipliers.values[iteration.multipliers.length - 1u];
+      if (exponent == 1.0L)
+      return base;
 
-        // …
+      for (long double count = 1.0L, multiplier = abs(base); exponent; ) {
         if (count < exponent and multiplier < LDBL_MAX / multiplier) {
           count      *= 2.0L;
           multiplier *= multiplier;
-
-          iteration.multipliers.values[iteration.multipliers.length++] = multiplier; // → Memoize `multiplier` since `isqrt(…)` could otherwise be slower
         }
 
-        while (count > exponent) {
-          count     /= 2.0L;                                                              // → Could also be memoized with a `.counts` list analogous to `.multipliers`
-          multiplier = iteration.multipliers.values[--iteration.multipliers.length - 1u]; // → `isqrt(multiplier)`
+        if (count > exponent) {
+          while (count > exponent) {
+            count /= 2.0L;
+            for (long double submultiplier = multiplier, next = 1.0L; ; next = multiplier) {
+              multiplier = (next + (submultiplier / next)) / 2.0L;
+              if (LDBL_EPSILON >= abs(multiplier - next))
+              break;
+            }
+          }
+
+          if (count == 1.0L)
+          power *= sign(base, +1);
         }
 
         if (power > LDBL_MAX / multiplier) {
@@ -1737,7 +1769,7 @@ namespace {
         }
 
         exponent -= count;
-        power    *= multiplier * (count == 1.0L and sign(base, +1) != -1 ? +1.0L : -1.0L);
+        power    *= multiplier;
       }
     }
 
@@ -1835,15 +1867,15 @@ namespace {
 
   // … → isqrt(𝙭) - Integer squared root of 𝙭
   intmax_t isqrt(intmax_t const number, bool* const representable) {
-    return root(number, 3, representable);
+    return iroot(number, 2, representable);
   }
 
   long double isqrt(long double const number, bool* const representable) {
-    return root(number, 3.0L, representable);
+    return iroot(number, 2.0L, representable);
   }
 
   uintmax_t isqrt(uintmax_t const number, bool* const representable) {
-    return root(number, 3u, representable);
+    return iroot(number, 2u, representable);
   }
 
   // … → is_denormal(𝙭) - Determines if 𝙭 is a denormalized floating-point value
@@ -2204,11 +2236,14 @@ namespace {
       return 0.0L;
     }
 
+    if (1.0L == divisor)
+    return dividend - trunc(dividend);
+
     dividend = abs(dividend);
     divisor  = abs(divisor);
 
     if (dividend >= divisor) {
-      for (enum _ /* : unsigned char */ { EXPONENTIAL, MULTIPLICATIVE, LOGARITHMIC, ADDITIVE } operation = EXPONENTIAL; operation <= ADDITIVE; ) {
+      for (enum _ /* : unsigned char */ { EXPONENTIAL, MULTIPLICATIVE, LOGARITHMIC, ADDITIVE } operation = divisor == trunc(divisor) ? EXPONENTIAL : MULTIPLICATIVE; operation <= ADDITIVE; ) {
         long double subdivisor = 0.0L;
 
         // …
@@ -2339,10 +2374,20 @@ namespace {
     return divide(1.0L, cosh(angle, iterationCount, representable), representable);
   }
 
-  // … → sin(𝙭) - Sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine`)
-  long double sin(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
-    long double ratio = 0.0L; // → Opposite ÷ Hypotenuse
+  // … → sin(𝙭) - Sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine#Series_definitions`)
+  long double sin(long double angle, std::size_t iterationCount, bool* const representable) {
+    std::size_t       count = iterationCount;
+    long double const pi    = compute_pi(), eta = pi / 2.00L, tau = pi * 2.00L;
+    long double       ratio = 0.0L; // → Opposite ÷ Hypotenuse
+
+    // …
+    angle = remainder(angle, tau);
+
+    if      (angle > +pi) angle -= tau;
+    else if (angle < -pi) angle += tau;
+
+    if      (angle > +eta) angle = +pi - angle;
+    else if (angle < -eta) angle = -pi - angle;
 
     // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ⁺¹) ÷ (2n + 1)!)`
     for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
@@ -2486,7 +2531,7 @@ namespace {
     // …
     number = abs(number);
 
-    if (next(number) < 1.0L) {
+    if ((next(number) - number) < 1.0L) {
       long double counter    = 1.0L;
       long double truncation = 0.0L;
 
@@ -2579,6 +2624,55 @@ namespace {
   }
 }
 
+namespace {
+  /* ... */
+  // `https://en.wikipedia.org/wiki/Elliptic_integral`
+  // long double complete_ellint(std::size_t, long double const eccentricity, ... /* long double const characteristics */);
+
+  // … → ellint(𝙭, 𝙢, 𝙣) - 𝙭th-kind elliptic integral of 𝙢 (and possible characteristic 𝙣) (`https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_third_kind`)
+  long double ellint(std::size_t const kind, long double const eccentricity, long double const amplitude, ... /* long double const characteristics */) {
+    struct ellint {
+      static long double integrand(long double const theta, long double const eccentricity[]) {
+        return 1.0L / sqrt(1.0L - (ipow(*eccentricity, 2.0L, NULL) * ipow(sin(theta, 0u, NULL), 2.0L, NULL)));
+      }
+    };
+
+    (void) kind;
+    return integrate(&ellint::integrand, 0.0L, amplitude, &eccentricity, 1024u);
+
+    // long double integral = 0.0L;
+    //
+    // …
+    // switch (kind) {
+    //   // … → 𝙁(𝙭; 𝙠) = ∫₀ˣ(1 ÷ √(1 - 𝙩²)(1 - 𝙠²𝙩²))𝙙𝙩
+    //   // … → ∫₀ᶲ(d𝜽 ÷ √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
+    //   case 1u: {
+    //     for (long double delta = 0.0L; delta <= amplitude; delta += 0.01L) {
+    //       integral += delta / sqrt(1.0L - (ipow(eccentricity, 2.0L, NULL) * ipow(sin(delta, 69u, NULL), 2.0L, NULL)), NULL);
+    //       std::printf("[]: %Le -> %Le = %Le" "\r\n", delta, amplitude, integral);
+    //     }
+    //     // for (long double count = 0, delta = 0.00001L; count != 1024.0L; ++count += 0.00001L)
+    //     // integral += 1.0L / sqrt((1.0L - ipow(delta, 2.0L, NULL)) * (1.0L - (ipow(eccentricity, 2.0L, NULL) * ipow(delta, 2.0L, NULL))), NULL);
+    //   } break;
+    //
+    //   // … → 𝙀(𝙭; 𝙠) = ∫₀ˣ(√(1 - 𝙠²𝙩²) ÷ √(1 - 𝙩²))𝙙𝙩
+    //   case 2u: {} break;
+    //
+    //   // … → 𝜫(𝙣; 𝝋|𝙢) = ∫₀ˢⁱⁿᶲ(1 ÷ (1 - 𝙣𝙩²))(1 ÷ √(1 - 𝙢𝙩²)(1 - 𝙩²))𝙙𝙩
+    //   case 3u: {} break;
+    // }
+    //
+    // return integral;
+  }
+}
+
 /* Main */
+#include <cstdlib>
+#include <ctime>
+
 int main(int, char*[]) /* noexcept */ {
+  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.0L, +compute_eta()), ellint(1u, 0.0L, +compute_eta())); // +1.5708
+  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.0L, -compute_eta()), ellint(1u, 0.0L, -compute_eta())); // -1.5708
+  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.7L, 0.0L),           ellint(1u, 0.7L, 0.0L));           // 0
+  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.2L, 0.3L),           ellint(1u, 0.2L, 0.3L));           // 0.300177
 }

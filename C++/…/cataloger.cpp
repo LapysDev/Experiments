@@ -295,7 +295,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
   };
 
   /* ... */
-  std::size_t const  timeSize                          = ...;
+  std::size_t const  timeSize                          = 2048u;
   char              *userCatalogPath                   = NULL;                                                                        //
   std::size_t        userCatalogDirectoryLength        = 0u;                                                                          //
   bool               userCatalogDirectoryExtended      = false;                                                                       // ->> `userCatalogDirectory` has been automatically delimited
@@ -310,6 +310,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
   bool const         catalogPathSpecified              = count > 1;                                                                   //
   char const *const  catalogPath                       = catalogPathSpecified ? arguments[1] : std::tmpnam(static_cast<char*>(NULL)); //
   std::FILE         *catalogFile                       = NULL;                                                                        //
+
+  // UPDATE (Lapys) ->> Bug
+  userCatalogDirectory = ::new (std::nothrow) char[2048];
+  userCatalogDirectory[0] = '.';
+  userCatalogDirectory[1] = '\0';
 
   // ... ->> Track the specified directory which to create user catalogs
   for (char delimiter = '\0', *iterator = userCatalogDirectory; ; ++iterator) {
@@ -544,16 +549,16 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       // ... ->> Create a new user catalog, and open it within a new Windows Notepad instance
-      userCatalogPath[userCatalogDirectoryLength + 0u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 10) % 10];
-      userCatalogPath[userCatalogDirectoryLength + 1u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 1)  % 10];
-      userCatalogPath[userCatalogDirectoryLength + 2u]  = '-';
-      userCatalogPath[userCatalogDirectoryLength + 3u]  = "0123456789"[(catalogRecentDate.tm_mday / 10) % 10];
-      userCatalogPath[userCatalogDirectoryLength + 4u]  = "0123456789"[(catalogRecentDate.tm_mday / 1)  % 10];
-      userCatalogPath[userCatalogDirectoryLength + 5u]  = '-';
-      userCatalogPath[userCatalogDirectoryLength + 6u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 1000) % 10];
-      userCatalogPath[userCatalogDirectoryLength + 7u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 100)  % 10];
-      userCatalogPath[userCatalogDirectoryLength + 8u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 10)   % 10];
-      userCatalogPath[userCatalogDirectoryLength + 9u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 1)    % 10];
+      userCatalogPath[userCatalogDirectoryLength + 0u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 1000) % 10];
+      userCatalogPath[userCatalogDirectoryLength + 1u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 100)  % 10];
+      userCatalogPath[userCatalogDirectoryLength + 2u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 10)   % 10];
+      userCatalogPath[userCatalogDirectoryLength + 3u]  = "0123456789"[((catalogRecentDate.tm_year + 1900) / 1)    % 10];
+      userCatalogPath[userCatalogDirectoryLength + 4u]  = '-';
+      userCatalogPath[userCatalogDirectoryLength + 5u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 10) % 10];
+      userCatalogPath[userCatalogDirectoryLength + 6u]  = "0123456789"[((catalogRecentDate.tm_mon + 1) / 1)  % 10];
+      userCatalogPath[userCatalogDirectoryLength + 7u]  = '-';
+      userCatalogPath[userCatalogDirectoryLength + 8u]  = "0123456789"[(catalogRecentDate.tm_mday / 10) % 10];
+      userCatalogPath[userCatalogDirectoryLength + 9u]  = "0123456789"[(catalogRecentDate.tm_mday / 1)  % 10];
       userCatalogPath[userCatalogDirectoryLength + 10u] = '.';
       userCatalogPath[userCatalogDirectoryLength + 11u] = 'l';
       userCatalogPath[userCatalogDirectoryLength + 12u] = 'o';
