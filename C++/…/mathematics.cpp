@@ -51,23 +51,23 @@ namespace {
   uintmax_t                             abs                         (intmax_t);
   long double                           abs                         (long double);
   uintmax_t                             abs                         (uintmax_t);
-  long double                           acos                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           acosh                       (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           acot                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           acoth                       (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           acsc                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           acsch                       (long double,              std::size_t = 0u, bool* = NULL);
-  intmax_t                              add                         (intmax_t,    intmax_t,                      bool* = NULL);
-  long double                           add                         (long double, long double,                   bool* = NULL);
-  uintmax_t                             add                         (uintmax_t,   uintmax_t,                     bool* = NULL);
-  long double                           asec                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           asech                       (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           asin                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           asinh                       (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           atan                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           atan                        (long double, long double, std::size_t = 0u, bool* = NULL);
-  long double                           atanh                       (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           bézier                      (std::size_t, long double, ...);
+  long double                           acos                        (long double,              bool* = NULL);
+  long double                           acosh                       (long double,              bool* = NULL);
+  long double                           acot                        (long double,              bool* = NULL);
+  long double                           acoth                       (long double,              bool* = NULL);
+  long double                           acsc                        (long double,              bool* = NULL);
+  long double                           acsch                       (long double,              bool* = NULL);
+  intmax_t                              add                         (intmax_t,    intmax_t,    bool* = NULL);
+  long double                           add                         (long double, long double, bool* = NULL);
+  uintmax_t                             add                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double                           asec                        (long double,              bool* = NULL);
+  long double                           asech                       (long double,              bool* = NULL);
+  long double                           asin                        (long double,              bool* = NULL);
+  long double                           asinh                       (long double,              bool* = NULL);
+  long double                           atan                        (long double,              bool* = NULL);
+  long double                           atan                        (long double, long double, bool* = NULL);
+  long double                           atanh                       (long double,              bool* = NULL);
+  long double                           bézier                      (std::size_t, long double...);
   long double                           bézier_cubic                (long double, long double, long double, long double, long double);
   long double                           bézier_linear               (long double, long double, long double);
   long double                           bézier_quadratic            (long double, long double, long double, long double);
@@ -96,7 +96,7 @@ namespace {
   long double                           bitrotright                 (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
   uintmax_t                             bitrotright                 (uintmax_t,          std::size_t = 1u);
   intmax_t                              bitset                      (intmax_t,           std::size_t);
-  long double                           bitset                      (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
+  long double                           bitset                      (long double const&, std::size_t,      unsigned char (*)[sizeof(long double)] = NULL);
   uintmax_t                             bitset                      (uintmax_t,          std::size_t);
   intmax_t                              bitshiftleft                (intmax_t,           std::size_t = 1u);
   long double                           bitshiftleft                (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
@@ -105,33 +105,33 @@ namespace {
   long double                           bitshiftright               (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
   uintmax_t                             bitshiftright               (uintmax_t,          std::size_t = 1u);
   intmax_t                              bitswap                     (intmax_t);
-  long double                           bitswap                     (long double const&, unsigned char (*)[sizeof(long double)] = NULL);
+  long double                           bitswap                     (long double const&,                   unsigned char (*)[sizeof(long double)] = NULL);
   uintmax_t                             bitswap                     (uintmax_t);
   std::size_t                           bitwidth                    (uintmax_t);
   intmax_t                              cbrt                        (intmax_t,    bool* = NULL);
   long double                           cbrt                        (long double, bool* = NULL);
   uintmax_t                             cbrt                        (uintmax_t,   bool* = NULL);
   long double                           ceil                        (long double);
-  intmax_t                              clamp                       (intmax_t,    intmax_t,    intmax_t);
-  long double                           clamp                       (long double, long double, long double);
-  uintmax_t                             clamp                       (uintmax_t,   uintmax_t,   uintmax_t);
+  intmax_t                              clamp                       (intmax_t,    intmax_t,                 intmax_t);
+  long double                           clamp                       (long double, long double,              long double);
+  uintmax_t                             clamp                       (uintmax_t,   uintmax_t,                uintmax_t);
   _<long double[2]>                     clerp                       (long double, long double const (&)[2], long double const (&)[2]);
-  long double                           compute_eta                 (std::size_t = 0u, bool* = NULL);
-  long double                           compute_euler               (std::size_t = 0u, bool* = NULL);
+  long double                           compute_eta                 ();
+  long double                           compute_euler               ();
   long double                           compute_infinity            ();
   long double                           compute_nan                 ();
-  long double                           compute_pi                  (std::size_t = 0u,              bool* = NULL);
-  long double                           compute_tau                 (std::size_t = 0u,              bool* = NULL);
-  long double                           cos                         (long double, std::size_t = 0u, bool* = NULL);
-  long double                           cosh                        (long double, std::size_t = 0u, bool* = NULL);
-  long double                           cot                         (long double, std::size_t = 0u, bool* = NULL);
+  long double                           compute_pi                  ();
+  long double                           compute_tau                 ();
+  long double                           cos                         (long double, bool* = NULL);
+  long double                           cosh                        (long double, bool* = NULL);
+  long double                           cot                         (long double, bool* = NULL);
   std::size_t                           countof                     (intmax_t);
   std::size_t                           countof                     (long double);
   std::size_t                           countof                     (uintmax_t);
-  long double                           csc                         (long double, std::size_t = 0u, bool* = NULL);
-  intmax_t                              divide                      (intmax_t,    intmax_t,         bool* = NULL);
-  long double                           divide                      (long double, long double,      bool* = NULL);
-  uintmax_t                             divide                      (uintmax_t,   uintmax_t,        bool* = NULL);
+  long double                           csc                         (long double,              bool* = NULL);
+  intmax_t                              div                         (intmax_t,    intmax_t,    bool* = NULL);
+  long double                           div                         (long double, long double, bool* = NULL);
+  uintmax_t                             div                         (uintmax_t,   uintmax_t,   bool* = NULL);
   long double                           ease                        (long double);
   long double                           ease_in                     (long double);
   long double                           ease_in_back                (long double);
@@ -178,7 +178,7 @@ namespace {
   long double                           ifactorial                  (long double, bool* = NULL);
   uintmax_t                             ifactorial                  (uintmax_t,   bool* = NULL);
   long double                           imaxof                      ();
-  long double                           integrate                   (long double (*)(long double, long double const[]), long double, long double, long double const[] = NULL, std::size_t = 1536u);
+  long double                           integrate                   (long double (*)(long double...), long double, long double...);
   intmax_t                              ipow                        (intmax_t,    intmax_t,    bool* = NULL);
   long double                           ipow                        (long double, long double, bool* = NULL);
   uintmax_t                             ipow                        (uintmax_t,   uintmax_t,   bool* = NULL);
@@ -201,12 +201,12 @@ namespace {
   long double                           lcm                         (long double, long double);
   uintmax_t                             lcm                         (uintmax_t,   uintmax_t);
   long double                           lerp                        (long double, long double, long double);
-  long double                           ln                          (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           log                         (long double, long double, std::size_t = 0u, bool* = NULL);
-  long double                           log2                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           log8                        (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           log10                       (long double,              std::size_t = 0u, bool* = NULL);
-  long double                           log16                       (long double,              std::size_t = 0u, bool* = NULL);
+  long double                           ln                          (long double,              bool* = NULL);
+  long double                           log                         (long double, long double, bool* = NULL);
+  long double                           log2                        (long double,              bool* = NULL);
+  long double                           log8                        (long double,              bool* = NULL);
+  long double                           log10                       (long double,              bool* = NULL);
+  long double                           log16                       (long double,              bool* = NULL);
   intmax_t                              max                         (intmax_t,    intmax_t);
   long double                           max                         (long double, long double);
   uintmax_t                             max                         (uintmax_t,   uintmax_t);
@@ -218,10 +218,11 @@ namespace {
   intmax_t                              modulus                     (intmax_t,    intmax_t,    bool* = NULL);
   long double                           modulus                     (long double, long double, bool* = NULL);
   uintmax_t                             modulus                     (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t                              multiply                    (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           multiply                    (long double, long double, bool* = NULL);
-  uintmax_t                             multiply                    (uintmax_t,   uintmax_t,   bool* = NULL);
+  intmax_t                              mul                         (intmax_t,    intmax_t,    bool* = NULL);
+  long double                           mul                         (long double, long double, bool* = NULL);
+  uintmax_t                             mul                         (uintmax_t,   uintmax_t,   bool* = NULL);
   long double                           next                        (long double);
+  long double                           nextprec                    (long double);
   bool                                  parity                      (intmax_t);
   bool                                  parity                      (long double);
   bool                                  parity                      (uintmax_t);
@@ -229,6 +230,7 @@ namespace {
   long double                           pow                         (long double, long double, bool* = NULL);
   uintmax_t                             pow                         (uintmax_t,   uintmax_t,   bool* = NULL);
   long double                           prev                        (long double);
+  long double                           prevprec                    (long double);
   intmax_t                              remainder                   (intmax_t,    intmax_t,    bool* = NULL);
   long double                           remainder                   (long double, long double, bool* = NULL);
   uintmax_t                             remainder                   (uintmax_t,   uintmax_t,   bool* = NULL);
@@ -236,22 +238,22 @@ namespace {
   long double                           root                        (long double, long double, bool* = NULL);
   uintmax_t                             root                        (uintmax_t,   uintmax_t,   bool* = NULL);
   long double                           round                       (long double);
-  long double                           sec                         (long double, std::size_t = 0u, bool* = NULL);
-  long double                           sech                        (long double, std::size_t = 0u, bool* = NULL);
+  long double                           sec                         (long double, bool* = NULL);
+  long double                           sech                        (long double, bool* = NULL);
   signed char                           sign                        (intmax_t,    signed char = 0);
   signed char                           sign                        (long double, signed char = 0);
   signed char                           sign                        (uintmax_t,   signed char = 0);
-  long double                           sin                         (long double, std::size_t = 0u, bool* = NULL);
-  long double                           sinh                        (long double, std::size_t = 0u, bool* = NULL);
+  long double                           sin                         (long double, bool* = NULL);
+  long double                           sinh                        (long double, bool* = NULL);
   long double                           slerp                       (long double, long double, long double);
-  intmax_t                              sqrt                        (intmax_t,                      bool* = NULL);
-  long double                           sqrt                        (long double,                   bool* = NULL);
-  uintmax_t                             sqrt                        (uintmax_t,                     bool* = NULL);
-  intmax_t                              subtract                    (intmax_t,    intmax_t,         bool* = NULL);
-  long double                           subtract                    (long double, long double,      bool* = NULL);
-  uintmax_t                             subtract                    (uintmax_t,   uintmax_t,        bool* = NULL);
-  long double                           tan                         (long double, std::size_t = 0u, bool* = NULL);
-  long double                           tanh                        (long double, std::size_t = 0u, bool* = NULL);
+  intmax_t                              sqrt                        (intmax_t,                 bool* = NULL);
+  long double                           sqrt                        (long double,              bool* = NULL);
+  uintmax_t                             sqrt                        (uintmax_t,                bool* = NULL);
+  intmax_t                              sub                         (intmax_t,    intmax_t,    bool* = NULL);
+  long double                           sub                         (long double, long double, bool* = NULL);
+  uintmax_t                             sub                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double                           tan                         (long double,              bool* = NULL);
+  long double                           tanh                        (long double,              bool* = NULL);
   long double                           trunc                       (long double);
   intmax_t                              wrap                        (intmax_t,    intmax_t,    intmax_t,    bool = false);
   long double                           wrap                        (long double, long double, long double, bool = false);
@@ -363,7 +365,7 @@ namespace {
   _<long double[2]>                     dot                         (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
   _<long double[3]>                     dot                         (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Dot.html
   _<long double[4]>                     dot                         (long double const (&)[4], long double const (&)[4]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Dot.html
-  long double                           ellint                      (std::size_t, long double, long double, ...);                               // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_3
+  long double                           ellint                      (std::size_t, long double, long double, long double = double());            // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_3
   long double                           expint                      (long double);                                                              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/expint
   long double                           gmean                       (long double, ...);                                                         // TODO (Lapys) → https://en.wikipedia.org/wiki/Geometric_mean
   long double                           hermite                     (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/hermite
@@ -429,33 +431,33 @@ namespace {
   }
 
   // … → acos(𝙭) - Arc cosine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double acos(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return atan(number, sqrt((1.0L + number) * (1.0L - number), representable), iterationCount, representable);
+  long double acos(long double const number, bool* const representable) {
+    return atan(number, sqrt((1.0L + number) * (1.0L - number), representable), representable);
   }
 
   // … → acosh(𝙭) → Area hyperbolic cosine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Conversions`)
-  long double acosh(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return abs(asinh(sqrt(ipow(number, 2.0L, representable) - 1.0L, representable), iterationCount, representable));
+  long double acosh(long double const number, bool* const representable) {
+    return abs(asinh(sqrt(ipow(number, 2.0L, representable) - 1.0L, representable), representable));
   }
 
   // … → acot(𝙭) - Arc cotangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double acot(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return atan(divide(1.0L, number, representable), iterationCount, representable);
+  long double acot(long double const number, bool* const representable) {
+    return atan(div(1.0L, number, representable), representable);
   }
 
   // … → acoth(𝙭) → Area hyperbolic cotangent of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
-  long double acoth(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return atanh(divide(1.0L, number, representable), iterationCount, representable);
+  long double acoth(long double const number, bool* const representable) {
+    return atanh(div(1.0L, number, representable), representable);
   }
 
   // … → acsc(𝙭) - Arc cosecant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double acsc(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return asin(divide(1.0L, number, representable), iterationCount, representable);
+  long double acsc(long double const number, bool* const representable) {
+    return asin(div(1.0L, number, representable), representable);
   }
 
   // … → acsch(𝙭) → Area hyperbolic cosecant of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
-  long double acsch(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return asinh(divide(1.0L, number, representable), iterationCount, representable);
+  long double acsch(long double const number, bool* const representable) {
+    return asinh(div(1.0L, number, representable), representable);
   }
 
   // … → add(𝙭, 𝙮) - Scalar addition of 𝙭 and 𝙮
@@ -487,70 +489,65 @@ namespace {
   }
 
   // … → asec(𝙭) - Arc secant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double asec(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return acos(divide(1.0L, number, representable), iterationCount, representable);
+  long double asec(long double const number, bool* const representable) {
+    return acos(div(1.0L, number, representable), representable);
   }
 
   // … → asech(𝙭) → Area hyperbolic secant of 𝙭 (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Useful_relations`)
-  long double asech(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return acosh(divide(1.0L, number, representable), iterationCount, representable);
+  long double asech(long double const number, bool* const representable) {
+    return acosh(div(1.0L, number, representable), representable);
   }
 
   // … → asin(𝙭) - Arc sine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
-  long double asin(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return atan(sqrt((1.0L + number) * (1.0L - number)), number, iterationCount, representable);
+  long double asin(long double const number, bool* const representable) {
+    return atan(sqrt((1.0L + number) * (1.0L - number)), number, representable);
   }
 
   // … → asinh(𝙭) → Area hyperbolic sine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Definitions_in_terms_of_logarithms`)
-  long double asinh(long double const number, std::size_t const iterationCount, bool* const representable) {
-    bool              subrepresentable = true;
-    long double const ratio            = ipow(number, 2.0L, &subrepresentable);
+  long double asinh(long double const number, bool* const representable) {
+    long double const ratio = ipow(number, 2.0L, representable);
 
     // …
-    subrepresentable = subrepresentable and ratio > imaxof();
-
-    if (not subrepresentable) {
-      if (representable) *representable = false;
-      if (iterationCount) return 0.0L;
+    if (nextprec(ratio) > 1.0L) {
+      if (representable)
+      *representable = false;
     }
 
-    return ln(number + sqrt(ratio + 1.0L, representable), iterationCount, representable);
+    return ln(number + sqrt(ratio + 1.0L, representable), representable);
   }
 
   // … → atan(𝙭) - Arc tangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Infinite_series`, `https://en.wikipedia.org/wiki/Atan2#Definition_and_computation`)
-  long double atan(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
+  long double atan(long double const angle, bool* const representable) {
     long double ratio = 0.0L; // → Adjacent ÷ Opposite
 
     // …
     if (abs(angle) > 1.0L) {
       ratio = atan(1.0L / angle);
-      return (+compute_eta() * sign(ratio, +1)) - ratio;
+      return (compute_eta() * sign(ratio, +1)) - ratio;
     }
 
     // … → `Σₙ₌₀(2²ⁿ(n!)² ÷ (2n + 1)!)(𝙭²ⁿ⁺¹ ÷ (1 + 𝙭²)ⁿ⁺¹)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+    for (long double index = 0.0L; ; ++index) {
       long double iteration[2][2]  = {{1.0L, 1.0L}, {1.0L, 1.0L}};
       long double preiteration     = ratio;
       bool        subrepresentable = index * 2.0L <= imaxof();
 
       // …
-      iteration[0][0] = multiply  (ipow(2.0L, index * 2.0L, &subrepresentable), ipow(ifactorial(index, &subrepresentable), 2.0L, &subrepresentable), &subrepresentable);
-      iteration[0][1] = ifactorial((index * 2.0L) + 1.0L,                                                                                            &subrepresentable);
+      iteration[0][0] = mul(ipow(2.0L, index * 2.0L, &subrepresentable), ipow(ifactorial(index, &subrepresentable), 2.0L, &subrepresentable), &subrepresentable);
+      iteration[0][1] = ifactorial((index * 2.0L) + 1.0L,                                                                                     &subrepresentable);
 
       iteration[1][0] = ipow(angle,                                       (index * 2.0L) + 1.0L, &subrepresentable);
       iteration[1][1] = ipow(ipow(angle, 2.0L, &subrepresentable) + 1.0L, (index * 1.0L) + 1.0L, &subrepresentable);
 
       // …
-      preiteration    += multiply(divide(iteration[0][0], iteration[0][1], &subrepresentable), divide(iteration[1][0], iteration[1][1], &subrepresentable), &subrepresentable);
+      preiteration    += mul(div(iteration[0][0], iteration[0][1], &subrepresentable), div(iteration[1][0], iteration[1][1], &subrepresentable), &subrepresentable);
       subrepresentable = subrepresentable and ratio != preiteration;
 
       if (not subrepresentable) {
         if (representable)
         *representable = false;
 
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
+        break;
       }
 
       ratio = preiteration;
@@ -559,39 +556,38 @@ namespace {
     return ratio;
   }
 
-  long double atan(long double const x, long double const y, std::size_t const iterationCount, bool* const representable) {
+  long double atan(long double const x, long double const y, bool* const representable) {
     // … → Adjacent ÷ Opposite
     switch (0.0L == x ? 0 : sign(x)) {
-      case +1:
-        return atan(y / x, iterationCount, representable);
-
-      case -1: {
-        bool              subrepresentable = true;
-        long double const ratio            = atan(y / x, iterationCount, &subrepresentable);
-
-        // …
-        if (not iterationCount or subrepresentable)
-        return ratio + (compute_pi() * sign(y, +1));
-      } break;
-
       case 0:
         if (0.0L != y and sign(y))
-        return 0.0L + (compute_eta() * sign(y, 0));
+        return compute_eta() * sign(y, 0);
+
+      case +1:
+        return atan(y / x, representable);
+
+      case -1:
+        bool              subrepresentable = true;
+        long double const ratio            = atan(y / x, &subrepresentable);
+
+        // …
+        if (subrepresentable)
+        return ratio + (compute_pi() * sign(y, +1));
     }
 
     if (representable)
     *representable = false;
 
-    return 0.0L;
+    return double();
   }
 
   // … → atanh(𝙭) → Area hyperbolic tangent of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Conversions`)
-  long double atanh(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return asinh(divide(number, sqrt(1.0L - ipow(number, 2.0L, representable), representable), representable), iterationCount, representable);
+  long double atanh(long double const number, bool* const representable) {
+    return asinh(div(number, sqrt(1.0L - ipow(number, 2.0L, representable), representable), representable), representable);
   }
 
   // … → bézier(𝙩, 𝙥0, …, 𝙥n) - Point 𝙩 on parametric multi-point curve, where all points lie between 0.0 and 1.0 (`https://en.wikipedia.org/wiki/Bézier_curve`)
-  long double bézier(std::size_t const order, long double const percent, ...) {
+  long double bézier(std::size_t const order, long double const percent...) {
     long double  point = 0.0L;
     std::va_list points;
 
@@ -602,9 +598,9 @@ namespace {
       long double iteration = 1.0L;
 
       // … → `Σᵢ₌₀bᵢ,ₙ(𝙩)𝙋ᵢ where 0 ≤ 𝙩 ≤1`
-      iteration *= ifactorial(static_cast<long double>(order)) / (ifactorial(static_cast<long double>(index)) * ifactorial(static_cast<long double>(order - index)));
-      iteration *= ipow      (1.0L - percent, static_cast<long double>(order - index));
-      iteration *= ipow      (percent,        static_cast<long double>(index));
+      iteration *= ifactorial(static_cast<long double>(order), NULL) / (ifactorial(static_cast<long double>(index), NULL) * ifactorial(static_cast<long double>(order - index), NULL));
+      iteration *= ipow      (1.0L - percent, static_cast<long double>(order - index), NULL);
+      iteration *= ipow      (percent,        static_cast<long double>(index),         NULL);
       iteration *= va_arg    (points,         long double);
 
       point += iteration;
@@ -651,10 +647,8 @@ namespace {
     // …
     for (; signedness ? (ceiling < number) : (ceiling > number); ceiling <<= 1)
     if (signedness ? (ceiling > INTMAX_MAX >> 1) : (ceiling < INTMAX_MIN >> 1)) {
-      if (representable) {
-        *representable = false;
-        return 0;
-      }
+      if (representable)
+      *representable = false;
 
       break;
     }
@@ -669,10 +663,8 @@ namespace {
     // …
     for (number = abs(number); ceiling < number; ceiling *= 2.0L)
     if (ceiling > LDBL_MAX / 2.0L) {
-      if (representable) {
-        *representable = false;
-        return 0.0L;
-      }
+      if (representable)
+      *representable = false;
 
       break;
     }
@@ -686,10 +678,8 @@ namespace {
     // …
     for (; ceiling < number; ceiling <<= 1u)
     if (ceiling > UINTMAX_MAX >> 1u) {
-      if (representable) {
-        *representable = false;
-        return 0u;
-      }
+      if (representable)
+      *representable = false;
 
       break;
     }
@@ -1113,35 +1103,29 @@ namespace {
   }
 
   // … → compute_eta(…)
-  long double compute_eta(std::size_t const iterationCount, bool* const representable) {
-    return compute_pi(iterationCount, representable) / 2.00L;
+  long double compute_eta() {
+    return compute_pi() / 2.00L;
   }
 
   // … → compute_euler(…) - Napier's constant (`https://en.wikipedia.org/wiki/E_(mathematical_constant)`)
-  long double compute_euler(std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
+  long double compute_euler() {
     long double euler = 0.0L;
 
     // … → `Σₙ₌₀(1 ÷ n!)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
-      long double iteration[2]     = {1.0L, 1.0L};
-      long double preiteration     = euler;
-      bool        subrepresentable = true;
+    for (long double index = 0.0L; ; ++index) {
+      long double iteration[2]  = {1.0L, 1.0L};
+      long double preiteration  = euler;
+      bool        representable = true;
 
       // …
-      iteration[1] = ifactorial(index, &subrepresentable);
+      iteration[1] = ifactorial(index, &representable);
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
-      subrepresentable = subrepresentable and euler != preiteration;
+      preiteration += div(iteration[0], iteration[1], &representable);
+      representable = representable and euler != preiteration;
 
-      if (not subrepresentable) {
-        if (representable)
-        *representable = false;
-
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
-      }
+      if (not representable)
+      break;
 
       euler = preiteration;
     }
@@ -1169,36 +1153,30 @@ namespace {
   }
 
   // … → compute_pi(…) - Archimedes' constant (`https://en.wikipedia.org/wiki/Chudnovsky_algorithm`, or alternatively `https://en.wikipedia.org/wiki/Ramanujan–Sato_series` for a different formula)
-  long double compute_pi(std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
-    long double pi    = 0.0L;
+  long double compute_pi() {
+    long double pi = 0.0L;
 
     // … → `Σₖ₌₀((-1)ᵏ(6k)!(545140134k + 13591409) ÷ (3k)!(k!)³(640320)³ᵏ⁺³ᐟ²)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
-      long double iteration[2]     = {1.0L, 1.0L};
-      long double preiteration     = pi;
-      bool        subrepresentable = true;
+    for (long double index = 0.0L; ; ++index) {
+      long double iteration[2]  = {1.0L, 1.0L};
+      long double preiteration  = pi;
+      bool        representable = true;
 
       // …
-      iteration[0] *= ifactorial(index * 6.0L,        &subrepresentable);
-      iteration[0] *= ipow      (-1.0L,        index, &subrepresentable);
-      iteration[0] *= multiply  (545140134.0L, index, &subrepresentable) + 13591409.0L;
+      iteration[0] *= ifactorial(index * 6.0L,        &representable);
+      iteration[0] *= ipow      (-1.0L,        index, &representable);
+      iteration[0] *= mul       (545140134.0L, index, &representable) + 13591409.0L;
 
-      iteration[1] *= ifactorial(index * 3.0L,                                                       &subrepresentable);
-      iteration[1] *= ipow      (ifactorial(index, &subrepresentable), 3.0L,                         &subrepresentable);
-      iteration[1] *= multiply  (512384047.996L /* → `640320³ᐟ²` */,   ipow(640320.0L, index * 3.0L, &subrepresentable) /* → `640320³ᵏ` */); // → j-function of negated Heegner number
+      iteration[1] *= ifactorial(index * 3.0L,                                                     &representable);
+      iteration[1] *= ipow      (ifactorial(index, &representable),  3.0L,                         &representable);
+      iteration[1] *= mul       (512384047.996L /* → `640320³ᐟ²` */, ipow(640320.0L, index * 3.0L, &representable) /* → `640320³ᵏ` */); // → j-function of negated Heegner number
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
-      subrepresentable = subrepresentable and pi != preiteration;
+      preiteration += div(iteration[0], iteration[1], &representable);
+      representable = representable and pi != preiteration;
 
-      if (not subrepresentable) {
-        if (representable)
-        *representable = false;
-
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
-      }
+      if (not representable)
+      break;
 
       pi = preiteration;
     }
@@ -1207,13 +1185,12 @@ namespace {
   }
 
   // … → compute_tau(…) - Circle constant
-  long double compute_tau(std::size_t const iterationCount, bool* const representable) {
-    return compute_pi(iterationCount, representable) * 2.00L;
+  long double compute_tau() {
+    return compute_pi() * 2.00L;
   }
 
   // … → cos(𝙭) - Cosine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine#Series_definitions`)
-  long double cos(long double angle, std::size_t const iterationCount, bool* const representable) {
-    std::size_t       count = iterationCount;
+  long double cos(long double angle, bool* const representable) {
     long double const pi    = compute_pi(), eta = pi / 2.00L, tau = pi * 2.00L;
     long double       ratio = 0.0L; // → Adjacent ÷ Hypotenuse
 
@@ -1227,7 +1204,7 @@ namespace {
     else if (angle < -eta) angle = -pi - angle;
 
     // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ) ÷ (2n)!)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+    for (long double index = 0.0L; ; ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = ratio;
       bool        subrepresentable = true;
@@ -1237,15 +1214,14 @@ namespace {
       iteration[1] = ifactorial(index * 2.0L, &subrepresentable);
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      preiteration    += div(iteration[0], iteration[1], &subrepresentable);
       subrepresentable = subrepresentable and ratio != preiteration;
 
       if (not subrepresentable) {
         if (representable)
         *representable = false;
 
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
+        break;
       }
 
       ratio = preiteration;
@@ -1255,12 +1231,11 @@ namespace {
   }
 
   // … → cosh(𝙭) - Hyperbolic cosine of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions`)
-  long double cosh(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
+  long double cosh(long double const angle, bool* const representable) {
     long double ratio = 0.0L; // → Opposite ÷ Hypotenuse
 
     // … → `Σₙ₌₀(𝙭²ⁿ ÷ (2n)!)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+    for (long double index = 0.0L; ; ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = ratio;
       bool        subrepresentable = true;
@@ -1270,15 +1245,14 @@ namespace {
       iteration[1] = ifactorial(index * 2.0L, &subrepresentable);
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      preiteration    += div(iteration[0], iteration[1], &subrepresentable);
       subrepresentable = subrepresentable and ratio != preiteration;
 
       if (not subrepresentable) {
         if (representable)
         *representable = false;
 
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
+        break;
       }
 
       ratio = preiteration;
@@ -1288,13 +1262,13 @@ namespace {
   }
 
   // … → cot(𝙭) - Cotangent of 𝙭 radians (`https://en.wikipedia.org/wiki/Trigonometric_functions`)
-  long double cot(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    return divide(1.0L, tan(angle, iterationCount, representable), representable);
+  long double cot(long double const angle, bool* const representable) {
+    return div(1.0L, tan(angle, representable), representable);
   }
 
   // … → coth(𝙭) - Hyperbolic cotangent of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Exponential_definitions`)
-  long double coth(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    return divide(1.0L, tanh(angle, iterationCount, representable), representable);
+  long double coth(long double const angle, bool* const representable) {
+    return div(1.0L, tanh(angle, representable), representable);
   }
 
   // … → countof(𝙭) - Number of denary digits representing 𝙭
@@ -1346,17 +1320,17 @@ namespace {
   }
 
   // … → csc(𝙭) - Cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Cosecant_(trigonometry)`)
-  long double csc(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    return divide(1.0L, sin(angle, iterationCount, representable), representable);
+  long double csc(long double const angle, bool* const representable) {
+    return div(1.0L, sin(angle, representable), representable);
   }
 
   // … → csch(𝙭) - Hyperbolic cosecant of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Exponential_definitions`)
-  long double csch(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    return divide(1.0L, sinh(angle, iterationCount, representable), representable);
+  long double csch(long double const angle, bool* const representable) {
+    return div(1.0L, sinh(angle, representable), representable);
   }
 
-  // … → divide(𝙭, 𝙮) - Scalar division of 𝙭 and 𝙮
-  intmax_t divide(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
+  // … → div(𝙭, 𝙮) - Scalar division of 𝙭 and 𝙮
+  intmax_t div(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
     if (0 == numberB) {
       *representable = false;
       return 0;
@@ -1365,7 +1339,7 @@ namespace {
     return numberA / numberB;
   }
 
-  long double divide(long double const numberA, long double const numberB, bool* const representable) {
+  long double div(long double const numberA, long double const numberB, bool* const representable) {
     if (0.0L == numberB) {
       if (representable)
       *representable = false;
@@ -1376,7 +1350,7 @@ namespace {
     return numberA / numberB;
   }
 
-  uintmax_t divide(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
+  uintmax_t div(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
     if (0u == numberB) {
       *representable = false;
       return 0u;
@@ -1556,8 +1530,8 @@ namespace {
   }
 
   // … → exp(𝙭) - 𝙭th power of Euler’s number
-  long double exp(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return pow(compute_euler(iterationCount, representable), number, representable);
+  long double exp(long double const number, bool* const representable) {
+    return pow(compute_euler(), number, representable);
   }
 
   // … → floor(𝙭) - Rounded-down value of 𝙭
@@ -1695,14 +1669,17 @@ namespace {
     return (maximum - 0.0L) + (maximum - 1.0L);
   }
 
-  // … → integrate(𝙛, 𝙖, 𝙗, …, 𝙣) → Numerical integration of ∫ₐᵇ 𝙛(…)𝙙𝙭 using a closed Newton-Cotes quadrature: the composite Simpson's 1/3 rule (`https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_1/3_rule`)
-  long double integrate(long double (*const integrand)(long double, long double const[]), long double const begin, long double const end, long double const values[], std::size_t precisionCount /* → Must be even and non-zero */) {
-    long double       integrated = (*integrand)(begin, values) + (*integrand)(end, values);
-    long double const width      = (end - begin) / precisionCount; // → 𝙝
+  // … → integrate(𝙛, 𝙖, 𝙗, …, 𝙣) → Numerical integration of ∫ₐᵇ 𝙛(…)d𝙭 using a closed Newton-Cotes quadrature: the composite Simpson's 1/3 rule (`https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_1/3_rule`)
+  long double integrate(long double (*const integrand)(long double...), long double const begin, long double const end...) {
+    std::va_list      arguments;                                                                                                                     va_start(arguments, end);
+    long double const values[]       = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double) /* , ... */}; va_end  (arguments);
+    long double       integrated     = (*integrand)(begin, values[0], values[1], values[2] /* , ... */) + (*integrand)(end, values[0], values[1], values[2] /* , ... */);
+    std::size_t       precisionCount = 1536u;                          // → Must be even and non-zero
+    long double const width          = (end - begin) / precisionCount; // → 𝙝
 
     // … → `⅓𝙝(𝙛(𝙖) + 4Σᵢ₌₁ⁿᐟ²𝙛(𝙭₂ᵢ₋₁) + 2Σᵢ₌₁ⁿᐟ²⁻¹𝙛(𝙭₂ᵢ) + 𝙛(𝙗))`
     while (--precisionCount)
-    integrated += (*integrand)(begin + (precisionCount * width), values) * (parity(precisionCount) ? 4.0L : 2.0L);
+    integrated += (*integrand)(begin + (precisionCount * width), values[0], values[1], values[2] /* , ... */) * (parity(precisionCount) ? 4.0L : 2.0L);
 
     return integrated * (width / 3.0L);
   }
@@ -1752,13 +1729,13 @@ namespace {
             count /= 2.0L;
             for (long double submultiplier = multiplier, next = 1.0L; ; next = multiplier) {
               multiplier = (next + (submultiplier / next)) / 2.0L;
+
               if (LDBL_EPSILON >= abs(multiplier - next))
               break;
             }
           }
 
-          if (count == 1.0L)
-          power *= sign(base, +1);
+          power *= count == 1.0L ? sign(base, +1) : 1.0L;
         }
 
         if (power > LDBL_MAX / multiplier) {
@@ -1982,36 +1959,36 @@ namespace {
   }
 
   // … → ln(𝙭) - Natural logarithm of 𝙭 (`https://en.wikipedia.org/wiki/Natural_logarithm`)
-  long double ln(long double const number, std::size_t const iterationCount, bool* const representable) {
-    std::size_t count     = iterationCount;
+  long double ln(long double const number, bool* const representable) {
     long double logarithm = 1.0L;
 
     // …
     if (0.0L == number) {
-      if (representable) *representable = false;
-      if (iterationCount) return 0.0L;
+      if (representable)
+      *representable = false;
+
+      return logarithm;
     }
 
     // … → `Πₖ₌₁(2 ÷ (1 + 2ᵏ√𝙭))`
-    for (long double index = 1.0L; count or not iterationCount; --count, ++index) {
+    for (long double index = 1.0L; ; ++index) {
       long double iteration        = 1.0L;
       long double preiteration     = logarithm;
       bool        subrepresentable = true;
 
       // …
-      iteration = iroot (number, ipow(2.0L, index, &subrepresentable), &subrepresentable) + 1.0L;
-      iteration = divide(2.0L,   iteration,                            &subrepresentable);
+      iteration = iroot(number, ipow(2.0L, index, &subrepresentable), &subrepresentable) + 1.0L;
+      iteration = div  (2.0L,   iteration,                            &subrepresentable);
 
       // …
-      preiteration     = multiply(preiteration, iteration, &subrepresentable); // → preiteration *= iteration;
+      preiteration     = mul(preiteration, iteration, &subrepresentable); // → preiteration *= iteration;
       subrepresentable = subrepresentable and logarithm != preiteration;
 
       if (not subrepresentable) {
         if (representable)
         *representable = false;
 
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
+        break;
       }
 
       logarithm = preiteration;
@@ -2021,28 +1998,28 @@ namespace {
   }
 
   // … → log(𝙭, 𝙣) - 𝙣-radix logarithm of 𝙭
-  long double log(long double const number, long double const base, std::size_t const iterationCount, bool* const representable) {
-    return divide(ln(number, iterationCount, representable), ln(base, iterationCount, representable), representable);
+  long double log(long double const number, long double const base, bool* const representable) {
+    return div(ln(number, representable), ln(base, representable), representable);
   }
 
   // … → log2(𝙭) - Binary logarithm of 𝙭
-  long double log2(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return log(number, 2.0L, iterationCount, representable);
+  long double log2(long double const number, bool* const representable) {
+    return log(number, 2.0L, representable);
   }
 
   // … → log8(𝙭) - Octonary logarithm of 𝙭
-  long double log8(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return log(number, 8.0L, iterationCount, representable);
+  long double log8(long double const number, bool* const representable) {
+    return log(number, 8.0L, representable);
   }
 
   // … → log10(𝙭) - Common (decimal) logarithm of 𝙭
-  long double log10(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return log(number, 10.0L, iterationCount, representable);
+  long double log10(long double const number, bool* const representable) {
+    return log(number, 10.0L, representable);
   }
 
   // … → log16(𝙭) - Hexadecimal logarithm of 𝙭
-  long double log16(long double const number, std::size_t const iterationCount, bool* const representable) {
-    return log(number, 16.0L, iterationCount, representable);
+  long double log16(long double const number, bool* const representable) {
+    return log(number, 16.0L, representable);
   }
 
   // … → max(𝙭, 𝙮) - Greatest-valued number of 𝙭 and 𝙮
@@ -2102,8 +2079,8 @@ namespace {
     return remainder(dividend, divisor, representable);
   }
 
-  // … → multiply(𝙭, 𝙮) - Scalar multiplication of 𝙭 and 𝙮
-  intmax_t multiply(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
+  // … → mul(𝙭, 𝙮) - Scalar multiplication of 𝙭 and 𝙮
+  intmax_t mul(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
     if (representable and abs(numberA) > INTMAX_MAX / abs(numberB)) {
       *representable = false;
       return 0;
@@ -2112,7 +2089,7 @@ namespace {
     return numberA * numberB;
   }
 
-  long double multiply(long double const numberA, long double const numberB, bool* const representable) {
+  long double mul(long double const numberA, long double const numberB, bool* const representable) {
     if (abs(numberA) > LDBL_MAX / abs(numberB)) {
       if (representable)
       *representable = false;
@@ -2123,7 +2100,7 @@ namespace {
     return numberA * numberB;
   }
 
-  uintmax_t multiply(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
+  uintmax_t mul(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
     if (numberA > UINTMAX_MAX / numberB) {
       if (representable)
       *representable = false;
@@ -2135,22 +2112,22 @@ namespace {
   }
 
   // … → next(𝙭) - Absolute next (normalized) floating-point value after 𝙭
-  long double next(long double number) {
-    if (not (is_infinite(number) or is_nan(number))) {
-      long double       precision  = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
-      long double const signedness = sign(number, +1);
+  long double next(long double const number) {
+    return number + nextprec(number);
+  }
 
-      // …
-      number = abs(number);
+  // … → nextprec(𝙭) - Difference between the next representable value of 𝙭 and its given value
+  long double nextprec(long double number) {
+    long double precision = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
 
-      while (number == number + precision)
-      precision *= 2.0L;
+    // …
+    number = abs(number);
 
-      // …
-      return (number + (number > LDBL_MAX - precision ? 0.0L : precision)) * signedness;
-    }
+    while (number == number + precision)
+    precision *= 2.0L;
 
-    return number;
+    // …
+    return number > LDBL_MAX - precision ? 0.0L : precision;
   }
 
   // … → parity(𝙭) - Parity (oddness) of integer 𝙭
@@ -2195,22 +2172,22 @@ namespace {
   }
 
   // … → prev(𝙭) - Absolute previous (normalized) floating-point value before 𝙭
-  long double prev(long double number) {
-    if (not (is_infinite(number) or is_nan(number))) {
-      long double       precision  = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
-      long double const signedness = sign(number, +1);
+  long double prev(long double const number) {
+    return number - prevprec(number);
+  }
 
-      // …
-      number = abs(number);
+  // … → prevprec(𝙭) - Difference between the previous representable value of 𝙭 and its given value
+  long double prevprec(long double number) {
+    long double precision = LDBL_EPSILON; // → Ideally can be multiplied by `2` toward `LDBL_MAX` without `FE_OVERFLOW`
 
-      while (number == number - precision)
-      precision *= 2.0L;
+    // …
+    number = abs(number);
 
-      // …
-      return (number + (number > LDBL_MAX - precision ? 0.0L : precision)) * signedness;
-    }
+    while (number == number - precision)
+    precision *= 2.0L;
 
-    return number;
+    // …
+    return number > LDBL_MAX - precision ? 0.0L : precision;
   }
 
   // … → remainder(𝙭, 𝙮) - Remainder of 𝙭 divided by 𝙮
@@ -2276,7 +2253,7 @@ namespace {
       if (representable)
       *representable = false;
 
-      return 0;
+      return 0u;
     }
 
     return dividend % divisor;
@@ -2339,7 +2316,7 @@ namespace {
       long double const signs     [2] = {+1.0L, -1.0L};
       unsigned char     sublayouts[2][sizeof(long double)];
 
-      // … -> Assume only a single bit represents signedness
+      // … -> Assume only a single bit represents signedness and there is no noise between `+1.0L` and `-1.0L`
       if (0.0L == number and 0 != signedness)
       return signedness;
 
@@ -2365,18 +2342,17 @@ namespace {
   }
 
   // … → sec(𝙭) - Secant of 𝙭 radians (`https://en.wikipedia.org/wiki/Secant_(trigonometry)`)
-  long double sec(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    return divide(1.0L, cos(angle, iterationCount, representable), representable);
+  long double sec(long double const angle, bool* const representable) {
+    return div(1.0L, cos(angle, representable), representable);
   }
 
   // … → sech(𝙭) - Hyperbolic secant of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Exponential_definitions`)
-  long double sech(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    return divide(1.0L, cosh(angle, iterationCount, representable), representable);
+  long double sech(long double const angle, bool* const representable) {
+    return div(1.0L, cosh(angle, representable), representable);
   }
 
   // … → sin(𝙭) - Sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Sine_and_cosine#Series_definitions`)
-  long double sin(long double angle, std::size_t iterationCount, bool* const representable) {
-    std::size_t       count = iterationCount;
+  long double sin(long double angle, bool* const representable) {
     long double const pi    = compute_pi(), eta = pi / 2.00L, tau = pi * 2.00L;
     long double       ratio = 0.0L; // → Opposite ÷ Hypotenuse
 
@@ -2390,7 +2366,7 @@ namespace {
     else if (angle < -eta) angle = -pi - angle;
 
     // … → `Σₙ₌₀((-1)ⁿ(𝙭²ⁿ⁺¹) ÷ (2n + 1)!)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+    for (long double index = 0.0L; ; ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = ratio;
       bool        subrepresentable = true;
@@ -2400,15 +2376,14 @@ namespace {
       iteration[1] = ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      preiteration    += div(iteration[0], iteration[1], &subrepresentable);
       subrepresentable = subrepresentable and ratio != preiteration;
 
       if (not subrepresentable) {
         if (representable)
         *representable = false;
 
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
+        break;
       }
 
       ratio = preiteration;
@@ -2418,30 +2393,28 @@ namespace {
   }
 
   // … → sinh(𝙭) - Hyperbolic sine of 𝙭 radians (`https://en.wikipedia.org/wiki/Hyperbolic_functions#Taylor_series_expressions`)
-  long double sinh(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    std::size_t count = iterationCount;
+  long double sinh(long double const angle, bool* const representable) {
     long double ratio = 0.0L; // → Opposite ÷ Hypotenuse
 
     // … → `Σₙ₌₀(𝙭²ⁿ⁺¹ ÷ (2n + 1)!)`
-    for (long double index = 0.0L; count or not iterationCount; --count, ++index) {
+    for (long double index = 0.0L; ; ++index) {
       long double iteration[2]     = {1.0L, 1.0L};
       long double preiteration     = ratio;
       bool        subrepresentable = index * 2.0L <= imaxof();
 
       // …
       iteration[0] = ipow(angle, (index * 2.0L) + 1.0L, &subrepresentable);
-      iteration[1] = ifactorial((index * 2.0L) + 1.0L, &subrepresentable);
+      iteration[1] = ifactorial ((index * 2.0L) + 1.0L, &subrepresentable);
 
       // …
-      preiteration    += divide(iteration[0], iteration[1], &subrepresentable);
+      preiteration    += div(iteration[0], iteration[1], &subrepresentable);
       subrepresentable = subrepresentable and ratio != preiteration;
 
       if (not subrepresentable) {
         if (representable)
         *representable = false;
 
-        if (not iterationCount) break;
-        if (representable)      return 0.0L;
+        break;
       }
 
       ratio = preiteration;
@@ -2468,8 +2441,8 @@ namespace {
     return root(number, 2u, representable);
   }
 
-  // … → subtract(𝙭, 𝙮) - Scalar addition of 𝙭 and 𝙮
-  intmax_t subtract(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
+  // … → sub(𝙭, 𝙮) - Scalar addition of 𝙭 and 𝙮
+  intmax_t sub(intmax_t const numberA, intmax_t const numberB, bool* const representable) {
     if (representable and (sign(numberA) == sign(numberB) ? abs(numberA) < INTMAX_MAX - abs(numberB) : false)) {
       *representable = false;
       return 0;
@@ -2478,7 +2451,7 @@ namespace {
     return numberA + numberB;
   }
 
-  long double subtract(long double const numberA, long double const numberB, bool* const representable) {
+  long double sub(long double const numberA, long double const numberB, bool* const representable) {
     if (representable and (sign(numberA) == sign(numberB) ? abs(numberA) < LDBL_MAX - abs(numberB) : false)) {
       *representable = false;
       return 0.0L;
@@ -2487,7 +2460,7 @@ namespace {
     return numberA + numberB;
   }
 
-  uintmax_t subtract(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
+  uintmax_t sub(uintmax_t const numberA, uintmax_t const numberB, bool* const representable) {
     if (representable and numberB > numberA) {
       *representable = false;
       return 0u;
@@ -2497,31 +2470,13 @@ namespace {
   }
 
   // … → tan(𝙭) - Tangent of 𝙭 radians
-  long double tan(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    bool              subrepresentable = true;
-    long double const ratio[2]         = {sin(angle, iterationCount, &subrepresentable), cos(angle, iterationCount, &subrepresentable)}; // → Opposite ÷ Adjacent
-
-    // …
-    if (not subrepresentable) {
-      if (representable) *representable = false;
-      if (iterationCount) return 0.0L;
-    }
-
-    return divide(ratio[0], ratio[1], representable);
+  long double tan(long double const angle, bool* const representable) {
+    return div(sin(angle, representable), cos(angle, representable), representable); // → Opposite ÷ Adjacent
   }
 
   // … → tanh(𝙭) - Hyperbolic tangent of 𝙭 radians
-  long double tanh(long double const angle, std::size_t const iterationCount, bool* const representable) {
-    bool              subrepresentable = true;
-    long double const ratio[2]         = {sinh(angle, iterationCount, &subrepresentable), cosh(angle, iterationCount, &subrepresentable)}; // → Opposite ÷ Adjacent
-
-    // …
-    if (not subrepresentable) {
-      if (representable) *representable = false;
-      if (iterationCount) return 0.0L;
-    }
-
-    return divide(ratio[0], ratio[1], representable);
+  long double tanh(long double const angle, bool* const representable) {
+    return div(sinh(angle, representable), cosh(angle, representable), representable); // → Opposite ÷ Adjacent
   }
 
   // … → trunc(𝙭) - Truncated value of 𝙭 without its mantissa
@@ -2626,53 +2581,48 @@ namespace {
 
 namespace {
   /* ... */
-  // `https://en.wikipedia.org/wiki/Elliptic_integral`
-  // long double complete_ellint(std::size_t, long double const eccentricity, ... /* long double const characteristics */);
+  // … → complete_ellint(𝙭, 𝙣, 𝙤) - 𝙭th-kind complete elliptic integral of 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_third_kind`)
+  // long double complete_ellint(std::size_t const kind, long double const modulus, long double const characteristics);
 
-  // … → ellint(𝙭, 𝙢, 𝙣) - 𝙭th-kind elliptic integral of 𝙢 (and possible characteristic 𝙣) (`https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_third_kind`)
-  long double ellint(std::size_t const kind, long double const eccentricity, long double const amplitude, ... /* long double const characteristics */) {
+  // … → ellint(𝙭, 𝙢, 𝙣, 𝙤) - 𝙭th-kind elliptic integral of 𝙢 radians and 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_third_kind`)
+  long double ellint(std::size_t const kind, long double const amplitude, long double const modulus, long double const characteristic) {
     struct ellint {
-      static long double integrand(long double const theta, long double const eccentricity[]) {
-        return 1.0L / sqrt(1.0L - (ipow(*eccentricity, 2.0L, NULL) * ipow(sin(theta, 0u, NULL), 2.0L, NULL)));
+      static long double integrand1(long double const amplitude...) {
+        std::va_list      arguments;                                                                                                   va_start(arguments, amplitude);
+        long double const values[] = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
+        long double const modulus  = values[1];
+
+        return 1.0L / sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L)));
+      }
+
+      static long double integrand2(long double const amplitude...) {
+        std::va_list      arguments;                                                                                                   va_start(arguments, amplitude);
+        long double const values[] = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
+        long double const modulus  = values[1];
+
+        return 1.0L * sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L)));
+      }
+
+      static long double integrand3(long double const amplitude...) {
+        std::va_list      arguments;                                                                                                         va_start(arguments, amplitude);
+        long double const values[]       = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
+        long double const characteristic = values[2], modulus = values[1];
+
+        return 1.0L / ((1.0L - (characteristic * ipow(sin(amplitude), 2.0L))) * sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L))));
       }
     };
 
-    (void) kind;
-    return integrate(&ellint::integrand, 0.0L, amplitude, &eccentricity, 1024u);
-
-    // long double integral = 0.0L;
-    //
     // …
-    // switch (kind) {
-    //   // … → 𝙁(𝙭; 𝙠) = ∫₀ˣ(1 ÷ √(1 - 𝙩²)(1 - 𝙠²𝙩²))𝙙𝙩
-    //   // … → ∫₀ᶲ(d𝜽 ÷ √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
-    //   case 1u: {
-    //     for (long double delta = 0.0L; delta <= amplitude; delta += 0.01L) {
-    //       integral += delta / sqrt(1.0L - (ipow(eccentricity, 2.0L, NULL) * ipow(sin(delta, 69u, NULL), 2.0L, NULL)), NULL);
-    //       std::printf("[]: %Le -> %Le = %Le" "\r\n", delta, amplitude, integral);
-    //     }
-    //     // for (long double count = 0, delta = 0.00001L; count != 1024.0L; ++count += 0.00001L)
-    //     // integral += 1.0L / sqrt((1.0L - ipow(delta, 2.0L, NULL)) * (1.0L - (ipow(eccentricity, 2.0L, NULL) * ipow(delta, 2.0L, NULL))), NULL);
-    //   } break;
-    //
-    //   // … → 𝙀(𝙭; 𝙠) = ∫₀ˣ(√(1 - 𝙠²𝙩²) ÷ √(1 - 𝙩²))𝙙𝙩
-    //   case 2u: {} break;
-    //
-    //   // … → 𝜫(𝙣; 𝝋|𝙢) = ∫₀ˢⁱⁿᶲ(1 ÷ (1 - 𝙣𝙩²))(1 ÷ √(1 - 𝙢𝙩²)(1 - 𝙩²))𝙙𝙩
-    //   case 3u: {} break;
-    // }
-    //
-    // return integral;
+    switch (kind) {
+      case 1u: return integrate(&ellint::integrand1, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(d𝜽 ÷ √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
+      case 2u: return integrate(&ellint::integrand2, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(d𝜽 × √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
+      case 3u: return integrate(&ellint::integrand3, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(1 ÷ (1 - 𝙣⋅𝙨𝙞𝙣²𝜽))(d𝜽 ÷ √(1 - (𝙨𝙞𝙣𝜽 𝙨𝙞𝙣𝜶)²))
+    }
+
+    return 0.0L;
   }
 }
 
 /* Main */
-#include <cstdlib>
-#include <ctime>
-
 int main(int, char*[]) /* noexcept */ {
-  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.0L, +compute_eta()), ellint(1u, 0.0L, +compute_eta())); // +1.5708
-  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.0L, -compute_eta()), ellint(1u, 0.0L, -compute_eta())); // -1.5708
-  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.7L, 0.0L),           ellint(1u, 0.7L, 0.0L));           // 0
-  std::printf("%Lf %Lf" "\r\n", std::ellint_1l(0.2L, 0.3L),           ellint(1u, 0.2L, 0.3L));           // 0.300177
 }
