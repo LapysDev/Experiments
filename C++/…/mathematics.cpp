@@ -60,6 +60,8 @@ namespace {
   intmax_t                              add                         (intmax_t,    intmax_t,    bool* = NULL);
   long double                           add                         (long double, long double, bool* = NULL);
   uintmax_t                             add                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  long double                           agmean                      (long double, long double, ...);
+  long double                           amean                       (long double, long double, ...);
   long double                           asec                        (long double,              bool* = NULL);
   long double                           asech                       (long double,              bool* = NULL);
   long double                           asin                        (long double,              bool* = NULL);
@@ -116,6 +118,7 @@ namespace {
   long double                           clamp                       (long double, long double,              long double);
   uintmax_t                             clamp                       (uintmax_t,   uintmax_t,                uintmax_t);
   _<long double[2]>                     clerp                       (long double, long double const (&)[2], long double const (&)[2]);
+  long double                           complete_ellint             (std::size_t, long double, long double = double());
   long double                           compute_eta                 ();
   long double                           compute_euler               ();
   long double                           compute_infinity            ();
@@ -166,12 +169,15 @@ namespace {
   long double                           ease_out_quartic            (long double);
   long double                           ease_out_quintic            (long double);
   long double                           ease_out_sine               (long double);
+  long double                           ellint                      (std::size_t, long double, long double, long double = double());
   long double                           exp                         (long double, std::size_t = 0u, bool* = NULL);
   long double                           floor                       (long double);
   _<long double[2]>                     fract                       (long double);
   intmax_t                              gcd                         (intmax_t,    intmax_t);
   long double                           gcd                         (long double, long double);
   uintmax_t                             gcd                         (uintmax_t,   uintmax_t);
+  long double                           gmean                       (long double, long double, ...);
+  long double                           hmean                       (long double, long double, ...);
   intmax_t                              icbrt                       (intmax_t,    bool* = NULL);
   long double                           icbrt                       (long double, bool* = NULL);
   uintmax_t                             icbrt                       (uintmax_t,   bool* = NULL);
@@ -231,6 +237,7 @@ namespace {
   uintmax_t                             pow                         (uintmax_t,   uintmax_t,   bool* = NULL);
   long double                           prev                        (long double);
   long double                           prevprec                    (long double);
+  long double                           qmean                       (long double, long double, ...);
   intmax_t                              remainder                   (intmax_t,    intmax_t,    bool* = NULL);
   long double                           remainder                   (long double, long double, bool* = NULL);
   uintmax_t                             remainder                   (uintmax_t,   uintmax_t,   bool* = NULL);
@@ -273,7 +280,6 @@ namespace {
   // SQRT3   //
   // SQRT5   //
   // ZERO    //
-  long double                           agm                         (long double, long double);                           // TODO (Lapys) → https://en.wikipedia.org/wiki/Arithmetic%E2%80%93geometric_mean
   long double                           alaguerre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre
   long double                           alegendre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre
   _<long double[2]>                     angle                       (long double const (&)[2], long double const (&)[2]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Angle.html, https://docs.unity3d.com/ScriptReference/Vector2.SignedAngle.html
@@ -290,7 +296,6 @@ namespace {
   long double                           cneumannn                   (std::size_t,              long double);                                    // TODO (Lapys) → `cbessel(2u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_neumann
   _<long double[2]>                     clamp                       (long double const (&)[2], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.ClampMagnitude.html
   _<long double[3]>                     clamp                       (long double const (&)[3], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.ClampMagnitude.html
-  long double                           complete_ellint             (std::size_t, long double, ...);                                            // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_3
   long double                           compute_apéry               (std::size_t = 0u, bool* = NULL);                                           //
   long double                           compute_artin               (std::size_t = 0u, bool* = NULL);                                           //
   long double                           compute_bernstein           (std::size_t = 0u, bool* = NULL);                                           //
@@ -365,11 +370,8 @@ namespace {
   _<long double[2]>                     dot                         (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
   _<long double[3]>                     dot                         (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Dot.html
   _<long double[4]>                     dot                         (long double const (&)[4], long double const (&)[4]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Dot.html
-  long double                           ellint                      (std::size_t, long double, long double, long double = double());            // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_1, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_2, https://en.cppreference.com/w/cpp/numeric/special_functions/ellint_3
   long double                           expint                      (long double);                                                              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/expint
-  long double                           gmean                       (long double, ...);                                                         // TODO (Lapys) → https://en.wikipedia.org/wiki/Geometric_mean
   long double                           hermite                     (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/hermite
-  long double                           hmean                       (long double, ...);                                                         // TODO (Lapys) → https://en.wikipedia.org/wiki/Harmonic_mean
   bool                                  intersects                  (long double const[][2], std::size_t, long double const[][2], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
   bool                                  intersects                  (long double const[][3], std::size_t, long double const[][3], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
   _<long double[4]>                     invert                      (long double const (&)[4]);                                                 // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Inverse.html
@@ -378,7 +380,6 @@ namespace {
   long double                           legendre                    (std::size_t, long double); // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/legendre
   _<long double[2]>                     magnitude                   (long double const (&)[2]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2-magnitude.html
   _<long double[3]>                     magnitude                   (long double const (&)[3]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3-magnitude.html
-  long double                           mean                        (long double, ...);         // TODO (Lapys) → https://en.wikipedia.org/wiki/Arithmetic_mean
   long double                           mt                          (long double);              // TODO (Lapys) → https://en.wikipedia.org/wiki/Mersenne_Twister
   long double                           mt32                        (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
   long double                           mt64                        (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
@@ -486,6 +487,24 @@ namespace {
     }
 
     return numberA + numberB;
+  }
+
+  // … → agmean(𝙭, 𝙮) - Arithmetic-geometric mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Arithmetic%E2%80%93geometric_mean`)
+  long double agmean(long double numberA, long double numberB, ...) {
+    for (long double arithmetic, geometric; LDBL_EPSILON < abs(numberA - numberB); ) {
+      arithmetic = amean(numberA, numberB, NULL);
+      geometric  = gmean(numberA, numberB, NULL);
+
+      numberA = arithmetic;
+      numberB = geometric;
+    }
+
+    return numberA; // → numberB
+  }
+
+  // … → amean(𝙭, 𝙮) - Arithmetic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Arithmetic_mean`)
+  long double amean(long double const numberA, long double const numberB, ...) {
+    return (numberA + numberB) / 2.0L;
   }
 
   // … → asec(𝙭) - Arc secant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
@@ -1102,6 +1121,17 @@ namespace {
     return value;
   }
 
+  // … → complete_ellint(𝙭, 𝙣, 𝙤) - 𝙭th-kind complete elliptic integral of 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_third_kind`)
+  long double complete_ellint(std::size_t const kind, long double const modulus, long double const characteristic) {
+    switch (kind) {
+      case 1u: return ellint(1u, compute_eta(), modulus);
+      case 2u: return ellint(2u, compute_eta(), modulus);
+      case 3u: return ellint(3u, compute_eta(), modulus, characteristic);
+    }
+
+    return 0.0L;
+  }
+
   // … → compute_eta(…)
   long double compute_eta() {
     return compute_pi() / 2.00L;
@@ -1529,6 +1559,44 @@ namespace {
     return sin((compute_pi() * time) / 2.0L);
   }
 
+  // … → ellint(𝙭, 𝙢, 𝙣, 𝙤) - 𝙭th-kind elliptic integral of 𝙢 radians and 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_third_kind`)
+  long double ellint(std::size_t const kind, long double const amplitude, long double const modulus, long double const characteristic) {
+    struct ellint {
+      static long double integrand1(long double const amplitude...) {
+        std::va_list      arguments;                                                                                                   va_start(arguments, amplitude);
+        long double const values[] = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
+        long double const modulus  = values[1];
+
+        return 1.0L / sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L)));
+      }
+
+      static long double integrand2(long double const amplitude...) {
+        std::va_list      arguments;                                                                                                   va_start(arguments, amplitude);
+        long double const values[] = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
+        long double const modulus  = values[1];
+
+        return 1.0L * sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L)));
+      }
+
+      static long double integrand3(long double const amplitude...) {
+        std::va_list      arguments;                                                                                                         va_start(arguments, amplitude);
+        long double const values[]       = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
+        long double const characteristic = values[2], modulus = values[1];
+
+        return 1.0L / ((1.0L - (characteristic * ipow(sin(amplitude), 2.0L))) * sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L))));
+      }
+    };
+
+    // …
+    switch (kind) {
+      case 1u: return integrate(&ellint::integrand1, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(d𝜽 ÷ √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
+      case 2u: return integrate(&ellint::integrand2, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(d𝜽 × √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
+      case 3u: return integrate(&ellint::integrand3, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(1 ÷ (1 - 𝙣⋅𝙨𝙞𝙣²𝜽))(d𝜽 ÷ √(1 - (𝙨𝙞𝙣𝜽 𝙨𝙞𝙣𝜶)²))
+    }
+
+    return 0.0L;
+  }
+
   // … → exp(𝙭) - 𝙭th power of Euler’s number
   long double exp(long double const number, bool* const representable) {
     return pow(compute_euler(), number, representable);
@@ -1601,6 +1669,16 @@ namespace {
     }
 
     return integerA;
+  }
+
+  // … → gmean(𝙭, 𝙮) - Geometric mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Geometric_mean`)
+  long double gmean(long double const numberA, long double const numberB, ...) {
+    return root(numberA * numberB, 2.0L, NULL /* → Unable to account for negative numbers */);
+  }
+
+  // … → hmean(𝙭, 𝙮) - Harmonic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Harmonic_mean`)
+  long double hmean(long double const numberA, long double const numberB, ...) {
+    return div(2.0L, div(1.0L, numberA, NULL) + div(1.0L, numberB, NULL), NULL);  // → Unable to account for zeroed numbers */
   }
 
   // … → icbrt(𝙭) - Integer cubed root of 𝙭
@@ -2190,6 +2268,11 @@ namespace {
     return number > LDBL_MAX - precision ? 0.0L : precision;
   }
 
+  // … → qmean(𝙭, 𝙮) - Quadratic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Root_mean_square`)
+  long double qmean(long double const numberA, long double const numberB, ...) {
+    return sqrt(((numberA * numberA) + (numberB * numberB)) / 2.0L);
+  }
+
   // … → remainder(𝙭, 𝙮) - Remainder of 𝙭 divided by 𝙮
   intmax_t remainder(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
     if (0 == divisor) {
@@ -2486,7 +2569,7 @@ namespace {
     // …
     number = abs(number);
 
-    if ((next(number) - number) < 1.0L) {
+    if (nextprec(number) < 1.0L) {
       long double counter    = 1.0L;
       long double truncation = 0.0L;
 
@@ -2567,7 +2650,9 @@ namespace {
 
     return (value % end) + begin;
   }
+}
 
+namespace {
   /* ... */
   _<unsigned char[sizeof(long double)]> bytesof(long double const number) {
     // frexp?
@@ -2577,52 +2662,47 @@ namespace {
     _<unsigned char[sizeof(long double)]> const bytes = {};
     return bytes;
   }
-}
 
-namespace {
-  /* ... */
-  // … → complete_ellint(𝙭, 𝙣, 𝙤) - 𝙭th-kind complete elliptic integral of 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_third_kind`)
-  // long double complete_ellint(std::size_t const kind, long double const modulus, long double const characteristics);
+  // Unreal Engine - State of Unreal 2017 ?
+  // Unreal Engine - State of Unreal 2020
+  // Unreal Engine - State of Unreal 2021
+  // Unreal Engine - State of Unreal 2022
 
-  // … → ellint(𝙭, 𝙢, 𝙣, 𝙤) - 𝙭th-kind elliptic integral of 𝙢 radians and 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Incomplete_elliptic_integral_of_the_third_kind`)
-  long double ellint(std::size_t const kind, long double const amplitude, long double const modulus, long double const characteristic) {
-    struct ellint {
-      static long double integrand1(long double const amplitude...) {
-        std::va_list      arguments;                                                                                                   va_start(arguments, amplitude);
-        long double const values[] = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
-        long double const modulus  = values[1];
+  // • Arithmetic-Contraharmonic
+  // • Arithmetic-Quadratic
+  // • Contraharmonic
+  // • Geometric-Contraharmonic
+  // • Geometric-Harmonic
+  // • Geometric-Quadratic
+  // • Harmonic-Quadratic
+  // • Quadratic-Contraharmonic
 
-        return 1.0L / sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L)));
-      }
+  // … → acmean(𝙭, 𝙮) - Arithmetic-contraharmonic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double acmean(long double const numberA, long double const numberB, ...) { return ; }
 
-      static long double integrand2(long double const amplitude...) {
-        std::va_list      arguments;                                                                                                   va_start(arguments, amplitude);
-        long double const values[] = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
-        long double const modulus  = values[1];
+  // … → aqmean(𝙭, 𝙮) - Arithmetic-quadratic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double aqmean(long double const numberA, long double const numberB, ...) { return ; }
 
-        return 1.0L * sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L)));
-      }
+  // … → cmean(𝙭, 𝙮) - Contra-harmonic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double cmean(long double const numberA, long double const numberB, ...) { return ; }
 
-      static long double integrand3(long double const amplitude...) {
-        std::va_list      arguments;                                                                                                         va_start(arguments, amplitude);
-        long double const values[]       = {va_arg(arguments, long double), va_arg(arguments, long double), va_arg(arguments, long double)}; va_end  (arguments);
-        long double const characteristic = values[2], modulus = values[1];
+  // … → gcmean(𝙭, 𝙮) - Geometric-contraharmonic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double gcmean(long double const numberA, long double const numberB, ...) { return ; }
 
-        return 1.0L / ((1.0L - (characteristic * ipow(sin(amplitude), 2.0L))) * sqrt(1.0L - (ipow(modulus, 2.0L) * ipow(sin(amplitude), 2.0L))));
-      }
-    };
+  // … → ghmean(𝙭, 𝙮) - Geometric-harmonic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double ghmean(long double const numberA, long double const numberB, ...) { return ; }
 
-    // …
-    switch (kind) {
-      case 1u: return integrate(&ellint::integrand1, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(d𝜽 ÷ √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
-      case 2u: return integrate(&ellint::integrand2, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(d𝜽 × √(1 - 𝙠²𝙨𝙞𝙣²𝜽))
-      case 3u: return integrate(&ellint::integrand3, 0.0L, amplitude, amplitude, modulus, characteristic); // → ∫₀ᶲ(1 ÷ (1 - 𝙣⋅𝙨𝙞𝙣²𝜽))(d𝜽 ÷ √(1 - (𝙨𝙞𝙣𝜽 𝙨𝙞𝙣𝜶)²))
-    }
+  // … → gqmean(𝙭, 𝙮) - Geometric-quadratic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double gqmean(long double const numberA, long double const numberB, ...) { return ; }
 
-    return 0.0L;
-  }
+  // … → hqmean(𝙭, 𝙮) - Harmonic-quadratic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double hqmean(long double const numberA, long double const numberB, ...) { return ; }
+
+  // … → qcmean(𝙭, 𝙮) - Quadratic-contraharmonic mean of 𝙭 and 𝙮 (`https://en.`)
+  long double qcmean(long double const numberA, long double const numberB, ...) { return ; }
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
+  std::printf("%Lf", agmean(4.0L, 5.0L));
 }
