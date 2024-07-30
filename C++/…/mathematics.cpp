@@ -22,8 +22,6 @@
 # include <limits>
 # define SUPPORTS_IEEE754_FLOAT std::numeric_limits<long double>::is_iec559
 #endif
-#include <cmath>
-#include <cstdio>
 
 #define FLT_RADIX       __FLT_RADIX__
 #define LDBL_EPSILON    __LDBL_EPSILON__
@@ -41,230 +39,238 @@
 namespace {
   template <typename base>
   union _ {
-    base const _;
+    base _;
 
-    inline operator base const&         () const          { return _; }
-    inline operator base const volatile&() const volatile { return _; }
+    inline operator base&         ()          { return _; }
+    inline operator base volatile&() volatile { return _; }
   };
 
   /* … */
-  uintmax_t                             abs                         (intmax_t);
-  long double                           abs                         (long double);
-  uintmax_t                             abs                         (uintmax_t);
-  long double                           acos                        (long double,              bool* = NULL);
-  long double                           acosh                       (long double,              bool* = NULL);
-  long double                           acot                        (long double,              bool* = NULL);
-  long double                           acoth                       (long double,              bool* = NULL);
-  long double                           acsc                        (long double,              bool* = NULL);
-  long double                           acsch                       (long double,              bool* = NULL);
-  intmax_t                              add                         (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           add                         (long double, long double, bool* = NULL);
-  uintmax_t                             add                         (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double                           agmean                      (long double, long double, ...);
-  long double                           amean                       (long double, long double, ...);
-  long double                           asec                        (long double,              bool* = NULL);
-  long double                           asech                       (long double,              bool* = NULL);
-  long double                           asin                        (long double,              bool* = NULL);
-  long double                           asinh                       (long double,              bool* = NULL);
-  long double                           atan                        (long double,              bool* = NULL);
-  long double                           atan                        (long double, long double, bool* = NULL);
-  long double                           atanh                       (long double,              bool* = NULL);
-  long double                           bézier                      (std::size_t, long double...);
-  long double                           bézier_cubic                (long double, long double, long double, long double, long double);
-  long double                           bézier_linear               (long double, long double, long double);
-  long double                           bézier_quadratic            (long double, long double, long double, long double);
-  intmax_t                              bitceil                     (intmax_t,    bool* = NULL);
-  long double                           bitceil                     (long double, bool* = NULL);
-  uintmax_t                             bitceil                     (uintmax_t,   bool* = NULL);
-  intmax_t                              bitclear                    (intmax_t,           std::size_t);
-  long double                           bitclear                    (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitclear                    (uintmax_t,          std::size_t);
-  intmax_t                              bitflip                     (intmax_t);
-  long double                           bitflip                     (long double const&, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitflip                     (uintmax_t);
-  intmax_t                              bitflip                     (intmax_t,           std::size_t);
-  long double                           bitflip                     (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitflip                     (uintmax_t,          std::size_t);
-  intmax_t                              bitfloor                    (intmax_t,    bool* = NULL);
-  long double                           bitfloor                    (long double, bool* = NULL);
-  uintmax_t                             bitfloor                    (uintmax_t,   bool* = NULL);
-  std::size_t                           bitpopcount                 (intmax_t);
-  std::size_t                           bitpopcount                 (long double const&);
-  std::size_t                           bitpopcount                 (uintmax_t);
-  intmax_t                              bitrotleft                  (intmax_t,           std::size_t = 1u);
-  long double                           bitrotleft                  (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitrotleft                  (uintmax_t,          std::size_t = 1u);
-  intmax_t                              bitrotright                 (intmax_t,           std::size_t = 1u);
-  long double                           bitrotright                 (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitrotright                 (uintmax_t,          std::size_t = 1u);
-  intmax_t                              bitset                      (intmax_t,           std::size_t);
-  long double                           bitset                      (long double const&, std::size_t,      unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitset                      (uintmax_t,          std::size_t);
-  intmax_t                              bitshiftleft                (intmax_t,           std::size_t = 1u);
-  long double                           bitshiftleft                (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitshiftleft                (uintmax_t,          std::size_t = 1u);
-  intmax_t                              bitshiftright               (intmax_t,           std::size_t = 1u);
-  long double                           bitshiftright               (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitshiftright               (uintmax_t,          std::size_t = 1u);
-  intmax_t                              bitswap                     (intmax_t);
-  long double                           bitswap                     (long double const&,                   unsigned char (*)[sizeof(long double)] = NULL);
-  uintmax_t                             bitswap                     (uintmax_t);
-  std::size_t                           bitwidth                    (uintmax_t);
-  intmax_t                              cbrt                        (intmax_t,    bool* = NULL);
-  long double                           cbrt                        (long double, bool* = NULL);
-  uintmax_t                             cbrt                        (uintmax_t,   bool* = NULL);
-  long double                           ceil                        (long double);
-  intmax_t                              clamp                       (intmax_t,    intmax_t,                 intmax_t);
-  long double                           clamp                       (long double, long double,              long double);
-  uintmax_t                             clamp                       (uintmax_t,   uintmax_t,                uintmax_t);
-  _<long double[2]>                     clerp                       (long double, long double const (&)[2], long double const (&)[2]);
-  long double                           complete_ellint             (std::size_t, long double, long double = double());
-  long double                           compute_eta                 ();
-  long double                           compute_euler               ();
-  long double                           compute_infinity            ();
-  long double                           compute_nan                 ();
-  long double                           compute_pi                  ();
-  long double                           compute_tau                 ();
-  long double                           cos                         (long double, bool* = NULL);
-  long double                           cosh                        (long double, bool* = NULL);
-  long double                           cot                         (long double, bool* = NULL);
-  std::size_t                           countof                     (intmax_t);
-  std::size_t                           countof                     (long double);
-  std::size_t                           countof                     (uintmax_t);
-  long double                           csc                         (long double,              bool* = NULL);
-  intmax_t                              div                         (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           div                         (long double, long double, bool* = NULL);
-  uintmax_t                             div                         (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double                           ease                        (long double);
-  long double                           ease_in                     (long double);
-  long double                           ease_in_back                (long double);
-  long double                           ease_in_bounce              (long double);
-  long double                           ease_in_circular            (long double);
-  long double                           ease_in_cubic               (long double);
-  long double                           ease_in_elastic             (long double);
-  long double                           ease_in_exponential         (long double);
-  long double                           ease_in_out                 (long double);
-  long double                           ease_in_out_back            (long double);
-  long double                           ease_in_out_bounce          (long double);
-  long double                           ease_in_out_circular        (long double);
-  long double                           ease_in_out_cubic           (long double);
-  long double                           ease_in_out_elastic         (long double);
-  long double                           ease_in_out_exponential     (long double);
-  long double                           ease_in_out_quadratic       (long double);
-  long double                           ease_in_out_quartic         (long double);
-  long double                           ease_in_out_quintic         (long double);
-  long double                           ease_in_out_sine            (long double);
-  long double                           ease_in_quadratic           (long double);
-  long double                           ease_in_quartic             (long double);
-  long double                           ease_in_quintic             (long double);
-  long double                           ease_in_sine                (long double);
-  long double                           ease_out                    (long double);
-  long double                           ease_out_back               (long double);
-  long double                           ease_out_bounce             (long double);
-  long double                           ease_out_circular           (long double);
-  long double                           ease_out_cubic              (long double);
-  long double                           ease_out_elastic            (long double);
-  long double                           ease_out_exponential        (long double);
-  long double                           ease_out_quadratic          (long double);
-  long double                           ease_out_quartic            (long double);
-  long double                           ease_out_quintic            (long double);
-  long double                           ease_out_sine               (long double);
-  long double                           ellint                      (std::size_t, long double, long double, long double = double());
-  long double                           exp                         (long double, std::size_t = 0u, bool* = NULL);
-  long double                           floor                       (long double);
-  _<long double[2]>                     fract                       (long double);
-  intmax_t                              gcd                         (intmax_t,    intmax_t);
-  long double                           gcd                         (long double, long double);
-  uintmax_t                             gcd                         (uintmax_t,   uintmax_t);
-  long double                           gmean                       (long double, long double, ...);
-  long double                           hmean                       (long double, long double, ...);
-  intmax_t                              icbrt                       (intmax_t,    bool* = NULL);
-  long double                           icbrt                       (long double, bool* = NULL);
-  uintmax_t                             icbrt                       (uintmax_t,   bool* = NULL);
-  long double                           ifactorial                  (long double, bool* = NULL);
-  uintmax_t                             ifactorial                  (uintmax_t,   bool* = NULL);
-  long double                           imaxof                      ();
-  long double                           integrate                   (long double (*)(long double...), long double, long double...);
-  intmax_t                              ipow                        (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           ipow                        (long double, long double, bool* = NULL);
-  uintmax_t                             ipow                        (uintmax_t,   uintmax_t,   bool* = NULL);
-  uintmax_t                             iroot                       (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           iroot                       (long double, long double, bool* = NULL);
-  uintmax_t                             iroot                       (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t                              isqrt                       (intmax_t,                 bool* = NULL);
-  long double                           isqrt                       (long double,              bool* = NULL);
-  uintmax_t                             isqrt                       (uintmax_t,                bool* = NULL);
-  bool                                  is_denormal                 (long double);
-  bool                                  is_infinite                 (long double);
-  bool                                  is_integer                  (long double);
-  bool                                  is_nan                      (long double);
-  bool                                  is_subnormal                (long double);
-  _<uintmax_t[4]>                       jsf                         (std::size_t, uintmax_t = 0xCAFE5EED00000001uLL);
-  _<uintmax_t[4]>                       jsf                         (std::size_t, uintmax_t const (&)[4]); // → Result in `_[3]`
-  _<uintmax_t[4]>                       jsf                         (std::size_t, uintmax_t const (&)[4], std::size_t, std::size_t, std::size_t);
-  std::size_t                           lcg                         (std::size_t, intmax_t = 48271, intmax_t = 0, intmax_t = (((INTMAX_C(1) << (31u - 1u)) - 1u) << 1u) + 1u); // → ANSI C (1103515245, 12345, 2³¹) [bits 16–30], Apple Carbon, MATLAB `mcg16807`, Minimal Standard in 1969–1988 (16807, 0, 2³¹), Borland C/C++ `lrand()`, `rand()` (22695477, 1, 2³¹) [bits 0–30, 16–30], Borland Delphi, Virtual Pascal (134775813, 1, 2³²) [bits 32–63], C Newlib (6364136223846793005, 1, 2⁶³) [bits 32–46, 32–62], cc65 (16843009, 3014898611, 2³²) [bits 16–31, 0–14 xor 16–31], cc65 (16843009, 826366247, 2³²) [bits 16–31], cc65 (65793, 4282663, 2²³) [bits 8–22], GCC (1103515245, 1, 2³¹) [bits 0–30], GCC `[dejm]rand48[_r]()`, POSIX `[dejm]rand48()` (25214903917, 11, 2⁴⁸) [bits 0–47, 15–47], GCC `[ln]rand48[_r]()`, Java `java.util.Random`, POSIX `[ln]rand48()` (25214903917, 11, 2⁴⁸) [bits 16–47], MATLAB `random0` (8121, 28411, 134456), Microsoft Visual Basic (16598013, 12820163, 2²⁴), Microsoft Visual Quick C/ C++ (214013, 2531011, 2³¹) [bits 16–30], Minimal Standard in 1993 (48271, 0, 2³¹), MMIX (6364136223846793005, 1442695040888963407, 2⁶⁴), Musl (6364136223846793005, 1, 2⁶⁴) [bits 33–63], Numerical Recipes' `ranqd1` (1664525, 1013904223, 2³²), OpenVMS `MTH$RANDOM` (69069, 1, 2³²), RANDU (65539, 0, 2³¹), Turbo Pascal (134775813, 1, 2³²), Windows Native API `RtlUniform()` (-18, -60, 2³¹ - 1), ZX81 (75, 74, 2¹⁶ + 1)
-  intmax_t                              lcm                         (intmax_t,    intmax_t);
-  long double                           lcm                         (long double, long double);
-  uintmax_t                             lcm                         (uintmax_t,   uintmax_t);
-  long double                           lerp                        (long double, long double, long double);
-  long double                           ln                          (long double,              bool* = NULL);
-  long double                           log                         (long double, long double, bool* = NULL);
-  long double                           log2                        (long double,              bool* = NULL);
-  long double                           log8                        (long double,              bool* = NULL);
-  long double                           log10                       (long double,              bool* = NULL);
-  long double                           log16                       (long double,              bool* = NULL);
-  intmax_t                              max                         (intmax_t,    intmax_t);
-  long double                           max                         (long double, long double);
-  uintmax_t                             max                         (uintmax_t,   uintmax_t);
-  long double                           maxprecof                   (long double, std::size_t = 0u, bool* = NULL);
-  uintmax_t                             maxwidthof                  (std::size_t);
-  intmax_t                              min                         (intmax_t,    intmax_t);
-  long double                           min                         (long double, long double);
-  uintmax_t                             min                         (uintmax_t,   uintmax_t);
-  intmax_t                              modulus                     (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           modulus                     (long double, long double, bool* = NULL);
-  uintmax_t                             modulus                     (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t                              mul                         (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           mul                         (long double, long double, bool* = NULL);
-  uintmax_t                             mul                         (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double                           next                        (long double);
-  long double                           nextprec                    (long double);
-  bool                                  parity                      (intmax_t);
-  bool                                  parity                      (long double);
-  bool                                  parity                      (uintmax_t);
-  intmax_t                              pow                         (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           pow                         (long double, long double, bool* = NULL);
-  uintmax_t                             pow                         (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double                           prev                        (long double);
-  long double                           prevprec                    (long double);
-  long double                           qmean                       (long double, long double, ...);
-  intmax_t                              remainder                   (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           remainder                   (long double, long double, bool* = NULL);
-  uintmax_t                             remainder                   (uintmax_t,   uintmax_t,   bool* = NULL);
-  intmax_t                              root                        (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           root                        (long double, long double, bool* = NULL);
-  uintmax_t                             root                        (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double                           round                       (long double);
-  long double                           sec                         (long double, bool* = NULL);
-  long double                           sech                        (long double, bool* = NULL);
-  signed char                           sign                        (intmax_t,    signed char = 0);
-  signed char                           sign                        (long double, signed char = 0);
-  signed char                           sign                        (uintmax_t,   signed char = 0);
-  long double                           sin                         (long double, bool* = NULL);
-  long double                           sinh                        (long double, bool* = NULL);
-  long double                           slerp                       (long double, long double, long double);
-  intmax_t                              sqrt                        (intmax_t,                 bool* = NULL);
-  long double                           sqrt                        (long double,              bool* = NULL);
-  uintmax_t                             sqrt                        (uintmax_t,                bool* = NULL);
-  intmax_t                              sub                         (intmax_t,    intmax_t,    bool* = NULL);
-  long double                           sub                         (long double, long double, bool* = NULL);
-  uintmax_t                             sub                         (uintmax_t,   uintmax_t,   bool* = NULL);
-  long double                           tan                         (long double,              bool* = NULL);
-  long double                           tanh                        (long double,              bool* = NULL);
-  long double                           trunc                       (long double);
-  intmax_t                              wrap                        (intmax_t,    intmax_t,    intmax_t,    bool = false);
-  long double                           wrap                        (long double, long double, long double, bool = false);
-  uintmax_t                             wrap                        (uintmax_t,   uintmax_t,   uintmax_t,   bool = false);
+             uintmax_t                             abs                         (intmax_t);
+  extern "C" long double                           abs                         (long double);
+             uintmax_t                             abs                         (uintmax_t);
+  extern "C" long double                           acmean                      (long double, long double, ...);
+  extern "C" long double                           acos                        (long double,              bool* = NULL);
+  extern "C" long double                           acosh                       (long double,              bool* = NULL);
+  extern "C" long double                           acot                        (long double,              bool* = NULL);
+  extern "C" long double                           acoth                       (long double,              bool* = NULL);
+  extern "C" long double                           acsc                        (long double,              bool* = NULL);
+  extern "C" long double                           acsch                       (long double,              bool* = NULL);
+             intmax_t                              add                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           add                         (long double, long double, bool* = NULL);
+             uintmax_t                             add                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  extern "C" long double                           agmean                      (long double, long double, ...);
+  extern "C" long double                           amean                       (long double, long double, ...);
+  extern "C" long double                           aqmean                      (long double, long double, ...);
+  extern "C" long double                           asec                        (long double,              bool* = NULL);
+  extern "C" long double                           asech                       (long double,              bool* = NULL);
+  extern "C" long double                           asin                        (long double,              bool* = NULL);
+  extern "C" long double                           asinh                       (long double,              bool* = NULL);
+  extern "C" long double                           atan                        (long double,              bool* = NULL);
+             long double                           atan                        (long double, long double, bool* = NULL);
+  extern "C" long double                           atanh                       (long double,              bool* = NULL);
+  extern "C" long double                           bézier                      (std::size_t, long double...);
+  extern "C" long double                           bézier_cubic                (long double, long double, long double, long double, long double);
+  extern "C" long double                           bézier_linear               (long double, long double, long double);
+  extern "C" long double                           bézier_quadratic            (long double, long double, long double, long double);
+             intmax_t                              bitceil                     (intmax_t,    bool* = NULL);
+             long double                           bitceil                     (long double, bool* = NULL);
+  extern "C" uintmax_t                             bitceil                     (uintmax_t,   bool* = NULL);
+             intmax_t                              bitclear                    (intmax_t,           std::size_t);
+             long double                           bitclear                    (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitclear                    (uintmax_t,          std::size_t);
+             intmax_t                              bitflip                     (intmax_t);
+             long double                           bitflip                     (long double const&, unsigned char (*)[sizeof(long double)] = NULL);
+             uintmax_t                             bitflip                     (uintmax_t);
+             intmax_t                              bitflip                     (intmax_t,           std::size_t);
+             long double                           bitflip                     (long double const&, std::size_t, unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitflip                     (uintmax_t,          std::size_t);
+             intmax_t                              bitfloor                    (intmax_t,    bool* = NULL);
+             long double                           bitfloor                    (long double, bool* = NULL);
+  extern "C" uintmax_t                             bitfloor                    (uintmax_t,   bool* = NULL);
+             std::size_t                           bitpopcount                 (intmax_t);
+             std::size_t                           bitpopcount                 (long double const&);
+  extern "C" std::size_t                           bitpopcount                 (uintmax_t);
+             intmax_t                              bitrotleft                  (intmax_t,           std::size_t = 1u);
+             long double                           bitrotleft                  (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitrotleft                  (uintmax_t,          std::size_t = 1u);
+             intmax_t                              bitrotright                 (intmax_t,           std::size_t = 1u);
+             long double                           bitrotright                 (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitrotright                 (uintmax_t,          std::size_t = 1u);
+             intmax_t                              bitset                      (intmax_t,           std::size_t);
+             long double                           bitset                      (long double const&, std::size_t,      unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitset                      (uintmax_t,          std::size_t);
+             intmax_t                              bitshiftleft                (intmax_t,           std::size_t = 1u);
+             long double                           bitshiftleft                (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitshiftleft                (uintmax_t,          std::size_t = 1u);
+             intmax_t                              bitshiftright               (intmax_t,           std::size_t = 1u);
+             long double                           bitshiftright               (long double const&, std::size_t = 1u, unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitshiftright               (uintmax_t,          std::size_t = 1u);
+             intmax_t                              bitswap                     (intmax_t);
+             long double                           bitswap                     (long double const&,                   unsigned char (*)[sizeof(long double)] = NULL);
+  extern "C" uintmax_t                             bitswap                     (uintmax_t);
+  extern "C" std::size_t                           bitwidth                    (uintmax_t);
+             intmax_t                              cbrt                        (intmax_t,    bool* = NULL);
+  extern "C" long double                           cbrt                        (long double, bool* = NULL);
+             uintmax_t                             cbrt                        (uintmax_t,   bool* = NULL);
+  extern "C" long double                           ceil                        (long double);
+             intmax_t                              clamp                       (intmax_t,    intmax_t,                 intmax_t);
+  extern "C" long double                           clamp                       (long double, long double,              long double);
+             uintmax_t                             clamp                       (uintmax_t,   uintmax_t,                uintmax_t);
+             _<long double[2]>                     clerp                       (long double, long double const (&)[2], long double const (&)[2]);
+  extern "C" long double                           cmean                       (long double, long double, ...);
+  extern "C" long double                           complete_ellint             (std::size_t, long double, long double = double());
+  extern "C" long double                           compute_eta                 ();
+  extern "C" long double                           compute_euler               ();
+  extern "C" long double                           compute_infinity            ();
+  extern "C" long double                           compute_nan                 ();
+  extern "C" long double                           compute_pi                  ();
+  extern "C" long double                           compute_tau                 ();
+  extern "C" long double                           cos                         (long double, bool* = NULL);
+  extern "C" long double                           cosh                        (long double, bool* = NULL);
+  extern "C" long double                           cot                         (long double, bool* = NULL);
+             std::size_t                           countof                     (intmax_t);
+             std::size_t                           countof                     (long double);
+  extern "C" std::size_t                           countof                     (uintmax_t);
+  extern "C" long double                           csc                         (long double,              bool* = NULL);
+             intmax_t                              div                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           div                         (long double, long double, bool* = NULL);
+             uintmax_t                             div                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  extern "C" long double                           ease                        (long double);
+  extern "C" long double                           ease_in                     (long double);
+  extern "C" long double                           ease_in_back                (long double);
+  extern "C" long double                           ease_in_bounce              (long double);
+  extern "C" long double                           ease_in_circular            (long double);
+  extern "C" long double                           ease_in_cubic               (long double);
+  extern "C" long double                           ease_in_elastic             (long double);
+  extern "C" long double                           ease_in_exponential         (long double);
+  extern "C" long double                           ease_in_out                 (long double);
+  extern "C" long double                           ease_in_out_back            (long double);
+  extern "C" long double                           ease_in_out_bounce          (long double);
+  extern "C" long double                           ease_in_out_circular        (long double);
+  extern "C" long double                           ease_in_out_cubic           (long double);
+  extern "C" long double                           ease_in_out_elastic         (long double);
+  extern "C" long double                           ease_in_out_exponential     (long double);
+  extern "C" long double                           ease_in_out_quadratic       (long double);
+  extern "C" long double                           ease_in_out_quartic         (long double);
+  extern "C" long double                           ease_in_out_quintic         (long double);
+  extern "C" long double                           ease_in_out_sine            (long double);
+  extern "C" long double                           ease_in_quadratic           (long double);
+  extern "C" long double                           ease_in_quartic             (long double);
+  extern "C" long double                           ease_in_quintic             (long double);
+  extern "C" long double                           ease_in_sine                (long double);
+  extern "C" long double                           ease_out                    (long double);
+  extern "C" long double                           ease_out_back               (long double);
+  extern "C" long double                           ease_out_bounce             (long double);
+  extern "C" long double                           ease_out_circular           (long double);
+  extern "C" long double                           ease_out_cubic              (long double);
+  extern "C" long double                           ease_out_elastic            (long double);
+  extern "C" long double                           ease_out_exponential        (long double);
+  extern "C" long double                           ease_out_quadratic          (long double);
+  extern "C" long double                           ease_out_quartic            (long double);
+  extern "C" long double                           ease_out_quintic            (long double);
+  extern "C" long double                           ease_out_sine               (long double);
+  extern "C" long double                           ellint                      (std::size_t, long double, long double, long double = double());
+  extern "C" long double                           exp                         (long double, std::size_t = 0u, bool* = NULL);
+  extern "C" long double                           floor                       (long double);
+             _<long double[2]>                     fract                       (long double);
+             intmax_t                              gcd                         (intmax_t,    intmax_t);
+  extern "C" long double                           gcd                         (long double, long double);
+             uintmax_t                             gcd                         (uintmax_t,   uintmax_t);
+  extern "C" long double                           gcmean                      (long double, long double, ...);
+  extern "C" long double                           ghmean                      (long double, long double, ...);
+  extern "C" long double                           gmean                       (long double, long double, ...);
+  extern "C" long double                           gqmean                      (long double, long double, ...);
+  extern "C" long double                           hmean                       (long double, long double, ...);
+  extern "C" long double                           hqmean                      (long double, long double, ...);
+             intmax_t                              icbrt                       (intmax_t,    bool* = NULL);
+             long double                           icbrt                       (long double, bool* = NULL);
+  extern "C" uintmax_t                             icbrt                       (uintmax_t,   bool* = NULL);
+             long double                           ifactorial                  (long double, bool* = NULL);
+  extern "C" uintmax_t                             ifactorial                  (uintmax_t,   bool* = NULL);
+  extern "C" long double                           imaxof                      ();
+  extern "C" long double                           integrate                   (long double (*)(long double...), long double, long double...);
+             intmax_t                              ipow                        (intmax_t,    intmax_t,    bool* = NULL);
+             long double                           ipow                        (long double, long double, bool* = NULL);
+  extern "C" uintmax_t                             ipow                        (uintmax_t,   uintmax_t,   bool* = NULL);
+             uintmax_t                             iroot                       (intmax_t,    intmax_t,    bool* = NULL);
+             long double                           iroot                       (long double, long double, bool* = NULL);
+  extern "C" uintmax_t                             iroot                       (uintmax_t,   uintmax_t,   bool* = NULL);
+             intmax_t                              isqrt                       (intmax_t,                 bool* = NULL);
+             long double                           isqrt                       (long double,              bool* = NULL);
+  extern "C" uintmax_t                             isqrt                       (uintmax_t,                bool* = NULL);
+  extern "C" bool                                  is_denormal                 (long double);
+  extern "C" bool                                  is_infinite                 (long double);
+  extern "C" bool                                  is_integer                  (long double);
+  extern "C" bool                                  is_nan                      (long double);
+  extern "C" bool                                  is_subnormal                (long double);
+             _<uintmax_t[4]>                       jsf                         (std::size_t, uintmax_t = 0xCAFE5EED00000001uLL);
+             _<uintmax_t[4]>                       jsf                         (std::size_t, uintmax_t const (&)[4]); // → Result in `_[3]`
+  extern "C" _<uintmax_t[4]>                       jsf                         (std::size_t, uintmax_t const (&)[4], std::size_t, std::size_t, std::size_t);
+  extern "C" std::size_t                           lcg                         (std::size_t, intmax_t = 48271, intmax_t = 0, intmax_t = (((INTMAX_C(1) << (31u - 1u)) - 1u) << 1u) + 1u); // → ANSI C (1103515245, 12345, 2³¹) [bits 16–30], Apple Carbon, MATLAB `mcg16807`, Minimal Standard in 1969–1988 (16807, 0, 2³¹), Borland C/C++ `lrand()`, `rand()` (22695477, 1, 2³¹) [bits 0–30, 16–30], Borland Delphi, Virtual Pascal (134775813, 1, 2³²) [bits 32–63], C Newlib (6364136223846793005, 1, 2⁶³) [bits 32–46, 32–62], cc65 (16843009, 3014898611, 2³²) [bits 16–31, 0–14 xor 16–31], cc65 (16843009, 826366247, 2³²) [bits 16–31], cc65 (65793, 4282663, 2²³) [bits 8–22], GCC (1103515245, 1, 2³¹) [bits 0–30], GCC `[dejm]rand48[_r]()`, POSIX `[dejm]rand48()` (25214903917, 11, 2⁴⁸) [bits 0–47, 15–47], GCC `[ln]rand48[_r]()`, Java `java.util.Random`, POSIX `[ln]rand48()` (25214903917, 11, 2⁴⁸) [bits 16–47], MATLAB `random0` (8121, 28411, 134456), Microsoft Visual Basic (16598013, 12820163, 2²⁴), Microsoft Visual Quick C/ C++ (214013, 2531011, 2³¹) [bits 16–30], Minimal Standard in 1993 (48271, 0, 2³¹), MMIX (6364136223846793005, 1442695040888963407, 2⁶⁴), Musl (6364136223846793005, 1, 2⁶⁴) [bits 33–63], Numerical Recipes' `ranqd1` (1664525, 1013904223, 2³²), OpenVMS `MTH$RANDOM` (69069, 1, 2³²), RANDU (65539, 0, 2³¹), Turbo Pascal (134775813, 1, 2³²), Windows Native API `RtlUniform()` (-18, -60, 2³¹ - 1), ZX81 (75, 74, 2¹⁶ + 1)
+             intmax_t                              lcm                         (intmax_t,    intmax_t);
+  extern "C" long double                           lcm                         (long double, long double);
+             uintmax_t                             lcm                         (uintmax_t,   uintmax_t);
+  extern "C" long double                           lerp                        (long double, long double, long double);
+  extern "C" long double                           ln                          (long double,              bool* = NULL);
+  extern "C" long double                           log                         (long double, long double, bool* = NULL);
+  extern "C" long double                           log2                        (long double,              bool* = NULL);
+  extern "C" long double                           log8                        (long double,              bool* = NULL);
+  extern "C" long double                           log10                       (long double,              bool* = NULL);
+  extern "C" long double                           log16                       (long double,              bool* = NULL);
+             intmax_t                              max                         (intmax_t,    intmax_t);
+  extern "C" long double                           max                         (long double, long double);
+             uintmax_t                             max                         (uintmax_t,   uintmax_t);
+  extern "C" long double                           maxprecof                   (long double, std::size_t = 0u, bool* = NULL);
+  extern "C" uintmax_t                             maxwidthof                  (std::size_t);
+             intmax_t                              min                         (intmax_t,    intmax_t);
+  extern "C" long double                           min                         (long double, long double);
+             uintmax_t                             min                         (uintmax_t,   uintmax_t);
+             intmax_t                              mod                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           mod                         (long double, long double, bool* = NULL);
+             uintmax_t                             mod                         (uintmax_t,   uintmax_t,   bool* = NULL);
+             intmax_t                              mul                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           mul                         (long double, long double, bool* = NULL);
+             uintmax_t                             mul                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  extern "C" long double                           next                        (long double);
+  extern "C" long double                           nextprec                    (long double);
+             bool                                  parity                      (intmax_t);
+             bool                                  parity                      (long double);
+  extern "C" bool                                  parity                      (uintmax_t);
+             intmax_t                              pow                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           pow                         (long double, long double, bool* = NULL);
+             uintmax_t                             pow                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  extern "C" long double                           prev                        (long double);
+  extern "C" long double                           prevprec                    (long double);
+  extern "C" long double                           qcmean                      (long double, long double, ...);
+  extern "C" long double                           qmean                       (long double, long double, ...);
+             intmax_t                              rem                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           rem                         (long double, long double, bool* = NULL);
+             uintmax_t                             rem                         (uintmax_t,   uintmax_t,   bool* = NULL);
+             intmax_t                              root                        (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           root                        (long double, long double, bool* = NULL);
+             uintmax_t                             root                        (uintmax_t,   uintmax_t,   bool* = NULL);
+  extern "C" long double                           round                       (long double);
+  extern "C" long double                           sec                         (long double, bool* = NULL);
+  extern "C" long double                           sech                        (long double, bool* = NULL);
+             signed char                           sign                        (intmax_t,    signed char = 0);
+  extern "C" signed char                           sign                        (long double, signed char = 0);
+             signed char                           sign                        (uintmax_t,   signed char = 0);
+  extern "C" long double                           sin                         (long double, bool* = NULL);
+  extern "C" long double                           sinh                        (long double, bool* = NULL);
+  extern "C" long double                           slerp                       (long double, long double, long double);
+             intmax_t                              sqrt                        (intmax_t,                 bool* = NULL);
+  extern "C" long double                           sqrt                        (long double,              bool* = NULL);
+             uintmax_t                             sqrt                        (uintmax_t,                bool* = NULL);
+             intmax_t                              sub                         (intmax_t,    intmax_t,    bool* = NULL);
+  extern "C" long double                           sub                         (long double, long double, bool* = NULL);
+             uintmax_t                             sub                         (uintmax_t,   uintmax_t,   bool* = NULL);
+  extern "C" long double                           tan                         (long double,              bool* = NULL);
+  extern "C" long double                           tanh                        (long double,              bool* = NULL);
+  extern "C" long double                           trunc                       (long double);
+             intmax_t                              wrap                        (intmax_t,    intmax_t,    intmax_t,    bool = false);
+  extern "C" long double                           wrap                        (long double, long double, long double, bool = false);
+             uintmax_t                             wrap                        (uintmax_t,   uintmax_t,   uintmax_t,   bool = false);
 
   /* TODO
       Mathematical constants `https://en.wikipedia.org/wiki/List_of_mathematical_constants`
@@ -280,141 +286,140 @@ namespace {
   // SQRT3   //
   // SQRT5   //
   // ZERO    //
-  long double                           alaguerre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre
-  long double                           alegendre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre
-  _<long double[2]>                     angle                       (long double const (&)[2], long double const (&)[2]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Angle.html, https://docs.unity3d.com/ScriptReference/Vector2.SignedAngle.html
-  _<long double[3]>                     angle                       (long double const (&)[3], long double const (&)[3]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Angle.html, https://docs.unity3d.com/ScriptReference/Vector3.SignedAngle.html
-  _<long double[4]>                     angle                       (long double const (&)[4], long double const (&)[4]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Angle.html
-  long double                           avg                         (long double, ...);                                   // TODO (Lapys) → `mean(…)`
-  long double                           beta                        (long double, long double);                           // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/beta
-  _<unsigned char[sizeof(intmax_t)]>    bytesof                     (intmax_t);
-  _<unsigned char[sizeof(long double)]> bytesof                     (long double);
-  _<unsigned char[sizeof(uintmax_t)]>   bytesof                     (uintmax_t);
-  long double                           cbessel                     (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_j
-  long double                           cbessel_irr                 (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_k
-  long double                           cbessel_reg                 (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_i
-  long double                           cneumannn                   (std::size_t,              long double);                                    // TODO (Lapys) → `cbessel(2u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_neumann
-  _<long double[2]>                     clamp                       (long double const (&)[2], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.ClampMagnitude.html
-  _<long double[3]>                     clamp                       (long double const (&)[3], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.ClampMagnitude.html
-  long double                           compute_apéry               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_artin               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_bernstein           (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_bloch               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_brun                (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_cahen               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_catalan             (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_champernowne        (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_connective_constant (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_conway              (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_copeland_erdős      (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_dottie              (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_embree_trefethen    (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_erdős_borwein       (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_erdős_tenenbaum_ford(std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_euler_constant      (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_feller_tornier      (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_gauss               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_gelfond             (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_gelfond_schneider   (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_gieseking           (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_glaisher_kinkelin   (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_golden_angle        (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_golden_ratio        (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → (1 + √5) ÷ 2
-  long double                           compute_golomb_dickman      (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_gompertz            (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_harmonic            (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_heath_brown_moroz   (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_kepler_bouwkamp     (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_khinchin            (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_landau              (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_landau_ramanujan    (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_laplace_limit       (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_lemniscate          (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_lévy                (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → π² ÷ 12 ln(2)
-  long double                           compute_liouville           (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_lochs               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_magic_angle         (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_mills               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_min_continued_fract (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → First continued fraction constant
-  long double                           compute_meissel_mertens     (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_mrb                 (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_nielsen_ramanujan   (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_niven               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_omega               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_parabolic           (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → Universal parabolic constant
-  long double                           compute_plastic_ratio       (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_porter              (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → Porter's constant
-  long double                           compute_prime               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_prouhet_thue_morse  (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_ramanujan           (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_rec_fibonacci       (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_robbins             (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_salem               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_sierpiński          (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_silver_ratio        (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → (1 + √2) ÷ 1
-  long double                           compute_soldner             (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_somos               (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_stephens            (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_supergolden_ratio   (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → (1 + ∛((29 + ∛93) ÷ 2) + ∛((29 - ∛93) ÷ 2)) ÷ 3
-  long double                           compute_taniguchi           (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_tribonacci          (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_twin_primes         (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_van_der_pauw        (std::size_t = 0u, bool* = NULL);                                           //
-  long double                           compute_weierstrass         (std::size_t = 0u, bool* = NULL);                                           //
-  bool                                  contains                    (long double const[][2], std::size_t, long double const[][2], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
-  bool                                  contains                    (long double const[][3], std::size_t, long double const[][3], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
-  _<long double[2]>                     cross                       (long double const (&)[2], long double const (&)[2]);
-  _<long double[3]>                     cross                       (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Cross.html
-  _<long double[2]>                     distance                    (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
-  _<long double[3]>                     distance                    (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Cross.html
-  _<long double[2]>                     dot                         (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
-  _<long double[3]>                     dot                         (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Dot.html
-  _<long double[4]>                     dot                         (long double const (&)[4], long double const (&)[4]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Dot.html
-  long double                           expint                      (long double);                                                              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/expint
-  long double                           hermite                     (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/hermite
-  bool                                  intersects                  (long double const[][2], std::size_t, long double const[][2], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
-  bool                                  intersects                  (long double const[][3], std::size_t, long double const[][3], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
-  _<long double[4]>                     invert                      (long double const (&)[4]);                                                 // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Inverse.html
-  long double                           knuth                       (std::size_t const size, long double);
-  long double                           laguerre                    (std::size_t, long double); // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/laguerre
-  long double                           legendre                    (std::size_t, long double); // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/legendre
-  _<long double[2]>                     magnitude                   (long double const (&)[2]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2-magnitude.html
-  _<long double[3]>                     magnitude                   (long double const (&)[3]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3-magnitude.html
-  long double                           mt                          (long double);              // TODO (Lapys) → https://en.wikipedia.org/wiki/Mersenne_Twister
-  long double                           mt32                        (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
-  long double                           mt64                        (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
-  long double                           mulberry                    (long double);
-  long double                           mulberry32                  (long double);
-  long double                           mwc                         (std::size_t, long double);                           // TODO (Lapys) → https://en.wikipedia.org/wiki/Multiply-with-carry_pseudorandom_number_generator
-  _<long double[2]>                     normalize                   (long double const (&)[2]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2-normalized.html
-  _<long double[3]>                     normalize                   (long double const (&)[3]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3-normalized.html
-  _<long double[4]>                     normalize                   (long double const (&)[4]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion-normalized.html
-  _<long double[4][4]>                  ortho                       (long double const (&)[4], long double, long double); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Matrix4x4.Ortho.html https://en.wikipedia.org/wiki/3D_projection
-  long double                           pcg                         (std::size_t, long double);                           // TODO (Lapys) → https://en.wikipedia.org/wiki/Permuted_congruential_generator
-  _<long double[2]>                     perpendicular               (long double const (&)[2]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Perpendicular.html
-  _<long double[3]>                     perpendicular               (long double const (&)[3]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Perpendicular.html
-  _<long double[4][4]>                  persp                       (long double, long double, long double, long double); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Matrix4x4.Perspective.html https://en.wikipedia.org/wiki/3D_projection
-  _<long double[2]>                     reflect                     (long double const (&)[2], long double const (&)[2]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Reflect.html
-  _<long double[3]>                     reflect                     (long double const (&)[3], long double const (&)[3]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Reflect.html
-  long double                           riemann_zeta                (long double);                                        // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/laguerre
-  _<long double[4]>                     rotate                      (long double const (&)[4], long double const (&)[4]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.SetFromToRotation.html
-  long double                           sfc32                       (long double);
-  long double                           sbessel                     (std::size_t, std::size_t, long double); // TODO (Lapys) → `sbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/sph_bessel
-  long double                           slegendre                   (std::size_t, std::size_t, long double); // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/sph_legendre
-  long double                           sneumannn                   (std::size_t,              long double); // TODO (Lapys) → `sbessel(2u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/sph_neumann
-  long double                           splitmix32                  (long double);
-  long double                           xorshift                    (long double);
-  long double                           xorshift128                 (long double);
-  long double                           xorshift128_p               (long double);
-  long double                           xorshift128_s               (long double);
-  long double                           xorshift256                 (long double);
-  long double                           xorshift256_p               (long double);
-  long double                           xorshift256_ss              (long double);
-  long double                           xorshift_p                  (long double);
-  long double                           xorshift_s                  (long double);
-  long double                           xorshift_ss                 (long double);
-  long double                           xorshiro128_ss              (long double);
-  long double                           xorwow                      (long double);
+  extern "C" long double                           alaguerre                   (std::size_t, std::size_t, long double);                                    // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre
+  extern "C" long double                           alegendre                   (std::size_t, std::size_t, long double);                                    // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre
+             _<long double[2]>                     angle                       (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Angle.html, https://docs.unity3d.com/ScriptReference/Vector2.SignedAngle.html
+             _<long double[3]>                     angle                       (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Angle.html, https://docs.unity3d.com/ScriptReference/Vector3.SignedAngle.html
+             _<long double[4]>                     angle                       (long double const (&)[4], long double const (&)[4]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Angle.html
+  extern "C" long double                           beta                        (long double, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/beta
+             _<unsigned char[sizeof(intmax_t)]>    bytesof                     (intmax_t);                                                                 //
+             _<unsigned char[sizeof(long double)]> bytesof                     (long double const&);                                                       //
+             _<unsigned char[sizeof(uintmax_t)]>   bytesof                     (uintmax_t);                                                                //
+  extern "C" long double                           cbessel                     (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_j
+  extern "C" long double                           cbessel_irr                 (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_k
+  extern "C" long double                           cbessel_reg                 (std::size_t, long double, long double);                                    // TODO (Lapys) → `cbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_bessel_i
+  extern "C" long double                           cneumannn                   (std::size_t,              long double);                                    // TODO (Lapys) → `cbessel(2u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/cyl_neumann
+             _<long double[2]>                     clamp                       (long double const (&)[2], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.ClampMagnitude.html
+             _<long double[3]>                     clamp                       (long double const (&)[3], long double);                                    // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.ClampMagnitude.html
+  extern "C" long double                           compute_apéry               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_artin               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_bernstein           (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_bloch               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_brun                (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_cahen               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_catalan             (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_champernowne        (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_connective_constant (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_conway              (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_copeland_erdős      (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_dottie              (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_embree_trefethen    (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_erdős_borwein       (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_erdős_tenenbaum_ford(std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_euler_constant      (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_feller_tornier      (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_gauss               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_gelfond             (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_gelfond_schneider   (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_gieseking           (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_glaisher_kinkelin   (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_golden_angle        (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_golden_ratio        (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → (1 + √5) ÷ 2
+  extern "C" long double                           compute_golomb_dickman      (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_gompertz            (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_harmonic            (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_heath_brown_moroz   (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_kepler_bouwkamp     (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_khinchin            (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_landau              (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_landau_ramanujan    (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_laplace_limit       (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_lemniscate          (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_lévy                (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → π² ÷ 12 ln(2)
+  extern "C" long double                           compute_liouville           (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_lochs               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_magic_angle         (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_mills               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_min_continued_fract (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → First continued fraction constant
+  extern "C" long double                           compute_meissel_mertens     (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_mrb                 (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_nielsen_ramanujan   (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_niven               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_omega               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_parabolic           (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → Universal parabolic constant
+  extern "C" long double                           compute_plastic_ratio       (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_porter              (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → Porter's constant
+  extern "C" long double                           compute_prime               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_prouhet_thue_morse  (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_ramanujan           (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_rec_fibonacci       (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_robbins             (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_salem               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_sierpiński          (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_silver_ratio        (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → (1 + √2) ÷ 1
+  extern "C" long double                           compute_soldner             (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_somos               (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_stephens            (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_supergolden_ratio   (std::size_t = 0u, bool* = NULL);                                           // TODO (Lapys) → (1 + ∛((29 + ∛93) ÷ 2) + ∛((29 - ∛93) ÷ 2)) ÷ 3
+  extern "C" long double                           compute_taniguchi           (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_tribonacci          (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_twin_primes         (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_van_der_pauw        (std::size_t = 0u, bool* = NULL);                                           //
+  extern "C" long double                           compute_weierstrass         (std::size_t = 0u, bool* = NULL);                                           //
+             bool                                  contains                    (long double const[][2], std::size_t, long double const[][2], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
+             bool                                  contains                    (long double const[][3], std::size_t, long double const[][3], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
+             _<long double[2]>                     cross                       (long double const (&)[2], long double const (&)[2]);                       //
+             _<long double[3]>                     cross                       (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Cross.html
+             _<long double[2]>                     distance                    (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
+             _<long double[3]>                     distance                    (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Cross.html
+             _<long double[2]>                     dot                         (long double const (&)[2], long double const (&)[2]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
+             _<long double[3]>                     dot                         (long double const (&)[3], long double const (&)[3]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Dot.html
+             _<long double[4]>                     dot                         (long double const (&)[4], long double const (&)[4]);                       // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Dot.html
+  extern "C" long double                           expint                      (long double);                                                              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/expint
+  extern "C" long double                           hermite                     (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/hermite
+             bool                                  intersects                  (long double const[][2], std::size_t, long double const[][2], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
+             bool                                  intersects                  (long double const[][3], std::size_t, long double const[][3], std::size_t); // TODO (Lapys) → Bézier spline support to allow circle detections
+             _<long double[4]>                     invert                      (long double const (&)[4]);                                                 // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.Inverse.html
+  extern "C" long double                           knuth                       (std::size_t const size, long double);                                      //
+  extern "C" long double                           laguerre                    (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/laguerre
+  extern "C" long double                           legendre                    (std::size_t, long double);                                                 // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/legendre
+             _<long double[2]>                     magnitude                   (long double const (&)[2]);                                                 // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2-magnitude.html
+             _<long double[3]>                     magnitude                   (long double const (&)[3]);                                                 // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3-magnitude.html
+  extern "C" long double                           mt                          (long double);                                                              // TODO (Lapys) → https://en.wikipedia.org/wiki/Mersenne_Twister
+  extern "C" long double                           mt32                        (long double, std::size_t = 624u, std::size_t = 397u, std::size_t = 31u, std::size_t = 0x9908B0DFu,         std::size_t = 11u, std::size_t = 0xFFFFFFFFu,         std::size_t = 7u,  std::size_t = 0x9D2C5680u,         std::size_t = 15u, std::size_t = 0xEFC60000u,         std::size_t = 18u, std::size_t = 1812433253u);
+  extern "C" long double                           mt64                        (long double, std::size_t = 312u, std::size_t = 156u, std::size_t = 31u, std::size_t = 0xB5026F5AA96619E9u, std::size_t = 29u, std::size_t = 0x5555555555555555u, std::size_t = 17u, std::size_t = 0x71D67FFFEDA60000u, std::size_t = 37u, std::size_t = 0xFFF7EEE000000000u, std::size_t = 43u, std::size_t = 6364136223846793005u);
+  extern "C" long double                           mulberry                    (long double);                                        //
+  extern "C" long double                           mulberry32                  (long double);                                        //
+  extern "C" long double                           mwc                         (std::size_t, long double);                           // TODO (Lapys) → https://en.wikipedia.org/wiki/Multiply-with-carry_pseudorandom_number_generator
+             _<long double[2]>                     normalize                   (long double const (&)[2]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2-normalized.html
+             _<long double[3]>                     normalize                   (long double const (&)[3]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3-normalized.html
+             _<long double[4]>                     normalize                   (long double const (&)[4]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion-normalized.html
+             _<long double[4][4]>                  ortho                       (long double const (&)[4], long double, long double); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Matrix4x4.Ortho.html https://en.wikipedia.org/wiki/3D_projection
+  extern "C" long double                           pcg                         (std::size_t, long double);                           // TODO (Lapys) → https://en.wikipedia.org/wiki/Permuted_congruential_generator
+             _<long double[2]>                     perpendicular               (long double const (&)[2]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Perpendicular.html
+             _<long double[3]>                     perpendicular               (long double const (&)[3]);                           // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Perpendicular.html
+             _<long double[4][4]>                  persp                       (long double, long double, long double, long double); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Matrix4x4.Perspective.html https://en.wikipedia.org/wiki/3D_projection
+             _<long double[2]>                     reflect                     (long double const (&)[2], long double const (&)[2]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector2.Reflect.html
+             _<long double[3]>                     reflect                     (long double const (&)[3], long double const (&)[3]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Vector3.Reflect.html
+  extern "C" long double                           riemann_zeta                (long double);                                        // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/laguerre
+             _<long double[4]>                     rotate                      (long double const (&)[4], long double const (&)[4]); // TODO (Lapys) → https://docs.unity3d.com/ScriptReference/Quaternion.SetFromToRotation.html
+  extern "C" long double                           sfc32                       (long double);                                        //
+  extern "C" long double                           sbessel                     (std::size_t, std::size_t, long double);              // TODO (Lapys) → `sbessel(1u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/sph_bessel
+  extern "C" long double                           slegendre                   (std::size_t, std::size_t, long double);              // TODO (Lapys) → https://en.cppreference.com/w/cpp/numeric/special_functions/sph_legendre
+  extern "C" long double                           sneumannn                   (std::size_t,              long double);              // TODO (Lapys) → `sbessel(2u, …)` https://en.cppreference.com/w/cpp/numeric/special_functions/sph_neumann
+  extern "C" long double                           splitmix32                  (long double);                                        //
+  extern "C" long double                           xorshift                    (long double);                                        //
+  extern "C" long double                           xorshift128                 (long double);                                        //
+  extern "C" long double                           xorshift128_p               (long double);                                        //
+  extern "C" long double                           xorshift128_s               (long double);                                        //
+  extern "C" long double                           xorshift256                 (long double);                                        //
+  extern "C" long double                           xorshift256_p               (long double);                                        //
+  extern "C" long double                           xorshift256_ss              (long double);                                        //
+  extern "C" long double                           xorshift_p                  (long double);                                        //
+  extern "C" long double                           xorshift_s                  (long double);                                        //
+  extern "C" long double                           xorshift_ss                 (long double);                                        //
+  extern "C" long double                           xorshiro128_ss              (long double);                                        //
+  extern "C" long double                           xorwow                      (long double);                                        //
 
   /* … */
   // … → abs(𝙭) - Absolute value of 𝙭
@@ -429,6 +434,19 @@ namespace {
 
   uintmax_t abs(uintmax_t const number) {
     return number;
+  }
+
+  // … → acmean(𝙭, 𝙮) - Arithmetic-contraharmonic mean of 𝙭 and 𝙮 (`https://goodcalculators.com/arithmetic-geometric-mean-calculator/`)
+  long double acmean(long double numberA, long double numberB, ...) {
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = amean(numberA, numberB, NULL);
+      means[1] = cmean(numberA, numberB, NULL);
+
+      numberA = means[0];
+      numberB = means[1];
+    }
+
+    return numberA; // → numberB
   }
 
   // … → acos(𝙭) - Arc cosine of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
@@ -491,12 +509,12 @@ namespace {
 
   // … → agmean(𝙭, 𝙮) - Arithmetic-geometric mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Arithmetic%E2%80%93geometric_mean`)
   long double agmean(long double numberA, long double numberB, ...) {
-    for (long double arithmetic, geometric; LDBL_EPSILON < abs(numberA - numberB); ) {
-      arithmetic = amean(numberA, numberB, NULL);
-      geometric  = gmean(numberA, numberB, NULL);
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = amean(numberA, numberB, NULL);
+      means[1] = gmean(numberA, numberB, NULL);
 
-      numberA = arithmetic;
-      numberB = geometric;
+      numberA = means[0];
+      numberB = means[1];
     }
 
     return numberA; // → numberB
@@ -505,6 +523,19 @@ namespace {
   // … → amean(𝙭, 𝙮) - Arithmetic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Arithmetic_mean`)
   long double amean(long double const numberA, long double const numberB, ...) {
     return (numberA + numberB) / 2.0L;
+  }
+
+  // … → aqmean(𝙭, 𝙮) - Arithmetic-quadratic mean of 𝙭 and 𝙮 (`https://goodcalculators.com/arithmetic-geometric-mean-calculator/`)
+  long double aqmean(long double numberA, long double numberB, ...) {
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = amean(numberA, numberB, NULL);
+      means[1] = qmean(numberA, numberB, NULL);
+
+      numberA = means[0];
+      numberB = means[1];
+    }
+
+    return numberA; // → numberB
   }
 
   // … → asec(𝙭) - Arc secant of 𝙭 (`https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Relationships_among_the_inverse_trigonometric_functions`)
@@ -1121,6 +1152,11 @@ namespace {
     return value;
   }
 
+  // … → cmean(𝙭, 𝙮) - Contra-harmonic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Contraharmonic_mean`)
+  long double cmean(long double const numberA, long double const numberB, ...) {
+    return ((numberA * numberA) + (numberB * numberB)) / (numberA + numberB);
+  }
+
   // … → complete_ellint(𝙭, 𝙣, 𝙤) - 𝙭th-kind complete elliptic integral of 𝙣 eccentricity (with possible characteristic 𝙤) (`https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_first_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_second_kind`, `https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_third_kind`)
   long double complete_ellint(std::size_t const kind, long double const modulus, long double const characteristic) {
     switch (kind) {
@@ -1225,7 +1261,7 @@ namespace {
     long double       ratio = 0.0L; // → Adjacent ÷ Hypotenuse
 
     // …
-    angle = remainder(angle, tau);
+    angle = rem(angle, tau);
 
     if      (angle > +pi) angle -= tau;
     else if (angle < -pi) angle += tau;
@@ -1622,7 +1658,7 @@ namespace {
 
       // …
       for (long double term[2] = {precision, round(precision * mantissa)}; 0.0L != term[0] and 0.0L != term[1]; ) {
-        term[term[0] < term[1]] = remainder(term[term[0] < term[1]], term[term[0] >= term[1]]); // → `term[term[0] < term[1]] %= term[term[0] >= term[1]]`
+        term[term[0] < term[1]] = rem(term[term[0] < term[1]], term[term[0] >= term[1]]); // → `term[term[0] < term[1]] %= term[term[0] >= term[1]]`
         divisor                 = term[0.0L == term[0]];
       }
 
@@ -1640,7 +1676,7 @@ namespace {
       intmax_t const value = integerB;
 
       // …
-      integerB = modulus(integerA, integerB);
+      integerB = mod(integerA, integerB);
       integerA = value;
     }
 
@@ -1652,7 +1688,7 @@ namespace {
       long double const value = integerB;
 
       // …
-      integerB = modulus(integerA, integerB);
+      integerB = mod(integerA, integerB);
       integerA = value;
     }
 
@@ -1664,21 +1700,65 @@ namespace {
       uintmax_t const value = integerB;
 
       // …
-      integerB = modulus(integerA, integerB);
+      integerB = mod(integerA, integerB);
       integerA = value;
     }
 
     return integerA;
   }
 
+  // … → gcmean(𝙭, 𝙮) - Geometric-contraharmonic mean of 𝙭 and 𝙮 (`https://goodcalculators.com/arithmetic-geometric-mean-calculator/`)
+  long double gcmean(long double numberA, long double numberB, ...) {
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = cmean(numberA, numberB, NULL);
+      means[1] = gmean(numberA, numberB, NULL);
+
+      numberA = means[0];
+      numberB = means[1];
+    }
+
+    return numberA; // → numberB
+  }
+
+  // … → ghmean(𝙭, 𝙮) - Geometric-harmonic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Geometric%E2%80%93harmonic_mean`)
+  long double ghmean(long double const numberA, long double const numberB, ...) {
+    return div(numberA * numberB, agmean(numberA, numberB, NULL), NULL); // → `div(1.0L, agmean(div(1.0L, numberA, NULL), div(1.0L, numberB, NULL), NULL))`
+  }
+
   // … → gmean(𝙭, 𝙮) - Geometric mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Geometric_mean`)
   long double gmean(long double const numberA, long double const numberB, ...) {
-    return root(numberA * numberB, 2.0L, NULL /* → Unable to account for negative numbers */);
+    return root(numberA * numberB, 2.0L, NULL);
+  }
+
+  // … → gqmean(𝙭, 𝙮) - Geometric-quadratic mean of 𝙭 and 𝙮 (`https://goodcalculators.com/arithmetic-geometric-mean-calculator/`)
+  long double gqmean(long double numberA, long double numberB, ...) {
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = gmean(numberA, numberB, NULL);
+      means[1] = qmean(numberA, numberB, NULL);
+
+      numberA = means[0];
+      numberB = means[1];
+    }
+
+    return numberA; // → numberB
   }
 
   // … → hmean(𝙭, 𝙮) - Harmonic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Harmonic_mean`)
   long double hmean(long double const numberA, long double const numberB, ...) {
-    return div(2.0L, div(1.0L, numberA, NULL) + div(1.0L, numberB, NULL), NULL);  // → Unable to account for zeroed numbers */
+    return div(2.0L, div(1.0L, numberA, NULL) + div(1.0L, numberB, NULL), NULL);
+  }
+
+  // … → hqmean(𝙭, 𝙮) - Harmonic-quadratic mean of 𝙭 and 𝙮 (`https://goodcalculators.com/arithmetic-geometric-mean-calculator/`)
+  long double hqmean(long double numberA, long double numberB, ...) {
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = hmean(numberA, numberB, NULL);
+      means[1] = qmean(numberA, numberB, NULL);
+
+      numberA = means[0];
+      numberB = means[1];
+    }
+
+    return numberA; // → numberB
   }
 
   // … → icbrt(𝙭) - Integer cubed root of 𝙭
@@ -2144,17 +2224,17 @@ namespace {
     return numberA < numberB ? numberA : numberB;
   }
 
-  // … → modulus(𝙭) - Modulus of 𝙭 and 𝙮 ¯\_(ツ)_/¯
-  intmax_t modulus(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
-    return remainder(dividend, divisor, representable);
+  // … → mod(𝙭) - Modulus of 𝙭 and 𝙮 ¯\_(ツ)_/¯
+  intmax_t mod(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
+    return rem(dividend, divisor, representable);
   }
 
-  long double modulus(long double const dividend, long double const divisor, bool* const representable) {
-    return remainder(dividend, divisor, representable);
+  long double mod(long double const dividend, long double const divisor, bool* const representable) {
+    return rem(dividend, divisor, representable);
   }
 
-  uintmax_t modulus(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
-    return remainder(dividend, divisor, representable);
+  uintmax_t mod(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
+    return rem(dividend, divisor, representable);
   }
 
   // … → mul(𝙭, 𝙮) - Scalar multiplication of 𝙭 and 𝙮
@@ -2268,13 +2348,26 @@ namespace {
     return number > LDBL_MAX - precision ? 0.0L : precision;
   }
 
+  // … → qcmean(𝙭, 𝙮) - Quadratic-contraharmonic mean of 𝙭 and 𝙮 (`https://goodcalculators.com/arithmetic-geometric-mean-calculator/`)
+  long double qcmean(long double numberA, long double numberB, ...) {
+    for (long double means[2]; LDBL_EPSILON < abs(numberA - numberB); ) {
+      means[0] = cmean(numberA, numberB, NULL);
+      means[1] = qmean(numberA, numberB, NULL);
+
+      numberA = means[0];
+      numberB = means[1];
+    }
+
+    return numberA; // → numberB
+  }
+
   // … → qmean(𝙭, 𝙮) - Quadratic mean of 𝙭 and 𝙮 (`https://en.wikipedia.org/wiki/Root_mean_square`)
   long double qmean(long double const numberA, long double const numberB, ...) {
     return sqrt(((numberA * numberA) + (numberB * numberB)) / 2.0L);
   }
 
-  // … → remainder(𝙭, 𝙮) - Remainder of 𝙭 divided by 𝙮
-  intmax_t remainder(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
+  // … → rem(𝙭, 𝙮) - Remainder of 𝙭 divided by 𝙮
+  intmax_t rem(intmax_t const dividend, intmax_t const divisor, bool* const representable) {
     if (0 == divisor) {
       if (representable)
       *representable = false;
@@ -2285,7 +2378,7 @@ namespace {
     return dividend % divisor;
   }
 
-  long double remainder(long double dividend, long double divisor, bool* const representable) {
+  long double rem(long double dividend, long double divisor, bool* const representable) {
     long double const signedness = sign(dividend, +1);
 
     // …
@@ -2331,7 +2424,7 @@ namespace {
     return dividend * signedness;
   }
 
-  uintmax_t remainder(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
+  uintmax_t rem(uintmax_t const dividend, uintmax_t const divisor, bool* const representable) {
     if (0 == divisor) {
       if (representable)
       *representable = false;
@@ -2440,7 +2533,7 @@ namespace {
     long double       ratio = 0.0L; // → Opposite ÷ Hypotenuse
 
     // …
-    angle = remainder(angle, tau);
+    angle = rem(angle, tau);
 
     if      (angle > +pi) angle -= tau;
     else if (angle < -pi) angle += tau;
@@ -2623,12 +2716,12 @@ namespace {
     return begin;
 
     if (not inclusive) {
-      value = remainder(value - begin, ++interval);
+      value = rem(value - begin, ++interval);
       return value + begin + (interval * (sign(value, +1) == -1));
     }
 
     if (value < begin or value > end) {
-      value  = remainder(value, interval);
+      value  = rem(value, interval);
       value += interval * (value < begin ? +1.0L : value > end ? -1.0L : 0.0L);
     }
 
@@ -2652,57 +2745,55 @@ namespace {
   }
 }
 
+#include <cstdio>
 namespace {
   /* ... */
-  _<unsigned char[sizeof(long double)]> bytesof(long double const number) {
-    // frexp?
-    (void) number;
+  long double mulberry  (long double) { return 0.0L; }
+  long double mulberry32(long double) { return 0.0L; }
+
+  // ...
+  _<unsigned char[sizeof(long double)]> bytesof(long double const& number) {
+    _<unsigned char[sizeof(long double)]> bytes = {};
 
     // …
-    _<unsigned char[sizeof(long double)]> const bytes = {};
+    #if false
+      (void) std::memcpy(static_cast<unsigned char (&)[sizeof(long double)]>(bytes), &number, sizeof(long double));
+    #else
+      bool const signedness = sign(number) == -1;
+
+      // …
+      (void) std::memset(static_cast<unsigned char (&)[sizeof(long double)]>(bytes), 0x00u, sizeof(long double));
+
+      // frexp?
+      if (0.0L == number) {
+        if (signedness)
+        bytes[0] = 0x80u;
+      }
+
+      else {}
+    #endif
+
     return bytes;
   }
-
-  // Unreal Engine - State of Unreal 2017 ?
-  // Unreal Engine - State of Unreal 2020
-  // Unreal Engine - State of Unreal 2021
-  // Unreal Engine - State of Unreal 2022
-
-  // • Arithmetic-Contraharmonic
-  // • Arithmetic-Quadratic
-  // • Contraharmonic
-  // • Geometric-Contraharmonic
-  // • Geometric-Harmonic
-  // • Geometric-Quadratic
-  // • Harmonic-Quadratic
-  // • Quadratic-Contraharmonic
-
-  // … → acmean(𝙭, 𝙮) - Arithmetic-contraharmonic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double acmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → aqmean(𝙭, 𝙮) - Arithmetic-quadratic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double aqmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → cmean(𝙭, 𝙮) - Contra-harmonic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double cmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → gcmean(𝙭, 𝙮) - Geometric-contraharmonic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double gcmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → ghmean(𝙭, 𝙮) - Geometric-harmonic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double ghmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → gqmean(𝙭, 𝙮) - Geometric-quadratic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double gqmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → hqmean(𝙭, 𝙮) - Harmonic-quadratic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double hqmean(long double const numberA, long double const numberB, ...) { return ; }
-
-  // … → qcmean(𝙭, 𝙮) - Quadratic-contraharmonic mean of 𝙭 and 𝙮 (`https://en.`)
-  long double qcmean(long double const numberA, long double const numberB, ...) { return ; }
 }
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  std::printf("%Lf", agmean(4.0L, 5.0L));
+  long double   const   number                      = -0.0L;
+  unsigned char const (&bytes)[sizeof(long double)] = bytesof(number); // hopefully lifetime-extended?
+
+  // ...
+  for (unsigned char const *iterator = bytes, *const end = iterator + sizeof(long double); iterator != end; ++iterator)
+  std::printf("%02X%c", *iterator, ' ');
+
+  std::printf("%.2s", "\r\n");
+
+  for (unsigned char const *iterator = bytes, *const end = iterator + sizeof(long double); iterator != end; ++iterator) {
+    for (unsigned char byte = *iterator, count = CHAR_BIT; count; --count, byte >>= 1u)
+    std::printf("%c", byte & 1u ? '1' : '0');
+
+    std::printf("%c", ' ');
+  }
+
+  std::printf("%.2s%Lf%c%Lf", "\r\n", number, ' ', *reinterpret_cast<long double const*>(bytes));
 }
