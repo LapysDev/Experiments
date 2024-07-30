@@ -2746,6 +2746,8 @@ namespace {
 }
 
 #include <cstdio>
+#include <new>
+
 namespace {
   /* ... */
   long double mulberry  (long double) { return 0.0L; }
@@ -2762,15 +2764,74 @@ namespace {
       bool const signedness = sign(number) == -1;
 
       // …
-      (void) std::memset(static_cast<unsigned char (&)[sizeof(long double)]>(bytes), 0x00u, sizeof(long double));
+      if (is_nan(number)) // → See `compute_nan()`
+        (void) std::memset(static_cast<unsigned char (&)[sizeof(long double)]>(bytes), UCHAR_MAX, sizeof(long double));
 
-      // frexp?
-      if (0.0L == number) {
-        if (signedness)
-        bytes[0] = 0x80u;
+      else {
+        (void) std::memset(static_cast<unsigned char (&)[sizeof(long double)]>(bytes), 0x00u, sizeof(long double));
+
+        if (0.0L == number) {
+          if (signedness)
+          bytes[0] = 0x80u;
+        }
+
+        else if (is_infinite(number)) {
+          bytes[0] = signedness ? 0xFFu : 0x7Fu;
+          bytes[1] = 0x80u;
+        }
+
+        else {
+          // // Based on code from
+          // // https://graphics.stanford.edu/~seander/bithacks.html
+          // constexpr int count_leading_zeroes(uint64_t v)
+          // {
+          //   constexpr char bit_position[64] = {
+          //      0,  1,  2,  7,  3, 13,  8, 19,  4, 25, 14, 28,  9, 34, 20, 40,
+          //      5, 17, 26, 38, 15, 46, 29, 48, 10, 31, 35, 54, 21, 50, 41, 57,
+          //     63,  6, 12, 18, 24, 27, 33, 39, 16, 37, 45, 47, 30, 53, 49, 56,
+          //     62, 11, 23, 32, 36, 44, 52, 55, 61, 22, 43, 51, 60, 42, 59, 58 };
+
+          //   v |= v >> 1; // first round down to one less than a power of 2
+          //   v |= v >> 2;
+          //   v |= v >> 4;
+          //   v |= v >> 8;
+          //   v |= v >> 16;
+          //   v |= v >> 32;
+          //   v = (v >> 1) + 1;
+
+          //   return 63 - bit_position[(v * 0x0218a392cd3d5dbf)>>58]; // [3]
+          // }
+
+          // constexpr uint32_t bits(float f)
+          // {
+          //   bool sign = f < 0.0f;
+          //   float abs_f = sign ? -f : f;
+
+          //   int exponent = 254;
+
+          //   while(abs_f < 0x1p87f)
+          //   {
+          //     abs_f *= 0x1p41f;
+          //     exponent -= 41;
+          //   }
+
+          //   uint64_t a = (uint64_t)(abs_f * 0x1p-64f);
+          //   int lz = count_leading_zeroes(a);
+          //   exponent -= lz;
+
+          //   if (exponent <= 0)
+          //   {
+          //     exponent = 0;
+          //     lz = 8 - 1;
+          //   }
+
+          //   uint32_t significand = (a << (lz + 1)) >> (64 - 23); // [3]
+          //   return (sign << 31) | (exponent << 23) | significand;
+          // }
+        }
+
+        // frexp, ilogb?
       }
-
-      else {}
     #endif
 
     return bytes;
@@ -2779,21 +2840,42 @@ namespace {
 
 /* Main */
 int main(int, char*[]) /* noexcept */ {
-  long double   const   number                      = -0.0L;
-  unsigned char const (&bytes)[sizeof(long double)] = bytesof(number); // hopefully lifetime-extended?
+  long double const number = -512.0L;
+  struct {
+    long double    *expectation;
+    unsigned char (&result)[sizeof(long double)]; // hopefully lifetime-extended? ¯\_(ツ)_/¯
+  } const bytes = {static_cast<long double*>(std::memcpy(::new (std::nothrow) long double, &number, sizeof(long double))), bytesof(number)};
 
   // ...
-  for (unsigned char const *iterator = bytes, *const end = iterator + sizeof(long double); iterator != end; ++iterator)
-  std::printf("%02X%c", *iterator, ' ');
+  std::printf("%.15s", "[EXPECTATION]" ": ");
+    for (unsigned char const *iterator = reinterpret_cast<unsigned char const*>(bytes.expectation), *const end = iterator + sizeof(long double); iterator != end; ++iterator)
+    std::printf("%02X%c", *iterator, ' ');
+  std::printf("%.2s", "\r\n");
+
+  std::printf("%.15s", "[RESULT]     " ": ");
+    for (unsigned char const *iterator = bytes.result, *const end = iterator + sizeof(long double); iterator != end; ++iterator)
+    std::printf("%02X%c", *iterator, ' ');
+  std::printf("%.2s", "\r\n");
 
   std::printf("%.2s", "\r\n");
 
-  for (unsigned char const *iterator = bytes, *const end = iterator + sizeof(long double); iterator != end; ++iterator) {
+  std::printf("%.15s", "[EXPECTATION]" ": ");
+  for (unsigned char const *iterator = reinterpret_cast<unsigned char const*>(bytes.expectation), *const end = iterator + sizeof(long double); iterator != end; ++iterator) {
     for (unsigned char byte = *iterator, count = CHAR_BIT; count; --count, byte >>= 1u)
     std::printf("%c", byte & 1u ? '1' : '0');
 
     std::printf("%c", ' ');
   }
+  std::printf("%.2s", "\r\n");
 
-  std::printf("%.2s%Lf%c%Lf", "\r\n", number, ' ', *reinterpret_cast<long double const*>(bytes));
+  std::printf("%.15s", "[RESULT]     " ": ");
+  for (unsigned char const *iterator = bytes.result, *const end = iterator + sizeof(long double); iterator != end; ++iterator) {
+    for (unsigned char byte = *iterator, count = CHAR_BIT; count; --count, byte >>= 1u)
+    std::printf("%c", byte & 1u ? '1' : '0');
+
+    std::printf("%c", ' ');
+  }
+  std::printf("%.2s", "\r\n");
+
+  std::printf("%.2s%Lf%c%Lf%c%Lf", "\r\n", number, ' ', *bytes.expectation, ' ', *reinterpret_cast<long double const*>(bytes.result));
 }
