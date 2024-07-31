@@ -1,6 +1,91 @@
+#include <cstdio>
+#include <type_traits>
+#include <typeinfo>
+
+/* … */
+template <typename T>
+struct captured {
+  // → capture captured/ `void` types
+  friend captured<T> operator ,(captured<T>, captured<void>);
+};
+
+struct capture {
+  // → capture reference types (and copy-constructible non-reference types or `void`)
+  // → support unary `(A) +B` over binary `(A) + B` expressions
+  //   • `template <typename T> operator T();`
+  template <typename T> operator T               & ();
+  template <typename T> operator T const         & ();
+  template <typename T> operator T const volatile& ();
+  template <typename T> operator T       volatile& ();
+  template <typename T> operator T               &&();
+  template <typename T> operator T const         &&();
+  template <typename T> operator T const volatile&&();
+  template <typename T> operator T       volatile&&();
+
+  friend capture operator +(capture);
+
+  // → capture `void` types
+  template <typename T>
+  friend captured<typename std::remove_cv<typename std::remove_reference<T>::type>::type> operator ,(capture, T&&);
+
+  // → alias captured unary `(A) +B` expression type
+  template <typename T>
+  friend captured<T> operator ,(capture, captured<T>);
+
+  // → capture non-`void` values
+  // → support binary `(A) + B` over unary `(A) +B` expressions
+  template <typename T>
+  friend captured<typename std::remove_cv<typename std::remove_reference<T>::type>::type> operator +(T&&, capture);
+};
+
+#define capture(value) decltype(capture{}, (value) +capture{}, captured<void>{}){}
+
+/* Main */
+template <typename T>
+char const* nameof(captured<T>) {
+  // → …for testing only
+  return typeid(T).name();
+}
+
+int main(int, char*[]) /* noexcept */ {
+  // → `typeid(…)`
+  //   • does not work with incomplete types
+  std::puts(typeid(0)    .name());
+  std::puts(typeid(int)  .name());
+  std::puts(typeid(int()).name());
+  std::puts("\r\n");
+
+  // → `capture(…)`
+  //   • does not work with incomplete types
+  //   • does not work with `void` expressions                     e.g.: `(void) 0`
+  //   • can only guarantee support for class reference types      e.g.: `struct _&`
+  //   • does not work with non-pointer/ -reference function types e.g.: `void ()`
+  //   ╰─ always reference-qualify types
+  std::puts(nameof(capture(0)));
+  std::puts(nameof(capture(int)));
+  std::puts(nameof(capture(int (&)())));
+  std::puts(nameof(capture(int               &)));
+  std::puts(nameof(capture(int const         &)));
+  std::puts(nameof(capture(int const volatile&)));
+  std::puts(nameof(capture(int       volatile&)));
+  std::puts(nameof(capture(int               &&)));
+  std::puts(nameof(capture(int const         &&)));
+  std::puts(nameof(capture(int const volatile&&)));
+  std::puts(nameof(capture(int       volatile&&)));
+}
+
+
+/* ================================= */
 #include <cstddef>
 #include <functional>
 #include <new>
+#if defined _MSVC_LANG
+# if _MSVC_LANG +0 >= 202002L
+#   include <version>
+# endif
+#elif __cplusplus >= 202002L or defined __apple_build_version__ or defined __clang__ or defined __clang_major__ or defined __clang_minor__ or defined __clang_patchlevel__ or defined __clang_version__ or defined __CUDACC_VER_BUILD__ or defined __CUDACC_VER_MAJOR__ or defined __CUDACC_VER_MINOR__ or defined __ECC or defined __GNUC__ or defined __GNUC_MINOR__ or defined __GNUC_PATCHLEVEL__ or defined __ICC or defined __ICL or defined __INTEL_COMPILER or defined __INTEL_COMPILER_BUILD_DATE or defined __INTEL_LLVM_COMPILER or defined __NVCC__ or defined __NVCOMPILER or defined _MSC_BUILD or defined _MSC_FULL_VER or defined _MSC_VER
+# include <version>
+#endif
 
 /* … */
 struct refl;
@@ -10,6 +95,60 @@ struct reflval;
 struct reflvalexpr;
 
 // …
+struct reflproxy {
+  template <class operation, typename base>
+    struct can {
+      template <typename type> static bool (&valueof(int, int))[sizeof operation::template value<type>(NULL, *(reflval*) NULL) + 1];
+      template <typename>      static bool (&valueof(...))     [false                                                          + 1];
+
+      // …
+      static bool const value = sizeof(bool[false + 1]) != sizeof valueof<base>(0x0, 0x0);
+    };
+      template <bool = true, int = 0x0> struct assignof  { template <typename> static bool value(reflproxy const*, reflval, std::size_t) { return false; } };
+      template <bool = true, int = 0x0> struct postincof { template <typename> static bool value(reflproxy const*, reflval, std::size_t) { return false; } };
+
+      template <int sfinae>
+      struct assignof<true, sfinae> {
+        template <typename type>
+        static bool value(reflproxy const* const proxy, reflval const value, std::size_t = sizeof(static_cast<void>(*static_cast<type*>(NULL) = *static_cast<type const*>(NULL)), 0)) {
+          if (proxy -> reflection.id != value.reflection.id) return false;
+          return proxy -> evaluate((reflvalexpr(), (*static_cast<type*>(proxy -> value) = *static_cast<type const*>(value.reflection.value)), reflexpr(), reflexpr())), true;
+        }
+      };
+
+      template <int sfinae>
+      struct postincof<true, sfinae> {
+        template <typename type>
+        static bool value(reflproxy const* const proxy, reflval const, std::size_t = sizeof(static_cast<void>((*static_cast<type*>(NULL))++), 0)) {
+          return proxy -> evaluate((reflvalexpr(), (*static_cast<type*>(proxy -> value))++, reflexpr(), reflexpr())), true;
+        }
+      };
+};
+
+struct refl {
+  template <typename T>
+  static void* constructorof(void* const address, void const* const object, ...) {
+    return NULL == object ? ::new (address) T() : ::new (address) T(static_cast<T const*>(object));
+  }
+
+  static void destructorof() {}
+
+  public:
+    void* (*const construct)(void*, void const*, ...);
+};
+
+struct reflexpr {
+  #ifdef __cpp_rvalue_references
+    template <typename type>
+    friend refl operator ,(reflexpr const, type const&) {
+      refl const reflection = {&refl::constructorof<type>};
+
+      return reflection;
+    }
+  #endif
+};
+
+/* ============================================================================== */
 struct refl {
   friend struct reflexpr;
   friend struct reflval;

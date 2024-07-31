@@ -2790,7 +2790,7 @@ namespace {
           //      5, 17, 26, 38, 15, 46, 29, 48, 10, 31, 35, 54, 21, 50, 41, 57,
           //     63,  6, 12, 18, 24, 27, 33, 39, 16, 37, 45, 47, 30, 53, 49, 56,
           //     62, 11, 23, 32, 36, 44, 52, 55, 61, 22, 43, 51, 60, 42, 59, 58 };
-
+          //
           //   v |= v >> 1; // first round down to one less than a power of 2
           //   v |= v >> 2;
           //   v |= v >> 4;
@@ -2798,35 +2798,73 @@ namespace {
           //   v |= v >> 16;
           //   v |= v >> 32;
           //   v = (v >> 1) + 1;
-
+          //
           //   return 63 - bit_position[(v * 0x0218a392cd3d5dbf)>>58]; // [3]
           // }
-
+          //
           // constexpr uint32_t bits(float f)
           // {
           //   bool sign = f < 0.0f;
           //   float abs_f = sign ? -f : f;
-
+          //
           //   int exponent = 254;
-
+          //
           //   while(abs_f < 0x1p87f)
           //   {
           //     abs_f *= 0x1p41f;
           //     exponent -= 41;
           //   }
-
+          //
           //   uint64_t a = (uint64_t)(abs_f * 0x1p-64f);
           //   int lz = count_leading_zeroes(a);
           //   exponent -= lz;
-
+          //
           //   if (exponent <= 0)
           //   {
           //     exponent = 0;
           //     lz = 8 - 1;
           //   }
-
+          //
           //   uint32_t significand = (a << (lz + 1)) >> (64 - 23); // [3]
           //   return (sign << 31) | (exponent << 23) | significand;
+          // }
+
+          // std::byte* bytesof(std::byte dest[], float src)
+          // {
+          //   if (src == 0)
+          //   {
+          //     dest[0] = 0;
+          //     dest[1] = 0;
+          //     dest[2] = 0;
+          //     dest[3] = 0;
+          //     return dest;
+          //   }
+          //
+          //   int   exp  = 0;
+          //   float frac = frexp(fp, &exp); // Returns frac in the range 0 to 1, not 0 to 2
+          //   --exp;
+          //   frac *= 2.0f;
+          //   bool sign = std::signbit(frac);
+          //
+          //   if (sign)
+          //   frac = -frac;
+          //
+          //   uint32_t rep = 0; // Since the fractional part is in 2^(-n) form instead of 2^n we can't just multiply by some fixed number to get the correct fractional part out from a cast.
+          //   for (size_t i = 0; i < 24; ++i)
+          //   {
+          //     uint8_t v = (uint8_t) frac;
+          //     frac -= v;
+          //     frac *= 2.0f;
+          //     rep <<= 1;
+          //     rep |= v;
+          //   }
+          //
+          //   rep &= 0x7F'FFFFU;
+          //   rep |= (uint8_t) (exp + 127) << 23;
+          //   if (sign)
+          //   rep |= 0x8000'0000U;
+          //
+          //   return dest;
           // }
         }
 
