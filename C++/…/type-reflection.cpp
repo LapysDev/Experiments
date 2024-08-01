@@ -1,84 +1,4 @@
-#include <cstdio>
-#include <type_traits>
-#include <typeinfo>
-
-/* … */
-template <typename T>
-struct captured {
-  // → capture captured/ `void` types
-  friend captured<T> operator ,(captured<T>, captured<void>);
-};
-
-struct capture {
-  // → capture reference types (and copy-constructible non-reference types or `void`)
-  // → support unary `(A) +B` over binary `(A) + B` expressions
-  //   • `template <typename T> operator T();`
-  template <typename T> operator T               & ();
-  template <typename T> operator T const         & ();
-  template <typename T> operator T const volatile& ();
-  template <typename T> operator T       volatile& ();
-  template <typename T> operator T               &&();
-  template <typename T> operator T const         &&();
-  template <typename T> operator T const volatile&&();
-  template <typename T> operator T       volatile&&();
-
-  friend capture operator +(capture);
-
-  // → capture `void` types
-  template <typename T>
-  friend captured<typename std::remove_cv<typename std::remove_reference<T>::type>::type> operator ,(capture, T&&);
-
-  // → alias captured unary `(A) +B` expression type
-  template <typename T>
-  friend captured<T> operator ,(capture, captured<T>);
-
-  // → capture non-`void` values
-  // → support binary `(A) + B` over unary `(A) +B` expressions
-  template <typename T>
-  friend captured<typename std::remove_cv<typename std::remove_reference<T>::type>::type> operator +(T&&, capture);
-};
-
-#define capture(value) decltype(capture{}, (value) +capture{}, captured<void>{}){}
-
-/* Main */
-template <typename T>
-char const* nameof(captured<T>) {
-  // → …for testing only
-  return typeid(T).name();
-}
-
-int main(int, char*[]) /* noexcept */ {
-  // → `typeid(…)`
-  //   • does not work with incomplete types
-  std::puts(typeid(0)    .name());
-  std::puts(typeid(int)  .name());
-  std::puts(typeid(int()).name());
-  std::puts("\r\n");
-
-  // → `capture(…)`
-  //   • does not work with incomplete types
-  //   • does not work with `void` expressions                     e.g.: `(void) 0`
-  //   • can only guarantee support for class reference types      e.g.: `struct _&`
-  //   • does not work with non-pointer/ -reference function types e.g.: `void ()`
-  //   ╰─ always reference-qualify types
-  std::puts(nameof(capture(0)));
-  std::puts(nameof(capture(int)));
-  std::puts(nameof(capture(int (&)())));
-  std::puts(nameof(capture(int               &)));
-  std::puts(nameof(capture(int const         &)));
-  std::puts(nameof(capture(int const volatile&)));
-  std::puts(nameof(capture(int       volatile&)));
-  std::puts(nameof(capture(int               &&)));
-  std::puts(nameof(capture(int const         &&)));
-  std::puts(nameof(capture(int const volatile&&)));
-  std::puts(nameof(capture(int       volatile&&)));
-}
-
-
-/* ================================= */
-#include <cstddef>
-#include <functional>
-#include <new>
+#include <ciso646>
 #if defined _MSVC_LANG
 # if _MSVC_LANG +0 >= 202002L
 #   include <version>
@@ -87,7 +7,79 @@ int main(int, char*[]) /* noexcept */ {
 # include <version>
 #endif
 
-/* … */
+template <typename base>
+union reflinfo {
+  typedef base type;
+
+  // → capture captured/ `void` types
+  friend reflinfo<base> operator ,(reflinfo<base>, reflinfo<void>) {
+    return reflinfo<base>();
+  }
+};
+
+union refl {
+  // → capture reference types (and copy-constructible non-reference types or `void`)
+  // → support unary `(A) +B` over binary `(A) + B` expressions
+  //   • `template <typename T> operator T();`
+  friend refl operator +(refl) { return refl(); }
+
+  template <typename type> operator type               &() { return static_cast<type               &>(*(type*) static_cast<void*>(this)); }
+  template <typename type> operator type const         &() { return static_cast<type const         &>(*(type*) static_cast<void*>(this)); }
+  template <typename type> operator type const volatile&() { return static_cast<type const volatile&>(*(type*) static_cast<void*>(this)); }
+  template <typename type> operator type       volatile&() { return static_cast<type       volatile&>(*(type*) static_cast<void*>(this)); }
+  #ifdef __cpp_rvalue_references // --> 200610L
+    template <typename type> operator type               &&() { return static_cast<ype               &&>(*(type*) static_cast<void*>(this)); }
+    template <typename type> operator type const         &&() { return static_cast<ype const         &&>(*(type*) static_cast<void*>(this)); }
+    template <typename type> operator type const volatile&&() { return static_cast<ype const volatile&&>(*(type*) static_cast<void*>(this)); }
+    template <typename type> operator type       volatile&&() { return static_cast<ype       volatile&&>(*(type*) static_cast<void*>(this)); }
+  #endif
+
+  #ifdef __cpp_rvalue_references // --> 200610L
+    template <typename type>
+    friend reflinfo<type&&> operator ,(refl, type&&) {
+      return reflinfo<type&&>();
+    }
+  #else
+    template <typename type> friend reflinfo<type               &> operator ,(refl, type               &) { return reflinfo<type               &>(); }
+    template <typename type> friend reflinfo<type const         &> operator ,(refl, type const         &) { return reflinfo<type const         &>(); }
+    template <typename type> friend reflinfo<type const volatile&> operator ,(refl, type const volatile&) { return reflinfo<type const volatile&>(); }
+    template <typename type> friend reflinfo<type       volatile&> operator ,(refl, type       volatile&) { return reflinfo<type       volatile&>(); }
+  #endif
+
+  // → alias captured unary `(A) +B` expression type
+  template <typename type>
+  friend reflinfo<type> operator ,(refl, reflinfo<type>);
+
+  // → capture non-`void` values
+  // → support binary `(A) + B` over unary `(A) +B` expressions
+  #ifdef __cpp_rvalue_references // --> 200610L
+    template <typename type>
+    friend reflinfo<type&&> operator +(type&&, refl);
+  #else
+    template <typename type> friend reflinfo<type               &> operator +(type               &, refl);
+    template <typename type> friend reflinfo<type const         &> operator +(type const         &, refl);
+    template <typename type> friend reflinfo<type const volatile&> operator +(type const volatile&, refl);
+    template <typename type> friend reflinfo<type       volatile&> operator +(type       volatile&, refl);
+  #endif
+};
+
+#define _
+#define reflid(value) (refl _ (), (value) refl _ (), reflinfo<void>())
+#if defined _MSC_VER or /* --> 200707L */ defined __cpp_decltype
+# define refl(value)     decltype(refl(), (value) +refl(), reflinfo<void>())()
+# define reflexpr(value) decltype(refl(), (value),         reflinfo<void>())()
+#elif defined __GNUC__
+# define refl(value)     __decltype(refl(), (value) +refl(), reflinfo<void>())()
+# define reflexpr(value) __decltype(refl(), (value),         reflinfo<void>())()
+#elif defined __clang__
+# define refl(value)     typename reflinfo<__typeof__(refl(), (value) +refl(), reflinfo<void>())>::type()
+# define reflexpr(value) typename reflinfo<__typeof__(refl(), (value),         reflinfo<void>())>::type()
+#else
+# define refl(value)     reflinfo<ERROR>()
+# define reflexpr(value) reflinfo<ERROR>()
+#endif
+
+/* ================================= */
 struct refl;
 struct reflexpr;
 struct reflproxy;

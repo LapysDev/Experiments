@@ -2781,6 +2781,7 @@ namespace {
         }
 
         else {
+          /* https://brnz.org/hbr/?p=1518 */
           // // Based on code from
           // // https://graphics.stanford.edu/~seander/bithacks.html
           // constexpr int count_leading_zeroes(uint64_t v)
