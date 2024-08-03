@@ -7,76 +7,129 @@
 # include <version>
 #endif
 
-template <typename base>
-union reflinfo {
-  typedef base type;
+/* ... */
+struct reflect /* final */ {
+  enum /* : unsigned char */ { const  = 0x1u, volatile = 0x2u                 }; // --> reflinfo::cv
+  enum /* : unsigned char */ { copy   = 0x1u, create   = 0x2u, destroy = 0x4u }; // --> reflinfo::trivial
+  enum /* : unsigned char */ { lvalue = 0x1u, rvalue   = 0x2u                 }; // --> reflinfo::reference
 
-  // → capture captured/ `void` types
-  friend reflinfo<base> operator ,(reflinfo<base>, reflinfo<void>) {
-    return reflinfo<base>();
-  }
-};
+  // ...
+  void* (*const constructor)(void*, reflparams); // FIGURE OUT COPY-/ ZERO-CONSTRUCTOR
+  void  (*const destructor) (void*, ...); // ALSO CARRY PARAMETERS LIKE CONSTRUCTORS
+  struct proxy {}; // -> add, assign, increment, plus
 
-union refl {
-  // → capture reference types (and copy-constructible non-reference types or `void`)
-  // → support unary `(A) +B` over binary `(A) + B` expressions
-  //   • `template <typename T> operator T();`
-  friend refl operator +(refl) { return refl(); }
+  reflproxy proxy = refl(int).proxy;
+  bool proxy::add(&2, &2, &result);
+  B operator +(A, A) == reflexpr(*(A*) … + *(A const [volatile]*) …).constructor(&result, copy)
 
+  constructor(&…, 2, 3.5)
+  constructor(&…, reflparams(2, 3.5))
+
+  std::size_t   alignment; // --> alignof base
+  bool          array;     // ->> Falsy for pointer-/ reference-to-arrays
+  unsigned char cv;        //
+  bool          except;    //
+  bool          function;  // ->> Falsy for pointer-/ reference-to-functions
+  void        (*id)();     //
+  std::size_t   length;    // ->> Zero for unbounded arrays, non-zero for bounded arrays
+  bool          member;    //
+  bool          pointer;   //
+  unsigned char reference; //
+  std::size_t   size;      // --> sizeof base
+  unsigned char trivial;   //
+
+  // ->> `refl(…)` for non-`void` types (2nd step)
   template <typename type> operator type               &() { return static_cast<type               &>(*(type*) static_cast<void*>(this)); }
   template <typename type> operator type const         &() { return static_cast<type const         &>(*(type*) static_cast<void*>(this)); }
   template <typename type> operator type const volatile&() { return static_cast<type const volatile&>(*(type*) static_cast<void*>(this)); }
   template <typename type> operator type       volatile&() { return static_cast<type       volatile&>(*(type*) static_cast<void*>(this)); }
   #ifdef __cpp_rvalue_references // --> 200610L
-    template <typename type> operator type               &&() { return static_cast<ype               &&>(*(type*) static_cast<void*>(this)); }
-    template <typename type> operator type const         &&() { return static_cast<ype const         &&>(*(type*) static_cast<void*>(this)); }
-    template <typename type> operator type const volatile&&() { return static_cast<ype const volatile&&>(*(type*) static_cast<void*>(this)); }
-    template <typename type> operator type       volatile&&() { return static_cast<ype       volatile&&>(*(type*) static_cast<void*>(this)); }
-  #endif
-
-  #ifdef __cpp_rvalue_references // --> 200610L
-    template <typename type>
-    friend reflinfo<type&&> operator ,(refl, type&&) {
-      return reflinfo<type&&>();
-    }
-  #else
-    template <typename type> friend reflinfo<type               &> operator ,(refl, type               &) { return reflinfo<type               &>(); }
-    template <typename type> friend reflinfo<type const         &> operator ,(refl, type const         &) { return reflinfo<type const         &>(); }
-    template <typename type> friend reflinfo<type const volatile&> operator ,(refl, type const volatile&) { return reflinfo<type const volatile&>(); }
-    template <typename type> friend reflinfo<type       volatile&> operator ,(refl, type       volatile&) { return reflinfo<type       volatile&>(); }
-  #endif
-
-  // → alias captured unary `(A) +B` expression type
-  template <typename type>
-  friend reflinfo<type> operator ,(refl, reflinfo<type>);
-
-  // → capture non-`void` values
-  // → support binary `(A) + B` over unary `(A) +B` expressions
-  #ifdef __cpp_rvalue_references // --> 200610L
-    template <typename type>
-    friend reflinfo<type&&> operator +(type&&, refl);
-  #else
-    template <typename type> friend reflinfo<type               &> operator +(type               &, refl);
-    template <typename type> friend reflinfo<type const         &> operator +(type const         &, refl);
-    template <typename type> friend reflinfo<type const volatile&> operator +(type const volatile&, refl);
-    template <typename type> friend reflinfo<type       volatile&> operator +(type       volatile&, refl);
+    template <typename type> operator type               &&() { return static_cast<type               &&>(*(type*) static_cast<void*>(this)); }
+    template <typename type> operator type const         &&() { return static_cast<type const         &&>(*(type*) static_cast<void*>(this)); }
+    template <typename type> operator type const volatile&&() { return static_cast<type const volatile&&>(*(type*) static_cast<void*>(this)); }
+    template <typename type> operator type       volatile&&() { return static_cast<type       volatile&&>(*(type*) static_cast<void*>(this)); }
   #endif
 };
 
-#define _
-#define reflid(value) (refl _ (), (value) refl _ (), reflinfo<void>())
+template <typename base, bool = true>
+struct reflinfo /* final */ : public reflect {
+  typedef ...  base; // int* -> int
+  typedef base type;
+
+  private:
+  public:
+    #ifdef __cpp_constexpr // --> 200704L
+      constexpr
+    #endif
+    operator reflect() const {
+      reflect reflection = {
+      };
+      return reflection;
+    }
+};
+
+template <typename base>
+struct reflinfo<base, false> /* final */ {
+  operator reflect() const {
+    reflect reflection = {};
+    return reflection;
+  }
+};
+
+typedef struct reflect::proxy reflproxy;
+  // ->> `refl(…)` for non-`void` types (1st step)
+  reflect operator +(reflect);
+
+  // ->> `refl(…)` for non-`void` types (3rd step)
+  #ifdef __cpp_rvalue_references // --> 200610L
+    template <typename type>
+    friend reflinfo<type&&> operator ,(reflect, type&&) {
+      return reflinfo<type&&>();
+    }
+  #else
+    template <typename type> friend reflinfo<type               &> operator ,(reflect, type               &) { return reflinfo<type               &>(); }
+    template <typename type> friend reflinfo<type const         &> operator ,(reflect, type const         &) { return reflinfo<type const         &>(); }
+    template <typename type> friend reflinfo<type const volatile&> operator ,(reflect, type const volatile&) { return reflinfo<type const volatile&>(); }
+    template <typename type> friend reflinfo<type       volatile&> operator ,(reflect, type       volatile&) { return reflinfo<type       volatile&>(); }
+  #endif
+
+  // ->> `refl(…)` for non-`void` types (4th step)
+  template <typename type>
+  reflinfo<type> operator ,(reflinfo<type>, reflinfo<void>) {
+    return reflinfo<type>();
+  }
+
+  // ->> `refl(…)` for expressions (1st step)
+  #ifdef __cpp_rvalue_references // --> 200610L
+    template <typename type>
+    reflinfo<type&&> operator +(type&&, reflect);
+  #else
+    template <typename type> reflinfo<type               &> operator +(type               &, reflect);
+    template <typename type> reflinfo<type const         &> operator +(type const         &, reflect);
+    template <typename type> reflinfo<type const volatile&> operator +(type const volatile&, reflect);
+    template <typename type> reflinfo<type       volatile&> operator +(type       volatile&, reflect);
+  #endif
+
+  // ->> `refl(…)` for expressions (2nd step)
+  template <typename type>
+  reflinfo<type> operator ,(reflect, reflinfo<type>);
+
 #if defined _MSC_VER or /* --> 200707L */ defined __cpp_decltype
-# define refl(value)     decltype(refl(), (value) +refl(), reflinfo<void>())()
-# define reflexpr(value) decltype(refl(), (value),         reflinfo<void>())()
+# define refl(value)     (reflect) decltype(reflect(), (value) +reflect(), reflinfo<void>())()
+# define reflexpr(value) (reflect) decltype(reflect(), (value),            reflinfo<void>())()
+# define reflid(value)   (reflect) decltype(reflect(), (value)  reflect(), reflinfo<void>())()
 #elif defined __GNUC__
-# define refl(value)     __decltype(refl(), (value) +refl(), reflinfo<void>())()
-# define reflexpr(value) __decltype(refl(), (value),         reflinfo<void>())()
+# define refl(value)     (reflect) __decltype(reflect(), (value) +reflect(), reflinfo<void>())()
+# define reflexpr(value) (reflect) __decltype(reflect(), (value),            reflinfo<void>())()
+# define reflid(value)   (reflect) __decltype(reflect(), (value)  reflect(), reflinfo<void>())()
 #elif defined __clang__
-# define refl(value)     typename reflinfo<__typeof__(refl(), (value) +refl(), reflinfo<void>())>::type()
-# define reflexpr(value) typename reflinfo<__typeof__(refl(), (value),         reflinfo<void>())>::type()
+# define refl(value)     (reflect) typename reflinfo<__typeof__(reflect(), (value) +reflect(), reflinfo<void>())>::type()
+# define reflexpr(value) (reflect) typename reflinfo<__typeof__(reflect(), (value),            reflinfo<void>())>::type()
+# define reflid(value)   (reflect) typename reflinfo<__typeof__(reflect(), (value)  reflect(), reflinfo<void>())>::type()
 #else
-# define refl(value)     reflinfo<ERROR>()
-# define reflexpr(value) reflinfo<ERROR>()
+# define refl(value)     (reflect) reflinfo<void, false>()
+# define reflexpr(value) (reflect) reflinfo<void, false>()
+# define reflid(value)   (reflect) (reflect(), (value) reflect(), reflinfo<void>())
 #endif
 
 /* ================================= */

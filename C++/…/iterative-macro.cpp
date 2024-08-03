@@ -84,6 +84,7 @@
 /* Main */
 #define add(...) +
 #define pass(integer) integer
+#define stringify(argument) # argument
 
 int main() {
   std::printf("[0x00]: %u" "\r\n", repeat(pass, default, add) 0u);
