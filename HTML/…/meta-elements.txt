@@ -200,30 +200,30 @@ Open Graph Meta Tags
   …
     • <meta content="…" name="fb:page_id"/>
 
-    • <meta content="Lapys Arts is a platform for creative expression through the Web" name="og:description"/>
-    • <meta content="Lapys Arts"                                                       name="og:site_name"/>
-    • <meta content="Movie Title"                                                      name="og:title"/>
-    • <meta content=+234-816-092-384-9                                                 name="og:fax_number"/>
-    • <meta content=+234-816-092-384-9                                                 name="og:phone_number"/>
-    • <meta content=-122.153013                                                        name="og:longitude"/>
-    • <meta content=37.416343                                                          name="og:latitude"/>
-    • <meta content=https://www.lapys.arts                                             name="og:url"/>
-    • <meta content=https://www.lapys.arts/icon.ico                                    name="og:image"/>
-    • <meta content=lapysdev@gmail.com                                                 name="og:email"/>
     • <meta content=Britain                                                            name="og:country-name"/>
-    • <meta content=website                                                            name="og:type"/>
+    • <meta content="Lapys Arts is a platform for creative expression through the Web" name="og:description"/>
+    • <meta content=lapysdev@gmail.com                                                 name="og:email"/>
+    • <meta content=+234-816-092-384-9                                                 name="og:fax_number"/>
+    • <meta content=https://www.lapys.arts/icon.ico                                    name="og:image"/>
+    • <meta content=37.416343                                                          name="og:latitude"/>
     • <meta content=…                                                                  name="og:locality"/>
+    • <meta content=-122.153013                                                        name="og:longitude"/>
+    • <meta content=+234-816-092-384-9                                                 name="og:phone_number"/>
     • <meta content=…                                                                  name="og:postal-code"/>
     • <meta content=…                                                                  name="og:region"/>
+    • <meta content="Lapys Arts"                                                       name="og:site_name"/>
     • <meta content=…                                                                  name="og:street-address"/>
+    • <meta content="Movie Title"                                                      name="og:title"/>
+    • <meta content=website                                                            name="og:type"/>
+    • <meta content=https://www.lapys.arts                                             name="og:url"/>
 
+    • <meta content=enum(a, an, the, "", auto)                property="og:determiner"/>
     • <meta content="A shiny red apple with a bite taken out" property="og:image:alt"/>
     • <meta content=300                                       property="og:image:height"/>
     • <meta content=400                                       property="og:image:width"/>
-    • <meta content=en_GB                                     property="og:locale"/>
-    • <meta content=enum(a, an, the, "", auto)                property="og:determiner"/>
-    • <meta content=es_ES                                     property="og:locale:alternate"/>
-    • <meta content=fr_FR                                     property="og:locale:alternate"/>
     • <meta content=http://example.com/ogp.jpg                property="og:image"/>
     • <meta content=https://secure.example.com/ogp.jpg        property="og:image:secure_url"/>
     • <meta content=image/jpeg                                property="og:image:type"/>
+    • <meta content=en_GB                                     property="og:locale"/>
+    • <meta content=es_ES                                     property="og:locale:alternate"/>
+    • <meta content=fr_FR                                     property="og:locale:alternate"/>
