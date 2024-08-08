@@ -5,38 +5,36 @@ Basic HTML Meta Tags
 • <meta content="accelerometer=(none), ambient-light-sensor=(none), autoplay=(none), battery=(none), camera=(none), display-capture=(none), document-domain=(none), encrypted-media=(none), fullscreen=(none), gamepad=(none), geolocation=(none), gyroscope=(none), layout-animations=(none), legacy-image-formats=(none), magnetometer=(none), microphone=(none), midi=(none), oversized-images=(none), payment=(none), picture-in-picture=(none), publickey-credentials-get=(none), speaker-selection=(none), sync-xhr=(none), usb=(none), screen-wake-lock=(none), web-share=(none), xr-spatial-tracking=(none)" http-equiv="Permissions-Policy"/>
 • <meta content="max-age=1800, max-stale, public, stale-if-error=259200, stale-while-revalidate=86400"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               http-equiv=Cache-Control rem="max-age=30minutes"/>
 • <meta content=0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    http-equiv="Expires"/>
-• <meta content=no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   http-equiv="imagetoolbar"/>
 • <meta content=no-cache                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             http-equiv="Pragma"/>
 
-• <meta content=!                                                                      name="fragment"/>
 • <meta content=""                                                                     name="abstract"/>
+• <meta content="Expected evaluation"                                                  name="assert"/>
+• <meta content=all                                                                    name="audience"/>
+• <meta content="LapysDev, lapysdev@gmail.com"                                         name="author"/>
 • <meta content=""                                                                     name="category"/>
+• <meta content=Business                                                               name="Classification"/>
+• <meta content="2024, Copyright Holder"                                               name="copyright"/>
+• <meta content=Worldwide                                                              name="coverage"/>
+• <meta content="Description of the webpage"                                           name="description"/>
 • <meta content=""                                                                     name="designer"/>
+• <meta content=submission                                                             name="directory"/>
+• <meta content=Global                                                                 name="distribution"/>
+• <meta content=True                                                                   name="HandheldFriendly"/>
+• <meta content=https://lapys.dev                                                      name="identifier-URL"/>
+• <meta content="Comma, separated, description"                                        name="keywords"/>
+• <meta content=ES                                                                     name="language"/>
 • <meta content=""                                                                     name="owner"/>
-• <meta content=""                                                                     name="summary"/>
-• <meta content=""                                                                     name="topic"/>
+• <meta content=General                                                                name="rating"/>
+• <meta content=oluwafunmitoo@gmail.com                                                name="reply-to"/>
+• <meta content="Sunday, July 18th, 2010, 5:15pm"                                      name="revised"/>
 • <meta content="7 days"                                                               name="revisit-after"/>
 • <meta content="archive, follow, imageindex, index, noindex, odp, snippet, translate" name="robots"/>
-• <meta content="Comma, separated, description"                                        name="keywords"/>
-• <meta content="Description of the webpage"                                           name="description"/>
-• <meta content="Expected evaluation"                                                  name="assert"/>
-• <meta content="https://www.lapys.dev"                                                name="identifier-URL"/>
-• <meta content="LapysDev, lapysdev@gmail.com"                                         name="author"/>
 • <meta content="Subject of the webpage"                                               name="subject"/>
-• <meta content="Sunday, July 18th, 2010, 5:15pm"                                      name="revised"/>
-• <meta content=#0000FF                                                                name="theme-color"/>
-• <meta content=all                                                                    name="audience"/>
+• <meta content=""                                                                     name="summary"/>
 • <meta content=all                                                                    name="target"/>
-• <meta content=Business                                                               name="Classification"/>
-• <meta content=Copyright                                                              name="copyright"/>
-• <meta content=ES                                                                     name="language"/>
-• <meta content=General                                                                name="rating"/>
-• <meta content=Global                                                                 name="distribution"/>
-• <meta content=https://www.lapys.dev                                                  name="url"/>
-• <meta content=oluwafunmitoo@gmail.com                                                name="reply-to"/>
-• <meta content=submission                                                             name="directory"/>
-• <meta content=True                                                                   name="HandheldFriendly"/>
-• <meta content=Worldwide                                                              name="coverage"/>
+• <meta content=#0000FF                                                                name="theme-color"/>
+• <meta content=""                                                                     name="topic"/>
+• <meta content=https://lapys.dev                                                      name="url"/>
 
 Company/ Service Meta Tags
   ClaimID
@@ -45,8 +43,8 @@ Company/ Service Meta Tags
   Apple Meta Tags
     • <meta content="address=no, date=no, email=no, telephone=no, url=no"                                                                             name="format-detection"/>
     • <meta content="height=device-height, initial-scale=1.0, maximum-scale=1.0, minimal-ui, minimum-scale=1.0, user-scalable=no, width=device-width" name="viewport"/>
-    • <meta content=#0000FF                                                                                                                           name="apple-mobile-web-app-status-bar-style"/>
     • <meta content=yes                                                                                                                               name="apple-mobile-web-app-capable"/>
+    • <meta content=#0000FF                                                                                                                           name="apple-mobile-web-app-status-bar-style"/>
     • <meta content=yes                                                                                                                               name="apple-touch-fullscreen"/>
 
   Apple Tags
@@ -62,6 +60,8 @@ Company/ Service Meta Tags
   Internet Explorer Meta Tags
     • <link href=icon.ico rel="shortcut icon"/>
 
+    • <meta content=RevealTrans(Duration=2.0,Transition=2)  http-equiv="Page-Enter"/>
+    • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
     • <meta content="action-uri=index.html;icon-uri=icon.ico;name=Task Name" name="msapplication-task"/>
     • <meta content="chrome=1" http-equiv="X-UA-Compatible"/>
       ▴ [chrome=1]       Google Chrome Frame is an open source browser plug-in. Users who have the plug-in installed have access to Google Chrome's open web technologies and speedy JavaScript engine when they open pages in the browser
@@ -78,20 +78,18 @@ Company/ Service Meta Tags
       ▴ [IE=EmulateIE8]  Emulate IE8 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 8 standards mode and quirks mode directives are displayed in IE5 mode
       ▴ [IE=EmulateIE9]  Emulate IE9 mode tells Internet Explorer to use the `<!DOCTYPE>` directive to determine how to render content. Standards mode directives are displayed in Internet Explorer 9 standards mode and quirks mode directives are displayed in IE5 mode
 
-    • <meta content="LapysDev Application Tooltip" name="msapplication-tooltip"/>
-    • <meta content="LapysDev Application"         name="application-name"/>
-    • <meta content=#                              name="msapplication-starturl"/>
-    • <meta content=#0000FF                        name="msapplication-navbutton-color"/>
-    • <meta content=height=600;width=800           name="msapplication-window"/>
-    • <meta content=no                             name="MSThemeCompatible"/>
-    • <meta content=RevealTrans(Duration=2.0,Transition=2)  http-equiv="Page-Enter"/>
-    • <meta content=RevealTrans(Duration=3.0,Transition=12) http-equiv="Page-Exit"/>
-    • <meta content=SKYPE_TOOLBAR_PARSER_COMPATIBLE name="SKYPE_TOOLBAR"/>
+    • <meta content="LapysDev Application"          name="application-name"/>
+    • <meta content=#0000FF                         name="msapplication-navbutton-color"/>
+    • <meta content=#                               name="msapplication-starturl"/>
+    • <meta content="LapysDev Application Tooltip"  name="msapplication-tooltip"/>
+    • <meta content=height=600;width=800            name="msapplication-window"/>
     • <meta content=true                            name="mssmarttagspreventparsing"/>
+    • <meta content=no                              name="MSThemeCompatible"/>
+    • <meta content=SKYPE_TOOLBAR_PARSER_COMPATIBLE name="SKYPE_TOOLBAR"/>
 
   Rails Meta Tags
     • <meta content="authenticity_token" name="csrf-param"/>
-    • <meta content=…                   name="csrf-token"/>
+    • <meta content=…                    name="csrf-token"/>
 
   TweetMeme Meta Tags
     • <meta name="tweetmeme-title" content="Retweet Button Explained"/>
@@ -103,23 +101,23 @@ HTML Link Tags
   • <link href=#                                                          rel="first"/>
   • <link href=#                                                          rel="last"/>
   • <link href=#                                                          rel="pingback"/>
-  • <link href=#                                                          rel=EditURI   title=…  type="application/rsd+xml"/>
+  • <link href=#                                                          rel=EditURI   title=…   type="application/rsd+xml"/>
   • <link href=base.css media="only screen and (max-device-width: 480px)" rel=stylesheet          type="text/css"/>
   • <link href=fluid-icon.png                                             rel=fluid-icon          type="image/png"/>
   • <link href=http://feeds.lapys.com/                                    rel=alternate title=RSS type="application/rss+xml"/>
   • <link href=https://www.lapys/                                         rel=me                  type="text/html"/>
   • <link href=https://www.lapys/*.php?                                   rel=self                type="application/atom+xml"/>
   • <link href=https://www.lapys/archives/                                rel=archives  title="May 2003"/>
-  • <link href=https://www.lapys/canonical                                rel="canonical"/>
+  • <link href=https://www.lapys/redirect/                                rel="canonical"/>
   • <link href=https://www.lapys/index/?                                  rel=index     title="…"/>
-  • <link href=https://www.lapys/search.xml                               rel=search    title=…  type="application/opensearchdescription+xml"/>
+  • <link href=https://www.lapys/search.xml                               rel=search    title=…   type="application/opensearchdescription+xml"/>
   • <link href=https://www.lapys/shortlink/                               rel="shortlink"/>
   • <link href=https://www.lapys/start/?                                  rel=start     title="…"/>
   • <link href=icon.ico                                                   rel="icon"/>
   • <link href=icon.ico                                                   rel="mask-icon"/>
   • <link href=icon.ico                                                   rel="shortcut icon"/>
-  • <link href=javascript:history.go(-1)                                  rel=prev      title="OpenSearch and OpenID"/>
-  • <link href=javascript:history.go(1)                                   rel=next      title="…"/>
+  • <link href=javascript:history.go(-1)                                  rel=prev      title="Preload previous Web document in series"/>
+  • <link href=javascript:history.go(+1)                                  rel=next      title="Preload next Web document in series"/>
 
 Open Graph Meta Tags
   The Open Graph protocol enables any web page to become a rich object in a social graph
@@ -214,10 +212,10 @@ Open Graph Meta Tags
     • <meta content=lapysdev@gmail.com                                                 name="og:email"/>
     • <meta content=Britain                                                            name="og:country-name"/>
     • <meta content=website                                                            name="og:type"/>
-    • <meta content=…                                                                 name="og:locality"/>
-    • <meta content=…                                                                 name="og:postal-code"/>
-    • <meta content=…                                                                 name="og:region"/>
-    • <meta content=…                                                                 name="og:street-address"/>
+    • <meta content=…                                                                  name="og:locality"/>
+    • <meta content=…                                                                  name="og:postal-code"/>
+    • <meta content=…                                                                  name="og:region"/>
+    • <meta content=…                                                                  name="og:street-address"/>
 
     • <meta content="A shiny red apple with a bite taken out" property="og:image:alt"/>
     • <meta content=300                                       property="og:image:height"/>
