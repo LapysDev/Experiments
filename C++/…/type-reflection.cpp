@@ -23,9 +23,9 @@ struct reflect /* final */ {
     private:
       static void  operator delete(void*);
       static void* operator new   (std::size_t);
-      static void* operator new   (std::size_t, _ const&);
+      static void* operator new   (std::size_t, _);
       #ifdef __cpp_rvalue_references // --> 200610L
-        static void* operator new(std::size_t, _&&);
+        static void* operator new(std::size_t, _&);
       #endif
   }; // ->> See `reflproxy::operator []`
 
@@ -622,21 +622,21 @@ typedef struct reflect::proxy reflproxy;
   }
 
 #if defined _MSC_VER or /* --> 200707L */ defined __cpp_decltype
-# define refl(value)     decltype(reflect(), (value) +reflect(), reflinfo<void>())().operator reflect()
-# define reflexpr(value) decltype(reflect(), (value),            reflinfo<void>())().operator reflect()
-# define reflid(value)   decltype(reflect(), (value)  reflect(), reflinfo<void>())().operator reflect()
+# define     refl(value) decltype(reflect(), (value) +reflect(), reflinfo<void>())().operator reflect() //
+# define reflexpr(value) reflinfo<decltype   (value)>                             ().operator reflect() // decltype(reflect(), (value),            reflinfo<void>())().operator reflect()
+# define   reflid(value) reflinfo            <value>                              ().operator reflect() // decltype(reflect(), (value)  reflect(), reflinfo<void>())().operator reflect()
 #elif defined __GNUC__
-# define refl(value)     __decltype(reflect(), (value) +reflect(), reflinfo<void>())().operator reflect()
-# define reflexpr(value) __decltype(reflect(), (value),            reflinfo<void>())().operator reflect()
-# define reflid(value)   __decltype(reflect(), (value)  reflect(), reflinfo<void>())().operator reflect()
+# define     refl(value) __decltype(reflect(), (value) +reflect(), reflinfo<void>())().operator reflect() //
+# define reflexpr(value) reflinfo<__decltype   (value)>                             ().operator reflect() // __decltype(reflect(), (value),            reflinfo<void>())().operator reflect()
+# define   reflid(value) reflinfo              <value>                              ().operator reflect() // __decltype(reflect(), (value)  reflect(), reflinfo<void>())().operator reflect()
 #elif defined __clang__
-# define refl(value)     typename reflinfo<__typeof__(reflect(), (value) +reflect(), reflinfo<void>())>::type().operator reflect()
-# define reflexpr(value) typename reflinfo<__typeof__(reflect(), (value),            reflinfo<void>())>::type().operator reflect()
-# define reflid(value)   typename reflinfo<__typeof__(reflect(), (value)  reflect(), reflinfo<void>())>::type().operator reflect()
+# define     refl(value) typename reflinfo<__typeof__(reflect(), (value) +reflect(), reflinfo<void>())>::type().operator reflect() //
+# define reflexpr(value) reflinfo         <__typeof__            (value)>                                    ().operator reflect() // typename reflinfo<__typeof__(reflect(), (value),            reflinfo<void>())>::type().operator reflect()
+# define   reflid(value) reflinfo                                <value>                                     ().operator reflect() // typename reflinfo<__typeof__(reflect(), (value)  reflect(), reflinfo<void>())>::type().operator reflect()
 #else
-# define refl(value)     reflinfo<void, false>()                         .operator reflect()
-# define reflexpr(value) reflinfo<void, false>()                         .operator reflect()
-# define reflid(value)   (reflect(), (value) reflect(), reflinfo<void>()).operator reflect()
+# define     refl(value) reflinfo<void, false>().operator reflect() //
+# define reflexpr(value) reflinfo<void, false>().operator reflect() //
+# define   reflid(value) reflinfo<value>      ().operator reflect() // (reflect(), (value) reflect(), reflinfo<void>()).operator reflect()
 #endif
 
 /* Main */

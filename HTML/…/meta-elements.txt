@@ -7,34 +7,34 @@ Basic HTML Meta Tags
 • <meta content=0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    http-equiv="Expires"/>
 • <meta content=no-cache                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             http-equiv="Pragma"/>
 
-• <meta content=""                                                                     name="abstract"/>
-• <meta content="Expected evaluation"                                                  name="assert"/>
-• <meta content=all                                                                    name="audience"/>
-• <meta content="LapysDev, lapysdev@gmail.com"                                         name="author"/>
-• <meta content=""                                                                     name="category"/>
-• <meta content=Business                                                               name="Classification"/>
-• <meta content="2024, Copyright Holder"                                               name="copyright"/>
-• <meta content=Worldwide                                                              name="coverage"/>
-• <meta content="Description of the webpage"                                           name="description"/>
-• <meta content=""                                                                     name="designer"/>
-• <meta content=submission                                                             name="directory"/>
-• <meta content=Global                                                                 name="distribution"/>
-• <meta content=True                                                                   name="HandheldFriendly"/>
-• <meta content=https://lapys.dev                                                      name="identifier-URL"/>
-• <meta content="Comma, separated, description"                                        name="keywords"/>
-• <meta content=ES                                                                     name="language"/>
-• <meta content=""                                                                     name="owner"/>
-• <meta content=General                                                                name="rating"/>
-• <meta content=oluwafunmitoo@gmail.com                                                name="reply-to"/>
-• <meta content="Sunday, July 18th, 2010, 5:15pm"                                      name="revised"/>
-• <meta content="7 days"                                                               name="revisit-after"/>
-• <meta content="archive, follow, imageindex, index, noindex, odp, snippet, translate" name="robots"/>
-• <meta content="Subject of the webpage"                                               name="subject"/>
-• <meta content=""                                                                     name="summary"/>
-• <meta content=all                                                                    name="target"/>
-• <meta content=#0000FF                                                                name="theme-color"/>
-• <meta content=""                                                                     name="topic"/>
-• <meta content=https://lapys.dev                                                      name="url"/>
+• <meta content=""                                                                                                                                       name="abstract"/>
+• <meta content="Expected evaluation"                                                                                                                    name="assert"/>
+• <meta content=all                                                                                                                                      name="audience"/>
+• <meta content="LapysDev, lapysdev@gmail.com"                                                                                                           name="author"/>
+• <meta content=""                                                                                                                                       name="category"/>
+• <meta content=Business                                                                                                                                 name="Classification"/>
+• <meta content="2024, Copyright Holder"                                                                                                                 name="copyright"/>
+• <meta content=Worldwide                                                                                                                                name="coverage"/>
+• <meta content="Description of the webpage"                                                                                                             name="description"/>
+• <meta content=""                                                                                                                                       name="designer"/>
+• <meta content=submission                                                                                                                               name="directory"/>
+• <meta content=Global                                                                                                                                   name="distribution"/>
+• <meta content=True                                                                                                                                     name="HandheldFriendly"/>
+• <meta content=https://lapys.dev                                                                                                                        name="identifier-URL"/>
+• <meta content="Comma, separated, description"                                                                                                          name="keywords"/>
+• <meta content=ES                                                                                                                                       name="language"/>
+• <meta content=""                                                                                                                                       name="owner"/>
+• <meta content="adult, General, RTA-5042-1996-1400-1577-RTA"                                                                                            name="rating"/>
+• <meta content=oluwafunmitoo@gmail.com                                                                                                                  name="reply-to"/>
+• <meta content="Sunday, July 18th, 2010, 5:15pm"                                                                                                        name="revised"/>
+• <meta content="7 days"                                                                                                                                 name="revisit-after"/>
+• <meta content="archive, follow, imageindex, index, max-image-preview:standard, max-snippet:69, max-video-preview:42, noindex, odp, snippet, translate" name="robots"/>
+• <meta content="Subject of the webpage"                                                                                                                 name="subject"/>
+• <meta content=""                                                                                                                                       name="summary"/>
+• <meta content=all                                                                                                                                      name="target"/>
+• <meta content=#0000FF                                                                                                                                  name="theme-color"/>
+• <meta content=""                                                                                                                                       name="topic"/>
+• <meta content=https://lapys.dev                                                                                                                        name="url"/>
 
 Company/ Service Meta Tags
   ClaimID

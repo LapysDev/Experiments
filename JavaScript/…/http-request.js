@@ -13,14 +13,14 @@ document.open();
 // ... ->> Spawn multiple interfaces for HTTP requests
 if ("function" === typeof fetch) {
   fetch(url, {
-    body          : body, // WARN (Lapys) -> Must match `Content-Type` header
-    cache         : "no-cache", // --> default | force-cache | no-cache | only-if-cached | reload
-    credentials   : "same-origin", // --> include | omit | same-origin
-    headers       : {"Content-Type": "text/plain" /* , ... */}, // ->> Denying CORS requests limits header types to `Accept`, `Accept-Language`, `Content-Language`, and `Content-Type: application/x-www-form-urlencoded | multipart/form-data | text/plain`
-    method        : method,
-    mode          : "cors", // ->> Unconstrained to the CORS policy --> cors | no-cors | same-origin
-    redirect      : "follow", // --> error | follow | manual
-    referrerPolicy: "no-referrer" // --> no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url
+    body          : body,                                       // WARN (Lapys) -> Must match `Content-Type` header
+    cache         : "no-cache",                                 // --> default                                                                                                                                            | force-cache         | no-cache | only-if-cached | reload
+    credentials   : "same-origin",                              // --> include                                                                                                                                            | omit                | same-origin
+    headers       : {"Content-Type": "text/plain" /* , ... */}, // ->> Denying CORS requests limits header types to `Accept`, `Accept-Language`, `Content-Language`, and `Content-Type: application/x-www-form-urlencoded | multipart/form-data | text/plain``
+    method        : method,                                     //
+    mode          : "cors",                                     // ->> Unconstrained to the CORS policy --> cors                                                                                                          | no-cors                    | same-origin
+    redirect      : "follow",                                   // --> error                                                                                                                                              | follow                     | manual
+    referrerPolicy: "no-referrer"                               // --> no-referrer                                                                                                                                        | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url
   }).then(function(response) {
     // document.write("<div>[Fetch API]: Fetch sent<pre>" + response + "</pre></div>");
     return response
