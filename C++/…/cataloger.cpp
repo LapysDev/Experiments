@@ -20,8 +20,20 @@
 int main(int count, char* arguments[]) /* noexcept */ {
   static struct cataloger *catalogAddress = NULL;
   struct cataloger /* final */ {
+    struct formatinfo /* final */ {
+      bool          value;
+      unsigned char metadata[32]; // ->> Arbitrarily-sized
+
+      /* ... */
+      inline formatinfo(bool const value) : metadata(), value(value) {}
+
+      inline bool operator =(bool const value) { this -> value = value; return value; }
+      inline operator bool() const { return this -> value; }
+    };
+
     enum /* : std::size_t */ { MESSAGE_MAXIMUM_LENGTH = 256u };
 
+    /* ... */
     /* [[noreturn]] extern "C" */ static void fault(int const signal) {
       bool (*const message)(char const[], std::FILE*) = NULL == catalogAddress ? NULL : &catalogAddress -> message;
 
@@ -46,76 +58,61 @@ int main(int count, char* arguments[]) /* noexcept */ {
       std::exit(EXIT_FAILURE);
     }
 
-    static bool message(char const message[], std::FILE* const stream = stdout) {
-      union format {
-        struct info /* final */ {
-          #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-            struct { DWORD attributes; bool reattributed; } metadata;
-          #else
-            unsigned char metadata;
-          #endif
-          bool value;
+    static formatinfo format(std::FILE* const stream, formatinfo const recolor = true) {
+      #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+        int const streamDescriptor = stream == stderr ? ::fileno(stream) /* --> STDERR_FILENO */ : -1;
 
-          /* ... */
-          inline info(bool const value) : metadata(), value(value) {}
-          inline operator bool() const { return this -> value; }
-        };
+        // ...
+        if (streamDescriptor != -1 and ::isatty(streamDescriptor) == 1) {
+          if (not recolor)
+            return std::fwrite("\x1B" "[00m", sizeof(char), 5u, stream) == 5u;
 
-        static format::info recolor(std::FILE* const stream, format::info const recolor = true) {
-          #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
-            int const streamDescriptor = stream == stderr ? ::fileno(stream) /* --> STDERR_FILENO */ : -1;
-
-            // ...
-            if (streamDescriptor != -1 and ::isatty(streamDescriptor) == 1) {
-              if (not recolor)
-                return std::fwrite("\x1B" "[00m", sizeof(char), 5u, stream) == 5u;
-
-              return stream == stderr ? std::fwrite("\x1B" "[31m", sizeof(char), 5u, stream) == 5u : true;
-            }
-          #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-            format::info               information                          = static_cast<format::info>(true);
-            DWORD                      streamConsoleMode                    = 0x00u;
-            CONSOLE_SCREEN_BUFFER_INFO streamConsoleScreenBufferInformation = {};
-            HANDLE const               streamStandardDeviceHandle           = stream == stderr ? ::GetStdHandle(STD_ERROR_HANDLE) : NULL;
-
-            // ...
-            if (INVALID_HANDLE_VALUE != streamStandardDeviceHandle and NULL != streamStandardDeviceHandle) {
-              if (not recolor)
-              return recolor.metadata.reattributed ?
-                FALSE != ::SetConsoleTextAttribute(streamStandardDeviceHandle, recolor.metadata.attributes) :
-                std::fwrite("\x1B" "[00m", sizeof(char), 5u, stream) == 5u
-              ;
-
-              #ifdef ENABLE_VIRTUAL_TERMINAL_PROCESSING // --> _WIN32_WINNT_WIN10
-                if (FALSE != ::GetConsoleMode(streamStandardDeviceHandle, &streamConsoleMode))
-                if (FALSE != ::SetConsoleMode(streamStandardDeviceHandle, streamConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING+0)) {
-                  information                       = stream == stderr ? std::fwrite("\x1B" "[31m", sizeof(char), 5u, stream) == 5u : true;
-                  information.metadata.reattributed = false;
-
-                  return information;
-                }
-              #endif
-
-              if (FALSE != ::GetConsoleScreenBufferInfo(streamStandardDeviceHandle, &streamConsoleScreenBufferInformation)) {
-                information                       = stream == stderr ? FALSE != ::SetConsoleTextAttribute(streamStandardDeviceHandle, FOREGROUND_RED) : true;
-                information.metadata.attributes   = streamConsoleScreenBufferInformation.wAttributes;
-                information.metadata.reattributed = true;
-
-                return information;
-              }
-            }
-          #endif
-
-          return false;
+          return stream == stderr ? std::fwrite("\x1B" "[31m", sizeof(char), 5u, stream) == 5u : true;
         }
-      };
+      #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+        formatinfo                 information                          = static_cast<formatinfo>(true);
+        DWORD                      streamConsoleMode                    = 0x00u;
+        CONSOLE_SCREEN_BUFFER_INFO streamConsoleScreenBufferInformation = {};
+        HANDLE const               streamStandardDeviceHandle           = stream == stderr ? ::GetStdHandle(STD_ERROR_HANDLE) : NULL;
 
+        // ...
+        if (INVALID_HANDLE_VALUE != streamStandardDeviceHandle and NULL != streamStandardDeviceHandle) {
+          if (not recolor)
+          return recolor.metadata.reattributed ?
+            FALSE != ::SetConsoleTextAttribute(streamStandardDeviceHandle, recolor.metadata.attributes) :
+            std::fwrite("\x1B" "[00m", sizeof(char), 5u, stream) == 5u
+          ;
+
+          #ifdef ENABLE_VIRTUAL_TERMINAL_PROCESSING // --> _WIN32_WINNT_WIN10
+            if (FALSE != ::GetConsoleMode(streamStandardDeviceHandle, &streamConsoleMode))
+            if (FALSE != ::SetConsoleMode(streamStandardDeviceHandle, streamConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING+0)) {
+              information                       = stream == stderr ? std::fwrite("\x1B" "[31m", sizeof(char), 5u, stream) == 5u : true;
+              information.metadata.reattributed = false;
+
+              return information;
+            }
+          #endif
+
+          if (FALSE != ::GetConsoleScreenBufferInfo(streamStandardDeviceHandle, &streamConsoleScreenBufferInformation)) {
+            information                       = stream == stderr ? FALSE != ::SetConsoleTextAttribute(streamStandardDeviceHandle, FOREGROUND_RED) : true;
+            information.metadata.attributes   = streamConsoleScreenBufferInformation.wAttributes;
+            information.metadata.reattributed = true;
+
+            return information;
+          }
+        }
+      #endif
+
+      return false;
+    }
+
+    static bool message(char const message[], std::FILE* const stream = stdout) {
       char        const messageTerminator[]         = "\r\n";                                             // ->> Source literal encoding to multi-byte NUL-terminated string
       std::size_t const messageTerminatorLength     = (sizeof messageTerminator     / sizeof(char)) - 1u; //
       char        const messageOverflowSuffix[]     = "…";                                                // ->> Source literal encoding to multi-byte NUL-terminated string
       std::size_t const messageOverflowSuffixLength = (sizeof messageOverflowSuffix / sizeof(char)) - 1u; //
       bool              messageOverflowed           = false;                                              //
-      format::info      messageFormatInformation    = static_cast<format::info>(false);                   //
+      formatinfo        messageFormatInformation    = static_cast<formatinfo>(false);                     //
       std::size_t       messageBufferLength         = 0u;                                                 //
       char              messageBuffer[MESSAGE_MAXIMUM_LENGTH + messageOverflowSuffixLength + messageTerminatorLength + /* ->> NUL terminator */ 1u];
 
@@ -179,7 +176,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       (void) std::setvbuf(stream, NULL, _IONBF, 0u);
 
       messageBuffer[messageBufferLength] = '\0';
-      messageFormatInformation           = format::recolor(stream);
+      messageFormatInformation           = catalogAddress -> format(stream);
 
       if (EOF != std::fputs(messageBuffer, stream))
         (void) std::fflush(stream);
@@ -191,7 +188,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
       if (messageFormatInformation) {
         messageFormatInformation.value = false;
-        (void) format::recolor(stream, messageFormatInformation);
+        (void) catalogAddress -> format(stream, messageFormatInformation);
       }
 
       return true;
@@ -202,14 +199,14 @@ int main(int count, char* arguments[]) /* noexcept */ {
     }
 
     /* ... */
-    char const *applicationName;           //
-    char const *logDirectoryPath;          // ->> Filesystem location for storing catalogs
-    bool        logDirectoryPathAllocated; //
-    char const *messagePrefix;             //
-    char const *messageSuffix;             //
-    std::FILE  *timerFileStream;           //
-    char       *timerPath;                 // ->> Filesystem location for serializing catalog timer
-    bool        timerPathAllocated;        //
+    char const *applicationName;
+    char const *logDirectoryPath;
+    bool        logDirectoryPathAllocated;
+    char const *messagePrefix;
+    char const *messageSuffix;
+    std::FILE  *timerFileStream;
+    char       *timerPath;
+    bool        timerPathAllocated;
   } catalog = {};
 
   // ...
@@ -218,12 +215,12 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   catalogAddress                    = &catalog;                        //
   catalog.applicationName           = "cataloger";                     //
-  catalog.logDirectoryPath          = count > 1 ? arguments[1] : NULL; // ->> Assume NUL-terminated
+  catalog.logDirectoryPath          = count > 1 ? arguments[1] : NULL; //  ->> Filesystem location for storing catalogs; Assume NUL-terminated
   catalog.logDirectoryPathAllocated = false;                           //
   catalog.messagePrefix             = "cataloger" ": ";                //
   catalog.messageSuffix             = "\r\n";                          //
   catalog.timerFileStream           = NULL;                            //
-  catalog.timerPath                 = count > 2 ? arguments[2] : NULL; // ->> Assume NUL-terminated
+  catalog.timerPath                 = count > 2 ? arguments[2] : NULL; // ->> Filesystem location for serializing catalog timer; Assume NUL-terminated
   catalog.timerPathAllocated        = false;                           //
 
   // ...
@@ -392,6 +389,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
   // CHECK IF TIME ELAPSED OR IF RUN FIRST TIME
   // SPAWN LOG not as child process; format: 2023–07–07.log
   // look for non-busy waits
+  // HELP SCREEN?
+  // ABOUT SCREEN
   std::printf("[...]: 0x%02lX {allocated: %4.5s, name: \"%s\"}" "\r\n", (unsigned long) reinterpret_cast<uintptr_t>(catalog.timerFileStream), catalog.timerPathAllocated ? "true" : "false", catalog.timerPath);
   // // ... ->> A more consistent `std::tm` binary format
   // struct timestamp {
