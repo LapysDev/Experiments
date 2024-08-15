@@ -22,6 +22,10 @@ constexpr inline int ones_complement(int const value) noexcept {
   return ~value;
 }
 
+constexpr inline int repeat_bits(int const value, std::size_t const length) noexcept {
+  return value * (0b11…1 /* UINT_MAX */ / ((1u << length) - 1u));
+}
+
 constexpr inline int set_bit(int const value, std::size_t const index) noexcept {
   return value | (1u << index);
 }
