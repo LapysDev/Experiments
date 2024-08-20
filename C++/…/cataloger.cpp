@@ -1,4 +1,3 @@
-// --> cataloger C:\Users\oluwa\OneDrive\Lapys\Catalog C:\Users\oluwa\OneDrive\Lapys\Catalog\schedule.dat
 #include <ciso646> // --> and, not, or
 #include <climits> // --> CHAR_BIT
 #include <clocale> // --> LC_ALL;                                std::setlocale(…)
@@ -13,10 +12,20 @@
 # include <unistd.h> // --> ::isatty(…)
 #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
 # define _CRT_SECURE_NO_WARNINGS
-# include <windows.h> // --> ENABLE_VIRTUAL_TERMINAL_PROCESSING, FOREGROUND_RED, INVALID_HANDLE_VALUE, STD_ERROR_HANDLE; CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE; ::GetConsoleMode(…), ::GetConsoleScreenBufferInfo(…), ::GetStdHandle(…), ::SetConsoleMode(…), ::SetConsoleTextAttribute(…)
+# include <windows.h> // --> ENABLE_VIRTUAL_TERMINAL_PROCESSING, FOREGROUND_RED, INVALID_HANDLE_VALUE, PSECURITY_DESCRIPTOR, STD_ERROR_HANDLE; CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE; ::GetConsoleMode(…), ::GetConsoleScreenBufferInfo(…), ::GetStdHandle(…), ::SetConsoleMode(…), ::SetConsoleTextAttribute(…)
+#   include <objbase.h>  // --> ::COINIT_MULTITHREADED; ::CoInitializeEx(…), ::CoInitializeSecurity(…), ::CoUninitialize(…)
+#   include <objidl.h>   // --> SOLE_AUTHENTICATION_SERVICE
+#   include <winerror.h> // --> FAILED, SUCCEEDED
+#   include <winnt.h>    // --> HRESULT
+#   if _WIN32_WINNT+0 >= 0x0600 // --> _WIN32_WINNT_VISTA | _WIN32_WINNT_WS08
+#     include <comutil.h>  // --> _bstr_t, _variant_t
+#     include <taskschd.h> // --> IAction, IActionCollection, IDailyTrigger, IRegistrationInfo, IRepetitionPattern, ITaskDefinition, ITaskFolder, ITaskService, ITrigger, ITriggerCollection
+#   endif
 #endif
 
-/* Main --> cataloger [log_path] [clock] */
+/* Main --> cataloger [log_directory] [clock_path] */
+// COMPILE: del cataloger.exe && cls && clang++ -pedantic -std=c++98 -Wall -Wextra cataloger.cpp -o cataloger.exe -lole32 -loleaut32 && cataloger.exe A C:\Users\oluwa\…\cataloger-clock.dat & del cataloger.exe
+// RUN    : cataloger C:/Users/oluwa/OneDrive/Lapys/Catalog C:/Users/oluwa/OneDrive/Lapys/Catalog/cataloger-clock.dat
 int main(int count, char* arguments[]) /* noexcept */ {
   static struct cataloger *catalogAddress = NULL;
   struct cataloger /* final */ {
@@ -24,7 +33,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     union formatinfo { unsigned char metadata[32]; /* ->> Arbitrarily-sized */ };
 
     /* ... */
-    /* [[noreturn]] extern "C" */ static void fault(int const signal) {
+    /* [[noreturn]] extern "C" */ static void error(int const signal) {
       bool (*const message)(char const[], std::FILE*) = NULL == catalogAddress ? NULL : &catalogAddress -> message;
 
       // ...
@@ -76,11 +85,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
               for (std::size_t index = sizeof(DWORD); index; --index)
               streamConsoleScreenBufferInformation.wAttributes = information -> metadata[index] | (streamConsoleScreenBufferInformation.wAttributes << CHAR_BIT);
             }
-
-            std::printf("[..B]: (%lu) ", (unsigned long) streamConsoleScreenBufferInformation.wAttributes);
-            for (unsigned char *i = information -> metadata; i != information -> metadata + sizeof information -> metadata; ++i)
-            std::printf("%02hX" " ", (unsigned short) *i);
-            std::printf("\r\n");
 
             return FALSE != ::SetConsoleTextAttribute(streamStandardDeviceHandle, streamConsoleScreenBufferInformation.wAttributes);
           }
@@ -140,6 +144,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
         if (NULL == messageComponent) {
           if (messageComponentIsAffix)
           continue;
+
+          break;
         }
 
         for (std::size_t subindex = 0u; ; ++subindex) {
@@ -201,8 +207,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
     /* ... */
     char const *applicationName;
-    char const *logDirectoryPath;
-    bool        logDirectoryPathAllocated;
+    char       *logDirectoryPath;
     char const *messagePrefix;
     char const *messageSuffix;
     std::FILE  *timerFileStream;
@@ -212,28 +217,27 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   // ...
   (void) std::setlocale(LC_ALL,  "LC_TIME=C.UTF-8");
-  (void) std::signal   (SIGSEGV, &catalog.fault);
+  (void) std::signal   (SIGSEGV, &catalog.error);
 
-  catalogAddress                    = &catalog;                        //
-  catalog.applicationName           = "cataloger";                     //
-  catalog.logDirectoryPath          = count > 1 ? arguments[1] : NULL; //  ->> Filesystem location for storing catalogs; Assume NUL-terminated
-  catalog.logDirectoryPathAllocated = false;                           //
-  catalog.messagePrefix             = "cataloger" ": ";                //
-  catalog.messageSuffix             = "\r\n";                          //
-  catalog.timerFileStream           = NULL;                            //
-  catalog.timerPath                 = count > 2 ? arguments[2] : NULL; // ->> Filesystem location for serializing catalog timer; Assume NUL-terminated
-  catalog.timerPathAllocated        = false;                           //
+  catalogAddress             = &catalog;                        //
+  catalog.applicationName    = "cataloger";                     //
+  catalog.logDirectoryPath   = count > 1 ? arguments[1] : NULL; //  ->> Filesystem location for storing catalogs; Assume NUL-terminated
+  catalog.messagePrefix      = "cataloger" ": ";                //
+  catalog.messageSuffix      = "\r\n";                          //
+  catalog.timerFileStream    = NULL;                            //
+  catalog.timerPath          = count > 2 ? arguments[2] : NULL; // ->> Filesystem location for serializing catalog timer; Assume NUL-terminated
+  catalog.timerPathAllocated = false;                           //
 
   // ...
   if (NULL == catalog.logDirectoryPath) {
     (void) catalog.message("No directory for logs specified; defaulting to the current working directory, instead");
-    catalog.logDirectoryPath = "./";
+    catalog.logDirectoryPath = const_cast<char*>("./");
   }
 
   if (NULL == catalog.timerPath)
   (void) catalog.message("No directory for the catalog's internal clock specified; defaulting to the current working directory, instead");
 
-  // ...
+  // ... --> catalog.timerFileStream = …;
   if (NULL == catalog.timerPath)
     catalog.timerFileStream = std::tmpfile();
 
@@ -300,63 +304,102 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       // ...
-      // catalogTimerFileNameFallbackBufferLength CAN BE ZERO
       #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-        bool              catalogerTimerPathPrefixed      = false; // ->> Determines if `::timerPath` (significantly) begins with `catalogTimerPathUNCPrefix`
+        char             *catalogTimerPathBuffer          = NULL;
+        bool              catalogTimerPathPrefixed        = false; // ->> Determines if `::timerPath` (significantly) begins with `catalogTimerPathUNCPrefix`
         char        const catalogTimerPathUNCPrefix[]     = "\\\\?\\";
-        std::size_t const catalogTimerPathUNCPrefixLength = sizeof catalogTimerPathUNCPrefix / sizeof(char);
+        std::size_t       catalogTimerPathUNCPrefixLength = (sizeof catalogTimerPathUNCPrefix / sizeof(char)) - 1u;
 
-        // ... --> catalogerTimerPathPrefixed = …;
-        for (char const *string = catalog.timerPath, *substring = catalogTimerPathUNCPrefix; ; ++string, ++substring) {
-          switch (*string) {
+        // ... --> catalogTimerPathPrefixed = …;
+        for (std::size_t prefixIndex = 0u, timerIndex = 0u; ; ++prefixIndex, ++timerIndex) {
+          switch (catalog.timerPath[timerIndex]) {
             case ' ': case '\f': case '\n': case '\r': case '\t': case '\v':
-              ++string;
-              continue;
+            continue;
           }
 
-          if ('\0' == *substring) {
-            catalogerTimerPathPrefixed = true;
+          if (catalogTimerPathUNCPrefixLength == prefixIndex) {
+            catalogTimerPathPrefixed = true;
             break;
           }
 
-          if (*string != *substring)
+          if (catalog.timerPath[timerIndex] != catalogTimerPathUNCPrefix[prefixIndex])
           break;
         }
 
-        // ... ->> Attempt to qualify `catalog.timerPath` as a NUL-terminated UNC (Universal Naming Convention) directory —
-        if (not catalogerTimerPathPrefixed or catalogTimerPathSuffixed) {
-          catalogTimerPathBuffer = ::new (std::nothrow) char[(catalogerTimerPathPrefixed ? 0u : catalogTimerPathUNCPrefixLength) + catalogTimerPathLength + (catalogTimerPathSuffixed ? catalogTimerFileNameFallbackBufferLength + 1u : 0u) + 1u];
+        // ...
+        catalogTimerPathBuffer = ::new (std::nothrow) char[(catalogTimerPathPrefixed ? 0u : catalogTimerPathUNCPrefixLength) + catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u];
 
-          /* Don’t repeat yourself… */
-          if (NULL != catalogTimerPathBuffer) {
-            std::size_t catalogTimerPathBufferLength = 0u;
-
-            // ...
-            for (char const *const components[] = {catalogerTimerPathPrefixed ? "" : catalogTimerPathUNCPrefix, catalog.timerPath, catalogTimerPathSuffixed ? "\\" : "", catalogTimerPathSuffixed ? catalogTimerFileNameFallbackBuffer : ""}, *const *component = components; component != components + (sizeof components / sizeof(char const*)); ++component) {
-              for (char *destination = catalogTimerPathBuffer + catalogTimerPathBufferLength, *source = const_cast<char*>(*component); ; ++destination, ++source) {
-                *destination = *source == '/' ? '\\' : *source;
-
-                if ('\0' == *source) { // TIMER PATH NOT NUL-TERMINATED?
-                  catalogTimerPathBufferLength += source - *component;
-                  break;
-                }
-              }
+        if (NULL == catalogTimerPathBuffer) {
+          if (catalogTimerPathPrefixed or MAX_PATH+0 >= catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u) {
+            if (not catalogTimerPathSuffixed) {
+              (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
+              return EXIT_FAILURE;
             }
 
-            catalogTimerPathBuffer[catalogTimerPathBufferLength] = '\0';
-            catalog.timerPath                                    = catalogTimerPathBuffer;
-            catalog.timerPathAllocated                           = true;
+            catalogTimerPathBuffer          = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u];
+            catalogTimerPathUNCPrefixLength = 0u;
+
+            if (NULL == catalogTimerPathBuffer) {
+              catalogTimerPathBuffer                   = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
+              catalogTimerFileNameFallbackBufferLength = 0u;
+
+              if (NULL == catalogTimerPathBuffer) {
+                (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
+                return EXIT_FAILURE;
+              }
+            }
           }
 
-          else if (catalogTimerPathSuffixed) {
-            (void) catalog.warn("Cataloger exited; no file for the catalog's internal clock specified");
-            return EXIT_FAILURE;
+          else {
+            catalogTimerPathBuffer                   = ::new (std::nothrow) char[catalogTimerPathUNCPrefixLength + catalogTimerPathLength + /* ->> NUL terminator */ 1u];
+            catalogTimerFileNameFallbackBufferLength = 0u;
+
+            if (NULL == catalogTimerPathBuffer) {
+              catalogTimerPathBuffer          = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
+              catalogTimerPathUNCPrefixLength = 0u;
+
+              if (NULL == catalogTimerPathBuffer) {
+                (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
+                return EXIT_FAILURE;
+              }
+            }
           }
+        }
+
+        catalogTimerPathBuffer[catalogTimerPathLength] = '\0';
+
+        for (std::size_t index = 0u; index != catalogTimerPathLength; ++index)
+          catalogTimerPathBuffer[index] = catalog.timerPath[index] != '/' ? catalog.timerPath[index] : '\\';
+
+        catalog.timerPath          = catalogTimerPathBuffer;
+        catalog.timerPathAllocated = true;
+        catalog.timerFileStream    = std::fopen(catalog.timerPath, "wb+");
+
+        if (NULL == catalog.timerFileStream and 0u != catalogTimerPathUNCPrefixLength and not catalogTimerPathPrefixed) {
+          for (std::size_t index = catalogTimerPathLength; index--; )
+            catalog.timerPath[catalogTimerPathUNCPrefixLength + index] = catalog.timerPath[index];
+
+          for (std::size_t index = catalogTimerPathUNCPrefixLength; index--; )
+            catalog.timerPath[index] = catalogTimerPathUNCPrefix[index];
+
+          catalogTimerPathLength += catalogTimerPathUNCPrefixLength;
+          catalog.timerFileStream = std::fopen(catalog.timerPath, "wb+");
+        }
+
+        if (NULL == catalog.timerFileStream and 0u != catalogTimerFileNameFallbackBufferLength) {
+          catalog.timerPath[catalogTimerPathLength]                                                 = '\\';
+          catalog.timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackBufferLength + 1u] = '\0';
+
+          for (std::size_t index = 0u; index != catalogTimerFileNameFallbackBufferLength; ++index)
+            catalog.timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallbackBuffer[index];
+
+          catalogTimerPathLength += catalogTimerFileNameFallbackBufferLength + 1u;
+          catalog.timerFileStream = std::fopen(catalog.timerPath, "wb+");
         }
       #else
         char *catalogTimerPathBuffer = NULL;
 
-        // — while ensuring `catalog.timerPath` is interpreted as a file directory
+        // ...
         if (not catalogTimerPathSuffixed) {
           (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
           return EXIT_FAILURE;
@@ -365,49 +408,248 @@ int main(int count, char* arguments[]) /* noexcept */ {
         catalogTimerPathBuffer = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u];
 
         if (NULL == catalogTimerPathBuffer) {
-          (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
-          return EXIT_FAILURE;
-        }
+          catalogTimerPathBuffer                   = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
+          catalogTimerFileNameFallbackBufferLength = 0u;
 
-        ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
-
-        for (std::size_t index = 0u; )
-
-        catalog.timerFileStream = std::fopen(catalog.timerPath, "wb+"); BUT catalogTimerPathLength IS trunc`ed
-        catalogTimerPathBuffer = ::new (std::nothrow) char[catalogTimerPathLength + (catalogTimerFileNameFallbackBufferLength + 1u) + 1u];
-
-        /* Don’t repeat yourself… */
-        if (NULL != catalogTimerPathBuffer) {
-          std::size_t catalogTimerPathBufferLength = 0u;
-
-          // ...
-          for (char const *const components[] = {catalog.timerPath, "/", catalogTimerFileNameFallbackBuffer}, *const *component = components; component != components + (sizeof components / sizeof(char const*)); ++component) {
-            for (char *destination = catalogTimerPathBuffer + catalogTimerPathBufferLength, *source = const_cast<char*>(*component); ; ++destination, ++source) {
-              *destination = *source;
-
-              if ('\0' == *source) {
-                catalogTimerPathBufferLength += source - *component;
-                break;
-              }
-            }
+          if (NULL == catalogTimerPathBuffer) {
+            (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
+            return EXIT_FAILURE;
           }
-
-          catalogTimerPathBuffer[catalogTimerPathBufferLength] = '\0';
-          catalog.timerPath                                    = catalogTimerPathBuffer;
-          catalog.timerPathAllocated                           = true;
         }
 
-        else {
-          (void) catalog.warn("Cataloger exited; no file for the catalog's internal clock specified");
-          return EXIT_FAILURE;
+        catalogTimerPathBuffer[catalogTimerPathLength] = '\0';
+
+        for (std::size_t index = 0u; index != catalogTimerPathLength; ++index)
+          catalogTimerPathBuffer[index] = catalog.timerPath[index];
+
+        catalog.timerPath          = catalogTimerPathBuffer;
+        catalog.timerPathAllocated = true;
+        catalog.timerFileStream    = std::fopen(catalog.timerPath, "wb+");
+
+        if (NULL == catalog.timerFileStream and 0u != catalogTimerFileNameFallbackBufferLength) {
+          catalog.timerPath[catalogTimerPathLength]                                                 = '/';
+          catalog.timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackBufferLength + 1u] = '\0';
+
+          for (std::size_t index = 0u; index != catalogTimerFileNameFallbackBufferLength; ++index)
+            catalog.timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallbackBuffer[index];
+
+          catalogTimerPathLength += catalogTimerFileNameFallbackBufferLength + 1u;
+          catalog.timerFileStream = std::fopen(catalog.timerPath, "wb+");
         }
       #endif
-
-      catalog.timerFileStream = std::fopen(catalog.timerPath, "wb+");
     }
   }
 
-  // CHECK IF TIMER FILE STREAM CREARED
+  if (NULL == catalog.timerFileStream) {
+    (void) catalog.warn("Cataloger exited; No file for the catalog's internal clock specified");
+    return EXIT_FAILURE;
+  }
+
+  // ...
+  #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+    // `usleep(…)` → `nanosleep(…)`
+  #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+    bool catalogClocked = false;
+
+    // ...
+    // Windows Task Scheduler → Windows Services → `WaitForSingleObject(…)` → `SetTimer(…)` → `Sleep(…)`
+    /* ... https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c--- */
+    if (SUCCEEDED(::CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
+      do {
+        IAction            *taskAction                  = NULL;                   //
+        IActionCollection  *taskActionCollection        = NULL;                   //
+        void               *taskExecutableAction        = NULL;                   // --> IExecAction*
+        WCHAR const         taskAuthor[]                = L"LapysDev";            //
+        void               *taskDailyTrigger            = NULL;                   // --> IDailyTrigger*
+        short const         taskDailyTriggerInterval    = 1;                      //
+        WCHAR const         taskDailyTriggerName     [] = L"checkup";             //
+        WCHAR               taskDailyTriggerTimeEnd  [] = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+        WCHAR               taskDailyTriggerTimeStart[] = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+        ITaskDefinition    *taskDefinition              = NULL;                   //
+        ITaskFolder        *taskFolder                  = NULL;                   //
+        WCHAR const         taskFolderPath[]            = L"\\";                  // ->> Root
+        WCHAR const         taskName      []            = L"Cataloger checkup";   //
+        IRegistrationInfo  *taskRegistrationInformation = NULL;                   //
+        IRepetitionPattern *taskRepititionPattern       = NULL;                   //
+        void               *taskService                 = NULL;                   // --> ITaskService*
+        ITrigger           *taskTrigger                 = NULL;                   //
+        ITriggerCollection *taskTriggerCollection       = NULL;                   //
+
+        // ...
+        if (FAILED(::CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) break;
+        if (FAILED(::CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  break;
+        if (NULL == taskService)                                                                                                                                                                                                                                                            break;
+
+        if (FAILED(static_cast<ITaskService*>(taskService) -> Connect  (::_variant_t(), ::_variant_t(), ::_variant_t(), ::_variant_t()))) break;
+        if (FAILED(static_cast<ITaskService*>(taskService) -> GetFolder(::_bstr_t(taskFolderPath), &taskFolder)))                         break;
+        if (NULL == taskFolder)                                                                                                           break;
+
+        (void) taskFolder -> DeleteTask(::_bstr_t(taskName, 0x00L));
+
+        if (FAILED(static_cast<ITaskService*>(taskService) -> NewTask(0x00u, &taskDefinition))) break;
+        if (NULL == taskDefinition)                                                             break;
+
+        if (FAILED(taskDefinition -> get_RegistrationInfo(&taskRegistrationInformation))) break;
+        if (NULL == taskRegistrationInformation)                                          break;
+
+        if (FAILED(taskRegistrationInformation -> put_Author  (::_bstr_t(taskAuthor))))  break;
+        if (FAILED(taskDefinition              -> get_Triggers(&taskTriggerCollection))) break;
+        if (NULL == taskTriggerCollection)                                               break;
+
+        if (FAILED(taskTriggerCollection -> Create(::TASK_TRIGGER_DAILY, &taskTrigger))) break;
+        if (NULL == taskTrigger)                                                         break;
+
+        if (FAILED(taskTrigger -> QueryInterface(::IID_IDailyTrigger, &taskDailyTrigger))) break;
+        if (NULL == taskDailyTrigger)                                                      break;
+
+        taskDailyTriggerTimeEnd taskDailyTriggerTimeStart; // ->> SET APPROPRIATE YEARs
+
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_DaysInterval           (taskDailyTriggerInterval)))   break;
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_EndBoundary  (::_bstr_t(taskDailyTriggerTimeEnd))))   break;
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_Id           (::_bstr_t(taskDailyTriggerName))))      break;
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_StartBoundary(::_bstr_t(taskDailyTriggerTimeStart)))) break;
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> get_Repitition            (&taskRepititionPattern)))      break;
+        if (NULL == taskRepititionPattern)                                                                                    break;
+
+        if (FAILED(taskRepititionPattern -> put_Duration(::_bstr_t(L"PT4M"))))    break;
+        if (FAILED(taskRepititionPattern -> put_Interval(::_bstr_t(L"PT1M"))))    break;
+        if (FAILED(taskDefinition        -> get_Actions (&taskActionCollection))) break;
+        if (NULL == taskActionCollection)                                         break;
+
+        if (FAILED(taskActionCollection -> Create(::TASK_ACTION_EXEC, &taskAction))) break;
+        if (NULL == taskAction)                                                      break;
+
+        /* ... */
+        catalogClocked = true;
+      } while (false);
+
+      // ...
+      if (NULL != taskAction)                  (void) taskAction                              -> Release();
+      if (NULL != taskActionCollection)        (void) taskActionCollection                    -> Release();
+      if (NULL != taskRepititionPattern)       (void) taskRepititionPattern                   -> Release();
+      if (NULL != taskTrigger)                 (void) taskTrigger                             -> Release();
+      if (NULL != taskTriggerCollection)       (void) taskTriggerCollection                   -> Release();
+      if (NULL != taskRegistrationInformation) (void) taskRegistrationInformation             -> Release();
+      if (NULL != taskDefinition)              (void) taskDefinition                          -> Release();
+      if (NULL != taskFolder)                  (void) taskFolder                              -> Release();
+      if (NULL != taskService)                 (void) static_cast<ITaskService*>(taskService) -> Release();
+
+      ::CoUninitialize();
+    }
+
+    // LPCWSTR wszTaskName = L"Daily Trigger Test Task";
+    // wstring wstrExecutablePath = _wgetenv( L"WINDIR") + L"\\SYSTEM32\\NOTEPAD.EXE";
+    // ITaskService *pService = NULL;
+    // ITaskFolder *pRootFolder = NULL;
+    // ITaskDefinition *pTask = NULL;
+    // IRegistrationInfo *pRegInfo= NULL;
+    // ITriggerCollection *pTriggerCollection = NULL;
+    // ITrigger *pTrigger = NULL;
+    // IDailyTrigger *pDailyTrigger = NULL;
+    // IRepetitionPattern *pRepetitionPattern = NULL;
+    // IActionCollection *pActionCollection = NULL;
+    // IAction *pAction = NULL;
+    // IExecAction *pExecAction = NULL;
+
+    // hr = pAction->QueryInterface(
+    //     IID_IExecAction, (void**) &pExecAction );
+    // pAction->Release();
+    // if( FAILED(hr) )
+    // {
+    //     printf("\nQueryInterface call failed for IExecAction: %x", hr );
+    //     pRootFolder->Release();
+    //     pTask->Release();
+    //     CoUninitialize();
+    //     return 1;
+    // }
+
+    // //  Set the path of the executable to notepad.exe.
+    // hr = pExecAction->put_Path( _bstr_t( wstrExecutablePath.c_str() ) );
+    // pExecAction->Release();
+    // if( FAILED(hr) )
+    // {
+    //     printf("\nCannot put the executable path: %x", hr );
+    //     pRootFolder->Release();
+    //     pTask->Release();
+    //     CoUninitialize();
+    //     return 1;
+    // }
+
+    // //  ------------------------------------------------------
+    // //  Securely get the user name and password. The task will
+    // //  be created to run with the credentials from the supplied
+    // //  user name and password.
+    // CREDUI_INFO cui;
+    // TCHAR pszName[CREDUI_MAX_USERNAME_LENGTH] = TEXT("");
+    // TCHAR pszPwd[CREDUI_MAX_PASSWORD_LENGTH] = TEXT("");
+    // BOOL fSave;
+    // DWORD dwErr;
+
+    // cui.cbSize = sizeof(CREDUI_INFO);
+    // cui.hwndParent = NULL;
+    // //  Ensure that MessageText and CaptionText identify
+    // //  what credentials to use and which application requires them.
+    // cui.pszMessageText = TEXT("Account information for task registration:");
+    // cui.pszCaptionText = TEXT("Enter Account Information for Task Registration");
+    // cui.hbmBanner = NULL;
+    // fSave = FALSE;
+
+    // //  Create the UI asking for the credentials.
+    // dwErr = CredUIPromptForCredentials(
+    //     &cui,                             //  CREDUI_INFO structure
+    //     TEXT(""),                         //  Target for credentials
+    //     NULL,                             //  Reserved
+    //     0,                                //  Reason
+    //     pszName,                          //  User name
+    //     CREDUI_MAX_USERNAME_LENGTH,       //  Max number for user name
+    //     pszPwd,                           //  Password
+    //     CREDUI_MAX_PASSWORD_LENGTH,       //  Max number for password
+    //     &fSave,                           //  State of save check box
+    //     CREDUI_FLAGS_GENERIC_CREDENTIALS |  //  Flags
+    //     CREDUI_FLAGS_ALWAYS_SHOW_UI |
+    //     CREDUI_FLAGS_DO_NOT_PERSIST);
+
+    // if(dwErr)
+    // {
+    //     cout << "Did not get credentials." << endl;
+    //     CoUninitialize();
+    //     return 1;
+    // }
+
+    // //  ------------------------------------------------------
+    // //  Save the task in the root folder.
+    // IRegisteredTask *pRegisteredTask = NULL;
+    // hr = pRootFolder->RegisterTaskDefinition(
+    //         _bstr_t( wszTaskName ),
+    //         pTask,
+    //         TASK_CREATE_OR_UPDATE,
+    //         _variant_t(_bstr_t(pszName)),
+    //         _variant_t(_bstr_t(pszPwd)),
+    //         TASK_LOGON_PASSWORD,
+    //         _variant_t(L""),
+    //         &pRegisteredTask);
+    // if( FAILED(hr) )
+    // {
+    //     printf("\nError saving the Task : %x", hr );
+    //     pRootFolder->Release();
+    //     pTask->Release();
+    //     CoUninitialize();
+    //     SecureZeroMemory(pszName, sizeof(pszName));
+    //     SecureZeroMemory(pszPwd, sizeof(pszPwd));
+    //     return 1;
+    // }
+
+    // printf("\n Success! Task successfully registered. " );
+
+    // //  Clean up
+    // pRootFolder->Release();
+    // pTask->Release();
+    // pRegisteredTask->Release();
+    // CoUninitialize();
+    // SecureZeroMemory(pszName, sizeof(pszName));
+    // SecureZeroMemory(pszPwd, sizeof(pszPwd));
+  #endif
+
   // GET CURRENT DATE/ TIME
   // CHECK IF TIME ELAPSED OR IF RUN FIRST TIME
   // SPAWN LOG not as child process; format: 2023–07–07.log
@@ -415,9 +657,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
   // HELP SCREEN?
   // ABOUT SCREEN
   //
-  // change overflow to contain CRLF terminator
   // switch from pointers to indexes
-
 
   std::printf("[...]: 0x%02lX {allocated: %4.5s, name: \"%s\"}" "\r\n", (unsigned long) reinterpret_cast<uintptr_t>(catalog.timerFileStream), catalog.timerPathAllocated ? "true" : "false", catalog.timerPath);
   // // ... ->> A more consistent `std::tm` binary format
