@@ -15,6 +15,7 @@
 # include <windows.h> // --> ENABLE_VIRTUAL_TERMINAL_PROCESSING, FOREGROUND_RED, INVALID_HANDLE_VALUE, PSECURITY_DESCRIPTOR, STD_ERROR_HANDLE; CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE; ::GetConsoleMode(…), ::GetConsoleScreenBufferInfo(…), ::GetStdHandle(…), ::SetConsoleMode(…), ::SetConsoleTextAttribute(…)
 #   include <objbase.h>  // --> ::COINIT_MULTITHREADED; ::CoInitializeEx(…), ::CoInitializeSecurity(…), ::CoUninitialize(…)
 #   include <objidl.h>   // --> SOLE_AUTHENTICATION_SERVICE
+#   include <wincred.h>  // --> CREDUI_INFO
 #   include <winerror.h> // --> FAILED, SUCCEEDED
 #   include <winnt.h>    // --> HRESULT
 #   if _WIN32_WINNT+0 >= 0x0600 // --> _WIN32_WINNT_VISTA | _WIN32_WINNT_WS08
@@ -456,24 +457,27 @@ int main(int count, char* arguments[]) /* noexcept */ {
     /* ... https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c--- */
     if (SUCCEEDED(::CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
       do {
-        IAction            *taskAction                  = NULL;                   //
-        IActionCollection  *taskActionCollection        = NULL;                   //
-        WCHAR const         taskAuthor[]                = L"LapysDev";            //
-        void               *taskDailyTrigger            = NULL;                   // --> IDailyTrigger*
-        short const         taskDailyTriggerInterval    = 1;                      //
-        WCHAR const         taskDailyTriggerName     [] = L"checkup";             //
-        WCHAR               taskDailyTriggerTimeEnd  [] = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-        WCHAR               taskDailyTriggerTimeStart[] = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-        ITaskDefinition    *taskDefinition              = NULL;                   //
-        void               *taskExecutableAction        = NULL;                   // --> IExecAction*
-        ITaskFolder        *taskFolder                  = NULL;                   //
-        WCHAR const         taskFolderPath[]            = L"\\";                  // ->> Root
-        WCHAR const         taskName      []            = L"Cataloger checkup";   //
-        IRegistrationInfo  *taskRegistrationInformation = NULL;                   //
-        IRepetitionPattern *taskRepititionPattern       = NULL;                   //
-        void               *taskService                 = NULL;                   // --> ITaskService*
-        ITrigger           *taskTrigger                 = NULL;                   //
-        ITriggerCollection *taskTriggerCollection       = NULL;                   //
+        WCHAR               credentialsName    [CREDUI_MAX_USERNAME_LENGTH + 1u] = L"";                    //
+        WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u] = L"";                    //
+        CREDUI_INFOW        credentialsUIInformation                             = {};                     //
+        IAction            *taskAction                                           = NULL;                   //
+        IActionCollection  *taskActionCollection                                 = NULL;                   //
+        WCHAR const         taskAuthor[]                                         = L"LapysDev";            //
+        void               *taskDailyTrigger                                     = NULL;                   // --> IDailyTrigger*
+        short const         taskDailyTriggerInterval                             = 1;                      //
+        WCHAR const         taskDailyTriggerName     []                          = L"checkup";             //
+        WCHAR               taskDailyTriggerTimeEnd  []                          = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+        WCHAR               taskDailyTriggerTimeStart[]                          = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+        ITaskDefinition    *taskDefinition                                       = NULL;                   //
+        void               *taskExecutableAction                                 = NULL;                   // --> IExecAction*
+        ITaskFolder        *taskFolder                                           = NULL;                   //
+        WCHAR const         taskFolderPath[]                                     = L"\\";                  // ->> Root
+        WCHAR const         taskName      []                                     = L"Cataloger checkup";   //
+        IRegistrationInfo  *taskRegistrationInformation                          = NULL;                   //
+        IRepetitionPattern *taskRepititionPattern                                = NULL;                   //
+        void               *taskService                                          = NULL;                   // --> ITaskService*
+        ITrigger           *taskTrigger                                          = NULL;                   //
+        ITriggerCollection *taskTriggerCollection                                = NULL;                   //
 
         // ...
         if (FAILED(::CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) break;
@@ -519,7 +523,19 @@ int main(int count, char* arguments[]) /* noexcept */ {
         if (FAILED(taskActionCollection -> Create(::TASK_ACTION_EXEC, &taskAction))) break;
         if (NULL == taskAction)                                                      break;
 
+        if (FAILED(taskAction                                      -> QueryInterface(::IID_IExecAction, &taskExecutableAction))) break;
+        if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> put_Path      (::_bstr_t(L"SOME_EXE.EXE"))))               break;
+
+        // ...
+        credentialsUIInformation.cbSize         = sizeof(CREDUI_INFOW);
+        credentialsUIInformation.hbmBanner      = static_cast<HBITMAP>(NULL);
+        credentialsUIInformation.hwndParent     = static_cast<HWND>   (NULL);
+        credentialsUIInformation.pszCaptionText = L"Enter account information for task registration";
+        credentialsUIInformation.pszMessageText = L"Account information for task registration";
+
         /* ... */
+        ::CredUIPromptForCredentialsW(&credentialsUIInformation, …);
+
         catalogClocked = true;
       } while (false);
 
@@ -550,49 +566,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
     // IActionCollection *pActionCollection = NULL;
     // IAction *pAction = NULL;
     // IExecAction *pExecAction = NULL;
-
-    // hr = pAction->QueryInterface(
-    //     IID_IExecAction, (void**) &pExecAction );
-    // pAction->Release();
-    // if( FAILED(hr) )
-    // {
-    //     printf("\nQueryInterface call failed for IExecAction: %x", hr );
-    //     pRootFolder->Release();
-    //     pTask->Release();
-    //     CoUninitialize();
-    //     return 1;
-    // }
-
-    // //  Set the path of the executable to notepad.exe.
-    // hr = pExecAction->put_Path( _bstr_t( wstrExecutablePath.c_str() ) );
-    // pExecAction->Release();
-    // if( FAILED(hr) )
-    // {
-    //     printf("\nCannot put the executable path: %x", hr );
-    //     pRootFolder->Release();
-    //     pTask->Release();
-    //     CoUninitialize();
-    //     return 1;
-    // }
-
-    // //  ------------------------------------------------------
-    // //  Securely get the user name and password. The task will
-    // //  be created to run with the credentials from the supplied
-    // //  user name and password.
     // CREDUI_INFO cui;
     // TCHAR pszName[CREDUI_MAX_USERNAME_LENGTH] = TEXT("");
     // TCHAR pszPwd[CREDUI_MAX_PASSWORD_LENGTH] = TEXT("");
     // BOOL fSave;
     // DWORD dwErr;
-
-    // cui.cbSize = sizeof(CREDUI_INFO);
-    // cui.hwndParent = NULL;
-    // //  Ensure that MessageText and CaptionText identify
-    // //  what credentials to use and which application requires them.
-    // cui.pszMessageText = TEXT("Account information for task registration:");
-    // cui.pszCaptionText = TEXT("Enter Account Information for Task Registration");
-    // cui.hbmBanner = NULL;
-    // fSave = FALSE;
 
     // //  Create the UI asking for the credentials.
     // dwErr = CredUIPromptForCredentials(
@@ -634,20 +612,10 @@ int main(int count, char* arguments[]) /* noexcept */ {
     //     pRootFolder->Release();
     //     pTask->Release();
     //     CoUninitialize();
-    //     SecureZeroMemory(pszName, sizeof(pszName));
-    //     SecureZeroMemory(pszPwd, sizeof(pszPwd));
     //     return 1;
     // }
 
     // printf("\n Success! Task successfully registered. " );
-
-    // //  Clean up
-    // pRootFolder->Release();
-    // pTask->Release();
-    // pRegisteredTask->Release();
-    // CoUninitialize();
-    // SecureZeroMemory(pszName, sizeof(pszName));
-    // SecureZeroMemory(pszPwd, sizeof(pszPwd));
   #endif
 
   // GET CURRENT DATE/ TIME
