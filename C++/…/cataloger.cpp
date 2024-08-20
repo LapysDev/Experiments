@@ -458,7 +458,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
       do {
         IAction            *taskAction                  = NULL;                   //
         IActionCollection  *taskActionCollection        = NULL;                   //
-        void               *taskExecutableAction        = NULL;                   // --> IExecAction*
         WCHAR const         taskAuthor[]                = L"LapysDev";            //
         void               *taskDailyTrigger            = NULL;                   // --> IDailyTrigger*
         short const         taskDailyTriggerInterval    = 1;                      //
@@ -466,6 +465,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
         WCHAR               taskDailyTriggerTimeEnd  [] = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
         WCHAR               taskDailyTriggerTimeStart[] = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
         ITaskDefinition    *taskDefinition              = NULL;                   //
+        void               *taskExecutableAction        = NULL;                   // --> IExecAction*
         ITaskFolder        *taskFolder                  = NULL;                   //
         WCHAR const         taskFolderPath[]            = L"\\";                  // ->> Root
         WCHAR const         taskName      []            = L"Cataloger checkup";   //
