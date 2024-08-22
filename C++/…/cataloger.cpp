@@ -5,7 +5,7 @@
 #include <cstddef> // --> NULL;                                  std::size_t
 #include <cstdio>  // --> _IONBF, EOF, L_tmpnam, stderr, stdout; std::FILE; std::fflush(…), std::fopen(…), std::fputs(…), std::fwrite(…), std::setvbuf(…), std::tmpfile(…), std::tmpnam(…)
 #include <cstdlib> // --> EXIT_FAILURE, EXIT_SUCCESS;            std::exit(…)
-#include <ctime>   //
+#include <ctime>   // --> std::time_t;                           std::gmtime(…), std::time(…)
 #include <new>     // --> new; std:nothrow
 #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
 # include <stdio.h>  // --> ::fileno(…)
@@ -15,12 +15,12 @@
 # include <windows.h> // --> ENABLE_VIRTUAL_TERMINAL_PROCESSING, FOREGROUND_RED, INVALID_HANDLE_VALUE, PSECURITY_DESCRIPTOR, STD_ERROR_HANDLE; CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE; ::GetConsoleMode(…), ::GetConsoleScreenBufferInfo(…), ::GetStdHandle(…), ::SetConsoleMode(…), ::SetConsoleTextAttribute(…)
 #   include <objbase.h>  // --> ::COINIT_MULTITHREADED; ::CoInitializeEx(…), ::CoInitializeSecurity(…), ::CoUninitialize(…)
 #   include <objidl.h>   // --> SOLE_AUTHENTICATION_SERVICE
-#   include <wincred.h>  // --> CREDUI_INFO
+#   include <wincred.h>  // --> CREDUI_INFO, PCtxtHandle; ::CredUIPromptForCredentialsW(…)
 #   include <winerror.h> // --> FAILED, SUCCEEDED
 #   include <winnt.h>    // --> HRESULT
 #   if _WIN32_WINNT+0 >= 0x0600 // --> _WIN32_WINNT_VISTA | _WIN32_WINNT_WS08
 #     include <comutil.h>  // --> _bstr_t, _variant_t
-#     include <taskschd.h> // --> IAction, IActionCollection, IDailyTrigger, IRegistrationInfo, IRepetitionPattern, ITaskDefinition, ITaskFolder, ITaskService, ITrigger, ITriggerCollection
+#     include <taskschd.h> // --> IAction, IActionCollection, IDailyTrigger, IRegisteredTask, IRegistrationInfo, IRepetitionPattern, ITaskDefinition, ITaskFolder, ITaskService, ITrigger, ITriggerCollection
 #   endif
 #endif
 
@@ -90,7 +90,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
             return FALSE != ::SetConsoleTextAttribute(streamStandardDeviceHandle, streamConsoleScreenBufferInformation.wAttributes);
           }
 
-          #ifdef ENABLE_VIRTUAL_TERMINAL_PROCESSING // --> _WIN32_WINNT_WIN10
+          #if defined ENABLE_VIRTUAL_TERMINAL_PROCESSING // --> _WIN32_WINNT_WIN10
             DWORD streamConsoleMode = 0x00u;
 
             // ...
@@ -456,86 +456,136 @@ int main(int count, char* arguments[]) /* noexcept */ {
     // Windows Task Scheduler → Windows Services → `WaitForSingleObject(…)` → `SetTimer(…)` → `Sleep(…)`
     /* ... https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c--- */
     if (SUCCEEDED(::CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
+      WCHAR               credentialsName    [CREDUI_MAX_USERNAME_LENGTH + 1u] = L"";                                        //
+      WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u] = L"";                                        //
+      CREDUI_INFOW        credentialsUIInformation                             = {};                                         //
+      IRegisteredTask    *registeredTask                                       = NULL;                                       //
+      IAction            *taskAction                                           = NULL;                                       //
+      IActionCollection  *taskActionCollection                                 = NULL;                                       //
+      WCHAR const         taskAuthor[]                                         = L"LapysDev";                                //
+      void               *taskDailyTrigger                                     = NULL;                                       // --> IDailyTrigger*
+      short const         taskDailyTriggerInterval                             = 1;                                          //
+      WCHAR const         taskDailyTriggerName     []                          = L"checkup";                                 //
+      WCHAR               taskDailyTriggerTimeEnd  []                          = L"20xx-01-01T12:00:00";                     // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+      WCHAR               taskDailyTriggerTimeStart[]                          = L"20xx-01-01T12:00:00";                     // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+      ITaskDefinition    *taskDefinition                                       = NULL;                                       //
+      void               *taskExecutableAction                                 = NULL;                                       // --> IExecAction*
+      ITaskFolder        *taskFolder                                           = NULL;                                       //
+      WCHAR const         taskFolderPath[]                                     = L"\\";                                      // ->> Root
+      WCHAR const         taskName      []                                     = L"Cataloger checkup";                       //
+      IRegistrationInfo  *taskRegistrationInformation                          = NULL;                                       //
+      IRepetitionPattern *taskRepititionPattern                                = NULL;                                       //
+      void               *taskService                                          = NULL;                                       // --> ITaskService*
+      ITrigger           *taskTrigger                                          = NULL;                                       //
+      ITriggerCollection *taskTriggerCollection                                = NULL;                                       //
+      std::time_t const   time                                                 = std::time(static_cast<std::time_t*>(NULL)); //
+      unsigned int        year                                                 = 0u;                                         // --> YYYY
+
+      // ...
+      credentialsName    [CREDUI_MAX_USERNAME_LENGTH] = L'\0';
+      credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH] = L'\0';
+      credentialsUIInformation.cbSize                 = sizeof(CREDUI_INFOW);
+      credentialsUIInformation.hbmBanner              = static_cast<HBITMAP>(NULL);
+      credentialsUIInformation.hwndParent             = static_cast<HWND>   (NULL);
+      credentialsUIInformation.pszCaptionText         = L"Enter account information for task registration";
+      credentialsUIInformation.pszMessageText         = L"Account information for task registration";
+
       do {
-        WCHAR               credentialsName    [CREDUI_MAX_USERNAME_LENGTH + 1u] = L"";                    //
-        WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u] = L"";                    //
-        CREDUI_INFOW        credentialsUIInformation                             = {};                     //
-        IAction            *taskAction                                           = NULL;                   //
-        IActionCollection  *taskActionCollection                                 = NULL;                   //
-        WCHAR const         taskAuthor[]                                         = L"LapysDev";            //
-        void               *taskDailyTrigger                                     = NULL;                   // --> IDailyTrigger*
-        short const         taskDailyTriggerInterval                             = 1;                      //
-        WCHAR const         taskDailyTriggerName     []                          = L"checkup";             //
-        WCHAR               taskDailyTriggerTimeEnd  []                          = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-        WCHAR               taskDailyTriggerTimeStart[]                          = L"20xx-01-01T12:00:00"; // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-        ITaskDefinition    *taskDefinition                                       = NULL;                   //
-        void               *taskExecutableAction                                 = NULL;                   // --> IExecAction*
-        ITaskFolder        *taskFolder                                           = NULL;                   //
-        WCHAR const         taskFolderPath[]                                     = L"\\";                  // ->> Root
-        WCHAR const         taskName      []                                     = L"Cataloger checkup";   //
-        IRegistrationInfo  *taskRegistrationInformation                          = NULL;                   //
-        IRepetitionPattern *taskRepititionPattern                                = NULL;                   //
-        void               *taskService                                          = NULL;                   // --> ITaskService*
-        ITrigger           *taskTrigger                                          = NULL;                   //
-        ITriggerCollection *taskTriggerCollection                                = NULL;                   //
+        // ... --> taskDailyTriggerTimeEnd[0‥3] = …; taskDailyTriggerTimeStart[0‥3] = …;
+        #ifndef __DATE__
+          year = 2024u;
+        #else
+          for (std::size_t index = 10u + 1u; index-- != 7u; )
+          switch (__DATE__[index]) { // --> std::asctime(…)
+            case '0': year = (year * 10u) + 0u; break;
+            case '1': year = (year * 10u) + 1u; break;
+            case '2': year = (year * 10u) + 2u; break;
+            case '3': year = (year * 10u) + 3u; break;
+            case '4': year = (year * 10u) + 4u; break;
+            case '5': year = (year * 10u) + 5u; break;
+            case '6': year = (year * 10u) + 6u; break;
+            case '7': year = (year * 10u) + 7u; break;
+            case '8': year = (year * 10u) + 8u; break;
+            case '9': year = (year * 10u) + 9u; break;
+          }
+        #endif
+
+        if (time != static_cast<std::time_t>(-1)) {
+          std::tm *const calenderTime = std::gmtime(&time);
+
+          if (NULL != calenderTime)
+          year = calenderTime -> tm_year + 1900;
+        }
+
+        for (struct { WCHAR *text; unsigned int value; } years[] = {
+          {taskDailyTriggerTimeEnd,   year + 100u},
+          {taskDailyTriggerTimeStart, year}
+        }, *year = years; year != years + (sizeof years / sizeof *years); ++year) {
+          for (std::size_t index = 3u + 1u; index--; year -> value /= 10u)
+          switch (year -> value % 10u) {
+            case 0u: year -> text[index] = '0'; break;
+            case 1u: year -> text[index] = '1'; break;
+            case 2u: year -> text[index] = '2'; break;
+            case 3u: year -> text[index] = '3'; break;
+            case 4u: year -> text[index] = '4'; break;
+            case 5u: year -> text[index] = '5'; break;
+            case 6u: year -> text[index] = '6'; break;
+            case 7u: year -> text[index] = '7'; break;
+            case 8u: year -> text[index] = '8'; break;
+            case 9u: year -> text[index] = '9'; break;
+          }
+        }
 
         // ...
-        if (FAILED(::CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) break;
-        if (FAILED(::CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  break;
-        if (NULL == taskService)                                                                                                                                                                                                                                                            break;
+        if (FAILED(::CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) { std::puts("[ERROR #1]"); break;}
+        if (FAILED(::CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  { std::puts("[ERROR #2]"); break;}
+        if (NULL == taskService)                                                                                                                                                                                                                                                            { std::puts("[ERROR #3]"); break;}
 
-        if (FAILED(static_cast<ITaskService*>(taskService) -> Connect  (::_variant_t(), ::_variant_t(), ::_variant_t(), ::_variant_t()))) break;
-        if (FAILED(static_cast<ITaskService*>(taskService) -> GetFolder(::_bstr_t(taskFolderPath), &taskFolder)))                         break;
-        if (NULL == taskFolder)                                                                                                           break;
+        if (FAILED(static_cast<ITaskService*>(taskService) -> Connect  (::_variant_t(), ::_variant_t(), ::_variant_t(), ::_variant_t()))) { std::puts("[ERROR #4]"); break;}
+        if (FAILED(static_cast<ITaskService*>(taskService) -> GetFolder(::_bstr_t(taskFolderPath), &taskFolder)))                         { std::puts("[ERROR #5]"); break;}
+        if (NULL == taskFolder)                                                                                                           { std::puts("[ERROR #6]"); break;}
 
-        (void) taskFolder -> DeleteTask(::_bstr_t(taskName, 0x00L));
+        (void) taskFolder -> DeleteTask(::_bstr_t(taskName), 0x00L);
 
-        if (FAILED(static_cast<ITaskService*>(taskService) -> NewTask(0x00u, &taskDefinition))) break;
-        if (NULL == taskDefinition)                                                             break;
+        if (FAILED(static_cast<ITaskService*>(taskService) -> NewTask(0x00u, &taskDefinition))) { std::puts("[ERROR #7]"); break;}
+        if (NULL == taskDefinition)                                                             { std::puts("[ERROR #8]"); break;}
 
-        if (FAILED(taskDefinition -> get_RegistrationInfo(&taskRegistrationInformation))) break;
-        if (NULL == taskRegistrationInformation)                                          break;
+        if (FAILED(taskDefinition -> get_RegistrationInfo(&taskRegistrationInformation))) { std::puts("[ERROR #9]"); break;}
+        if (NULL == taskRegistrationInformation)                                          { std::puts("[ERROR #10]"); break;}
 
-        if (FAILED(taskRegistrationInformation -> put_Author  (::_bstr_t(taskAuthor))))  break;
-        if (FAILED(taskDefinition              -> get_Triggers(&taskTriggerCollection))) break;
-        if (NULL == taskTriggerCollection)                                               break;
+        if (FAILED(taskRegistrationInformation -> put_Author  (::_bstr_t(taskAuthor))))  { std::puts("[ERROR #11]"); break;}
+        if (FAILED(taskDefinition              -> get_Triggers(&taskTriggerCollection))) { std::puts("[ERROR #12]"); break;}
+        if (NULL == taskTriggerCollection)                                               { std::puts("[ERROR #13]"); break;}
 
-        if (FAILED(taskTriggerCollection -> Create(::TASK_TRIGGER_DAILY, &taskTrigger))) break;
-        if (NULL == taskTrigger)                                                         break;
+        if (FAILED(taskTriggerCollection -> Create(::TASK_TRIGGER_DAILY, &taskTrigger))) { std::puts("[ERROR #14]"); break;}
+        if (NULL == taskTrigger)                                                         { std::puts("[ERROR #15]"); break;}
 
-        if (FAILED(taskTrigger -> QueryInterface(::IID_IDailyTrigger, &taskDailyTrigger))) break;
-        if (NULL == taskDailyTrigger)                                                      break;
+        if (FAILED(taskTrigger -> QueryInterface(::IID_IDailyTrigger, &taskDailyTrigger))) { std::puts("[ERROR #16]"); break;}
+        if (NULL == taskDailyTrigger)                                                      { std::puts("[ERROR #17]"); break;}
 
-        taskDailyTriggerTimeEnd taskDailyTriggerTimeStart; // ->> SET APPROPRIATE YEARs
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_DaysInterval           (taskDailyTriggerInterval)))   { std::puts("[ERROR #18]"); break;}
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_EndBoundary  (::_bstr_t(taskDailyTriggerTimeEnd))))   { std::puts("[ERROR #19]"); break;}
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_Id           (::_bstr_t(taskDailyTriggerName))))      { std::puts("[ERROR #20]"); break;}
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_StartBoundary(::_bstr_t(taskDailyTriggerTimeStart)))) { std::puts("[ERROR #21]"); break;}
+        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> get_Repetition            (&taskRepititionPattern)))      { std::puts("[ERROR #22]"); break;}
+        if (NULL == taskRepititionPattern)                                                                                    { std::puts("[ERROR #23]"); break;}
 
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_DaysInterval           (taskDailyTriggerInterval)))   break;
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_EndBoundary  (::_bstr_t(taskDailyTriggerTimeEnd))))   break;
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_Id           (::_bstr_t(taskDailyTriggerName))))      break;
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_StartBoundary(::_bstr_t(taskDailyTriggerTimeStart)))) break;
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> get_Repitition            (&taskRepititionPattern)))      break;
-        if (NULL == taskRepititionPattern)                                                                                    break;
+        if (FAILED(taskRepititionPattern -> put_Duration(::_bstr_t(L"PT4M"))))    { std::puts("[ERROR #24]"); break;}
+        if (FAILED(taskRepititionPattern -> put_Interval(::_bstr_t(L"PT1M"))))    { std::puts("[ERROR #25]"); break;}
+        if (FAILED(taskDefinition        -> get_Actions (&taskActionCollection))) { std::puts("[ERROR #26]"); break;}
+        if (NULL == taskActionCollection)                                         { std::puts("[ERROR #27]"); break;}
 
-        if (FAILED(taskRepititionPattern -> put_Duration(::_bstr_t(L"PT4M"))))    break;
-        if (FAILED(taskRepititionPattern -> put_Interval(::_bstr_t(L"PT1M"))))    break;
-        if (FAILED(taskDefinition        -> get_Actions (&taskActionCollection))) break;
-        if (NULL == taskActionCollection)                                         break;
+        if (FAILED(taskActionCollection -> Create(::TASK_ACTION_EXEC, &taskAction))) { std::puts("[ERROR #28]"); break;}
+        if (NULL == taskAction)                                                      { std::puts("[ERROR #29]"); break;}
 
-        if (FAILED(taskActionCollection -> Create(::TASK_ACTION_EXEC, &taskAction))) break;
-        if (NULL == taskAction)                                                      break;
+        if (FAILED(taskAction                                      -> QueryInterface(::IID_IExecAction, &taskExecutableAction))) { std::puts("[ERROR #30]"); break;}
+        if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> put_Path      (::_bstr_t(L"notepad.exe"))))                { std::puts("[ERROR #31]"); break;}
 
-        if (FAILED(taskAction                                      -> QueryInterface(::IID_IExecAction, &taskExecutableAction))) break;
-        if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> put_Path      (::_bstr_t(L"SOME_EXE.EXE"))))               break;
+        // if (0x00u != ::CredUIPromptForCredentialsW(&credentialsUIInformation, L"", static_cast<PCtxtHandle>(NULL), 0x00u, credentialsName, sizeof credentialsName / sizeof(WCHAR), credentialsPassword, sizeof credentialsPassword / sizeof(WCHAR), static_cast<BOOL*>(NULL), CREDUI_FLAGS_ALWAYS_SHOW_UI | CREDUI_FLAGS_DO_NOT_PERSIST | CREDUI_FLAGS_GENERIC_CREDENTIALS)) break;
+        // if (FAILED(taskFolder -> RegisterTaskDefinition(::_bstr_t(taskName), taskDefinition, TASK_CREATE_OR_UPDATE, ::_variant_t(::_bstr_t(credentialsName)), ::_variant_t(::_bstr_t(credentialsPassword)), TASK_LOGON_PASSWORD, ::_variant_t(L""), &registeredTask)))                                                                                                       break;
+        if (FAILED(taskFolder -> RegisterTaskDefinition(::_bstr_t(taskName), taskDefinition, TASK_CREATE_OR_UPDATE, ::_variant_t(::_bstr_t(L"oluwa")), ::_variant_t(::_bstr_t(L"Lapys30*)")), TASK_LOGON_PASSWORD, ::_variant_t(L""), &registeredTask))) { std::puts("[ERROR #32]"); break; }
 
         // ...
-        credentialsUIInformation.cbSize         = sizeof(CREDUI_INFOW);
-        credentialsUIInformation.hbmBanner      = static_cast<HBITMAP>(NULL);
-        credentialsUIInformation.hwndParent     = static_cast<HWND>   (NULL);
-        credentialsUIInformation.pszCaptionText = L"Enter account information for task registration";
-        credentialsUIInformation.pszMessageText = L"Account information for task registration";
-
-        /* ... */
-        ::CredUIPromptForCredentialsW(&credentialsUIInformation, …);
-
         catalogClocked = true;
       } while (false);
 
@@ -550,72 +600,9 @@ int main(int count, char* arguments[]) /* noexcept */ {
       if (NULL != taskFolder)                  (void) taskFolder                              -> Release();
       if (NULL != taskService)                 (void) static_cast<ITaskService*>(taskService) -> Release();
 
+      (void) catalogClocked;
       ::CoUninitialize();
     }
-
-    // LPCWSTR wszTaskName = L"Daily Trigger Test Task";
-    // wstring wstrExecutablePath = _wgetenv( L"WINDIR") + L"\\SYSTEM32\\NOTEPAD.EXE";
-    // ITaskService *pService = NULL;
-    // ITaskFolder *pRootFolder = NULL;
-    // ITaskDefinition *pTask = NULL;
-    // IRegistrationInfo *pRegInfo= NULL;
-    // ITriggerCollection *pTriggerCollection = NULL;
-    // ITrigger *pTrigger = NULL;
-    // IDailyTrigger *pDailyTrigger = NULL;
-    // IRepetitionPattern *pRepetitionPattern = NULL;
-    // IActionCollection *pActionCollection = NULL;
-    // IAction *pAction = NULL;
-    // IExecAction *pExecAction = NULL;
-    // CREDUI_INFO cui;
-    // TCHAR pszName[CREDUI_MAX_USERNAME_LENGTH] = TEXT("");
-    // TCHAR pszPwd[CREDUI_MAX_PASSWORD_LENGTH] = TEXT("");
-    // BOOL fSave;
-    // DWORD dwErr;
-
-    // //  Create the UI asking for the credentials.
-    // dwErr = CredUIPromptForCredentials(
-    //     &cui,                             //  CREDUI_INFO structure
-    //     TEXT(""),                         //  Target for credentials
-    //     NULL,                             //  Reserved
-    //     0,                                //  Reason
-    //     pszName,                          //  User name
-    //     CREDUI_MAX_USERNAME_LENGTH,       //  Max number for user name
-    //     pszPwd,                           //  Password
-    //     CREDUI_MAX_PASSWORD_LENGTH,       //  Max number for password
-    //     &fSave,                           //  State of save check box
-    //     CREDUI_FLAGS_GENERIC_CREDENTIALS |  //  Flags
-    //     CREDUI_FLAGS_ALWAYS_SHOW_UI |
-    //     CREDUI_FLAGS_DO_NOT_PERSIST);
-
-    // if(dwErr)
-    // {
-    //     cout << "Did not get credentials." << endl;
-    //     CoUninitialize();
-    //     return 1;
-    // }
-
-    // //  ------------------------------------------------------
-    // //  Save the task in the root folder.
-    // IRegisteredTask *pRegisteredTask = NULL;
-    // hr = pRootFolder->RegisterTaskDefinition(
-    //         _bstr_t( wszTaskName ),
-    //         pTask,
-    //         TASK_CREATE_OR_UPDATE,
-    //         _variant_t(_bstr_t(pszName)),
-    //         _variant_t(_bstr_t(pszPwd)),
-    //         TASK_LOGON_PASSWORD,
-    //         _variant_t(L""),
-    //         &pRegisteredTask);
-    // if( FAILED(hr) )
-    // {
-    //     printf("\nError saving the Task : %x", hr );
-    //     pRootFolder->Release();
-    //     pTask->Release();
-    //     CoUninitialize();
-    //     return 1;
-    // }
-
-    // printf("\n Success! Task successfully registered. " );
   #endif
 
   // GET CURRENT DATE/ TIME
