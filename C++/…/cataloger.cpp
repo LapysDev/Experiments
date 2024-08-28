@@ -20,7 +20,7 @@
 #   define _WIN32_WINNT 0x0501 // --> _WIN32_WINNT_WINXP
 # endif
 # include <stdio.h>   // --> ::_get_pgmptr(…), ::_get_wpgmptr(…)
-# include <windows.h> // --> ENABLE_VIRTUAL_TERMINAL_PROCESSING, FOREGROUND_RED, INVALID_HANDLE_VALUE, PSECURITY_DESCRIPTOR, STD_ERROR_HANDLE, WINAPI; BOOL, CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE, HMODULE, LPCWSTR, LPDWORD, LPVOID, PCONSOLE_SCREEN_BUFFER_INFO, TCHAR, UINT, WCHAR; ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
+# include <windows.h> // --> FOREGROUND_RED, INVALID_HANDLE_VALUE, STD_ERROR_HANDLE, WINAPI; BOOL, CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE, HMODULE, LPCWSTR, LPDWORD, LPVOID, PCONSOLE_SCREEN_BUFFER_INFO, PSECURITY_DESCRIPTOR, TCHAR, UINT, WCHAR; ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
 #   include <oaidl.h>    // --> VARIANT
 #   include <objbase.h>  // --> ::COINIT_MULTITHREADED; ::CoInitializeEx(…), ::CoInitializeSecurity(…), ::CoUninitialize(…)
 #   include <objidl.h>   // --> SOLE_AUTHENTICATION_SERVICE
@@ -65,10 +65,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
       if (NULL != catalog) {
         catalog -> applicationExitCode = code;
 
-        if (catalog -> timerPathAllocated) {
-          ::delete[] catalog -> timerPath;
-          catalog -> timerPath = NULL;
-        }
+        if (catalog -> timerPathAllocated)
+        ::delete[] catalog -> timerPath;
       }
 
       catalog = NULL;
@@ -289,12 +287,14 @@ int main(int count, char* arguments[]) /* noexcept */ {
   catalog -> timerPath           = count > 2 ? arguments[2] : NULL; // ->> Filesystem location for serializing catalog timer; Assume NUL-terminated
   catalog -> timerPathAllocated  = false;                           //
 
-  (void) std::at_quick_exit     (&catalog -> quick_exit); //
-  (void) std::signal   (SIGTERM, &catalog -> error);      //
-  (void) std::signal   (SIGSEGV, &catalog -> error);      // ->> ¯\_(ツ)_/¯
-  (void) std::signal   (SIGINT,  &catalog -> error);      // ->> Handle possible user interrupts
-  (void) std::signal   (SIGABRT, &catalog -> error);      // ->> Handle `std::abort(…)` and `std::terminate(…)` (and `throw` expression) invocations
-  (void) std::setlocale(LC_ALL,  "C.UTF-8");              //
+  (void) std::signal   (SIGTERM, &catalog -> error); //
+  (void) std::signal   (SIGSEGV, &catalog -> error); // ->> ¯\_(ツ)_/¯
+  (void) std::signal   (SIGINT,  &catalog -> error); // ->> Handle possible user interrupts
+  (void) std::signal   (SIGABRT, &catalog -> error); // ->> Handle `std::abort(…)` and `std::terminate(…)` (and `throw` expression) invocations
+  (void) std::setlocale(LC_ALL,  "C.UTF-8");         //
+  #if __cplusplus >= 201103L
+    (void) std::at_quick_exit(&catalog -> quick_exit);
+  #endif
 
   #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
     enum {
@@ -332,8 +332,10 @@ int main(int count, char* arguments[]) /* noexcept */ {
     libraries                      = l;
     libraryPath[libraryPathLength] = L'\\';
 
-    (void) std::at_quick_exit(&libraries -> exit);
-    (void) std::atexit       (&libraries -> exit);
+    (void) std::atexit(&libraries -> exit);
+    #if __cplusplus >= 201103L
+      (void) std::at_quick_exit(&libraries -> exit);
+    #endif
 
     if (0u != libraryPathLength) {
       // ... ->> Load the userland `kernel32` library
@@ -351,11 +353,9 @@ int main(int count, char* arguments[]) /* noexcept */ {
       if (NULL != SetDefaultDllDirectories)
       SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
 
-      // ... ->> Load other used Windows API libraries
-      for (struct libraryinfo *library = libraries; library != libraries + librariesLength; ++library) {
-        if (NULL != library -> module)
-        continue;
-
+      // ... ->> Load other used Windows API libraries —
+      for (struct libraryinfo *library = libraries; library != libraries + librariesLength; ++library)
+      if (NULL == library -> module) { // ->> — except the already loaded userland `kernel32` library
         for (std::size_t index = 0u; ; ++index) {
           libraryPath[index + libraryPathLength + 1u] = library -> name[index];
           if (L'\0' == library -> name[index]) break;
@@ -363,13 +363,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
         if (FALSE == ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &library -> module) or NULL == library -> module) {
           library -> module   = LoadLibraryExW(libraryPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
-          library -> unloader = FreeLibrary;
+          library -> unloader = NULL == library -> module ? NULL : FreeLibrary;
         }
       }
     }
   #endif
 
-  // ...
+  // ... --> catalog -> logDirectoryPath = …;
   if (NULL == catalog -> logDirectoryPath) {
     (void) catalog -> message("No directory for logs specified; defaulting to the current working directory, instead");
     catalog -> logDirectoryPath = const_cast<char*>("./");
@@ -382,46 +382,52 @@ int main(int count, char* arguments[]) /* noexcept */ {
   catalog -> timerFileStream = NULL == catalog -> timerPath ? std::tmpfile() : std::fopen(catalog -> timerPath, "wb+");
 
   if (NULL == catalog -> timerFileStream and NULL != catalog -> timerPath) {
-    char const  catalogTimerFileNameFallback      []                                                                = "cataloger-clock.dat";
-    char        catalogTimerFileNameFallbackBuffer[L_tmpnam + (sizeof catalogTimerFileNameFallback / sizeof(char))] = {};
-    std::size_t catalogTimerFileNameFallbackBufferLength                                                            = 0u;
-    std::size_t catalogTimerPathLength                                                                              = 0u;
-    bool        catalogTimerPathSuffixed                                                                            = false; // ->> Determines if `::timerPath` (significantly) ends with `pathDelimiters[…]`
-    char const  pathDelimiters[]                                                                                    = {'/'
+    char        catalogTimerFileNameFallback[L_tmpnam + 1u] = {};
+    std::size_t catalogTimerFileNameFallbackLength          = 0u;
+    std::size_t catalogTimerPathLength                      = 0u;
+    bool        catalogTimerPathSuffixed                    = false; // ->> Determines if `::timerPath` (significantly) ends with `pathDelimiters[…]`
+    char const  pathDelimiters[]                            = {'/'
       #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
         , '\\'
       #endif
     };
     std::size_t const pathDelimitersLength = sizeof pathDelimiters / sizeof(char);
 
-    // ... --> catalogTimerFileNameFallbackBuffer       = std::tmpnam(…) ?? catalogTimerFileNameFallback;
-    //         catalogTimerFileNameFallbackBufferLength = …;
-    catalogTimerFileNameFallbackBuffer[(sizeof catalogTimerFileNameFallbackBuffer / sizeof(char)) - 1u] = '\0';
+    // ... --> catalogTimerFileNameFallback       = std::tmpnam(…) ?? …;
+    //         catalogTimerFileNameFallbackLength = …;
+    if (catalogTimerFileNameFallback != std::tmpnam(catalogTimerFileNameFallback)) {
+      char        const fallback[]     = "cataloger-clock.dat";
+      std::size_t const fallbackLength = (sizeof fallback / sizeof(char)) - 1u;
 
-    if (catalogTimerFileNameFallbackBuffer != std::tmpnam(catalogTimerFileNameFallbackBuffer)) {
-      for (std::size_t index = 0u; index != sizeof catalogTimerFileNameFallback / sizeof(char); ++index)
-      catalogTimerFileNameFallbackBuffer[index] = catalogTimerFileNameFallback[index];
+      // ...
+      for (std::size_t index = 0u; ; ++index) {
+        catalogTimerFileNameFallback[index] = fallback[index];
+
+        if (fallbackLength == index or index == (sizeof catalogTimerFileNameFallback / sizeof(char)) - 1u) {
+          catalogTimerFileNameFallback[index] = '\0';
+          break;
+        }
+      }
     }
 
-    while ('\0' != catalogTimerFileNameFallbackBuffer[catalogTimerFileNameFallbackBufferLength])
-    ++catalogTimerFileNameFallbackBufferLength;
+    while ('\0' != catalogTimerFileNameFallback[catalogTimerFileNameFallbackLength])
+    ++catalogTimerFileNameFallbackLength;
 
-    for (std::size_t index = catalogTimerFileNameFallbackBufferLength; index--; ) {
+    for (std::size_t index = catalogTimerFileNameFallbackLength; index--; ) {
       // ... ->> Unique names only, rather than unique file paths
       for (std::size_t subindex = 0u; pathDelimitersLength != subindex; ++subindex)
-      if (catalogTimerFileNameFallbackBuffer[index] == pathDelimiters[subindex]) {
-        catalogTimerFileNameFallbackBufferLength -= ++index;
+      if (catalogTimerFileNameFallback[index] == pathDelimiters[subindex]) {
+        catalogTimerFileNameFallbackLength -= ++index;
 
-        for (subindex = 0u; subindex <= catalogTimerFileNameFallbackBufferLength; ++index, ++subindex)
-        catalogTimerFileNameFallbackBuffer[subindex] = catalogTimerFileNameFallbackBuffer[index];
+        for (subindex = 0u; subindex <= catalogTimerFileNameFallbackLength; ++index, ++subindex)
+        catalogTimerFileNameFallback[subindex] = catalogTimerFileNameFallback[index];
 
         index = 0u;
         break;
       }
     }
 
-    // ... --> catalog -> timerPath     = …;
-    //         catalogTimerPathLength   = …;
+    // ... --> catalogTimerPathLength   = …;
     //         catalogTimerPathSuffixed = …;
     for (; '\0' != catalog -> timerPath[catalogTimerPathLength]; ++catalogTimerPathLength) {
       for (std::size_t subindex = 0u; pathDelimitersLength != subindex; ++subindex)
@@ -441,7 +447,9 @@ int main(int count, char* arguments[]) /* noexcept */ {
       break;
     }
 
-    // ...
+    // ... --> catalog -> timerFileStream = …;
+    //         catalog -> timerPath…      = …;
+    /* TODO: MERGE FOR BOTH VENDORS; UNC BECOMES GENERIC PREFIX */
     #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
       char             *catalogTimerPathBuffer          = NULL;
       bool              catalogTimerPathPrefixed        = false; // ->> Determines if `::timerPath` (significantly) begins with `catalogTimerPathUNCPrefix`
@@ -465,21 +473,21 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       // ... --> catalogTimerPathBuffer = …;
-      catalogTimerPathBuffer = ::new (std::nothrow) char[(catalogTimerPathPrefixed ? 0u : catalogTimerPathUNCPrefixLength) + catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u];
+      catalogTimerPathBuffer = ::new (std::nothrow) char[(catalogTimerPathPrefixed ? 0u : catalogTimerPathUNCPrefixLength) + catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u];
 
       if (NULL == catalogTimerPathBuffer) {
-        if (catalogTimerPathPrefixed or MAX_PATH+0 >= catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u) {
+        if (catalogTimerPathPrefixed or MAX_PATH+0 >= catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u) {
           if (not catalogTimerPathSuffixed) {
             (void) catalog -> warn("Cataloger exited; No file for the catalog's internal clock specified");
             return catalog -> exit(EXIT_FAILURE);
           }
 
-          catalogTimerPathBuffer          = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u];
+          catalogTimerPathBuffer          = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u];
           catalogTimerPathUNCPrefixLength = 0u;
 
           if (NULL == catalogTimerPathBuffer) {
             catalogTimerPathBuffer                   = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
-            catalogTimerFileNameFallbackBufferLength = 0u;
+            catalogTimerFileNameFallbackLength = 0u;
 
             if (NULL == catalogTimerPathBuffer) {
               (void) catalog -> warn("Cataloger exited; No file for the catalog's internal clock specified");
@@ -490,7 +498,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
         else {
           catalogTimerPathBuffer                   = ::new (std::nothrow) char[catalogTimerPathUNCPrefixLength + catalogTimerPathLength + /* ->> NUL terminator */ 1u];
-          catalogTimerFileNameFallbackBufferLength = 0u;
+          catalogTimerFileNameFallbackLength = 0u;
 
           if (NULL == catalogTimerPathBuffer) {
             catalogTimerPathBuffer          = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
@@ -525,14 +533,14 @@ int main(int count, char* arguments[]) /* noexcept */ {
         catalog -> timerFileStream = std::fopen(catalog -> timerPath, "wb+");
       }
 
-      if (NULL == catalog -> timerFileStream and 0u != catalogTimerFileNameFallbackBufferLength) {
+      if (NULL == catalog -> timerFileStream and 0u != catalogTimerFileNameFallbackLength) {
         catalog -> timerPath[catalogTimerPathLength]                                                 = '\\';
-        catalog -> timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackBufferLength + 1u] = '\0';
+        catalog -> timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackLength + 1u] = '\0';
 
-        for (std::size_t index = 0u; index != catalogTimerFileNameFallbackBufferLength; ++index)
-          catalog -> timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallbackBuffer[index];
+        for (std::size_t index = 0u; index != catalogTimerFileNameFallbackLength; ++index)
+          catalog -> timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallback[index];
 
-        catalogTimerPathLength += catalogTimerFileNameFallbackBufferLength + 1u;
+        catalogTimerPathLength += catalogTimerFileNameFallbackLength + 1u;
         catalog -> timerFileStream = std::fopen(catalog -> timerPath, "wb+");
       }
     #else
@@ -544,11 +552,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
         return catalog -> exit(EXIT_FAILURE);
       }
 
-      catalogTimerPathBuffer = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackBufferLength + /* ->> NUL terminator */ 1u];
+      catalogTimerPathBuffer = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u];
 
       if (NULL == catalogTimerPathBuffer) {
         catalogTimerPathBuffer                   = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
-        catalogTimerFileNameFallbackBufferLength = 0u;
+        catalogTimerFileNameFallbackLength = 0u;
 
         if (NULL == catalogTimerPathBuffer) {
           (void) catalog -> warn("Cataloger exited; No file for the catalog's internal clock specified");
@@ -565,14 +573,14 @@ int main(int count, char* arguments[]) /* noexcept */ {
       catalog -> timerPathAllocated = true;
       catalog -> timerFileStream    = std::fopen(catalog -> timerPath, "wb+");
 
-      if (NULL == catalog -> timerFileStream and 0u != catalogTimerFileNameFallbackBufferLength) {
+      if (NULL == catalog -> timerFileStream and 0u != catalogTimerFileNameFallbackLength) {
         catalog -> timerPath[catalogTimerPathLength]                                                 = '/';
-        catalog -> timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackBufferLength + 1u] = '\0';
+        catalog -> timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackLength + 1u] = '\0';
 
-        for (std::size_t index = 0u; index != catalogTimerFileNameFallbackBufferLength; ++index)
-          catalog -> timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallbackBuffer[index];
+        for (std::size_t index = 0u; index != catalogTimerFileNameFallbackLength; ++index)
+          catalog -> timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallback[index];
 
-        catalogTimerPathLength += catalogTimerFileNameFallbackBufferLength + 1u;
+        catalogTimerPathLength += catalogTimerFileNameFallbackLength + 1u;
         catalog -> timerFileStream = std::fopen(catalog -> timerPath, "wb+");
       }
     #endif
@@ -583,7 +591,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     return catalog -> exit(EXIT_FAILURE);
   }
 
-  // ...
+  // ... ->> NOW ACTUAL WORK
   #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
     // TODO (Lapys) -> `usleep(…)` → `nanosleep(…)`
   #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
@@ -871,5 +879,5 @@ int main(int count, char* arguments[]) /* noexcept */ {
   //   std::time_t        catalogRecentTime = static_cast<std::time_t>(-1); // --> std::mktime(&catalogRecentDate)
 
   // ...
-  return EXIT_SUCCESS;
+  return catalog -> exit(EXIT_SUCCESS);
 }
