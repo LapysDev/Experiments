@@ -1,26 +1,34 @@
-// COMPILE: del cataloger.exe && cls && clang++ -pedantic -std=c++98 -Wall -Wextra cataloger.cpp -o cataloger.exe -lcredui -lole32 -loleaut32 -ltaskschd && cataloger.exe A C:\Users\oluwa\…\cataloger-clock.dat & del cataloger.exe
+// COMPILE: del cataloger.exe && cls && clang++ -pedantic -std=c++98 -Wall -Wextra cataloger.cpp -o cataloger.exe -ltaskschd && cataloger.exe A C:\Users\oluwa\…\cataloger-clock.dat & del cataloger.exe
 // RUN    : cataloger C:/Users/oluwa/OneDrive/Lapys/Catalog C:/Users/oluwa/OneDrive/Lapys/Catalog/cataloger-clock.dat
+#include <cerrno>  // --> EILSEQ, errno
 #include <ciso646> // --> and, not, or
 #include <climits> // --> CHAR_BIT, UCHAR_MAX
 #include <clocale> // --> LC_ALL;                                            std::setlocale(…)
 #include <csignal> // --> SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM; std::signal(…)
 #include <cstddef> // --> NULL; std::size_t
-#include <cstdio>  // --> _IONBF, EOF, L_tmpnam, stderr, stdout; std::FILE; std::fflush(…), std::fopen(…), std::fputs(…), std::fwrite(…), std::setvbuf(…), std::tmpfile(…), std::tmpnam(…)
-#include <cstdlib> // --> EXIT_FAILURE, EXIT_SUCCESS;                       std::at_quick_exit(…), std::atexit(…), std::exit(…)
-#include <ctime>   // --> std::time_t;                                      std::gmtime(…), std::time(…)
+#include <cstdio>  // --> _IONBF, EOF, L_tmpnam, stderr, stdin, stdout; std::FILE; std::fflush(…), std::fopen(…, "ccs=UTF-8"), std::fputs(…), std::fwrite(…), std::setvbuf(…), std::tmpfile(…), std::tmpnam(…)
+#include <cstdlib> // --> EXIT_FAILURE, EXIT_SUCCESS;                              std::at_quick_exit(…), std::atexit(…), std::exit(…)
+#include <ctime>   // --> std::time_t;                                             std::gmtime(…), std::time(…)
+#include <cwchar>  // --> std::fgetwc(…), std::fputws(…), std::fwide(…)
 #include <new>     // --> delete, new; std:nothrow
 #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
 # include <stdio.h>  // --> ::fileno(…)
 # include <unistd.h> // --> ::isatty(…)
 #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-# define _CRT_SECURE_NO_WARNINGS
-# define STRICT
-# define UNICODE
-# ifndef _WIN32_WINNT
+# if defined _MSC_BUILD or defined _MSC_FULL_VER or defined _MSC_VER
+#   pragma comment(lib, "kernel32.lib")
+#   pragma comment(lib, "taskschd.lib")
+# endif
+# define _CRT_SECURE_NO_WARNINGS // ->> C Run-Time security                    --> `https://learn.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt`
+# define CINTERFACE              // ->> C Interface for Component Object Model --> `https://learn.microsoft.com/en-us/windows/win32/com/the-component-object-model`
+# define STRICT                  // ->> Strict type checking                   --> `https://learn.microsoft.com/en-us/windows/win32/winprog/enabling-strict`
+# define UNICODE                 // ->> Unicode preference                     --> `https://learn.microsoft.com/en-us/windows/win32/learnwin32/working-with-strings`
+# ifndef _WIN32_WINNT            //
 #   define _WIN32_WINNT 0x0501 // --> _WIN32_WINNT_WINXP
 # endif
-# include <stdio.h>   // --> ::_get_pgmptr(…), ::_get_wpgmptr(…)
-# include <windows.h> // --> CP_UTF8, FOREGROUND_RED, INVALID_HANDLE_VALUE, MAX_PATH, MB_ERR_INVALID_CHARS, STD_ERROR_HANDLE, WINAPI; BOOL, CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE, HLOCAL, HMODULE, LONG, LPBOOL, LPCCH, LPCVOID, LPCWCH, LPCWSTR, LPDWORD, LPUNKNOWN, LPVOID, LPWSTR, OLECHAR, PCONSOLE_SCREEN_BUFFER_INFO, PCWSTR, PSECURITY_DESCRIPTOR, PWSTR, REFCLSID, REFIID, TCHAR, UINT, VARIANTARG, WCHAR; ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
+# include <io.h>      // --> ::_isatty(…)
+# include <stdio.h>   // --> ::_fileno(…), ::_get_pgmptr(…), ::_get_wpgmptr(…)
+# include <windows.h> // --> CP_UTF8, ERROR_CANCELLED, ERROR_SUCCESS, FOREGROUND_RED, INVALID_HANDLE_VALUE, MAX_PATH, MB_ERR_INVALID_CHARS, STD_ERROR_HANDLE, WINAPI; BOOL, CONSOLE_SCREEN_BUFFER_INFO, DWORD, HANDLE, HLOCAL, HMODULE, LONG, LPBOOL, LPCCH, LPCVOID, LPCWCH, LPCWSTR, LPDWORD, LPSERVICE_MAIN_FUNCTIONW, LPUNKNOWN, LPVOID, LPWSTR, OLECHAR, PCONSOLE_SCREEN_BUFFER_INFO, PCWSTR, PSECURITY_DESCRIPTOR, PWSTR, REFCLSID, REFIID, SERVICE_TABLE_ENTRYW, TCHAR, UINT, VARIANTARG, WCHAR; ::GetModuleHandleExW(…), ::GetProcAddress(…), ::GetSystemDirectoryW(…)
 #   include <oaidl.h>         // --> VARIANT, VARIANTARG
 #   include <objbase.h>       // --> ::COINIT_MULTITHREADED
 #   include <objidl.h>        // --> SOLE_AUTHENTICATION_SERVICE
@@ -35,10 +43,10 @@
 #   endif
 #endif
 
-/* Main --> cataloger [log_directory] [clock_path] [rerun] */
+/* Main --> catalog [log_directory] [clock_path] [rerun] */
 int main(int count, char* arguments[]) /* noexcept */ {
-  static struct cataloger *catalog = NULL;
-  struct cataloger /* final */ {
+  static struct catalog *catalog = NULL;
+  static struct catalog /* final */ {
     enum { MESSAGE_MAXIMUM_LENGTH = 256u };           // --> std::size_t
     union formatinfo { unsigned char metadata[32]; }; // ->> Arbitrarily-sized
 
@@ -62,12 +70,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
       std::exit(EXIT_FAILURE);
     }
 
-    static int exit(int const code) {
+    /* [[noreturn]] */ static int exit(int const code) {
       if (NULL != catalog) {
-        catalog -> applicationExitCode = code;
+        if (catalog -> timerPathAllocated)      ::delete[]  catalog -> timerPath;
+        if (NULL != catalog -> timerFileStream) std::fclose(catalog -> timerFileStream);
 
-        if (catalog -> timerPathAllocated)
-        ::delete[] catalog -> timerPath;
+        catalog -> applicationExitCode = code;
+        catalog -> timerFileStream     = NULL;
       }
 
       catalog = NULL;
@@ -271,6 +280,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     /* ... */
     int         applicationExitCode;
     char const *applicationName;
+    bool        clocked;
     char       *logDirectoryPath;
     char const *messagePrefix;
     char const *messageSuffix;
@@ -283,32 +293,34 @@ int main(int count, char* arguments[]) /* noexcept */ {
   /* ... -> Vendor API setup, then initialization */
   #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
     enum {
-      credui, kernel32, ole32, oleaut32, shell32, taskschd,
+      advapi32, credui, kernel32, ole32, oleaut32, shell32,
       librariesLength // --> std::size_t{…}
     };
 
     WCHAR                      libraryPath[MAX_PATH + 1u] = L"";
     UINT const                 libraryPathLength          = ::GetSystemDirectoryW(libraryPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
     static struct libraryinfo *libraries                  = NULL;
-    struct libraryinfo /* final */ {
+    static struct libraryinfo /* final */ {
       LPCWSTR const name;
       HMODULE       module;
       BOOL        (*unloader)(HMODULE);
 
       /* extern "C" */ static void exit() {
         for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library)
-        if (NULL != library -> unloader) { // --> FreeLibrary(…)
+        if (NULL != library -> module and /* --> FreeLibrary(…) */ NULL != library -> unloader) {
           library -> unloader(library -> module);
+
+          library -> module   = NULL;
           library -> unloader = NULL;
         }
       }
     } l[librariesLength] = {
+      {L"advapi32" ".dll", NULL, NULL},
       {L"credui"   ".dll", NULL, NULL},
       {L"kernel32" ".dll", NULL, NULL},
       {L"ole32"    ".dll", NULL, NULL},
       {L"oleaut32" ".dll", NULL, NULL},
-      {L"shell32"  ".dll", NULL, NULL},
-      {L"taskschd" ".dll", NULL, NULL}
+      {L"shell32"  ".dll", NULL, NULL}
     };
 
     // ...
@@ -335,7 +347,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
         if (L'\0' == *source) break;
       }
 
-      if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &libraries[kernel32].module) and NULL != libraries[kernel32].module) {
+      if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &libraries[kernel32].module))
+      if (NULL != libraries[kernel32].module) {
         FreeLibrary              = reinterpret_cast<BOOL    (*)(HMODULE)>                                            (::GetProcAddress(libraries[kernel32].module, "FreeLibrary"));
         GetCommandLineW          = reinterpret_cast<LPWSTR  (*)()>                                                   (::GetProcAddress(libraries[kernel32].module, "GetCommandLineW"));
         LoadLibraryExW           = reinterpret_cast<HMODULE (*)(LPCWSTR, HANDLE, DWORD)>                             (::GetProcAddress(libraries[kernel32].module, "LoadLibraryExW"));
@@ -425,11 +438,12 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   catalog                        = &c;                                 //
   catalog -> applicationExitCode = EXIT_SUCCESS;                       //
-  catalog -> applicationName     = "cataloger";                        //
-  catalog -> logDirectoryPath    = count > 1 ? arguments[1] : NULL;    //  ->> Filesystem location for storing catalogs; Assume NUL-terminated
+  catalog -> applicationName     = "Cataloger";                        //
+  catalog -> clocked             = false;                              // ->> Catalog's internal clock is active
+  catalog -> logDirectoryPath    = count > 1 ? arguments[1] : NULL;    // ->> Filesystem location for storing catalogs; Assume NUL-terminated
   catalog -> messagePrefix       = "cataloger" ": ";                   //
   catalog -> messageSuffix       = "\r\n";                             //
-  catalog -> rerun               = count > 3 and NULL != arguments[3]; // ->> Determines if Catalog is re-executed
+  catalog -> rerun               = count > 3 and NULL != arguments[3]; // ->> Catalog is re-executed
   catalog -> timerFileStream     = NULL;                               //
   catalog -> timerPath           = count > 2 ? arguments[2] : NULL;    // ->> Filesystem location for serializing catalog timer; Assume NUL-terminated
   catalog -> timerPathAllocated  = false;                              //
@@ -619,333 +633,523 @@ int main(int count, char* arguments[]) /* noexcept */ {
     return catalog -> exit(EXIT_FAILURE);
   }
 
-  // ...
+  /* ... ->> Activate internal clock */
   #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
     // TODO (Lapys) -> `usleep(…)` → `nanosleep(…)`
   #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-    bool catalogClocked = false;
-    HRESULT (*const CoCreateInstance)                  (REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)                                                         = reinterpret_cast<HRESULT         (*)(REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)>                                                        (::GetProcAddress(libraries[ole32]   .module, "CoCreateInstance"));
-    HRESULT (*const CoInitializeEx)                    (LPVOID, DWORD)                                                                                      = reinterpret_cast<HRESULT         (*)(LPVOID, DWORD)>                                                                                     (::GetProcAddress(libraries[ole32]   .module, "CoInitializeEx"));
-    HRESULT (*const CoInitializeSecurity)              (PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*) = reinterpret_cast<HRESULT         (*)(PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*)>(::GetProcAddress(libraries[ole32]   .module, "CoInitializeSecurity"));
-    void    (*const CoUninitialize)                    ()                                                                                                   = reinterpret_cast<void            (*)()>                                                                                                  (::GetProcAddress(libraries[ole32]   .module, "CoUninitialize"));
-    DWORD   (*const CredUIPromptForCredentialsW)       (PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)                = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)>               (::GetProcAddress(libraries[credui]  .module, "CredUIPromptForCredentialsW"));
-    DWORD   (*const CredUIPromptForWindowsCredentialsW)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)                        = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)>                       (::GetProcAddress(libraries[credui]  .module, "CredUIPromptForWindowsCredentialsW"));
-    BOOL    (*const CredUnPackAuthenticationBufferW)   (DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)                                = reinterpret_cast<CREDUIAPI BOOL  (*)(DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)>                               (::GetProcAddress(libraries[credui]  .module, "CredUnPackAuthenticationBufferW"));
-    LPWSTR  (*const GetCommandLineW)                   ()                                                                                                   = reinterpret_cast<LPWSTR          (*)()>                                                                                                  (::GetProcAddress(libraries[kernel32].module, "GetCommandLineW"));
-    DWORD   (*const GetModuleFileNameW)                (HMODULE, LPWSTR, DWORD)                                                                             = reinterpret_cast<DWORD           (*)(HMODULE, LPWSTR, DWORD)>                                                                            (::GetProcAddress(libraries[kernel32].module, "GetModuleFileNameW"));
-    int     (*const MultiByteToWideChar)               (UINT, DWORD, LPCCH, int, LPWSTR, int)                                                               = reinterpret_cast<int             (*)(UINT, DWORD, LPCCH, int, LPWSTR, int)>                                                              (::GetProcAddress(libraries[kernel32].module, "MultiByteToWideChar"));
-    BSTR    (*const SysAllocString)                    (OLECHAR const*)                                                                                     = reinterpret_cast<BSTR            (*)(OLECHAR const*)>                                                                                    (::GetProcAddress(libraries[oleaut32].module, "SysAllocString"));
-    void    (*const SysFreeString)                     (BSTR)                                                                                               = reinterpret_cast<void            (*)(BSTR)>                                                                                              (::GetProcAddress(libraries[oleaut32].module, "SysFreeString"));
-    HRESULT (*const VariantClear)                      (VARIANTARG*)                                                                                        = reinterpret_cast<HRESULT         (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].module, "VariantClear"));
-    void    (*const VariantInit)                       (VARIANTARG*)                                                                                        = reinterpret_cast<void            (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].module, "VariantInit"));
+    /* ... ->> Windows Task Scheduler */
+    if (not catalog -> clocked and not catalog -> rerun)
+    if (NULL != libraries[credui].module and NULL != libraries[kernel32].module and NULL != libraries[ole32].module and NULL != libraries[oleaut32].module) {
+      HRESULT (*const CoCreateInstance)                  (REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)                                                         = reinterpret_cast<HRESULT         (*)(REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)>                                                        (::GetProcAddress(libraries[ole32]   .module, "CoCreateInstance"));
+      HRESULT (*const CoInitializeEx)                    (LPVOID, DWORD)                                                                                      = reinterpret_cast<HRESULT         (*)(LPVOID, DWORD)>                                                                                     (::GetProcAddress(libraries[ole32]   .module, "CoInitializeEx"));
+      HRESULT (*const CoInitializeSecurity)              (PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*) = reinterpret_cast<HRESULT         (*)(PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*)>(::GetProcAddress(libraries[ole32]   .module, "CoInitializeSecurity"));
+      void    (*const CoUninitialize)                    ()                                                                                                   = reinterpret_cast<void            (*)()>                                                                                                  (::GetProcAddress(libraries[ole32]   .module, "CoUninitialize"));
+      DWORD   (*const CredUIPromptForCredentialsW)       (PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)                = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)>               (::GetProcAddress(libraries[credui]  .module, "CredUIPromptForCredentialsW"));
+      DWORD   (*const CredUIPromptForWindowsCredentialsW)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)                        = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)>                       (::GetProcAddress(libraries[credui]  .module, "CredUIPromptForWindowsCredentialsW"));
+      BOOL    (*const CredUnPackAuthenticationBufferW)   (DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)                                = reinterpret_cast<CREDUIAPI BOOL  (*)(DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)>                               (::GetProcAddress(libraries[credui]  .module, "CredUnPackAuthenticationBufferW"));
+      LPWSTR  (*const GetCommandLineW)                   ()                                                                                                   = reinterpret_cast<LPWSTR          (*)()>                                                                                                  (::GetProcAddress(libraries[kernel32].module, "GetCommandLineW"));
+      DWORD   (*const GetModuleFileNameW)                (HMODULE, LPWSTR, DWORD)                                                                             = reinterpret_cast<DWORD           (*)(HMODULE, LPWSTR, DWORD)>                                                                            (::GetProcAddress(libraries[kernel32].module, "GetModuleFileNameW"));
+      int     (*const MultiByteToWideChar)               (UINT, DWORD, LPCCH, int, LPWSTR, int)                                                               = reinterpret_cast<int             (*)(UINT, DWORD, LPCCH, int, LPWSTR, int)>                                                              (::GetProcAddress(libraries[kernel32].module, "MultiByteToWideChar"));
+      BSTR    (*const SysAllocString)                    (OLECHAR const*)                                                                                     = reinterpret_cast<BSTR            (*)(OLECHAR const*)>                                                                                    (::GetProcAddress(libraries[oleaut32].module, "SysAllocString"));
+      void    (*const SysFreeString)                     (BSTR)                                                                                               = reinterpret_cast<void            (*)(BSTR)>                                                                                              (::GetProcAddress(libraries[oleaut32].module, "SysFreeString"));
+      HRESULT (*const VariantClear)                      (VARIANTARG*)                                                                                        = reinterpret_cast<HRESULT         (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].module, "VariantClear"));
+      void    (*const VariantInit)                       (VARIANTARG*)                                                                                        = reinterpret_cast<void            (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].module, "VariantInit"));
 
-    // NOTE (Lapys) -> Derived from `https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c---`
-    // TODO (Lapys) -> Windows Task Scheduler → Windows Services → `WaitForSingleObject(…)` → `SetTimer(…)` → `Sleep(…)`
-    /* ... */
-    if (NULL != CoCreateInstance and NULL != CoInitializeEx and NULL != CoInitializeSecurity and NULL != CoUninitialize and NULL != CredUIPromptForCredentialsW and NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW and NULL != GetCommandLineW and NULL != GetModuleFileNameW and NULL != MultiByteToWideChar and NULL != SysAllocString and NULL != SysFreeString and NULL != VariantClear and NULL != VariantInit)
-    if (SUCCEEDED(CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
-      WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u] = L"";                                             //
-      WCHAR               credentialsUsername[CREDUI_MAX_USERNAME_LENGTH + 1u] = L"";                                             //
-      CREDUI_INFOW        credentialsUIInformation                             = {};                                              //
-      IRegisteredTask    *registeredTask                                       = NULL;                                            // ->> Must remain `NULL`
-      IAction            *taskAction                                           = NULL;                                            //
-      IActionCollection  *taskActionCollection                                 = NULL;                                            //
-      BSTR const          taskAuthor                                           = SysAllocString(L"LapysDev");                     //
-      void               *taskDailyTrigger                                     = NULL;                                            // --> IDailyTrigger*
-      short const         taskDailyTriggerInterval                             = 1;                                               //
-      BSTR  const         taskDailyTriggerName                                 = SysAllocString(L"checkup");                      //
-      BSTR                taskDailyTriggerTimeEnd                              = NULL;                                            //
-      WCHAR               taskDailyTriggerTimeEndBuffer[]                      = L"20xx-01-01T12:00:00";                          // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-      BSTR                taskDailyTriggerTimeStart                            = NULL;                                            //
-      WCHAR               taskDailyTriggerTimeStartBuffer[]                    = L"20xx-01-01T12:00:00";                          // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-      ITaskDefinition    *taskDefinition                                       = NULL;                                            //
-      void               *taskExecutableAction                                 = NULL;                                            // --> IExecAction*
-      BSTR                taskExecutableArguments                              = SysAllocString(GetCommandLineW());               //
-      BSTR                taskExecutablePath                                   = NULL;                                            //
-      WCHAR               taskExecutablePathBuffer[MAX_PATH + 1u]              = {};                                              //
-      std::size_t const   taskExecutablePathBufferLength                       = sizeof taskExecutablePathBuffer / sizeof(WCHAR); //
-      ITaskFolder        *taskFolder                                           = NULL;                                            //
-      VARIANT             taskFolderPassword                                   = {};                                              //
-      BSTR const          taskFolderPath                                       = SysAllocString(L"\\");                           // ->> Root folder
-      VARIANT             taskFolderSecurityDescriptor                         = {};                                              //
-      VARIANT             taskFolderUsername                                   = {};                                              //
-      BSTR const          taskName                                             = SysAllocString(L"Cataloger checkup");            //
-      IRegistrationInfo  *taskRegistrationInformation                          = NULL;                                            //
-      IRepetitionPattern *taskRepititionPattern                                = NULL;                                            //
-      BSTR const          taskRepititionPatternDuration                        = SysAllocString(L"PT4M");                         // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-duration-repetitiontype-element`
-      BSTR const          taskRepititionPatternInterval                        = SysAllocString(L"PT1M");                         // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-interval-repetitiontype-element`
-      void               *taskService                                          = NULL;                                            // --> ITaskService*
-      VARIANT             taskServiceDomain                                    = {};                                              //
-      VARIANT             taskServicePassword                                  = {};                                              //
-      VARIANT             taskServiceServerName                                = {};                                              //
-      VARIANT             taskServiceUser                                      = {};                                              //
-      ITrigger           *taskTrigger                                          = NULL;                                            //
-      ITriggerCollection *taskTriggerCollection                                = NULL;                                            //
-      std::time_t const   time                                                 = std::time(static_cast<std::time_t*>(NULL));      //
-      unsigned int        year                                                 = 2024u;                                           // --> YYYY
+      // ... -> Derived from `https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c---`
+      if (NULL != CoCreateInstance and NULL != CoInitializeEx and NULL != CoInitializeSecurity and NULL != CoUninitialize and NULL != SysAllocString and NULL != VariantInit and (NULL != CredUIPromptForCredentialsW or (NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW)))
+      if (SUCCEEDED(CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
+        #ifdef __DATE__ // --> "Mmm DD YYYY"
+          char const DATE[12] = __DATE__; // --> std::asctime(…)
+        #else
+          char const DATE[] = "Jan 00 2024";
+        #endif
+        #ifdef __TIME__ // --> "HH:MM:SS"
+          char const TIME[9] = __TIME__;
+        #else
+          char const TIME[] = "12:00:00";
+        #endif
+        LPVOID              credentialsAuthenticationBuffer                             = NULL;                                                   // --> CredUIPromptForWindowsCredentialsW(…)
+        ULONG               credentialsAuthenticationBufferSize                         = 0u;                                                     // --> CredUIPromptForWindowsCredentialsW(…)
+        ULONG               credentialsAuthenticationPackage                            = 0x00u;                                                  // --> CredUIPromptForWindowsCredentialsW(…)
+        WCHAR               credentialsDomainName[CREDUI_MAX_DOMAIN_TARGET_LENGTH + 1u] = L"";                                                    // --> CredUnPackAuthenticationBufferW   (…)
+        DWORD               credentialsDomainNameSize                                   = sizeof credentialsDomainName / sizeof(WCHAR);           // --> CredUnPackAuthenticationBufferW   (…)
+        WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u]        = L"";                                                    // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+        DWORD               credentialsPasswordSize                                     = sizeof credentialsPassword / sizeof(WCHAR);             // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+        WCHAR const         credentialsPromptCaption[CREDUI_MAX_CAPTION_LENGTH]         = L"Cataloger";                                           // --> catalog -> applicationName
+        WCHAR const         credentialsPromptMessage[CREDUI_MAX_MESSAGE_LENGTH]         = L"Set up internal clock via the Task Scheduler ⏱️";     //
+        WCHAR               credentialsUsername[CREDUI_MAX_USERNAME_LENGTH + 1u]        = L"";                                                    // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+        DWORD               credentialsUsernameSize                                     = sizeof credentialsUsername / sizeof(WCHAR);             // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+        CREDUI_INFOW        credentialsUIInformation                                    = {};                                                     //
+        IRegisteredTask    *registeredTask                                              = NULL;                                                   // ->> Must remain `NULL`
+        int                 standardInputDescriptor                                     = -1;                                                     //
+        bool                standardInputIsTeletype                                     = false;                                                  //
+        bool                standardInputNewlined                                       = true;                                                   //
+        IAction            *taskAction                                                  = NULL;                                                   //
+        IActionCollection  *taskActionCollection                                        = NULL;                                                   //
+        BSTR const          taskAuthor                                                  = SysAllocString(L"LapysDev");                            //
+        BSTR const          taskDescription                                             = SysAllocString(L"Cataloger internal clock ⏱️");         //
+        void               *taskDailyTrigger                                            = NULL;                                                   // --> IDailyTrigger*
+        short const         taskDailyTriggerInterval                                    = 1;                                                      //
+        BSTR  const         taskDailyTriggerName                                        = SysAllocString(L"checkup");                             //
+        BSTR                taskDailyTriggerTimeEnd                                     = NULL;                                                   //
+        WCHAR               taskDailyTriggerTimeEndBuffer[]                             = L"20\0\0-01-01" "T" "\0\0:\0\0:\0\0";                   // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+        BSTR                taskDailyTriggerTimeStart                                   = NULL;                                                   //
+        WCHAR               taskDailyTriggerTimeStartBuffer[]                           = L"20\0\0-01-01" "T" "\0\0:\0\0:\0\0";                   // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+        ITaskDefinition    *taskDefinition                                              = NULL;                                                   //
+        void               *taskExecutableAction                                        = NULL;                                                   // --> IExecAction*
+        BSTR                taskExecutableArguments                                     = NULL;                                                   // --> GetCommandLineW(…)
+        WCHAR              *taskExecutableArgumentsBuffer                               = NULL;                                                   //
+        BSTR                taskExecutablePath                                          = NULL;                                                   // --> GetModuleFileNameW(…)
+        WCHAR               taskExecutablePathBuffer[MAX_PATH + 1u]                     = {};                                                     //
+        std::size_t const   taskExecutablePathBufferLength                              = sizeof taskExecutablePathBuffer / sizeof(WCHAR);        //
+        ITaskFolder        *taskFolder                                                  = NULL;                                                   //
+        VARIANT             taskFolderPassword                                          = {};                                                     //
+        BSTR const          taskFolderPath                                              = SysAllocString(L"\\");                                  // ->> Root folder
+        VARIANT             taskFolderSecurityDescriptor                                = {};                                                     //
+        VARIANT             taskFolderUsername                                          = {};                                                     //
+        BSTR const          taskName                                                    = SysAllocString(L"Cataloger");                           //
+        IRegistrationInfo  *taskRegistrationInformation                                 = NULL;                                                   //
+        IRepetitionPattern *taskRepititionPattern                                       = NULL;                                                   //
+        BSTR const          taskRepititionPatternDuration                               = SysAllocString(L"PT4M");                                // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-duration-repetitiontype-element`
+        BSTR const          taskRepititionPatternInterval                               = SysAllocString(L"PT1M");                                // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-interval-repetitiontype-element`
+        void               *taskService                                                 = NULL;                                                   // --> ITaskService*
+        VARIANT             taskServiceDomain                                           = {};                                                     //
+        VARIANT             taskServicePassword                                         = {};                                                     //
+        VARIANT             taskServiceServerName                                       = {};                                                     //
+        VARIANT             taskServiceUser                                             = {};                                                     //
+        ITrigger           *taskTrigger                                                 = NULL;                                                   //
+        ITriggerCollection *taskTriggerCollection                                       = NULL;                                                   //
+        struct {
+          std::time_t const value;                //
+          unsigned int      year;                 // --> YYYY
+          unsigned int      hour, minute, second; // --> HH:MM:SS
+        } time = {std::time(static_cast<std::time_t*>(NULL)), 0000u, 00u, 00u, 00u};
 
-      // ...
-      VariantInit(&taskFolderPassword);
-      VariantInit(&taskFolderSecurityDescriptor);
-      VariantInit(&taskFolderUsername);
-      VariantInit(&taskServiceDomain);
-      VariantInit(&taskServicePassword);
-      VariantInit(&taskServiceServerName);
-      VariantInit(&taskServiceUser);
-
-      credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH] = L'\0';
-      credentialsUsername[CREDUI_MAX_USERNAME_LENGTH] = L'\0';
-      credentialsUIInformation    .cbSize             = sizeof(CREDUI_INFOW);
-      credentialsUIInformation    .hbmBanner          = static_cast<HBITMAP>(NULL);
-      credentialsUIInformation    .hwndParent         = static_cast<HWND>   (NULL);
-      credentialsUIInformation    .pszCaptionText     = L"Enter account information for task registration";
-      credentialsUIInformation    .pszMessageText     = L"Account information for task registration";
-      taskFolderPassword          .vt                 = ::VT_BSTR;
-      taskFolderSecurityDescriptor.vt                 = ::VT_BSTR;
-      taskFolderUsername          .vt                 = ::VT_BSTR;
-
-      // ... --> taskDailyTriggerTimeEndBuffer[0‥3] = taskDailyTriggerTimeStartBuffer[0‥3] = __DATE__[7‥10] ?? std::itoa(std::gmtime(…) -> tm_year, …, 10);
-      #ifdef __DATE__
-        char const date[12] = __DATE__;
-
-        // ...
-        year = 0u;
-
-        for (std::size_t index = 10u + 1u; index-- != 7u; )
-        switch (date[index]) { // --> std::asctime(…)
-          case '0': year = (year * 10u) + 0u; break;
-          case '1': year = (year * 10u) + 1u; break;
-          case '2': year = (year * 10u) + 2u; break;
-          case '3': year = (year * 10u) + 3u; break;
-          case '4': year = (year * 10u) + 4u; break;
-          case '5': year = (year * 10u) + 5u; break;
-          case '6': year = (year * 10u) + 6u; break;
-          case '7': year = (year * 10u) + 7u; break;
-          case '8': year = (year * 10u) + 8u; break;
-          case '9': year = (year * 10u) + 9u; break;
-        }
-      #endif
-
-      if (time != static_cast<std::time_t>(-1)) {
-        std::tm *const calenderTime = std::gmtime(&time);
-        year = NULL != calenderTime ? calenderTime -> tm_year + 1900 : year;
-      }
-
-      for (struct { WCHAR *text; unsigned int value; } years[] = {
-        {taskDailyTriggerTimeEndBuffer,   year + 100u},
-        {taskDailyTriggerTimeStartBuffer, year + 0u}
-      }, *year = years; year != years + (sizeof years / sizeof *years); ++year) {
-        for (std::size_t index = 3u + 1u; index--; year -> value /= 10u)
-        switch (year -> value % 10u) {
-          case 0u: year -> text[index] = '0'; break;
-          case 1u: year -> text[index] = '1'; break;
-          case 2u: year -> text[index] = '2'; break;
-          case 3u: year -> text[index] = '3'; break;
-          case 4u: year -> text[index] = '4'; break;
-          case 5u: year -> text[index] = '5'; break;
-          case 6u: year -> text[index] = '6'; break;
-          case 7u: year -> text[index] = '7'; break;
-          case 8u: year -> text[index] = '8'; break;
-          case 9u: year -> text[index] = '9'; break;
-        }
-      }
-
-      // ... --> taskExecutablePath… = …;
-      if (0u == GetModuleFileNameW(static_cast<HMODULE>(NULL), taskExecutablePathBuffer, MAX_PATH + 1u)) {
-        union { wchar_t *unicode; char *nonUnicode; } pointer = {NULL};
-
-        // ...
-        taskExecutablePathBuffer[0] = L'\0';
-
-        if (0 != ::_get_wpgmptr(&pointer.unicode) or NULL == pointer.unicode) {
-          pointer.nonUnicode = NULL;
-          pointer.nonUnicode = 0 != ::_get_pgmptr(&pointer.nonUnicode) or NULL == pointer.nonUnicode ? arguments[0] : pointer.nonUnicode;
-
-          if (NULL != pointer.nonUnicode) {
-            if (
-              taskExecutablePathBufferLength < static_cast<unsigned>(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pointer.nonUnicode, -1, static_cast<LPWSTR>(NULL), 0)) or
-              0                              ==                      MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pointer.nonUnicode, -1, taskExecutablePathBuffer, taskExecutablePathBufferLength)
-            ) taskExecutablePathBuffer[0] = L'\0';
+        // ... --> time = …;
+        for (struct { char const *text; unsigned int *time; std::size_t begin, end; } const indexes[] = {
+          {TIME, &time.hour,   0u, 1u},
+          {TIME, &time.minute, 3u, 4u},
+          {TIME, &time.second, 6u, 7u},
+          {DATE, &time.year,   7u, 10u}
+        }, *index = indexes; index != indexes + (sizeof indexes / sizeof *indexes); ++index) {
+          for (std::size_t subindex = index -> end + 1u; index -> begin != subindex--; )
+          switch (index -> text[subindex]) {
+            case '0': *(index -> time) = (*(index -> time) * 10u) + 0u; break;
+            case '1': *(index -> time) = (*(index -> time) * 10u) + 1u; break;
+            case '2': *(index -> time) = (*(index -> time) * 10u) + 2u; break;
+            case '3': *(index -> time) = (*(index -> time) * 10u) + 3u; break;
+            case '4': *(index -> time) = (*(index -> time) * 10u) + 4u; break;
+            case '5': *(index -> time) = (*(index -> time) * 10u) + 5u; break;
+            case '6': *(index -> time) = (*(index -> time) * 10u) + 6u; break;
+            case '7': *(index -> time) = (*(index -> time) * 10u) + 7u; break;
+            case '8': *(index -> time) = (*(index -> time) * 10u) + 8u; break;
+            case '9': *(index -> time) = (*(index -> time) * 10u) + 9u; break;
           }
         }
 
-        else for (std::size_t index = 0u; ; ++index) {
-          taskExecutablePathBuffer[index] = pointer.unicode[index];
-          if (L'\0' == pointer.unicode[index]) break;
-        }
-      }
+        if (time.value != static_cast<std::time_t>(-1)) {
+          struct std::tm *const calenderTime = std::gmtime(&time.value);
 
-      // ...
-      taskDailyTriggerTimeEnd            = SysAllocString(taskDailyTriggerTimeEndBuffer);
-      taskDailyTriggerTimeStart          = SysAllocString(taskDailyTriggerTimeStartBuffer);
-      taskExecutablePathBuffer[MAX_PATH] = L'\0';
-      taskExecutablePath                 = SysAllocString(taskExecutablePathBuffer);
-
-      if (
-        NULL  != taskAuthor                    and
-        NULL  != taskDailyTriggerName          and
-        NULL  != taskDailyTriggerTimeEnd       and
-        NULL  != taskDailyTriggerTimeStart     and
-        NULL  != taskExecutablePath            and
-        L'\0' != taskExecutablePathBuffer[0]   and
-        NULL  != taskFolderPath                and
-        NULL  != taskName                      and
-        NULL  != taskRepititionPatternDuration and
-        NULL  != taskRepititionPatternInterval
-      ) do {
-        if (FAILED(CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) { std::puts("[ERROR #1]"); break; }
-        if (FAILED(CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  { std::puts("[ERROR #2]"); break; }
-        if (NULL == taskService)                                                                                                                                                                                                                                                          { std::puts("[ERROR #3]"); break; }
-
-        if (FAILED(static_cast<ITaskService*>(taskService) -> Connect  (taskServiceServerName, taskServiceUser, taskServiceDomain, taskServicePassword))) { std::puts("[ERROR #4]"); break; }
-        if (FAILED(static_cast<ITaskService*>(taskService) -> GetFolder(taskFolderPath, &taskFolder)))                                                    { std::puts("[ERROR #5]"); break; }
-        if (NULL == taskFolder)                                                                                                                           { std::puts("[ERROR #6]"); break; }
-
-        (void) taskFolder -> DeleteTask(taskName, 0x00L);
-
-        if (FAILED(static_cast<ITaskService*>(taskService) -> NewTask(0x00u, &taskDefinition))) { std::puts("[ERROR #7]"); break; }
-        if (NULL == taskDefinition)                                                             { std::puts("[ERROR #8]"); break; }
-
-        if (FAILED(taskDefinition -> get_RegistrationInfo(&taskRegistrationInformation))) { std::puts("[ERROR #9]"); break; }
-        if (NULL == taskRegistrationInformation)                                          { std::puts("[ERROR #10]"); break; }
-
-        if (FAILED(taskRegistrationInformation -> put_Author  (taskAuthor)))             { std::puts("[ERROR #11]"); break; }
-        if (FAILED(taskDefinition              -> get_Triggers(&taskTriggerCollection))) { std::puts("[ERROR #12]"); break; }
-        if (NULL == taskTriggerCollection)                                               { std::puts("[ERROR #13]"); break; }
-
-        if (FAILED(taskTriggerCollection -> Create(::TASK_TRIGGER_DAILY, &taskTrigger))) { std::puts("[ERROR #14]"); break; }
-        if (NULL == taskTrigger)                                                         { std::puts("[ERROR #15]"); break; }
-
-        if (FAILED(taskTrigger -> QueryInterface(::IID_IDailyTrigger, &taskDailyTrigger))) { std::puts("[ERROR #16]"); break; }
-        if (NULL == taskDailyTrigger)                                                      { std::puts("[ERROR #17]"); break; }
-
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_DaysInterval (taskDailyTriggerInterval)))  { std::puts("[ERROR #18]"); break; }
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_EndBoundary  (taskDailyTriggerTimeEnd)))   { std::puts("[ERROR #19]"); break; }
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_Id           (taskDailyTriggerName)))      { std::puts("[ERROR #20]"); break; }
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> put_StartBoundary(taskDailyTriggerTimeStart))) { std::puts("[ERROR #21]"); break; }
-        if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> get_Repetition  (&taskRepititionPattern)))     { std::puts("[ERROR #22]"); break; }
-        if (NULL == taskRepititionPattern)                                                                         { std::puts("[ERROR #23]"); break; }
-
-        if (FAILED(taskRepititionPattern -> put_Duration(taskRepititionPatternDuration))) { std::puts("[ERROR #24]"); break; }
-        if (FAILED(taskRepititionPattern -> put_Interval(taskRepititionPatternInterval))) { std::puts("[ERROR #25]"); break; }
-        if (FAILED(taskDefinition        -> get_Actions (&taskActionCollection)))         { std::puts("[ERROR #26]"); break; }
-        if (NULL == taskActionCollection)                                                 { std::puts("[ERROR #27]"); break; }
-
-        if (FAILED(taskActionCollection -> Create(::TASK_ACTION_EXEC, &taskAction))) { std::puts("[ERROR #28]"); break; }
-        if (NULL == taskAction)                                                      { std::puts("[ERROR #29]"); break; }
-
-        if (FAILED(taskAction -> QueryInterface(::IID_IExecAction, &taskExecutableAction))) { std::puts("[ERROR #30]"); break; }
-        if (NULL == taskExecutableAction)                                                   { std::puts("[ERROR #31]"); break; }
-
-        if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> put_Arguments(taskExecutableArguments))) { std::puts("[ERROR #32]"); break; }
-        if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> put_Path     (taskExecutablePath)))      { std::puts("[ERROR #33]"); break; }
-
-        // TODO
-        LPVOID credentialsAuthenticationBuffer     = NULL;
-        ULONG  credentialsAuthenticationBufferSize = 0u;
-        ULONG  credentialsAuthenticationPackage    = 0x00u;
-        DWORD  credentialsUsernameSize = sizeof credentialsUsername / sizeof(WCHAR);
-        WCHAR  credentialsDomainName[CREDUI_MAX_DOMAIN_TARGET_LENGTH + 1u] = L"";
-        DWORD  credentialsDomainNameSize = sizeof credentialsDomainName / sizeof(WCHAR);
-        DWORD  credentialsPasswordSize = sizeof credentialsPassword / sizeof(WCHAR);
-        if (ERROR_SUCCESS != CredUIPromptForWindowsCredentialsW(&credentialsUIInformation, 0x00u, &credentialsAuthenticationPackage, static_cast<LPCVOID>(NULL), 0u, &credentialsAuthenticationBuffer, &credentialsAuthenticationBufferSize, static_cast<BOOL*>(NULL), CREDUIWIN_ENUMERATE_CURRENT_USER | CREDUIWIN_GENERIC)) {
-          std::puts("[ERROR #34]");
-          break;
+          if (NULL != calenderTime) {
+            time.hour   = calenderTime -> tm_hour;
+            time.minute = calenderTime -> tm_min;
+            time.second = calenderTime -> tm_sec  % /* ->> Correct for C89 leap-second defect */ 61;
+            time.year   = calenderTime -> tm_year + 1900;
+          }
         }
 
-        if (FALSE == CredUnPackAuthenticationBufferW(0x1u /* --> CRED_PACK_PROTECTED_CREDENTIALS */, credentialsAuthenticationBuffer, credentialsAuthenticationBufferSize, credentialsUsername, &credentialsUsernameSize, credentialsDomainName, &credentialsDomainNameSize, credentialsPassword, &credentialsPasswordSize)) {
-          std::puts("[ERROR #35]");
-          break;
+        // ... --> taskExecutablePath… = …;
+        if (NULL == GetModuleFileNameW or 0u == GetModuleFileNameW(static_cast<HMODULE>(NULL), taskExecutablePathBuffer, MAX_PATH + 1u)) {
+          union { wchar_t *unicode; char *nonUnicode; } pointer = {NULL};
+
+          // ...
+          taskExecutablePathBuffer[0] = L'\0';
+
+          if (0 == ::_get_wpgmptr(&pointer.unicode)) {
+            for (std::size_t index = 0u; ; ++index) {
+              taskExecutablePathBuffer[index] = pointer.unicode[index];
+              if (L'\0' == pointer.unicode[index]) break;
+            }
+          }
+
+          else if (NULL != MultiByteToWideChar) {
+            pointer.nonUnicode = NULL;
+            pointer.nonUnicode = 0 != ::_get_pgmptr(&pointer.nonUnicode) or NULL == pointer.nonUnicode ? arguments[0] : pointer.nonUnicode;
+
+            if (NULL != pointer.nonUnicode)
+            if (taskExecutablePathBufferLength >= static_cast<unsigned>(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pointer.nonUnicode, -1, static_cast<LPWSTR>(NULL), 0))) {
+              if (0 == MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pointer.nonUnicode, -1, taskExecutablePathBuffer, taskExecutablePathBufferLength))
+              taskExecutablePathBuffer[0] = L'\0';
+            }
+          }
         }
 
-        (void) CredUIPromptForCredentialsW;
-        std::printf("[...]: {username: \"%ls\", domain: \"%ls\", password: \"%ls\"}" "\r\n", credentialsUsername, credentialsDomainName, credentialsPassword);
-        // if (NULL == CredUIPromptForCredentialsW) {
-        //   std::puts("[ERROR #36-A]");
-        //   break;
-        // }
+        // ... --> taskExecutableArguments… = …;
+        if (NULL != GetCommandLineW) {
+          LPWSTR const      commandLine                    = GetCommandLineW();
+          std::size_t       commandLineLength              = 0u;
+          WCHAR       const commandLineRerunArgument[]     = L"--rerun";
+          std::size_t const commandLineRerunArgumentLength = (sizeof commandLineRerunArgument / sizeof(WCHAR)) - 1u;
 
-        // else if (0x00u != CredUIPromptForCredentialsW(&credentialsUIInformation, L"", static_cast<PCtxtHandle>(NULL), 0x00u, credentialsUsername, sizeof credentialsUsername / sizeof(WCHAR), credentialsPassword, sizeof credentialsPassword / sizeof(WCHAR), static_cast<BOOL*>(NULL), CREDUI_FLAGS_ALWAYS_SHOW_UI | CREDUI_FLAGS_DO_NOT_PERSIST | CREDUI_FLAGS_GENERIC_CREDENTIALS)) {
-        //   std::puts("[ERROR #36-B]");
-        //   break;
-        // }
+          // ...
+          while (L'\0' != commandLine[commandLineLength])
+          ++commandLineLength;
 
-        taskFolderPassword          .bstrVal = SysAllocString(credentialsPassword);
-        taskFolderSecurityDescriptor.bstrVal = SysAllocString(L"");
-        taskFolderUsername          .bstrVal = SysAllocString(credentialsUsername);
+          taskExecutableArgumentsBuffer = ::new (std::nothrow) WCHAR[commandLineLength + commandLineRerunArgumentLength + /* ->> NUL terminator */ 1u];
 
-        if (NULL == taskFolderPassword          .bstrVal) { std::puts("[ERROR #37]"); break; }
-        if (NULL == taskFolderSecurityDescriptor.bstrVal) { std::puts("[ERROR #38]"); break; }
-        if (NULL == taskFolderUsername          .bstrVal) { std::puts("[ERROR #39]"); break; }
+          if (NULL != taskExecutableArgumentsBuffer) {
+            taskExecutableArgumentsBuffer[commandLineLength + commandLineRerunArgumentLength] = L'\0';
 
-        if (FAILED(taskFolder -> RegisterTaskDefinition(taskName, taskDefinition, ::TASK_CREATE_OR_UPDATE, taskFolderUsername, taskFolderPassword, ::TASK_LOGON_PASSWORD, taskFolderSecurityDescriptor, &registeredTask))) {
-          std::puts("[ERROR #40]");
-          break;
+            for (std::size_t index = 0u; index != commandLineLength; ++index)
+            taskExecutableArgumentsBuffer[index] = commandLine[index];
+
+            for (std::size_t index = 0u; index != commandLineRerunArgumentLength; ++index)
+            taskExecutableArgumentsBuffer[commandLineLength + index] = commandLineRerunArgument[index];
+          }
+        }
+
+        // ... --> taskDailyTriggerTime…Buffer[…] = …;
+        for (struct { WCHAR *text; unsigned int time; std::size_t begin, end; } indexes[] = {
+          {taskDailyTriggerTimeEndBuffer,   time.hour,        11u, 12u},
+          {taskDailyTriggerTimeEndBuffer,   time.minute,      14u, 15u},
+          {taskDailyTriggerTimeEndBuffer,   time.second,      17u, 18u},
+          {taskDailyTriggerTimeEndBuffer,   time.year + 100u, 0u,  3u},
+          {taskDailyTriggerTimeStartBuffer, time.hour,        11u, 12u},
+          {taskDailyTriggerTimeStartBuffer, time.minute,      14u, 15u},
+          {taskDailyTriggerTimeStartBuffer, time.second,      17u, 18u},
+          {taskDailyTriggerTimeStartBuffer, time.year,        0u,  3u},
+        }, *index = indexes; index != indexes + (sizeof indexes / sizeof *indexes); ++index) {
+          for (std::size_t subindex = index -> end + 1u; index -> begin != subindex--; index -> time /= 10u)
+          index -> text[subindex] = "0123456789"[index -> time % 10u];
         }
 
         // ...
-        catalogClocked = true;
-      } while (false);
+        VariantInit(&taskFolderPassword);
+        VariantInit(&taskFolderSecurityDescriptor);
+        VariantInit(&taskFolderUsername);
+        VariantInit(&taskServiceDomain);
+        VariantInit(&taskServicePassword);
+        VariantInit(&taskServiceServerName);
+        VariantInit(&taskServiceUser);
+
+        credentialsPassword[credentialsPasswordSize - 1u] = L'\0';
+        credentialsUsername[credentialsUsernameSize - 1u] = L'\0';
+        credentialsUIInformation.cbSize                   = sizeof(CREDUI_INFOW);
+        credentialsUIInformation.hbmBanner                = static_cast<HBITMAP>(NULL);
+        credentialsUIInformation.hwndParent               = static_cast<HWND>   (NULL);
+        credentialsUIInformation.pszCaptionText           = credentialsPromptCaption;
+        credentialsUIInformation.pszMessageText           = credentialsPromptMessage;
+        taskDailyTriggerTimeEnd                           = SysAllocString(taskDailyTriggerTimeEndBuffer);
+        taskDailyTriggerTimeStart                         = SysAllocString(taskDailyTriggerTimeStartBuffer);
+        taskFolderPassword          .vt                   = ::VT_BSTR;
+        taskFolderSecurityDescriptor.bstrVal              = NULL;
+        taskFolderSecurityDescriptor.vt                   = ::VT_BSTR;
+        taskFolderUsername          .vt                   = ::VT_BSTR;
+        taskExecutableArguments                           = NULL != taskExecutableArgumentsBuffer ? SysAllocString(taskExecutableArgumentsBuffer) : NULL;
+        taskExecutablePathBuffer[MAX_PATH]                = L'\0';
+        taskExecutablePath                                = SysAllocString(taskExecutablePathBuffer);
+
+        ::delete[] taskExecutableArgumentsBuffer;
+
+        if (
+          NULL  != taskAuthor                    and
+          NULL  != taskDailyTriggerName          and
+          NULL  != taskDailyTriggerTimeEnd       and
+          NULL  != taskDailyTriggerTimeStart     and
+          NULL  != taskExecutableArguments       and
+          NULL  != taskExecutablePath            and
+          L'\0' != taskExecutablePathBuffer[0]   and
+          NULL  != taskFolderPath                and
+          NULL  != taskName                      and
+          NULL  != taskRepititionPatternDuration and
+          NULL  != taskRepititionPatternInterval
+        ) do {
+          if (FAILED(CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) break;
+          if (FAILED(CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  break;
+          if (NULL == taskService)                                                                                                                                                                                                                                                          break;
+
+          if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> Connect  (static_cast<ITaskService*>(taskService), taskServiceServerName, taskServiceUser, taskServiceDomain, taskServicePassword))) break;
+          if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> GetFolder(static_cast<ITaskService*>(taskService), taskFolderPath, &taskFolder)))                                                    break;
+          if (NULL == taskFolder)                                                                                                                                                                              break;
+
+          if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> NewTask(static_cast<ITaskService*>(taskService), 0x00u, &taskDefinition))) break;
+          if (NULL == taskDefinition)                                                                                                                break;
+
+          if (FAILED(taskDefinition -> lpVtbl -> get_RegistrationInfo(taskDefinition, &taskRegistrationInformation))) break;
+          if (NULL == taskRegistrationInformation)                                                                    break;
+
+          if (FAILED(taskRegistrationInformation -> lpVtbl -> put_Description(taskRegistrationInformation, taskDescription))) { /* Do nothing… */ }
+          if (FAILED(taskRegistrationInformation -> lpVtbl -> put_Author     (taskRegistrationInformation, taskAuthor)))            break;
+          if (FAILED(taskDefinition              -> lpVtbl -> get_Triggers   (taskDefinition,             &taskTriggerCollection))) break;
+          if (NULL == taskTriggerCollection)                                                                                        break;
+
+          if (FAILED(taskTriggerCollection -> lpVtbl -> Create(taskTriggerCollection, ::TASK_TRIGGER_DAILY, &taskTrigger))) break;
+          if (NULL == taskTrigger)                                                                                          break;
+
+          if (FAILED(taskTrigger -> lpVtbl -> QueryInterface(taskTrigger, ::IID_IDailyTrigger, &taskDailyTrigger))) break;
+          if (NULL == taskDailyTrigger)                                                                             break;
+
+          if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_DaysInterval (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerInterval)))  break;
+          if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_EndBoundary  (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerTimeEnd)))   break;
+          if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_Id           (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerName)))      break;
+          if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_StartBoundary(static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerTimeStart))) break;
+          if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> get_Repetition   (static_cast<IDailyTrigger*>(taskDailyTrigger), &taskRepititionPattern)))     break;
+          if (NULL == taskRepititionPattern)                                                                                                                                   break;
+
+          if (FAILED(taskRepititionPattern -> lpVtbl -> put_Duration(taskRepititionPattern, taskRepititionPatternDuration))) break;
+          if (FAILED(taskRepititionPattern -> lpVtbl -> put_Interval(taskRepititionPattern, taskRepititionPatternInterval))) break;
+          if (FAILED(taskDefinition        -> lpVtbl -> get_Actions (taskDefinition,       &taskActionCollection)))          break;
+          if (NULL == taskActionCollection)                                                                                  break;
+
+          if (FAILED(taskActionCollection -> lpVtbl -> Create(taskActionCollection, ::TASK_ACTION_EXEC, &taskAction))) break;
+          if (NULL == taskAction)                                                                                      break;
+
+          if (FAILED(taskAction -> lpVtbl -> QueryInterface(taskAction, ::IID_IExecAction, &taskExecutableAction))) break;
+          if (NULL == taskExecutableAction)                                                                         break;
+
+          if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> lpVtbl -> put_Arguments(static_cast<IExecAction*>(taskExecutableAction), taskExecutableArguments))) break;
+          if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> lpVtbl -> put_Path     (static_cast<IExecAction*>(taskExecutableAction), taskExecutablePath)))      break;
+
+          // ... --> credentialsPassword = …; credentialsUsername = …;
+          credentialsAuthenticationBuffer = &credentialsAuthenticationBuffer;
+          do {
+            // --> catalog -> message(credentialsPromptMessage);
+            if (EOF == std::fputs(catalog -> messagePrefix, stdout))
+            break;
+
+            (void) std::fputws(credentialsPromptMessage, stdout);
+            (void) std::fputs (catalog -> messageSuffix, stdout);
+          } while (false);
+
+          // ...
+          if (NULL != credentialsAuthenticationBuffer) { // --> std::fgetws(…)
+            (void) std::fwide(stdin, +1);
+
+            standardInputDescriptor = ::_fileno(stdin);
+            standardInputIsTeletype = standardInputDescriptor != -1 and 0 != ::_isatty(standardInputDescriptor);
+
+            for (struct { wchar_t const detailMessage[14u + /* ->> NUL terminator */ 1u]; WCHAR *detail; std::size_t detailLength; } const credentials[] = {
+              {L"\r\n" "  " "Username: ", credentialsUsername, credentialsUsernameSize - 1u},
+              {L"\r\n" "  " "Password: ", credentialsPassword, credentialsPasswordSize - 1u}
+            }, *credential = credentials; credential != credentials + (sizeof credentials / sizeof *credentials); ++credential) {
+              if (NULL == credentialsAuthenticationBuffer)
+              break;
+
+              // ...
+              if (EOF == std::fputws(credential -> detailMessage + (standardInputIsTeletype and standardInputNewlined ? /* ->> CRLF newline */ 2u : 0u), stdout))
+                credentialsAuthenticationBuffer = NULL;
+
+              else for (std::size_t length = 0u; ; ++length) {
+                std::wint_t character = WEOF;
+
+                // ...
+                if (credential -> detailLength <= length) {
+                  (void) catalog -> warn("Unable to set up internal clock via the Task Scheduler; Insufficient memory");
+                  credentialsAuthenticationBuffer = NULL;
+
+                  break;
+                }
+
+                character             = std::fgetwc(stdin);
+                standardInputNewlined = L'\n' == static_cast<wchar_t>(character);
+
+                if (WEOF == character or standardInputNewlined) {
+                  // credentialsAuthenticationBuffer = EILSEQ == errno ? NULL : credentialsAuthenticationBuffer;
+                  credential -> detail[length] = L'\0';
+                  break;
+                }
+
+                credential -> detail[length] = character;
+              }
+            }
+          }
+
+          if (NULL == credentialsAuthenticationBuffer) // --> CredUIPromptForWindowsCredentialsW(…)
+          if (NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW) {
+            DWORD const credentialsPrompted = CredUIPromptForWindowsCredentialsW(&credentialsUIInformation, 0x00u, &credentialsAuthenticationPackage, static_cast<LPCVOID>(NULL), 0u, &credentialsAuthenticationBuffer, &credentialsAuthenticationBufferSize, static_cast<BOOL*>(NULL), CREDUIWIN_ENUMERATE_CURRENT_USER | CREDUIWIN_GENERIC);
+
+            // ...
+            if (ERROR_CANCELLED == credentialsPrompted) {
+              (void) catalog -> warn("Rejected internal clock set up");
+              break;
+            }
+
+            else if (ERROR_SUCCESS == credentialsPrompted) {
+              if (FALSE == CredUnPackAuthenticationBufferW(0x1u /* --> CRED_PACK_PROTECTED_CREDENTIALS */, credentialsAuthenticationBuffer, credentialsAuthenticationBufferSize, credentialsUsername, &credentialsUsernameSize, credentialsDomainName, &credentialsDomainNameSize, credentialsPassword, &credentialsPasswordSize))
+              credentialsAuthenticationBuffer = NULL;
+            }
+          }
+
+          if (NULL == credentialsAuthenticationBuffer) // --> CredUIPromptForCredentialsW(…)
+          if (NULL != CredUIPromptForCredentialsW) {
+            DWORD const credentialsPrompted = CredUIPromptForCredentialsW(&credentialsUIInformation, L"", static_cast<PCtxtHandle>(NULL), 0x00u, credentialsUsername, credentialsUsernameSize, credentialsPassword, credentialsPasswordSize, static_cast<BOOL*>(NULL), CREDUI_FLAGS_ALWAYS_SHOW_UI | CREDUI_FLAGS_DO_NOT_PERSIST | CREDUI_FLAGS_GENERIC_CREDENTIALS);
+
+            // ...
+            if (ERROR_CANCELLED == credentialsPrompted) {
+              (void) catalog -> warn("Rejected internal clock set up");
+              break;
+            }
+          }
+
+          (void) taskFolder -> lpVtbl -> DeleteTask(taskFolder, taskName, 0x00L);
+          taskFolderPassword.bstrVal = SysAllocString(credentialsPassword);
+          taskFolderUsername.bstrVal = SysAllocString(credentialsUsername);
+
+          if (FAILED(taskFolder -> lpVtbl -> RegisterTaskDefinition(taskFolder, taskName, taskDefinition, ::TASK_CREATE_OR_UPDATE, taskFolderUsername, taskFolderPassword, ::TASK_LOGON_PASSWORD, taskFolderSecurityDescriptor, &registeredTask))) {
+            (void) catalog -> warn("Unable to set up internal clock via the Task Scheduler; Failed task registration");
+            break;
+          }
+
+          // catalog -> clocked = true;
+        } while (false);
+
+        // ...
+        if (NULL != VariantClear) {
+          (void) VariantClear(&taskFolderUsername);
+          (void) VariantClear(&taskServiceDomain);
+          (void) VariantClear(&taskServicePassword);
+          (void) VariantClear(&taskServiceServerName);
+          (void) VariantClear(&taskServiceUser);
+        }
+
+        if (NULL != taskAction)                  (void) taskAction                              -> lpVtbl -> Release(taskAction);
+        if (NULL != taskActionCollection)        (void) taskActionCollection                    -> lpVtbl -> Release(taskActionCollection);
+        if (NULL != taskRepititionPattern)       (void) taskRepititionPattern                   -> lpVtbl -> Release(taskRepititionPattern);
+        if (NULL != taskTrigger)                 (void) taskTrigger                             -> lpVtbl -> Release(taskTrigger);
+        if (NULL != taskTriggerCollection)       (void) taskTriggerCollection                   -> lpVtbl -> Release(taskTriggerCollection);
+        if (NULL != taskRegistrationInformation) (void) taskRegistrationInformation             -> lpVtbl -> Release(taskRegistrationInformation);
+        if (NULL != taskDefinition)              (void) taskDefinition                          -> lpVtbl -> Release(taskDefinition);
+        if (NULL != taskFolder)                  (void) taskFolder                              -> lpVtbl -> Release(taskFolder);
+        if (NULL != taskService)                 (void) static_cast<ITaskService*>(taskService) -> lpVtbl -> Release(static_cast<ITaskService*>(taskService));
+
+        if (NULL != SysFreeString) {
+          SysFreeString(taskAuthor);
+          SysFreeString(taskDailyTriggerName);
+          SysFreeString(taskDailyTriggerTimeEnd);
+          SysFreeString(taskDailyTriggerTimeStart);
+          SysFreeString(taskDescription);
+          SysFreeString(taskExecutableArguments);
+          SysFreeString(taskExecutablePath);
+          SysFreeString(taskFolderPath);
+          SysFreeString(taskName);
+          SysFreeString(taskRepititionPatternDuration);
+          SysFreeString(taskRepititionPatternInterval);
+        }
+
+        CoUninitialize();
+      }
+    }
+
+    /* ... ->> Windows Services */
+    if (not catalog -> clocked)
+    if (NULL != libraries[advapi32].module) {
+      BOOL (*const StartServiceCtrlDispatcherW)(SERVICE_TABLE_ENTRYW const*) = reinterpret_cast<BOOL (*)(SERVICE_TABLE_ENTRYW const*)>(::GetProcAddress(libraries[advapi32].module, "StartServiceCtrlDispatcherW"));
+      struct /* final */ {
+        static void WINAPI main(DWORD count, LPWSTR arguments[]) {
+          // // Global variables
+          // SERVICE_STATUS g_ServiceStatus = {};
+          // SERVICE_STATUS_HANDLE g_StatusHandle = nullptr;
+          // HANDLE g_ServiceStopEvent = INVALID_HANDLE_VALUE;
+
+          // // Function that performs the task
+          // void PerformTask() {
+          //     // Task: Print message to console (or any other function/task)
+          //     std::cout << "Task is being performed" << std::endl;
+          // }
+
+          // // Function that will be called every 24 hours
+          // void CALLBACK TimerRoutine(PVOID lpParam, BOOLEAN TimerOrWaitFired) {
+          //     PerformTask(); // Execute the task
+          // }
+
+          // // Service control handler function
+          // void WINAPI ServiceCtrlHandler(DWORD CtrlCode) {
+          //     switch (CtrlCode) {
+          //         case SERVICE_CONTROL_STOP:
+          //             if (g_ServiceStatus.dwCurrentState != SERVICE_RUNNING)
+          //                 break;
+
+          //             g_ServiceStatus.dwCurrentState = SERVICE_STOP_PENDING;
+          //             SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
+
+          //             // Signal the service to stop
+          //             SetEvent(g_ServiceStopEvent);
+          //             break;
+
+          //         default:
+          //             break;
+          //     }
+          // }
+
+          // // Main service function
+          // void WINAPI ServiceMain(DWORD argc, LPTSTR *argv) {
+          //     g_StatusHandle = RegisterServiceCtrlHandler(_T("MyService"), ServiceCtrlHandler);
+          //     if (g_StatusHandle == nullptr) {
+          //         return;
+          //     }
+
+          //     // Service status initialization
+          //     g_ServiceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+          //     g_ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+          //     g_ServiceStatus.dwCurrentState = SERVICE_RUNNING;
+          //     g_ServiceStatus.dwWin32ExitCode = 0;
+          //     g_ServiceStatus.dwServiceSpecificExitCode = 0;
+          //     g_ServiceStatus.dwCheckPoint = 0;
+
+          //     // Register the service status
+          //     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
+
+          //     // Create an event to signal service stop
+          //     g_ServiceStopEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+          //     if (g_ServiceStopEvent == nullptr) {
+          //         g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
+          //         g_ServiceStatus.dwWin32ExitCode = GetLastError();
+          //         SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
+          //         return;
+          //     }
+
+          //     // Create a timer to execute the task every 24 hours (86400000 milliseconds)
+          //     HANDLE hTimer = nullptr;
+          //     HANDLE hTimerQueue = CreateTimerQueue();
+          //     if (!CreateTimerQueueTimer(&hTimer, hTimerQueue, TimerRoutine, nullptr, 0, 86400000, 0)) {
+          //         g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
+          //         g_ServiceStatus.dwWin32ExitCode = GetLastError();
+          //         SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
+          //         return;
+          //     }
+
+          //     // Wait until the service is stopped
+          //     WaitForSingleObject(g_ServiceStopEvent, INFINITE);
+
+          //     // Cleanup and stop
+          //     DeleteTimerQueue(hTimerQueue);
+          //     CloseHandle(g_ServiceStopEvent);
+
+          //     g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
+          //     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
+          // }
+        }
+      } const service = {};
 
       // ...
-      (void) VariantClear(&taskFolderUsername);
-      (void) VariantClear(&taskServiceDomain);
-      (void) VariantClear(&taskServicePassword);
-      (void) VariantClear(&taskServiceServerName);
-      (void) VariantClear(&taskServiceUser);
-
-      if (NULL != taskAction)                  (void) taskAction                              -> Release();
-      if (NULL != taskActionCollection)        (void) taskActionCollection                    -> Release();
-      if (NULL != taskRepititionPattern)       (void) taskRepititionPattern                   -> Release();
-      if (NULL != taskTrigger)                 (void) taskTrigger                             -> Release();
-      if (NULL != taskTriggerCollection)       (void) taskTriggerCollection                   -> Release();
-      if (NULL != taskRegistrationInformation) (void) taskRegistrationInformation             -> Release();
-      if (NULL != taskDefinition)              (void) taskDefinition                          -> Release();
-      if (NULL != taskFolder)                  (void) taskFolder                              -> Release();
-      if (NULL != taskService)                 (void) static_cast<ITaskService*>(taskService) -> Release();
-
-      if (NULL != taskAuthor)                    SysFreeString(taskAuthor);
-      if (NULL != taskDailyTriggerName)          SysFreeString(taskDailyTriggerName);
-      if (NULL != taskDailyTriggerTimeEnd)       SysFreeString(taskDailyTriggerTimeEnd);
-      if (NULL != taskDailyTriggerTimeStart)     SysFreeString(taskDailyTriggerTimeStart);
-      if (NULL != taskExecutableArguments)       SysFreeString(taskExecutableArguments);
-      if (NULL != taskExecutablePath)            SysFreeString(taskExecutablePath);
-      if (NULL != taskFolderPath)                SysFreeString(taskFolderPath);
-      if (NULL != taskName)                      SysFreeString(taskName);
-      if (NULL != taskRepititionPatternDuration) SysFreeString(taskRepititionPatternDuration);
-      if (NULL != taskRepititionPatternInterval) SysFreeString(taskRepititionPatternInterval);
-
-      CoUninitialize();
-      (void) catalogClocked;
+      if (NULL != StartServiceCtrlDispatcher) {
+        SERVICE_TABLE_ENTRYW const serviceEntries[] = {{L"Cataloger", reinterpret_cast<LPSERVICE_MAIN_FUNCTIONW>(&service.main)}, {NULL, NULL}};
+        catalog -> clocked = FALSE != StartServiceCtrlDispatcher(serviceEntries);
+      }
     }
+
+    // TODO (Lapys) -> `WaitForSingleObject(…)` → `SetTimer(…)` → `Sleep(…)`
+    if (not catalog -> clocked) {}
+  #else
   #endif
 
   // GET CURRENT DATE/ TIME
   // CHECK IF TIME ELAPSED OR IF RUN FIRST TIME
   // SPAWN LOG not as child process; format: 2023–07–07.log
-  // look for non-busy waits
   // HELP SCREEN?
   // ABOUT SCREEN
-  //
-  // switch from pointers to indexes
 
   std::printf("[...]: 0x%02lX {allocated: %4.5s, name: \"%s\"}" "\r\n", (unsigned long) reinterpret_cast<uintptr_t>(catalog -> timerFileStream), catalog -> timerPathAllocated ? "true" : "false", catalog -> timerPath);
-  // // ... ->> A more consistent `std::tm` binary format
-  // struct timestamp {
-  //   bool           daylightSavings : 1u;  // --> std::tm::tm_isdst {INT_MIN, 0}
-  //   unsigned char  day             : 5u;  // --> std::tm::tm_mday  {1, 31}
-  //   unsigned char  hour            : 5u;  // --> std::tm::tm_hour  {0, 23}
-  //   unsigned char  minute          : 6u;  // --> std::tm::tm_min   {0, 59}
-  //   unsigned char  month           : 4u;  // --> std::tm::tm_mon   {0, 11}
-  //   unsigned char  second          : 6u;  // --> std::tm::tm_sec   {0, 60‥61}
-  //   unsigned char  weekDay         : 3u;  // --> std::tm::tm_wday  {0, 6}
-  //   unsigned short year            : 14u; // --> std::tm::tm_year  {1900 + ‥}
-  //   unsigned short yearDay         : 9u;  // --> std::tm::tm_yday  {0, 365}
-  // };
-
-  //   double             catalogTimeSpan   = 0.0;                          // --> std::difftime(currentTime, catalogRecentTime)
-  //   double /* const */ catalogTimeRange  = 86400.00;                     // ->> Observed time (in seconds) passed between `catalogTimes`; currently set to one single day
-  //   std::time_t        catalogRecentTime = static_cast<std::time_t>(-1); // --> std::mktime(&catalogRecentDate)
 
   // ...
   return catalog -> exit(EXIT_SUCCESS);
