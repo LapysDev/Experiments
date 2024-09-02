@@ -43,10 +43,10 @@
 #   endif
 #endif
 
-/* Main --> catalog [log_directory] [clock_path] [rerun] */
+/* Main --> cataloger [log_directory] [clock_path] [rerun] */
 int main(int count, char* arguments[]) /* noexcept */ {
-  static struct catalog *catalog = NULL;
-  static struct catalog /* final */ {
+  static struct cataloger *catalog = NULL;
+  static struct cataloger /* final */ {
     enum { MESSAGE_MAXIMUM_LENGTH = 256u };           // --> std::size_t
     union formatinfo { unsigned char metadata[32]; }; // ->> Arbitrarily-sized
 
