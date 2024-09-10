@@ -230,21 +230,23 @@ int main(int count, char* arguments[]) /* noexcept */ {
           }
 
           // ...
-          if (NULL != begin) *begin = characterBegin;
-          if (NULL != end)   *end   = characterEnd;
+          *begin = characterBegin;
+          *end   = characterEnd;
         }
       };
 
-      std::size_t       messageLength               = 0u;                                                 // ->> Bytes
-      std::size_t       messageOutputLength         = 0u;                                                 //
-      bool              messageOutputted            = false;                                              //
-      bool              messageOverflowed           = false;                                              //
-      char        const messageOverflowSuffix[]     = "…" "\r\n";                                         // ->> Source literal encoding to multi-byte NUL-terminated string
-      std::size_t const messageOverflowSuffixLength = (sizeof messageOverflowSuffix / sizeof(char)) - 1u; //
-      bool              messageSuffixed             = false;                                              //
-      std::size_t       messageSuffixLength         = 0u;                                                 //
-      bool              messageSuffixSignificance   = true;                                               //
-      char              messageOutput[MESSAGE_MAXIMUM_LENGTH + messageOverflowSuffixLength + /* ->> NUL terminator */ 1u];
+      std::size_t       messageBegin              = 0u;                                           //
+      std::size_t       messageEnd                = 0u;                                           //
+      std::size_t       messageLength             = 0u;                                           //
+      std::size_t       messageOutputLength       = 0u;                                           //
+      bool              messageOutputted          = false;                                        //
+      char const        messageOverflow[]         = "…" "\r\n";                                   // ->> Source literal encoding to multi-byte NUL-terminated string
+      bool              messageOverflowed         = false;                                        //
+      std::size_t const messageOverflowLength     = (sizeof messageOverflow / sizeof(char)) - 1u; //
+      std::size_t       messagePrefixLength       = 0u;                                           //
+      std::size_t       messageSuffixLength       = 0u;                                           //
+      bool              messageSuffixSignificance = true;                                         // ->> `message` ends with `::messageSuffix` followed by whitespace
+      char              messageOutput[MESSAGE_MAXIMUM_LENGTH + messageOverflowLength + /* ->> NUL terminator */ 1u];
 
       // ...
       if (NULL == message or NULL == stream) return true;
@@ -256,35 +258,70 @@ int main(int count, char* arguments[]) /* noexcept */ {
         bool                 characterIsNUL = true;
 
         // ... ->> Assumes `character` NUL is a complete set of zeroed code units
-        for (std::size_t subindex = 0u; subindex != stride; ++subindex)
+        for (std::size_t subindex = 0u; stride != subindex; ++subindex)
         if (0x00u != character[subindex]) {
           characterIsNUL = false;
           break;
         }
 
-        if (characterIsNUL or MESSAGE_MAXIMUM_LENGTH == index) {
+        if (characterIsNUL or MESSAGE_MAXIMUM_LENGTH + 1u == index) {
           messageLength = index;
           break;
         }
       }
 
-      // ... ->> Truncate significant (non-whitespace trailing) `::messageSuffix` repeats
+      messageBegin = 0u;
+      messageEnd   = messageLength;
+
+      // ... ->> Truncate (non-whitespace leading) `::messagePrefix` repeats
+      if (NULL != catalog -> messagePrefix) {
+        // ... --> messagePrefixLength = …;
+        while ('\0' != catalog -> messagePrefix[messagePrefixLength] and MESSAGE_MAXIMUM_LENGTH + 1u != messagePrefixLength)
+        ++messagePrefixLength;
+
+        // ...
+        for (std::size_t messageIndex = 0u, messagePrefixed = true, messagePrefixIndex = 0u; messageIndex != messageLength and messagePrefixed; messageIndex += stride) {
+          unsigned char const *const character      = static_cast<unsigned char const*>(message) + messageIndex;
+          std::size_t                characterBegin = 0u;
+          std::size_t                characterEnd   = stride;
+
+          // ... --> messageBegin = …;
+          //     ->> Assume first occurrence of `::messagePrefix` begins the `message`
+          character::spanof(character, stride, &characterBegin, &characterEnd);
+
+          for (std::size_t subindex = characterBegin; characterEnd != subindex; ) {
+            // ... ->> Follow iteratively next character/ code unit for `::messagePrefix`
+            if (catalog -> messagePrefix[messagePrefixIndex++] != character[subindex++]) {
+              messagePrefixed = false;
+              break;
+            }
+
+            // ... ->> Found `::messagePrefix`
+            if (messagePrefixIndex == messagePrefixLength) {
+              // ... ->> Truncate `message` by this (repeat) instance of `::messagePrefix`
+              messageBegin       = messageIndex + subindex;
+              messagePrefixIndex = 0u;
+            }
+          }
+        }
+      }
+
+      // ... ->> Truncate (whitespace trailing) `::messageSuffix` repeats
       if (NULL != catalog -> messageSuffix) {
         // ... --> messageSuffixLength = …;
-        while ('\0' != catalog -> messageSuffix[messageSuffixLength] and MESSAGE_MAXIMUM_LENGTH != messageSuffixLength)
+        while ('\0' != catalog -> messageSuffix[messageSuffixLength] and MESSAGE_MAXIMUM_LENGTH + 1u != messageSuffixLength)
         ++messageSuffixLength;
 
         // ...
-        for (std::size_t messageIndex = messageLength, messageSuffixIndex = messageSuffixLength, messageTrimIndex = messageIndex, messageTrimSubindex = stride; messageIndex and messageSuffixSignificance; messageIndex -= stride) {
+        for (std::size_t messageIndex = messageLength, messageSuffixed = false, messageSuffixIndex = messageSuffixLength, messageTrimIndex = messageIndex, messageTrimSubindex = stride; messageIndex and messageSuffixSignificance; messageIndex -= stride) {
           unsigned char const *const character      = static_cast<unsigned char const*>(message) + (messageIndex - stride);
           std::size_t                characterBegin = 0u;
           std::size_t                characterEnd   = stride;
 
-          // ... --> characterBegin = …; characterEnd = …;
+          // ... --> messageEnd = …;
+          //     ->> Search last occurrence of `::messageSuffix`
           character::spanof(character, stride, &characterBegin, &characterEnd);
 
-          // ... --> messageLength = …;
-          //     ->> Search last significant (non-whitespace trailing) occurrence of `::messageSuffix`
           for (std::size_t subindex = characterEnd; characterBegin != subindex; ) {
             // ... ->> Search iteratively next character/ code unit for `::messageSuffix`
             if (messageSuffixIndex == messageSuffixLength) {
@@ -301,7 +338,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
             if (0u == messageSuffixIndex) {
               // ... ->> Determine `::messageSuffix` significance i.e.: trailed by whitespace
               if (not messageSuffixed)
-              for (bool suffixed = true; messageLength != messageTrimIndex; messageTrimIndex += stride) {
+              for (bool suffixed = true; messageEnd != messageTrimIndex and messageSuffixSignificance; messageTrimIndex += stride) {
                 unsigned char const *const character      = static_cast<unsigned char const*>(message) + messageTrimIndex;
                 std::size_t                characterBegin = 0u;
                 std::size_t                characterEnd   = stride;
@@ -312,34 +349,24 @@ int main(int count, char* arguments[]) /* noexcept */ {
                 characterBegin      = 0u == messageTrimSubindex ? characterBegin : messageTrimSubindex;
                 messageTrimSubindex = 0u;
 
-                for (std::size_t subindex = characterBegin; characterEnd != subindex; ++subindex) {
-                  // ... ->> First code unit is the end of `::messageSuffix`, so it is ignored
-                  if (suffixed) {
-                    suffixed = false;
-                    continue;
-                  }
-
-                  // ...
+                for (std::size_t subindex = characterBegin; characterEnd != subindex and messageSuffixSignificance; ++subindex, suffixed = false)
+                if (not suffixed) { // ->> First code unit is the end of `::messageSuffix`, so it is ignored
                   switch (static_cast<char>(character[subindex])) {
                     case '\f': case '\n': case '\r': case '\t': case '\v': case ' ':
                     continue;
                   }
 
                   messageSuffixSignificance = false;
-                  break;
                 }
-
-                if (not messageSuffixSignificance)
-                break;
               }
 
-              // ... --> messageLength = …;
-              //     ->> Truncate `message` by tracking the first instance in the last set of contiguous `::messageSuffix` repeats
+              // ... ->> `::messageSuffix` must be significant to be truncated off `message`
               if (not messageSuffixSignificance)
               break;
 
-              messageLength      = subindex + (messageIndex - stride);
-              messageSuffixed    = true;
+              // ... ->> Truncate `message` by tracking the first instance in the last set of contiguous `::messageSuffix` repeats
+              messageEnd         = subindex + (messageIndex - stride);
+              messageSuffixed    = true; // ->> For symmetry with `messagePrefixed` only
               messageSuffixIndex = messageSuffixLength;
             }
           }
@@ -347,80 +374,54 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       // ... --> messageOutput[messageOutputLength++…] = …;
-      if (NULL != messagePrefix and not messageOverflowed)
-      for (std::size_t index = 0u; '\0' != catalog -> messagePrefix[index]; ++index) {
+      for (std::size_t index = 0u; index != messagePrefixLength and not messageOverflowed; ++index) {
+        messageOutput[messageOutputLength++] = catalog -> messagePrefix[index];
+
+        if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength)
+        messageOverflowed = true;
+      }
+
+      for (std::size_t index = 0u; index != messageLength and not messageOverflowed; index += stride) {
+        unsigned char const *const character      = static_cast<unsigned char const*>(message) + index;
+        std::size_t                characterBegin = 0u;
+        std::size_t                characterEnd   = stride;
+
+        // ...
+        character::spanof(character, stride, &characterBegin, &characterEnd);
+
+        for (std::size_t subindex = 0u; characterEnd != subindex; ++subindex)
+        if (messageBegin <= index + subindex and messageEnd > index + subindex) {
+          messageOutput[messageOutputLength++] = static_cast<char>(character[subindex]);
+
+          if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength) {
+            messageOverflowed = true;
+            break;
+          }
+        }
+      }
+
+      for (std::size_t index = 0u; index != messageSuffixLength and not messageOverflowed; ++index) {
+        messageOutput[messageOutputLength++] = catalog -> messageSuffix[index];
+
         if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength) {
-          messageOverflowed = true;
-          break;
+          messageOutputLength -= messageSuffixLength;
+          messageOverflowed    = true;
         }
-
-        messageOutput[messageOutputLength++] = catalog -> messagePrefix[index]
       }
 
-      if (not messageOverflowed) {
-        for (std::size_t index = 0u; index < messageLength; index += stride) {
-          unsigned char const *const character      = static_cast<unsigned char const*>(message) + index;
-          std::size_t                characterBegin = 0u;
-          std::size_t                characterEnd   = stride;
-
-          // ... --> characterBegin = …; characterEnd = …;
-          character::spanof(character, stride, &characterBegin, &characterEnd);
-
-          // ... CHECK IF PREFIX REPEATS and IGNORE
-        }
-        // for (std::size_t index = 0u, length = 0u; ; index += stride) {
-        //   unsigned char const *const character      = reinterpret_cast<unsigned char const*>(encoded) + index;
-        //   bool                       characterIsNUL = true;
-        //   std::size_t                currentIndex   = 0u;
-        //   std::size_t                nextIndex      = 0u;
-
-        //   for (bool redundant = false; currentIndex != stride and not redundant; ++currentIndex) {
-        //     nextIndex           = currentIndex + 1u;
-        //     unencoded[length++] = static_cast<char>(character[currentIndex]);
-
-        //     for (redundant = true; nextIndex != stride; ++nextIndex)
-        //     if (0x00u != character[nextIndex]) {
-        //       redundant = false;
-        //       break;
-        //     }
-
-        //     if (not redundant and 0x00u == character[currentIndex]) {
-        //       length           -= currentIndex;
-        //       unencoded[length++] = '?';
-
-        //       break;
-        //     }
-        //   }
-        // }
+      if (messageOverflowed) {
+        for (std::size_t index = 0u; index != messageOverflowLength; ++index)
+        messageOutput[messageOutputLength++] = messageOverflow[index];
       }
 
-      (void) messageSuffixed;
-
-      // POSSIBLY CHECK REPEATS FOR PREFIX?
-      // ... --> messageOutput… = …;
-      // if (NULL != catalog -> messagePrefix and not messageOverflowed)
-      // for (std::size_t index = 0u; '\0' != catalog -> messagePrefix[index]; ++index) {
-      //   if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength) {
-      //     messageOverflowed = true;
-      //     break;
-      //   }
-
-      //   messageOutput[messageOutputLength++] = catalog -> messagePrefix[index];
-      // }
-
-      // if (messageOverflowed) {
-      //   for (std::size_t index = 0u; index != messageOverflowSuffixLength; ++index)
-      //   messageOutput[messageOutputLength++] = messageOverflowSuffix[index];
-      // }
+      messageOutput[messageOutputLength] = '\0';
 
       // ...
-      // (void) std::fflush (stream);                                       // ->> Ensure the `stream` delivers the `messageOutput` immediately
-      // (void) std::setvbuf(stream, static_cast<char*>(NULL), _IONBF, 0u); //
+      (void) std::fflush (stream);                                       // ->> Ensure the `stream` delivers the `messageOutput` immediately
+      (void) std::setvbuf(stream, static_cast<char*>(NULL), _IONBF, 0u); //
 
-      // messageOutput[messageOutputLength] = '\0';
-      // messageOutputted                   = EOF != std::fputs(messageOutput, stream);
-
-      // messageOutputted ? (void) std::fflush(stream) : std::clearerr(stream);
+      messageOutputted = EOF != std::fputs (messageOutput, stream);
+      messageOutputted ? (void) std::fflush(stream) : std::clearerr(stream);
 
       // ...
       return messageOutputted;
