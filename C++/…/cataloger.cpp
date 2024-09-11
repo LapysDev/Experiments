@@ -1,8 +1,8 @@
-// COMPILE: del cataloger.exe && cls && clang++ -pedantic -std=c++98 -Wall -Wextra cataloger.cpp -o cataloger.exe -ltaskschd && cataloger.exe A C:\Users\oluwa\…\cataloger-clock.dat & del cataloger.exe
+// COMPILE: del cataloger.exe && cls && clang++ -pedantic -std=c++98 -Wall -Wextra -Wno-c++11-long-long cataloger.cpp -o cataloger.exe -ltaskschd && cataloger.exe A C:\Users\oluwa\…\cataloger-clock.dat & del cataloger.exe
 // RUN    : cataloger C:/Users/oluwa/OneDrive/Lapys/Catalog C:/Users/oluwa/OneDrive/Lapys/Catalog/cataloger-clock.dat
 #include <cerrno>  // --> EILSEQ, errno
 #include <ciso646> // --> and, not, or
-#include <climits> // --> CHAR_BIT, UCHAR_MAX
+#include <climits> // --> CHAR_BIT, SIZE_MAX, UCHAR_MAX
 #include <clocale> // --> LC_ALL;                                            std::setlocale(…)
 #include <csignal> // --> SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM; std::signal(…)
 #include <cstddef> // --> NULL; std::size_t
@@ -45,18 +45,95 @@
 
 /* Main --> cataloger [log_directory] [clock_path] [rerun] */
 int main(int count, char* arguments[]) /* noexcept */ {
+  /* ... -> Vendor setup */
+  #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+    enum {
+      advapi32, credui, kernel32, ole32, oleaut32, shell32, taskschd,
+      librariesLength // --> std::size_t{…}
+    };
+
+    WCHAR                      libraryPath[MAX_PATH + 1u] = L"";
+    UINT const                 libraryPathLength          = ::GetSystemDirectoryW(libraryPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
+    static struct libraryinfo *libraries                  = NULL;
+    static struct libraryinfo /* final */ {
+      LPCWSTR const name;
+      HMODULE       moduleHandle;
+      BOOL        (*unloader)(HMODULE);
+
+      static void exit() /* extern "C" */ {
+        for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library)
+        if (NULL != library -> moduleHandle and NULL != library -> unloader) {
+          library -> unloader(library -> moduleHandle); // --> FreeLibrary(…)
+
+          library -> moduleHandle = NULL;
+          library -> unloader     = NULL;
+        }
+      }
+    } l[librariesLength] = {
+      {L"advapi32" ".dll", NULL, NULL},
+      {L"credui"   ".dll", NULL, NULL},
+      {L"kernel32" ".dll", NULL, NULL},
+      {L"ole32"    ".dll", NULL, NULL},
+      {L"oleaut32" ".dll", NULL, NULL},
+      {L"shell32"  ".dll", NULL, NULL},
+      {L"taskschd" ".dll", NULL, NULL}
+    };
+
+    // ...
+    libraries                      = l;
+    libraryPath[libraryPathLength] = L'\\';
+
+    (void) std::atexit(&libraries -> exit);
+    #if __cplusplus >= 201103L
+      (void) std::at_quick_exit(&libraries -> exit);
+    #endif
+
+    if (0u != libraryPathLength) {
+      BOOL    (*FreeLibrary)             (HMODULE)                = NULL;
+      HMODULE (*LoadLibraryExW)          (LPCWSTR, HANDLE, DWORD) = NULL;
+      BOOL    (*SetDefaultDllDirectories)(DWORD)                  = NULL;
+
+      // ... ->> Load the userland `kernel32` library
+      for (std::size_t index = 0u; ; ++index) {
+        libraryPath[index + libraryPathLength + 1u] = libraries[kernel32].name[index];
+        if (L'\0' == libraries[kernel32].name[index]) break;
+      }
+
+      if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &libraries[kernel32].moduleHandle))
+      if (NULL != libraries[kernel32].moduleHandle) {
+        FreeLibrary              = reinterpret_cast<BOOL    (*)(HMODULE)>               (::GetProcAddress(libraries[kernel32].moduleHandle, "FreeLibrary"));              // --> <windows.h>
+        LoadLibraryExW           = reinterpret_cast<HMODULE (*)(LPCWSTR, HANDLE, DWORD)>(::GetProcAddress(libraries[kernel32].moduleHandle, "LoadLibraryExW"));           // --> <windows.h>
+        SetDefaultDllDirectories = reinterpret_cast<BOOL    (*)(DWORD)>                 (::GetProcAddress(libraries[kernel32].moduleHandle, "SetDefaultDllDirectories")); // --> <windows.h>
+      }
+
+      if (NULL != SetDefaultDllDirectories)
+      (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+      // ... ->> Load other used Windows API libraries —
+      for (struct libraryinfo *library = libraries; library != libraries + librariesLength; ++library)
+      if (NULL == library -> moduleHandle) { // ->> — except the already loaded userland `kernel32` library
+        for (std::size_t index = 0u; ; ++index) {
+          libraryPath[index + libraryPathLength + 1u] = library -> name[index];
+          if (L'\0' == library -> name[index]) break;
+        }
+
+        if (FALSE == ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &library -> moduleHandle) or NULL == library -> moduleHandle) {
+          library -> moduleHandle = LoadLibraryExW(libraryPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
+          library -> unloader     = NULL == library -> moduleHandle ? NULL : FreeLibrary;
+        }
+      }
+    }
+  #endif
+
+  /* ... ->> Application `start()` */
   static struct cataloger *catalog = NULL;
   static struct cataloger /* final */ {
     enum              { MESSAGE_MAXIMUM_LENGTH = 256u };                     // --> std::size_t
     union formatinfo  { unsigned char metadata[32]; };                       // ->> Arbitrarily-sized
     enum  formatstyle { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN }; // --> bool
 
-    /* ... */
-    static void clock() {
-      // ... ->> Runs every `::timerInterval` elapsed
-    }
-
-    /* [[noreturn]] extern "C" */ static void error(int const signal) {
+    /* ... TODO -> Update Windows-specific garbage in `format(…)` */
+    static void error(int const signal) /* [[noreturn]] extern "C" */ {
       if (NULL != catalog)
       switch (signal) {
         case SIGABRT: (void) catalog -> exit((catalog -> warn("Cataloger stopped by abormal termination"),               EXIT_FAILURE));                break;
@@ -75,13 +152,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
       std::exit(EXIT_FAILURE);
     }
 
-    /* [[noreturn]] */ static int exit(int const code) {
+    static int exit(int const code) /* [[noreturn]] */ {
       if (NULL != catalog) {
-        if (catalog -> timerPathAllocated)      ::delete[]  catalog -> timerPath;
-        if (NULL != catalog -> timerFileStream) std::fclose(catalog -> timerFileStream);
+        if (catalog -> clockPathAllocated)      ::delete[]  catalog -> clockPath;
+        if (NULL != catalog -> clockFileStream) std::fclose(catalog -> clockFileStream);
 
         catalog -> applicationExitCode = code;
-        catalog -> timerFileStream     = NULL;
+        catalog -> clockFileStream     = NULL;
       }
 
       catalog = NULL;
@@ -207,31 +284,24 @@ int main(int count, char* arguments[]) /* noexcept */ {
     static bool message(void const* const message, std::FILE* const stream, std::size_t const stride) {
       union character {
         static void spanof(unsigned char const character[], std::size_t const stride, std::size_t* const begin, std::size_t* const end) {
-          std::size_t characterBegin = 0u;
-          std::size_t characterEnd   = stride;
-
           // ... ->> Ignores `character` endianness, leading bytes, and trailing bytes (assumes it is a distinct set of `stride` code units)
-          for (; characterBegin != stride; ++characterBegin) {
-            if (0x00u != character[characterBegin])
+          for (; *begin != stride; ++*begin) {
+            if (0x00u != character[*begin])
             break;
           }
 
-          for (std::size_t index = characterBegin, redundant = false; ; ++index) {
-            characterEnd = index;
+          for (std::size_t index = *begin, redundant = false; ; ++index) {
+            *end = index;
 
             if (index == stride or redundant)
             break;
 
-            for (++characterEnd, redundant = true; characterEnd != stride; ++characterEnd)
-            if (0x00u != character[characterEnd]) {
+            for (++*end, redundant = true; *end != stride; ++*end)
+            if (0x00u != character[*end]) {
               redundant = false;
               break;
             }
           }
-
-          // ...
-          *begin = characterBegin;
-          *end   = characterEnd;
         }
       };
 
@@ -276,7 +346,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       // ... ->> Truncate (non-whitespace leading) `::messagePrefix` repeats
       if (NULL != catalog -> messagePrefix) {
         // ... --> messagePrefixLength = …;
-        while ('\0' != catalog -> messagePrefix[messagePrefixLength] and MESSAGE_MAXIMUM_LENGTH + 1u != messagePrefixLength)
+        while (MESSAGE_MAXIMUM_LENGTH + 1u != messagePrefixLength and '\0' != catalog -> messagePrefix[messagePrefixLength])
         ++messagePrefixLength;
 
         // ...
@@ -309,7 +379,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       // ... ->> Truncate (whitespace trailing) `::messageSuffix` repeats
       if (NULL != catalog -> messageSuffix) {
         // ... --> messageSuffixLength = …;
-        while ('\0' != catalog -> messageSuffix[messageSuffixLength] and MESSAGE_MAXIMUM_LENGTH + 1u != messageSuffixLength)
+        while (MESSAGE_MAXIMUM_LENGTH + 1u != messageSuffixLength and '\0' != catalog -> messageSuffix[messageSuffixLength])
         ++messageSuffixLength;
 
         // ...
@@ -404,7 +474,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
         messageOutput[messageOutputLength++] = catalog -> messageSuffix[index];
 
         if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength) {
-          messageOutputLength -= messageSuffixLength;
+          messageOutputLength -= index + 1u;
           messageOverflowed    = true;
         }
       }
@@ -429,12 +499,238 @@ int main(int count, char* arguments[]) /* noexcept */ {
       static bool message(char    const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(char)); }
       static bool message(wchar_t const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(wchar_t)); }
 
-    /* [[noreturn]] extern "C" */ static void quick_exit() {
+    static void parse(char* arguments[], std::size_t const length) {
+      union parse {
+        static bool sequenced(struct option const* option) {
+          struct option const *const sequenced = static_cast<struct option const*>(reinterpret_cast<void*>(option -> metadata));
+          return NULL != sequenced -> argument; // ->> Waits for its `sequenced` command-line option before a successful `parse()`
+        }
+      };
+
+      struct option /* final */ {
+        enum { ABOUT, CLOCK, HELP, LOG, RERUN } command;                         // ->> Command-line option identifier
+        char const                             *name;                            // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
+        char const                             *longName;                        // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
+        char const                             *shortName;                       // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
+        std::size_t                             valueCount;                      // ->> Number of command-line arguments (after `::value`) evaluated
+        bool                                  (*validate)(struct option const*); // ->> Predicate function determining the validity of this command-line option; Called through command-line `parse()`; Optionally `NULL`
+        char                                   *argument;                        // ->> Command-line argument representing the              command-line option; Set    through command-line `parse()`
+        char                                   *value;                           // ->> Command-line argument representing the value of the command-line option; Set    through command-line `parse()`
+        unsigned char                           metadata[sizeof(void*)];         // ->> Arbitrarily-sized
+
+        /* ... ->> Default `::validate` predicates */
+        static bool UNVALUED(struct option const* option) { return NULL == option -> value; }
+        static bool VALUED  (struct option const* option) { return NULL != option -> value; }
+      } options[] = {
+        // ->> `NULL`-ish `::…name`s represent unrecognized command-line arguments
+        {option::ABOUT, "?",  "about", NULL, 0u, &option::UNVALUED,  NULL, NULL, {}},
+        {option::CLOCK, NULL, NULL,    NULL, 0u, &parse ::sequenced, NULL, NULL, {}}, // --> 1
+        {option::CLOCK, NULL, "clock", "c",  0u, &option::VALUED,    NULL, NULL, {}},
+        {option::CLOCK, NULL, "clock", "c",  1u, &option::VALUED,    NULL, NULL, {}},
+        {option::CLOCK, NULL, NULL,    "t",  0u, &option::VALUED,    NULL, NULL, {}},
+        {option::CLOCK, NULL, NULL,    "t",  1u, &option::VALUED,    NULL, NULL, {}},
+        {option::HELP,  NULL, "help",  "h",  0u, &option::UNVALUED,  NULL, NULL, {}},
+        {option::LOG,   NULL, NULL,    NULL, 0u, NULL,               NULL, NULL, {}}, // --> 7
+        {option::RERUN, NULL, "rerun", "r",  0u, &option::UNVALUED,  NULL, NULL, {}}
+      };
+      std::size_t const optionsLength = sizeof options / sizeof *options;
+
+      // ...
+      (void) ::new (options[1].metadata) void*(options + 7); // ->> `parse::sequenced(…)` after `options[7]`
+
+      catalog -> commandLineOptionLongTags
+      catalog -> commandLineOptionShortTags
+      catalog -> commandLineOptionValueTags
+
+      for (std::size_t index = 0u; catalog -> commandLineArgumentsLength != index; ++index) {
+        char *const commandLineArgument         = catalog -> commandLineArguments[index];
+        bool        commandLineArgumentIsOption = false;
+        std::size_t commandLineOptionIndex      = 0u;
+
+        // ... TODO
+        for (struct option *option = options; option != options + optionsLength; ++option) {
+          // ... --> commandLineArgumentIsOption = …;
+          if (not commandLineArgumentIsOption) // ... --> commandLineArgument == option -> name;
+          if (NULL != option -> name) {
+            for (std::size_t subindex = 0u; '\0' != commandLineArgument[subindex] and '\0' != option -> name[subindex]; ++subindex) {
+              if (commandLineArgument[subindex] != option -> name[subindex])
+              break;
+
+              if ('\0' == commandLineArgument[subindex] or '\0' == option -> name[subindex])
+              commandLineArgumentIsOption = '\0' == commandLineArgument[subindex] and '\0' == option -> name[subindex];
+            }
+          }
+
+          if (not commandLineArgumentIsOption) // ... --> commandLineArgument == option -> shortName;
+          if (NULL != option -> shortName and commandLineArgument[0] == '-') {
+            for (std::size_t subindex = 0u; '\0' != commandLineArgument[subindex + 1u] and '\0' != option -> shortName[subindex]; ++subindex) {
+              if (commandLineArgument[subindex + 1u] != option -> shortName[subindex])
+              break;
+
+              commandLineArgumentIsOption = '\0' == option -> shortName[subindex];
+            }
+          }
+
+          if (not commandLineArgumentIsOption) // ... --> commandLineArgument == option -> longName;
+          if (NULL != option -> longName and commandLineArgument[0] == '-' and commandLineArgument[1] == '-') {
+            for (std::size_t subindex = 0u; '\0' != commandLineArgument[subindex + 2u] and '\0' != option -> shortName[subindex]; ++subindex) {
+              if (commandLineArgument[subindex + 2u] != option -> shortName[subindex])
+              break;
+
+              commandLineArgumentIsOption = '\0' == option -> shortName[subindex];
+            }
+          }
+
+          // ... --> commandLineOptionIndex = …;
+          if (commandLineArgumentIsOption)
+          commandLineOptionIndex = option - options;
+        }
+      }
+    }
+
+    static void quick_exit() /* [[noreturn]] extern "C" */ {
       if (NULL != catalog)
         (void) catalog -> exit(catalog -> applicationExitCode);
 
       // ... ->> Cleanup regardless
       std::exit(EXIT_SUCCESS);
+    }
+
+    static void start(char* arguments[], std::size_t const length) {
+      char const *const commandLineOptionLongTags [] = {"--"};
+      char const *const commandLineOptionShortTags[] = {"-", "/"};
+      char const *const commandLineOptionValueTags[] = {"=", ":"};
+
+      // ...
+      catalog -> applicationExitCode        = EXIT_SUCCESS;               // ->> Used by `::quick_exit(…)` primarily
+      catalog -> applicationName            = "Cataloger";                //
+      catalog -> clocked                    = false;                      // ->> Catalog's internal clock is active
+      catalog -> clockFileStream            = NULL;                       // ->> File stream representing the Catalog's internal clock
+      catalog -> clockInterval              = 86400000u;                  // ->> Milliseconds
+      catalog -> clockPathAllocated         = false;                      //
+      catalog -> commandLineArguments       = arguments;                  // ->> Useful for determining how the standard C/ C++ command-line `arguments` were evaluated; Optionally `NULL`-terminated
+      catalog -> commandLineArgumentsLength = length;                     //
+      catalog -> commandLineOptionLongTags  = commandLineOptionLongTags;  // ->> Denotes long   command-line options interchangeably
+      catalog -> commandLineOptionShortTags = commandLineOptionShortTags; // ->> Denotes short  command-line options interchangeably
+      catalog -> commandLineOptionValueTags = commandLineOptionValueTags; // ->> Denotes valued command-line options interchangeably
+      catalog -> messagePrefix              = "cataloger" ": ";           // ->> Used by `::message(…)` primarily; Optionally `NULL`
+      catalog -> messageSuffix              = "\r\n";                     // ->> Used by `::message(…)` primarily; Optionally `NULL`
+
+      #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+        LPWSTR* (*const CommandLineToArgvW) (LPCWSTR, int*)                                       = NULL == libraries[shell32] .moduleHandle ? NULL : reinterpret_cast<LPWSTR* (*)(LPCWSTR, int*)>                                      (::GetProcAddress(libraries[shell32] .moduleHandle, "CommandLineToArgvW"));  // --> <shellapi.h>
+        LPWSTR  (*const GetCommandLineW)    ()                                                    = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<LPWSTR  (*)()>                                                   (::GetProcAddress(libraries[kernel32].moduleHandle, "GetCommandLineW"));     // --> <windows.h> → <processenv.h>
+        BOOL    (*const GetModuleHandleExA) (DWORD, LPCSTR, HMODULE*)                             = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<BOOL    (*)(DWORD, LPCSTR, HMODULE*)>                            (::GetProcAddress(libraries[kernel32].moduleHandle, "GetModuleHandleExA"));  // --> <windows.h>
+        HLOCAL  (*const LocalFree)          (HLOCAL)                                              = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<HLOCAL  (*)(HLOCAL)>                                             (::GetProcAddress(libraries[kernel32].moduleHandle, "LocalFree"));           // --> <windows.h>
+        int     (*const WideCharToMultiByte)(UINT, DWORD, LPCWCH, int, LPSTR, int, LPCCH, LPBOOL) = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<int     (*)(UINT, DWORD, LPCWCH, int, LPSTR, int, LPCCH, LPBOOL)>(::GetProcAddress(libraries[kernel32].moduleHandle, "WideCharToMultiByte")); // --> <windows.h>
+        HMODULE         applicationModuleHandle                                                   = NULL;
+        HMODULE         argumentModuleHandle                                                      = NULL;
+
+        // ... ->> Normalize standard C/ C++ command-line `arguments` to vendor-specific Windows `commandLineArguments`
+        if (NULL != CommandLineToArgvW and NULL != GetCommandLineW) {
+          int           commandLineArgumentsLength = 0;
+          LPWSTR *const commandLineArguments       = CommandLineToArgvW(GetCommandLineW(), &commandLineArgumentsLength);
+
+          // ...
+          if (NULL != WideCharToMultiByte)
+          if (NULL != commandLineArguments and static_cast<unsigned>(commandLineArgumentsLength) <= length) {
+            char       *allocation = NULL;
+            std::size_t size       = 0u;
+
+            // ... --> allocation = …; size = …;
+            for (int index = 0; commandLineArgumentsLength != index; ++index) {
+              int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, static_cast<LPSTR>(NULL), 0u, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
+
+              // ...
+              if (0 == commandLineArgumentSize) {
+                size = 0u;
+                break;
+              }
+
+              size += commandLineArgumentSize;
+            }
+
+            allocation = size ? /* ->> Likely memory leak */ ::new (std::nothrow) char[size = /* ->> Non-NUL characters */ (size / sizeof(char)) + /* ->> NUL terminators */ (commandLineArgumentsLength * sizeof(char))] : NULL;
+
+            // ... --> catalog -> commandLineArguments[…] = …;
+            if (NULL != allocation) {
+              char *iterator   = allocation;
+              bool  normalized = false;
+
+              // ...
+              for (int index = 0; commandLineArgumentsLength != index; ++index) {
+                int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, iterator, size, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
+
+                if (0 != commandLineArgumentSize) {
+                  catalog -> commandLineArguments[index] = iterator; // ->> Normalize standard C/ C++ command-line argument
+                  iterator                              += commandLineArgumentSize;
+                  normalized                             = true;
+                }
+              }
+
+              if (not normalized)
+              ::delete[] allocation;
+            }
+          }
+
+          if (NULL != LocalFree)
+          (void) LocalFree(commandLineArguments);
+        }
+
+        // ... ->> Ignore the standard C/ C++ command-line string used to execute this application
+        if (NULL != GetModuleHandleExA) {
+          if (
+            FALSE !=   GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, catalog -> commandLineArguments[0], &argumentModuleHandle) and
+            FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPWSTR>(NULL),          &applicationModuleHandle)
+          ) {
+            catalog -> commandLineArguments       += applicationModuleHandle == argumentModuleHandle;
+            catalog -> commandLineArgumentsLength -= applicationModuleHandle == argumentModuleHandle;
+          }
+        }
+      #endif
+
+      // ... ->> Trim `::commandLineArguments`
+      for (std::size_t index = 0u; index != catalog -> commandLineArgumentsLength; ++index) {
+        char **const commandLineArgument       = catalog -> commandLineArguments + index;
+        std::size_t  commandLineArgumentLength = 0u;
+
+        // ... --> commandLineArgumentLength = …;
+        while (SIZE_MAX != commandLineArgumentLength and '\0' != (*commandLineArgument)[commandLineArgumentLength])
+        ++commandLineArgumentLength;
+
+        // ...
+        for (std::size_t subindex = commandLineArgumentLength, trim = true; trim and subindex--; )
+        switch ((*commandLineArgument)[subindex]) {
+          case ' ': case '\f': case '\n': case '\r': case '\t': case '\v': continue;
+          default: { *((*commandLineArgument) + subindex + 1u) = '\0'; trim = false; } break;
+        }
+
+        for (std::size_t subindex = 0u, trim = true; trim and commandLineArgumentLength != subindex; ++subindex)
+        switch ((*commandLineArgument)[subindex]) {
+          case ' ': case '\f': case '\n': case '\r': case '\t': case '\v': continue;
+          default: { *commandLineArgument = *commandLineArgument + subindex; trim = false; } break;
+        }
+      }
+
+      // ... TODO -> Handle parse properly
+      catalog -> parse(catalog -> commandLineArguments, catalog -> commandLineArgumentsLength);
+      catalog -> clockPath        = length > 2u ? arguments[2] : NULL;    // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
+      catalog -> logDirectoryPath = length > 1u ? arguments[1] : NULL;    // ->> Filesystem location for storing catalogs;          Assume NUL-terminated
+      catalog -> rerun            = length > 3u and NULL != arguments[3]; // ->> Catalog is re-executed
+
+      // ... ->> Handle unexpected application `error()`
+      (void) std::signal   (SIGTERM, &catalog -> error); //
+      (void) std::signal   (SIGSEGV, &catalog -> error); // ->> ¯\_(ツ)_/¯
+      (void) std::signal   (SIGINT,  &catalog -> error); // ->> Handle possible user interrupts
+      (void) std::signal   (SIGABRT, &catalog -> error); // ->> Handle `std::abort(…)` and `std::terminate(…)` (and `throw` expression) invocations
+      (void) std::setlocale(LC_ALL,  "C.UTF-8");         //
+      #if __cplusplus >= 201103L                         //
+        (void) std::at_quick_exit(&catalog -> quick_exit);
+      #endif
+    }
+
+    static void update() {
+      // ... ->> Ideally runs every `::clockInterval` elapsed
+      return;
     }
 
     static bool warn(void const* const message, std::FILE* const stream, std::size_t const stride) {
@@ -456,209 +752,48 @@ int main(int count, char* arguments[]) /* noexcept */ {
       static bool warn(wchar_t const message[], std::FILE* const stream = stderr) { return catalog -> warn(message, stream, sizeof(wchar_t)); }
 
     /* ... */
-    int         applicationExitCode; // ->> For `::quick_exit(…)` primarily
-    char const *applicationName;
-    bool        clocked;
-    char       *logDirectoryPath;
-    char const *messagePrefix;
-    char const *messageSuffix;
-    bool        rerun;
-    std::FILE  *timerFileStream;
-    std::size_t timerInterval;
-    char       *timerPath;
-    bool        timerPathAllocated;
+    int                applicationExitCode;
+    char const        *applicationName;
+    bool               clocked;
+    std::FILE         *clockFileStream;
+    std::size_t        clockInterval;
+    char              *clockPath;
+    bool               clockPathAllocated;
+    char             **commandLineArguments;
+    std::size_t        commandLineArgumentsLength;
+    char const *const *commandLineOptionLongTags;
+    char const *const *commandLineOptionShortTags;
+    char const *const *commandLineOptionValueTags;
+    char const        *logDirectoryPath;
+    char const        *messagePrefix;
+    char const        *messageSuffix;
+    bool               rerun;
   } c = {};
 
-  /* ... -> Vendor API setup, then initialization */
-  #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-    enum {
-      advapi32, credui, kernel32, ole32, oleaut32, shell32, taskschd,
-      librariesLength // --> std::size_t{…}
-    };
-
-    WCHAR                      libraryPath[MAX_PATH + 1u] = L"";
-    UINT const                 libraryPathLength          = ::GetSystemDirectoryW(libraryPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
-    static struct libraryinfo *libraries                  = NULL;
-    static struct libraryinfo /* final */ {
-      LPCWSTR const name;
-      HMODULE       moduleHandle;
-      BOOL        (*unloader)(HMODULE);
-
-      /* extern "C" */ static void exit() {
-        for (struct libraryinfo *library = libraries; library != libraries + (NULL == libraries ? 0u : librariesLength); ++library)
-        if (NULL != library -> moduleHandle and /* --> FreeLibrary(…) */ NULL != library -> unloader) {
-          library -> unloader(library -> moduleHandle);
-
-          library -> moduleHandle = NULL;
-          library -> unloader     = NULL;
-        }
-      }
-    } l[librariesLength] = {
-      {L"advapi32" ".dll", NULL, NULL},
-      {L"credui"   ".dll", NULL, NULL},
-      {L"kernel32" ".dll", NULL, NULL},
-      {L"ole32"    ".dll", NULL, NULL},
-      {L"oleaut32" ".dll", NULL, NULL},
-      {L"shell32"  ".dll", NULL, NULL},
-      {L"taskschd" ".dll", NULL, NULL}
-    };
-
-    // ...
-    libraries                      = l;
-    libraryPath[libraryPathLength] = L'\\';
-
-    (void) std::atexit(&libraries -> exit);
-    #if __cplusplus >= 201103L
-      (void) std::at_quick_exit(&libraries -> exit);
-    #endif
-
-    if (0u != libraryPathLength) {
-      LPWSTR* (*CommandLineToArgvW)      (LPCWSTR, int*)                                       = NULL;
-      BOOL    (*FreeLibrary)             (HMODULE)                                             = NULL;
-      LPWSTR  (*GetCommandLineW)         ()                                                    = NULL;
-      HMODULE (*LoadLibraryExW)          (LPCWSTR, HANDLE, DWORD)                              = NULL;
-      HLOCAL  (*LocalFree)               (HLOCAL)                                              = NULL;
-      BOOL    (*SetDefaultDllDirectories)(DWORD)                                               = NULL;
-      int     (*WideCharToMultiByte)     (UINT, DWORD, LPCWCH, int, LPSTR, int, LPCCH, LPBOOL) = NULL;
-
-      // ... ->> Load the userland `kernel32` library
-      for (WCHAR *destination = libraryPath + (libraryPathLength + 1u), *source = const_cast<WCHAR*>(libraries[kernel32].name); ; ++destination, ++source) {
-        *destination = *source;
-        if (L'\0' == *source) break;
-      }
-
-      if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &libraries[kernel32].moduleHandle))
-      if (NULL != libraries[kernel32].moduleHandle) {
-        FreeLibrary              = reinterpret_cast<BOOL    (*)(HMODULE)>                                            (::GetProcAddress(libraries[kernel32].moduleHandle, "FreeLibrary"));              // --> <windows.h>
-        GetCommandLineW          = reinterpret_cast<LPWSTR  (*)()>                                                   (::GetProcAddress(libraries[kernel32].moduleHandle, "GetCommandLineW"));          // --> <windows.h> → <processenv.h>
-        LoadLibraryExW           = reinterpret_cast<HMODULE (*)(LPCWSTR, HANDLE, DWORD)>                             (::GetProcAddress(libraries[kernel32].moduleHandle, "LoadLibraryExW"));           // --> <windows.h>
-        LocalFree                = reinterpret_cast<HLOCAL  (*)(HLOCAL)>                                             (::GetProcAddress(libraries[kernel32].moduleHandle, "LocalFree"));                // --> <windows.h>
-        SetDefaultDllDirectories = reinterpret_cast<BOOL    (*)(DWORD)>                                              (::GetProcAddress(libraries[kernel32].moduleHandle, "SetDefaultDllDirectories")); // --> <windows.h>
-        WideCharToMultiByte      = reinterpret_cast<int     (*)(UINT, DWORD, LPCWCH, int, LPSTR, int, LPCCH, LPBOOL)>(::GetProcAddress(libraries[kernel32].moduleHandle, "WideCharToMultiByte"));      // --> <windows.h>
-      }
-
-      if (NULL != SetDefaultDllDirectories)
-      (void) SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
-
-      // ... ->> Load other used Windows API libraries —
-      for (struct libraryinfo *library = libraries; library != libraries + librariesLength; ++library)
-      if (NULL == library -> moduleHandle) { // ->> — except the already loaded userland `kernel32` library
-        for (std::size_t index = 0u; ; ++index) {
-          libraryPath[index + libraryPathLength + 1u] = library -> name[index];
-          if (L'\0' == library -> name[index]) break;
-        }
-
-        if (FALSE == ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &library -> moduleHandle) or NULL == library -> moduleHandle) {
-          library -> moduleHandle = LoadLibraryExW(libraryPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
-          library -> unloader     = NULL == library -> moduleHandle ? NULL : FreeLibrary;
-        }
-      }
-
-      // ...
-      if (NULL != libraries[shell32].moduleHandle)
-      CommandLineToArgvW = reinterpret_cast<LPWSTR* (*)(LPCWSTR, int*)>(::GetProcAddress(libraries[shell32].moduleHandle, "CommandLineToArgvW")); // --> <shellapi.h>
-
-      // ... ->> Normalize standard C/ C++ command-line `arguments` to vendor-specific Windows `commandLineArguments`
-      if (NULL != CommandLineToArgvW and NULL != GetCommandLineW) {
-        int           commandLineArgumentsLength = 0;
-        LPWSTR *const commandLineArguments       = CommandLineToArgvW(GetCommandLineW(), &commandLineArgumentsLength);
-
-        // ...
-        if (NULL != commandLineArguments and commandLineArgumentsLength <= count) {
-          if (NULL != WideCharToMultiByte) {
-            char       *allocation = NULL;
-            std::size_t size       = 0u;
-
-            // ...
-            for (int index = 0; commandLineArgumentsLength != index; ++index) {
-              int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, static_cast<LPSTR>(NULL), 0u, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
-
-              // ...
-              if (0 == commandLineArgumentSize) {
-                size = 0u;
-                break;
-              }
-
-              size += commandLineArgumentSize;
-            }
-
-            if (0u != size) {
-              size       = /* ->> Non-NUL characters */ (size / sizeof(char)) + /* ->> NUL terminators */ (commandLineArgumentsLength * sizeof(char));
-              allocation = ::new (std::nothrow) char[size]; // ->> Potential memory leak
-            }
-
-            if (NULL != allocation) {
-              char *iterator   = allocation;
-              bool  normalized = false;
-
-              // ...
-              for (int index = 0; commandLineArgumentsLength != index; ++index) {
-                int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, iterator, size, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
-
-                // ...
-                if (0 == commandLineArgumentSize)
-                continue;
-
-                arguments[index] = iterator; // ->> Normalize standard C/ C++ command-line argument
-                iterator        += commandLineArgumentSize;
-                normalized       = true;
-              }
-
-              if (not normalized)
-              ::delete[] allocation;
-            }
-          }
-
-          if (NULL != LocalFree)
-          (void) LocalFree(commandLineArguments);
-        }
-      }
-    }
-  #endif
-
-  catalog                        = &c;                                 //
-  catalog -> applicationExitCode = EXIT_SUCCESS;                       //
-  catalog -> applicationName     = "Cataloger";                        //
-  catalog -> clocked             = false;                              // ->> Catalog's internal clock is active
-  catalog -> logDirectoryPath    = count > 1 ? arguments[1] : NULL;    // ->> Filesystem location for storing catalogs; Assume NUL-terminated
-  catalog -> messagePrefix       = "cataloger" ": ";                   //
-  catalog -> messageSuffix       = "\r\n";                             //
-  catalog -> rerun               = count > 3 and NULL != arguments[3]; // ->> Catalog is re-executed
-  catalog -> timerInterval       = 86400000u;                          // ->> Milliseconds
-  catalog -> timerFileStream     = NULL;                               //
-  catalog -> timerPath           = count > 2 ? arguments[2] : NULL;    // ->> Filesystem location for serializing catalog timer; Assume NUL-terminated
-  catalog -> timerPathAllocated  = false;                              //
-
-  (void) std::signal   (SIGTERM, &catalog -> error); //
-  (void) std::signal   (SIGSEGV, &catalog -> error); // ->> ¯\_(ツ)_/¯
-  (void) std::signal   (SIGINT,  &catalog -> error); // ->> Handle possible user interrupts
-  (void) std::signal   (SIGABRT, &catalog -> error); // ->> Handle `std::abort(…)` and `std::terminate(…)` (and `throw` expression) invocations
-  (void) std::setlocale(LC_ALL,  "C.UTF-8");         //
-  #if __cplusplus >= 201103L                         //
-    (void) std::at_quick_exit(&catalog -> quick_exit);
-  #endif
+  catalog = &c;                       //
+  catalog -> start(arguments, count); // ->> Initialization
 
   // ... --> catalog -> logDirectoryPath = …;
   if (NULL == catalog -> logDirectoryPath) {
-    (void) catalog -> message("No directory for logs specified; defaulting to the current working directory, instead");
-    catalog -> logDirectoryPath = const_cast<char*>("./");
+    (void) catalog -> message("No directory for logs specified; defaulting to the current working directory instead");
+    catalog -> logDirectoryPath = "./";
   }
 
-  if (NULL == catalog -> timerPath)
-  (void) catalog -> message("No directory for the catalog's internal clock specified; defaulting to the current working directory, instead");
+  // ... --> catalog -> clockFileStream = …;
+  if (NULL == catalog -> clockPath) {
+    (void) catalog -> message("No directory for the catalog's internal clock specified; defaulting to fallback instead");
+    catalog -> clockFileStream = std::tmpfile();
+  } else catalog -> clockFileStream = std::fopen(catalog -> clockPath, "wb+");
 
-  // ... --> catalog -> timerFileStream = …;
-  catalog -> timerFileStream = NULL == catalog -> timerPath ? std::tmpfile() : std::fopen(catalog -> timerPath, "wb+");
-
-  if (NULL == catalog -> timerFileStream and NULL != catalog -> timerPath) {
-    char        catalogTimerFileNameFallback[L_tmpnam + 1u] = {};    //
-    std::size_t catalogTimerFileNameFallbackLength          = 0u;    //
-    char       *catalogTimerPathBuffer                      = NULL;  // ->> Non-null if `::timerPathAllocated` and assigned to `::timerPath` afterward
-    std::size_t catalogTimerPathLength                      = 0u;    //
-    char const *catalogTimerPathPrefix                      = "";    //
-    bool        catalogTimerPathPrefixed                    = false; // ->> Determines if `::timerPath` (significantly) begins with `catalogTimerPathPrefix`
-    std::size_t catalogTimerPathPrefixLength                = 0u;    //
-    bool        catalogTimerPathSuffixed                    = false; // ->> Determines if `::timerPath` (significantly) ends   with `pathDelimiters[…]`
+  if (NULL == catalog -> clockFileStream and NULL != catalog -> clockPath) {
+    char        catalogClockFileNameFallback[L_tmpnam + 1u] = {};    //
+    std::size_t catalogClockFileNameFallbackLength          = 0u;    //
+    char       *catalogClockPathBuffer                      = NULL;  // ->> Non-null when `::clockPathAllocated` and assigned to `::clockPath` afterward
+    std::size_t catalogClockPathLength                      = 0u;    //
+    char const *catalogClockPathPrefix                      = "";    //
+    bool        catalogClockPathPrefixed                    = false; // ->> Determines `::clockPath` (significantly) begins with `catalogClockPathPrefix`
+    std::size_t catalogClockPathPrefixLength                = 0u;    //
+    bool        catalogClockPathSuffixed                    = false; // ->> Determines `::clockPath` (significantly) ends   with `pathDelimiters[…]`
     char const  pathDelimiters[]                            = {'/'
       #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
         , '\\'
@@ -666,166 +801,165 @@ int main(int count, char* arguments[]) /* noexcept */ {
     };
     std::size_t const pathDelimitersLength = sizeof pathDelimiters / sizeof(char);
 
-    // ... --> catalogTimerFileNameFallback       = std::strrchr(std::tmpnam(…) ?? …, '/' | …);
-    //         catalogTimerFileNameFallbackLength = std::strlen (catalogTimerFileNameFallback);
-    if (catalogTimerFileNameFallback != std::tmpnam(catalogTimerFileNameFallback)) {
+    // ... --> catalogClockFileNameFallback       = std::strrchr(std::tmpnam(…) ?? …, '/' | …);
+    //         catalogClockFileNameFallbackLength = std::strlen (catalogClockFileNameFallback);
+    if (catalogClockFileNameFallback != std::tmpnam(catalogClockFileNameFallback)) {
       char        const fallback[]     = "cataloger-clock.dat";
       std::size_t const fallbackLength = (sizeof fallback / sizeof(char)) - 1u;
 
       // ...
       for (std::size_t index = 0u; ; ++index) {
-        catalogTimerFileNameFallback[index] = fallback[index];
+        catalogClockFileNameFallback[index] = fallback[index];
 
-        if (fallbackLength == index or index == (sizeof catalogTimerFileNameFallback / sizeof(char)) - 1u) {
-          catalogTimerFileNameFallback[index] = '\0';
+        if (fallbackLength == index or index == (sizeof catalogClockFileNameFallback / sizeof(char)) - 1u) {
+          catalogClockFileNameFallback[index] = '\0';
           break;
         }
       }
     }
 
-    while ('\0' != catalogTimerFileNameFallback[catalogTimerFileNameFallbackLength])
-    ++catalogTimerFileNameFallbackLength;
+    while ('\0' != catalogClockFileNameFallback[catalogClockFileNameFallbackLength])
+    ++catalogClockFileNameFallbackLength;
 
-    for (std::size_t index = catalogTimerFileNameFallbackLength; index--; ) {
+    for (std::size_t index = catalogClockFileNameFallbackLength; index--; ) {
       // ... ->> Unique names only, rather than unique file paths
       for (std::size_t subindex = 0u; pathDelimitersLength != subindex; ++subindex)
-      if (catalogTimerFileNameFallback[index] == pathDelimiters[subindex]) {
-        catalogTimerFileNameFallbackLength -= ++index;
+      if (catalogClockFileNameFallback[index] == pathDelimiters[subindex]) {
+        catalogClockFileNameFallbackLength -= ++index;
 
-        for (subindex = 0u; subindex <= catalogTimerFileNameFallbackLength; ++index, ++subindex)
-        catalogTimerFileNameFallback[subindex] = catalogTimerFileNameFallback[index];
+        for (subindex = 0u; subindex <= catalogClockFileNameFallbackLength; ++index, ++subindex)
+        catalogClockFileNameFallback[subindex] = catalogClockFileNameFallback[index];
 
         index = 0u;
         break;
       }
     }
 
-    // ... --> catalogTimerPathLength   = std::strlen(catalog -> timerPath | …);
-    //         catalogTimerPathSuffixed = …;
-    for (; '\0' != catalog -> timerPath[catalogTimerPathLength]; ++catalogTimerPathLength) {
+    // ... --> catalogClockPathLength   = std::strlen(catalog -> clockPath | …);
+    //         catalogClockPathSuffixed = …;
+    for (; '\0' != catalog -> clockPath[catalogClockPathLength]; ++catalogClockPathLength) {
       for (std::size_t subindex = 0u; pathDelimitersLength != subindex; ++subindex)
-      if (catalog -> timerPath[catalogTimerPathLength] == pathDelimiters[subindex]) {
-        for (char *iterator = catalog -> timerPath + (catalogTimerPathLength + 1u); ; ++iterator) {
+      if (catalog -> clockPath[catalogClockPathLength] == pathDelimiters[subindex]) {
+        for (char *iterator = catalog -> clockPath + (catalogClockPathLength + 1u); ; ++iterator) {
           switch (*iterator) {
             case ' ': case '\f': case '\n': case '\r': case '\t': case '\v':
             continue;
           }
 
-          catalogTimerPathSuffixed = '\0' == *iterator;
+          catalogClockPathSuffixed = '\0' == *iterator;
           break;
         }
       }
 
-      if (catalogTimerPathSuffixed)
+      if (catalogClockPathSuffixed)
       break;
     }
 
-    // ... --> catalogTimerPathPrefix… = …;
+    // ... --> catalogClockPathPrefix… = …;
     #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-      catalogTimerPathPrefix       = "\\\\?\\";
-      catalogTimerPathPrefixLength = MAX_PATH < catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u ? 3u : 0u;
+      catalogClockPathPrefix       = "\\\\?\\";
+      catalogClockPathPrefixLength = MAX_PATH < catalogClockPathLength + /* ->> Path delimiter */ 1u + catalogClockFileNameFallbackLength + /* ->> NUL terminator */ 1u ? 3u : 0u;
     #endif
 
-    // ... --> catalogTimerPathPrefixed = …;
-    for (std::size_t prefixIndex = 0u, timerIndex = 0u; ; ++timerIndex) {
-      if (catalogTimerPathPrefixLength == prefixIndex) {
-        catalogTimerPathPrefixed     = true;
-        catalogTimerPathPrefixLength = 0u;
+    // ... --> catalogClockPathPrefixed = …;
+    for (std::size_t clockIndex = 0u, prefixIndex = 0u; ; ++clockIndex) {
+      if (catalogClockPathPrefixLength == prefixIndex) {
+        catalogClockPathPrefixed     = true;
+        catalogClockPathPrefixLength = 0u;
 
         break;
       }
 
-      switch (catalog -> timerPath[timerIndex]) {
+      switch (catalog -> clockPath[clockIndex]) {
         case ' ': case '\f': case '\n': case '\r': case '\t': case '\v':
         continue;
       }
 
-      if (catalog -> timerPath[timerIndex] != catalogTimerPathPrefix[prefixIndex++])
+      if (catalog -> clockPath[clockIndex] != catalogClockPathPrefix[prefixIndex++])
       break;
     }
 
-    // ... --> catalogTimerPathBuffer = …; ->> Just resizing
-    catalogTimerPathBuffer = ::new (std::nothrow) char[catalogTimerPathPrefixLength + catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u];
+    // ... --> catalogClockPathBuffer = …; ->> Just resizing
+    catalogClockPathBuffer = ::new (std::nothrow) char[catalogClockPathPrefixLength + catalogClockPathLength + /* ->> Path delimiter */ 1u + catalogClockFileNameFallbackLength + /* ->> NUL terminator */ 1u];
 
-    if (NULL == catalogTimerPathBuffer) {
-      if (not catalogTimerPathPrefixed) {
-        catalogTimerPathBuffer             = ::new (std::nothrow) char[catalogTimerPathPrefixLength + catalogTimerPathLength + /* ->> NUL terminator */ 1u];
-        catalogTimerFileNameFallbackLength = 0u;
+    if (NULL == catalogClockPathBuffer) {
+      if (not catalogClockPathPrefixed) {
+        catalogClockPathBuffer             = ::new (std::nothrow) char[catalogClockPathPrefixLength + catalogClockPathLength + /* ->> NUL terminator */ 1u];
+        catalogClockFileNameFallbackLength = 0u;
       }
 
-      else if (not catalogTimerPathSuffixed) {
+      else if (not catalogClockPathSuffixed) {
         (void) catalog -> warn("Cataloger exited; No file for the catalog's internal clock specified");
         return catalog -> exit(EXIT_FAILURE);
       }
 
       else
-        catalogTimerPathBuffer = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> Path delimiter */ 1u + catalogTimerFileNameFallbackLength + /* ->> NUL terminator */ 1u];
+        catalogClockPathBuffer = ::new (std::nothrow) char[catalogClockPathLength + /* ->> Path delimiter */ 1u + catalogClockFileNameFallbackLength + /* ->> NUL terminator */ 1u];
     }
 
-    if (NULL == catalogTimerPathBuffer) {
-      catalogTimerPathBuffer       = ::new (std::nothrow) char[catalogTimerPathLength + /* ->> NUL terminator */ 1u];
-      catalogTimerPathPrefixLength = 0u;
+    if (NULL == catalogClockPathBuffer) {
+      catalogClockPathBuffer       = ::new (std::nothrow) char[catalogClockPathLength + /* ->> NUL terminator */ 1u];
+      catalogClockPathPrefixLength = 0u;
 
-      if (NULL == catalogTimerPathBuffer) {
+      if (NULL == catalogClockPathBuffer) {
         (void) catalog -> warn("Cataloger exited; No file for the catalog's internal clock specified");
         return catalog -> exit(EXIT_FAILURE);
       }
     }
 
-    catalogTimerPathBuffer[catalogTimerPathLength] = '\0';
+    catalogClockPathBuffer[catalogClockPathLength] = '\0';
 
-    for (std::size_t index = 0u; index != catalogTimerPathLength; ++index)
-    catalogTimerPathBuffer[index] = catalog -> timerPath[index] != '/' ? catalog -> timerPath[index] : '\\';
+    for (std::size_t index = 0u; index != catalogClockPathLength; ++index)
+    catalogClockPathBuffer[index] = catalog -> clockPath[index] != '/' ? catalog -> clockPath[index] : '\\';
 
-    // ... --> catalog -> timerFileStream = …;
-    //         catalog -> timerPath…      = …;
-    catalog -> timerPath          = catalogTimerPathBuffer;
-    catalog -> timerPathAllocated = true;
-    catalog -> timerFileStream    = std::fopen(catalog -> timerPath, "wb+");
+    // ... --> catalog -> clockFileStream = …;
+    //         catalog -> clockPath…      = …;
+    catalog -> clockPathAllocated = true;
+    catalog -> clockPath          = catalogClockPathBuffer;
+    catalog -> clockFileStream    = std::fopen(catalog -> clockPath, "wb+");
 
-    if (NULL == catalog -> timerFileStream)
-    if (0u != catalogTimerPathPrefixLength) {
-      for (std::size_t index = catalogTimerPathLength; index--; )
-        catalog -> timerPath[catalogTimerPathPrefixLength + index] = catalog -> timerPath[index];
+    if (NULL == catalog -> clockFileStream)
+    if (0u != catalogClockPathPrefixLength) {
+      for (std::size_t index = catalogClockPathLength; index--; )
+        catalog -> clockPath[catalogClockPathPrefixLength + index] = catalog -> clockPath[index];
 
-      for (std::size_t index = catalogTimerPathPrefixLength; index--; )
-        catalog -> timerPath[index] = catalogTimerPathPrefix[index];
+      for (std::size_t index = catalogClockPathPrefixLength; index--; )
+        catalog -> clockPath[index] = catalogClockPathPrefix[index];
 
-      catalogTimerPathLength    += catalogTimerPathPrefixLength;
-      catalog -> timerFileStream = std::fopen(catalog -> timerPath, "wb+");
+      catalogClockPathLength    += catalogClockPathPrefixLength;
+      catalog -> clockFileStream = std::fopen(catalog -> clockPath, "wb+");
     }
 
-    if (NULL == catalog -> timerFileStream)
-    if (0u != catalogTimerFileNameFallbackLength) {
-      catalog -> timerPath[catalogTimerPathLength]                                           = '\\';
-      catalog -> timerPath[catalogTimerPathLength + catalogTimerFileNameFallbackLength + 1u] = '\0';
+    if (NULL == catalog -> clockFileStream)
+    if (0u != catalogClockFileNameFallbackLength) {
+      catalog -> clockPath[catalogClockPathLength]                                           = '\\';
+      catalog -> clockPath[catalogClockPathLength + catalogClockFileNameFallbackLength + 1u] = '\0';
 
-      for (std::size_t index = 0u; index != catalogTimerFileNameFallbackLength; ++index)
-        catalog -> timerPath[catalogTimerPathLength + index + 1u] = catalogTimerFileNameFallback[index];
+      for (std::size_t index = 0u; index != catalogClockFileNameFallbackLength; ++index)
+        catalog -> clockPath[catalogClockPathLength + index + 1u] = catalogClockFileNameFallback[index];
 
-      catalogTimerPathLength    += catalogTimerFileNameFallbackLength + 1u;
-      catalog -> timerFileStream = std::fopen(catalog -> timerPath, "wb+");
+      catalogClockPathLength    += catalogClockFileNameFallbackLength + 1u;
+      catalog -> clockFileStream = std::fopen(catalog -> clockPath, "wb+");
     }
   }
 
   // ...
-  if (NULL == catalog -> timerFileStream) {
+  if (NULL == catalog -> clockFileStream) {
     (void) catalog -> warn("Cataloger exited; No file for the catalog's internal clock specified");
     return catalog -> exit(EXIT_FAILURE);
   }
 
   /* ... ->> Execute internal clock */
   if (catalog -> rerun)
-    catalog -> clock();
+    catalog -> update();
 
   else {
   #if false // TODO (Lapys)
     #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
-      // TODO (Lapys) -> Linus service → `usleep(…)` → `nanosleep(…)`
+      // TODO (Lapys) -> Linux service → `usleep(…)` → `nanosleep(…)`
     #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-      DWORD           (*GetModuleFileNameW) (HMODULE, LPWSTR, DWORD)               = NULL;
-      BOOL            (*GetModuleHandleExA) (DWORD, LPCSTR, HMODULE*)              = NULL;
-      int             (*MultiByteToWideChar)(UINT, DWORD, LPCCH, int, LPWSTR, int) = NULL;
+      DWORD     (*const GetModuleFileNameW) (HMODULE, LPWSTR, DWORD)               = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<DWORD (*)(HMODULE, LPWSTR, DWORD)>              (::GetProcAddress(libraries[kernel32].moduleHandle, "GetModuleFileNameW"));  // --> <windows.h>
+      int       (*const MultiByteToWideChar)(UINT, DWORD, LPCCH, int, LPWSTR, int) = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<int   (*)(UINT, DWORD, LPCCH, int, LPWSTR, int)>(::GetProcAddress(libraries[kernel32].moduleHandle, "MultiByteToWideChar")); // --> <windows.h>
       WCHAR             applicationFilePath[MAX_PATH + 1u]                         = {};
       std::size_t const applicationFilePathLength                                  = sizeof applicationFilePath / sizeof(WCHAR);
       HMODULE           applicationModuleHandle                                    = NULL;
@@ -834,25 +968,9 @@ int main(int count, char* arguments[]) /* noexcept */ {
       char             *programPointer                                             = NULL; // --> ::_pgmptr
       wchar_t          *programPointerW                                            = NULL; // --> ::_wpgmptr
 
-      // ...
-      if (NULL != libraries[kernel32].moduleHandle) {
-        GetModuleFileNameW  = reinterpret_cast<DWORD (*)(HMODULE, LPWSTR, DWORD)>              (::GetProcAddress(libraries[kernel32].moduleHandle, "GetModuleFileNameW"));  // --> <windows.h>
-        GetModuleHandleExA  = reinterpret_cast<BOOL  (*)(DWORD, LPCSTR, HMODULE*)>             (::GetProcAddress(libraries[kernel32].moduleHandle, "GetModuleHandleExA"));  // --> <windows.h>
-        MultiByteToWideChar = reinterpret_cast<int   (*)(UINT, DWORD, LPCCH, int, LPWSTR, int)>(::GetProcAddress(libraries[kernel32].moduleHandle, "MultiByteToWideChar")); // --> <windows.h>
-      }
-
-      // ... --> applicationModuleHandle = GetModuleHandleEx…(…);
-      //         argumentModuleHandle    = GetModuleHandleExA(…);
-      if (NULL != GetModuleHandleExA) {
-        applicationModuleHandle = FALSE == GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(NULL), &applicationModuleHandle) ? NULL : applicationModuleHandle;
-        argumentModuleHandle    = FALSE == GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, arguments[0],              &argumentModuleHandle)    ? NULL : argumentModuleHandle;
-      }
-
-      applicationModuleHandle = NULL == applicationModuleHandle and FALSE == ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPWSTR>(NULL), &applicationModuleHandle) ? NULL : applicationModuleHandle;
-
       // ... --> programPointer… = ::_get_…pgmptr(…);
-      programPointer  = 0 != ::_get_pgmptr (&programPointer)  ? applicationModuleHandle == argumentModuleHandle ? arguments[0] : NULL : programPointer;
-      programPointerW = 0 != ::_get_wpgmptr(&programPointerW) ?                                                                  NULL : programPointerW;
+      programPointer  = 0 != ::_get_pgmptr (&programPointer)  ? arguments + 1 == catalog -> commandLineArguments ? arguments[0] : NULL : programPointer;
+      programPointerW = 0 != ::_get_wpgmptr(&programPointerW) ?                                                                   NULL : programPointerW;
 
       // ... --> applicationFilePath = …;
       if (NULL == GetModuleFileNameW or FALSE == GetModuleFileNameW(static_cast<HMODULE>(NULL), applicationFilePath, applicationFilePathLength)) {
@@ -1260,7 +1378,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
         static struct serviceinfo *service                                                                                                                                     = NULL;                                                                                                                                                                                                                              //
         static struct serviceinfo /* final */ {
           static void CALLBACK callback(PVOID const /* parameter */, BOOLEAN const /* triggered */) {
-            catalog -> clock();
+            catalog -> update();
           }
 
           static DWORD WINAPI control(DWORD const code, DWORD const /* event */, LPVOID const /* eventData */, LPVOID const /* parameter */) {
@@ -1290,8 +1408,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
             SERVICE_STATUS_HANDLE (*const RegisterServiceCtrlHandlerExW)(LPCWSTR, LPHANDLER_FUNCTION_EX, LPVOID)                           = reinterpret_cast<SERVICE_STATUS_HANDLE (*)(LPCWSTR, LPHANDLER_FUNCTION_EX, LPVOID)>                          (::GetProcAddress(libraries[advapi32].moduleHandle, "RegisterServiceCtrlHandlerExW")); // --> <windows.h>
             BOOL                  (*const SetServiceStatus)             (SERVICE_STATUS_HANDLE, LPSERVICE_STATUS)                          = reinterpret_cast<BOOL                  (*)(SERVICE_STATUS_HANDLE, LPSERVICE_STATUS)>                         (::GetProcAddress(libraries[advapi32].moduleHandle, "SetServiceStatus"));              // --> <windows.h>
             DWORD                 (*const WaitForSingleObject)          (HANDLE, DWORD)                                                    = reinterpret_cast<DWORD                 (*)(HANDLE, DWORD)>                                                   (::GetProcAddress(libraries[kernel32].moduleHandle, "WaitForSingleObject"));           // --> <windows.h> → <synchapi.h>
-            HANDLE                        timerHandle                                                                                      = NULL;                                                                                                                                                                                               //
-            HANDLE                        timerQueueHandle                                                                                 = NULL;                                                                                                                                                                                               //
+            HANDLE                        clockHandle                                                                                      = NULL;                                                                                                                                                                                               //
+            HANDLE                        clockQueueHandle                                                                                 = NULL;                                                                                                                                                                                               //
 
             // ...
             return;
@@ -1309,13 +1427,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
             service -> status.dwWin32ExitCode           = NO_ERROR;
             service -> statusHandle                     = RegisterServiceCtrlHandlerExW(applicationName, &service -> control, static_cast<LPVOID>(service));
             service -> stopEvent                        = CreateEventW(static_cast<LPSECURITY_ATTRIBUTES>(NULL), TRUE, FALSE, static_cast<LPCWSTR>(NULL)); // ->> `CloseHandle(…)` (if non-`NULL`) on program termination
-            timerQueueHandle                            = CreateTimerQueue();
+            clockQueueHandle                            = CreateTimerQueue();
 
             do {
-              if (NULL == service -> statusHandle or NULL == timerQueueHandle)
+              if (NULL == service -> statusHandle or NULL == clockQueueHandle)
               break;
 
-              if (NULL == service -> stopEvent or FALSE == CreateTimerQueueTimer(&timerHandle, timerQueueHandle, &service -> callback, static_cast<PVOID>(service), 0u, catalog -> timerInterval, 0x00u)) {
+              if (NULL == service -> stopEvent or FALSE == CreateTimerQueueTimer(&clockHandle, clockQueueHandle, &service -> callback, static_cast<PVOID>(service), 0u, catalog -> clockInterval, 0x00u)) {
                 service -> status.dwCurrentState  = SERVICE_STOPPED;
                 service -> status.dwWin32ExitCode = NULL == GetLastError ? ERROR_INVALID_HANDLE : GetLastError();
                 (void) SetServiceStatus(service -> statusHandle, &service -> status);
@@ -1331,8 +1449,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
             } while (false);
 
             if (INVALID_HANDLE_VALUE != service -> stopEvent and NULL != service -> stopEvent and NULL != CloseHandle) (void) CloseHandle(service -> stopEvent);
-            if (NULL != timerQueueHandle and NULL != DeleteTimerQueueEx) { (void) DeleteTimerQueueEx(timerQueueHandle, static_cast<HANDLE>(NULL)); timerQueueHandle = NULL; }
-            if (NULL != timerQueueHandle and NULL != DeleteTimerQueue)   { (void) DeleteTimerQueue  (timerQueueHandle);                            timerQueueHandle = NULL; }
+            if (NULL != clockQueueHandle and NULL != DeleteTimerQueueEx) { (void) DeleteTimerQueueEx(clockQueueHandle, static_cast<HANDLE>(NULL)); clockQueueHandle = NULL; }
+            if (NULL != clockQueueHandle and NULL != DeleteTimerQueue)   { (void) DeleteTimerQueue  (clockQueueHandle);                            clockQueueHandle = NULL; }
 
             service -> status.dwCurrentState = SERVICE_STOPPED;
             (void) SetServiceStatus(service -> statusHandle, &service -> status);
@@ -1390,7 +1508,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
   // HELP SCREEN?
   // ABOUT SCREEN
 
-  std::printf("[...]: 0x%02lX {allocated: %4.5s, name: \"%s\"}" "\r\n", (unsigned long) reinterpret_cast<uintptr_t>(catalog -> timerFileStream), catalog -> timerPathAllocated ? "true" : "false", catalog -> timerPath);
+  std::printf("[...]: 0x%02lX {allocated: %4.5s, name: \"%s\"}" "\r\n", (unsigned long) reinterpret_cast<uintptr_t>(catalog -> clockFileStream), catalog -> clockPathAllocated ? "true" : "false", catalog -> clockPath);
 
   // ...
   return catalog -> exit(EXIT_SUCCESS);
