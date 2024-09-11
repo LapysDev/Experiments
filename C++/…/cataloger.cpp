@@ -128,9 +128,25 @@ int main(int count, char* arguments[]) /* noexcept */ {
   /* ... ->> Application `start()` */
   static struct cataloger *catalog = NULL;
   static struct cataloger /* final */ {
-    enum              { MESSAGE_MAXIMUM_LENGTH = 256u };                     // --> std::size_t
-    union formatinfo  { unsigned char metadata[32]; };                       // ->> Arbitrarily-sized
-    enum  formatstyle { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN }; // --> bool
+    enum               { MESSAGE_MAXIMUM_LENGTH = 256u };                     // --> std::size_t
+    union  formatinfo  { unsigned char metadata[32]; };                       // ->> Arbitrarily-sized
+    enum   formatstyle { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN }; // --> bool
+    struct parsecmd /* final */ {
+      /* ... ->> `NULL`-ish `::…name`s represent unrecognized command-line arguments */
+      enum { ABOUT, CLOCK, HELP, LOG, RERUN } command;                           // ->> Command-line option identifier
+      char const                             *name;                              // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
+      char const                             *longName;                          // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
+      char const                             *shortName;                         // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
+      std::size_t                             valueCount;                        // ->> Number of command-line arguments (after `::value`) evaluated
+      bool                                  (*validate)(struct parsecmd const*); // ->> Predicate function determining the validity of this command-line option; Called through command-line `parse()`; Optionally `NULL`
+      char                                   *argument;                          // ->> Command-line argument representing the              command-line option; Set    through command-line `parse()`
+      char                                   *value;                             // ->> Command-line argument representing the value of the command-line option; Set    through command-line `parse()`
+      unsigned char                           metadata[sizeof(void*)];           // ->> Arbitrarily-sized
+
+      /* ... ->> Default `::validate` predicates */
+      static bool UNVALUED(struct parsecmd const* option) { return NULL == option -> value; }
+      static bool VALUED  (struct parsecmd const* option) { return NULL != option -> value; }
+    };
 
     /* ... TODO -> Update Windows-specific garbage in `format(…)` */
     static void error(int const signal) /* [[noreturn]] extern "C" */ {
@@ -499,91 +515,28 @@ int main(int count, char* arguments[]) /* noexcept */ {
       static bool message(char    const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(char)); }
       static bool message(wchar_t const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(wchar_t)); }
 
-    static void parse(char* arguments[], std::size_t const length) {
-      union parse {
-        static bool sequenced(struct option const* option) {
-          struct option const *const sequenced = static_cast<struct option const*>(reinterpret_cast<void*>(option -> metadata));
-          return NULL != sequenced -> argument; // ->> Waits for its `sequenced` command-line option before a successful `parse()`
-        }
-      };
-
-      struct option /* final */ {
-        enum { ABOUT, CLOCK, HELP, LOG, RERUN } command;                         // ->> Command-line option identifier
-        char const                             *name;                            // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
-        char const                             *longName;                        // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
-        char const                             *shortName;                       // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
-        std::size_t                             valueCount;                      // ->> Number of command-line arguments (after `::value`) evaluated
-        bool                                  (*validate)(struct option const*); // ->> Predicate function determining the validity of this command-line option; Called through command-line `parse()`; Optionally `NULL`
-        char                                   *argument;                        // ->> Command-line argument representing the              command-line option; Set    through command-line `parse()`
-        char                                   *value;                           // ->> Command-line argument representing the value of the command-line option; Set    through command-line `parse()`
-        unsigned char                           metadata[sizeof(void*)];         // ->> Arbitrarily-sized
-
-        /* ... ->> Default `::validate` predicates */
-        static bool UNVALUED(struct option const* option) { return NULL == option -> value; }
-        static bool VALUED  (struct option const* option) { return NULL != option -> value; }
-      } options[] = {
-        // ->> `NULL`-ish `::…name`s represent unrecognized command-line arguments
-        {option::ABOUT, "?",  "about", NULL, 0u, &option::UNVALUED,  NULL, NULL, {}},
-        {option::CLOCK, NULL, NULL,    NULL, 0u, &parse ::sequenced, NULL, NULL, {}}, // --> 1
-        {option::CLOCK, NULL, "clock", "c",  0u, &option::VALUED,    NULL, NULL, {}},
-        {option::CLOCK, NULL, "clock", "c",  1u, &option::VALUED,    NULL, NULL, {}},
-        {option::CLOCK, NULL, NULL,    "t",  0u, &option::VALUED,    NULL, NULL, {}},
-        {option::CLOCK, NULL, NULL,    "t",  1u, &option::VALUED,    NULL, NULL, {}},
-        {option::HELP,  NULL, "help",  "h",  0u, &option::UNVALUED,  NULL, NULL, {}},
-        {option::LOG,   NULL, NULL,    NULL, 0u, NULL,               NULL, NULL, {}}, // --> 7
-        {option::RERUN, NULL, "rerun", "r",  0u, &option::UNVALUED,  NULL, NULL, {}}
-      };
-      std::size_t const optionsLength = sizeof options / sizeof *options;
-
-      // ...
-      (void) ::new (options[1].metadata) void*(options + 7); // ->> `parse::sequenced(…)` after `options[7]`
-
-      catalog -> commandLineOptionLongTags
-      catalog -> commandLineOptionShortTags
-      catalog -> commandLineOptionValueTags
-
-      for (std::size_t index = 0u; catalog -> commandLineArgumentsLength != index; ++index) {
-        char *const commandLineArgument         = catalog -> commandLineArguments[index];
-        bool        commandLineArgumentIsOption = false;
-        std::size_t commandLineOptionIndex      = 0u;
+    static void parse(char* arguments[], std::size_t const argumentsLength, struct parsecmd options[], std::size_t optionsLength) {
+      // TODO
+      for (std::size_t index = 0u; argumentsLength != index; ++index) {
+        char *const argument         = arguments[index];
+        bool        argumentIsOption = false;
+        std::size_t optionIndex      = 0u;
 
         // ... TODO
-        for (struct option *option = options; option != options + optionsLength; ++option) {
-          // ... --> commandLineArgumentIsOption = …;
-          if (not commandLineArgumentIsOption) // ... --> commandLineArgument == option -> name;
-          if (NULL != option -> name) {
-            for (std::size_t subindex = 0u; '\0' != commandLineArgument[subindex] and '\0' != option -> name[subindex]; ++subindex) {
-              if (commandLineArgument[subindex] != option -> name[subindex])
-              break;
+        for (struct parsecmd *option = options; option != options + optionsLength; ++option) {
+          struct parsecmd const fallback = *option;
 
-              if ('\0' == commandLineArgument[subindex] or '\0' == option -> name[subindex])
-              commandLineArgumentIsOption = '\0' == commandLineArgument[subindex] and '\0' == option -> name[subindex];
-            }
-          }
+          // ...
+          option -> argument
+            option -> name
+            catalog -> commandLineOptionShortTags option -> shortName
+            catalog -> commandLineOptionLongTags  option -> longName
 
-          if (not commandLineArgumentIsOption) // ... --> commandLineArgument == option -> shortName;
-          if (NULL != option -> shortName and commandLineArgument[0] == '-') {
-            for (std::size_t subindex = 0u; '\0' != commandLineArgument[subindex + 1u] and '\0' != option -> shortName[subindex]; ++subindex) {
-              if (commandLineArgument[subindex + 1u] != option -> shortName[subindex])
-              break;
+          option -> value
+            catalog -> commandLineOptionValueTags option -> valueCount
 
-              commandLineArgumentIsOption = '\0' == option -> shortName[subindex];
-            }
-          }
-
-          if (not commandLineArgumentIsOption) // ... --> commandLineArgument == option -> longName;
-          if (NULL != option -> longName and commandLineArgument[0] == '-' and commandLineArgument[1] == '-') {
-            for (std::size_t subindex = 0u; '\0' != commandLineArgument[subindex + 2u] and '\0' != option -> shortName[subindex]; ++subindex) {
-              if (commandLineArgument[subindex + 2u] != option -> shortName[subindex])
-              break;
-
-              commandLineArgumentIsOption = '\0' == option -> shortName[subindex];
-            }
-          }
-
-          // ... --> commandLineOptionIndex = …;
-          if (commandLineArgumentIsOption)
-          commandLineOptionIndex = option - options;
+          option -> validate
+            *option = fallback
         }
       }
     }
@@ -597,11 +550,31 @@ int main(int count, char* arguments[]) /* noexcept */ {
     }
 
     static void start(char* arguments[], std::size_t const length) {
+      union parse {
+        static bool sequenced(struct parsecmd const* option) {
+          struct parsecmd const *const sequenced = static_cast<struct parsecmd const*>(reinterpret_cast<void*>(option -> metadata));
+          return NULL != sequenced -> argument; // ->> Waits for its `sequenced` command-line option before a successful `parse()`
+        }
+      };
+
       char const *const commandLineOptionLongTags [] = {"--"};
       char const *const commandLineOptionShortTags[] = {"-", "/"};
       char const *const commandLineOptionValueTags[] = {"=", ":"};
+      struct parsecmd   commandLineOptions        [] = {
+        {parsecmd::ABOUT, "?",  "about", NULL, 0u, &parsecmd::UNVALUED,  NULL, NULL, {}},
+        {parsecmd::CLOCK, NULL, NULL,    NULL, 0u, &parse   ::sequenced, NULL, NULL, {}}, // --> 1
+        {parsecmd::CLOCK, NULL, "clock", "c",  0u, &parsecmd::VALUED,    NULL, NULL, {}},
+        {parsecmd::CLOCK, NULL, "clock", "c",  1u, &parsecmd::VALUED,    NULL, NULL, {}},
+        {parsecmd::CLOCK, NULL, NULL,    "t",  0u, &parsecmd::VALUED,    NULL, NULL, {}},
+        {parsecmd::CLOCK, NULL, NULL,    "t",  1u, &parsecmd::VALUED,    NULL, NULL, {}},
+        {parsecmd::HELP,  NULL, "help",  "h",  0u, &parsecmd::UNVALUED,  NULL, NULL, {}},
+        {parsecmd::LOG,   NULL, NULL,    NULL, 0u, NULL,                 NULL, NULL, {}}, // --> 7
+        {parsecmd::RERUN, NULL, "rerun", "r",  0u, &parsecmd::UNVALUED,  NULL, NULL, {}}
+      };
 
       // ...
+      (void) ::new (commandLineOptions[1].metadata) void*(commandLineOptions + 7); // ->> `parse::sequenced(…)` after `commandLineOptions[7]`
+
       catalog -> applicationExitCode        = EXIT_SUCCESS;               // ->> Used by `::quick_exit(…)` primarily
       catalog -> applicationName            = "Cataloger";                //
       catalog -> clocked                    = false;                      // ->> Catalog's internal clock is active
@@ -712,7 +685,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       // ... TODO -> Handle parse properly
-      catalog -> parse(catalog -> commandLineArguments, catalog -> commandLineArgumentsLength);
+      catalog -> parse(catalog -> commandLineArguments, catalog -> commandLineArgumentsLength, commandLineOptions, sizeof commandLineOptions / sizeof *commandLineOptions);
       catalog -> clockPath        = length > 2u ? arguments[2] : NULL;    // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
       catalog -> logDirectoryPath = length > 1u ? arguments[1] : NULL;    // ->> Filesystem location for storing catalogs;          Assume NUL-terminated
       catalog -> rerun            = length > 3u and NULL != arguments[3]; // ->> Catalog is re-executed
