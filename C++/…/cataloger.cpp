@@ -2,7 +2,7 @@
 // RUN    : cataloger C:/Users/oluwa/OneDrive/Lapys/Catalog C:/Users/oluwa/OneDrive/Lapys/Catalog/cataloger-clock.dat
 #include <cerrno>  // --> EILSEQ, errno
 #include <ciso646> // --> and, not, or
-#include <climits> // --> CHAR_BIT, SIZE_MAX, UCHAR_MAX
+#include <climits> // --> CHAR_BIT, UCHAR_MAX
 #include <clocale> // --> LC_ALL;                                            std::setlocale(…)
 #include <csignal> // --> SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM; std::signal(…)
 #include <cstddef> // --> NULL; std::size_t
@@ -24,7 +24,7 @@
 # define STRICT                  // ->> Strict type checking                   --> `https://learn.microsoft.com/en-us/windows/win32/winprog/enabling-strict`
 # define UNICODE                 // ->> Unicode preference                     --> `https://learn.microsoft.com/en-us/windows/win32/learnwin32/working-with-strings`
 # ifndef _WIN32_WINNT            //
-#   define _WIN32_WINNT 0x0501 // --> _WIN32_WINNT_WINXP
+#   define _WIN32_WINNT 0x0600 // --> _WIN32_WINNT_WINXP+
 # endif
 # include <io.h>      // --> ::_isatty(…)
 # include <stdio.h>   // --> ::_fileno(…), ::_get_pgmptr(…), ::_get_wpgmptr(…)
@@ -117,10 +117,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
           if (L'\0' == library -> name[index]) break;
         }
 
-        if (FALSE == ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &library -> moduleHandle) or NULL == library -> moduleHandle) {
-          library -> moduleHandle = LoadLibraryExW(libraryPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
-          library -> unloader     = NULL == library -> moduleHandle ? NULL : FreeLibrary;
-        }
+        if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &library -> moduleHandle))
+        if (NULL != library -> moduleHandle) continue;
+
+        library -> moduleHandle = LoadLibraryExW(libraryPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
+        library -> unloader     = NULL == library -> moduleHandle ? NULL : FreeLibrary;
       }
     }
   #endif
@@ -128,27 +129,30 @@ int main(int count, char* arguments[]) /* noexcept */ {
   /* ... ->> Application `start()` */
   static struct cataloger *catalog = NULL;
   static struct cataloger /* final */ {
-    enum               { MESSAGE_MAXIMUM_LENGTH = 256u };                     // --> std::size_t
-    union  formatinfo  { unsigned char metadata[32]; };                       // ->> Arbitrarily-sized
-    enum   formatstyle { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN }; // --> bool
+    enum               { MESSAGE_MAXIMUM_LENGTH = 256u }; // --> std::size_t
+    union  formatinfo  { unsigned char metadata[32]; };   // ->> Arbitrarily-sized
+    enum   formatstyle { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN };
     struct parsecmd /* final */ {
       /* ... ->> `NULL`-ish `::…name`s represent unrecognized command-line arguments */
       enum { ABOUT, CLOCK, HELP, LOG, RERUN } command;                           // ->> Command-line option identifier
       char const                             *name;                              // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
       char const                             *longName;                          // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
       char const                             *shortName;                         // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
-      std::size_t                             valueCount;                        // ->> Number of command-line arguments (after `::value`) evaluated
+      std::size_t                             valueCount;                        // ->> Number of command-line arguments (after `::argument`) evaluated
       bool                                  (*validate)(struct parsecmd const*); // ->> Predicate function determining the validity of this command-line option; Called through command-line `parse()`; Optionally `NULL`
       char                                   *argument;                          // ->> Command-line argument representing the              command-line option; Set    through command-line `parse()`
       char                                   *value;                             // ->> Command-line argument representing the value of the command-line option; Set    through command-line `parse()`
-      unsigned char                           metadata[sizeof(void*)];           // ->> Arbitrarily-sized
+      union {                                                                    //
+        unsigned char metadata[sizeof(void*)];                                   // ->> Arbitrarily-sized
+        void   *const _;                                                         // ->> Alignment
+      }
 
       /* ... ->> Default `::validate` predicates */
       static bool UNVALUED(struct parsecmd const* option) { return NULL == option -> value; }
       static bool VALUED  (struct parsecmd const* option) { return NULL != option -> value; }
     };
 
-    /* ... TODO -> Update Windows-specific garbage in `format(…)` */
+    /* ... */
     static void error(int const signal) /* [[noreturn]] extern "C" */ {
       if (NULL != catalog)
       switch (signal) {
@@ -192,38 +196,17 @@ int main(int count, char* arguments[]) /* noexcept */ {
         // ...
         styleSupported = streamDescriptor != -1 and ::isatty(streamDescriptor) == 1;
       #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
-        BOOL   WINAPI            (*GetConsoleMode)            (HANDLE, LPDWORD)                     = NULL;
-        BOOL   WINAPI            (*GetConsoleScreenBufferInfo)(HANDLE, PCONSOLE_SCREEN_BUFFER_INFO) = NULL;
-        HANDLE WINAPI            (*GetStdHandle)              (DWORD)                               = NULL;
-        BOOL   WINAPI            (*SetConsoleMode)            (HANDLE, DWORD)                       = NULL;
-        BOOL   WINAPI            (*SetConsoleTextAttribute)   (HANDLE, WORD)                        = NULL;
+        BOOL   WINAPI      (*const GetConsoleMode)            (HANDLE, LPDWORD)                     = NULL == libraries[kernel32].moduleHandle ? reinterpret_cast<BOOL   WINAPI (*)(HANDLE, LPDWORD)>                    (::GetProcAddress(libraryModuleHandle, "GetConsoleMode"));             // --> <windows.h>
+        BOOL   WINAPI      (*const GetConsoleScreenBufferInfo)(HANDLE, PCONSOLE_SCREEN_BUFFER_INFO) = NULL == libraries[kernel32].moduleHandle ? reinterpret_cast<BOOL   WINAPI (*)(HANDLE, PCONSOLE_SCREEN_BUFFER_INFO)>(::GetProcAddress(libraryModuleHandle, "GetConsoleScreenBufferInfo")); // --> <windows.h>
+        HANDLE WINAPI      (*const GetStdHandle)              (DWORD)                               = NULL == libraries[kernel32].moduleHandle ? reinterpret_cast<HANDLE WINAPI (*)(DWORD)>                              (::GetProcAddress(libraryModuleHandle, "GetStdHandle"));               // --> <windows.h>
+        BOOL   WINAPI      (*const SetConsoleMode)            (HANDLE, DWORD)                       = NULL == libraries[kernel32].moduleHandle ? reinterpret_cast<BOOL   WINAPI (*)(HANDLE, DWORD)>                      (::GetProcAddress(libraryModuleHandle, "SetConsoleMode"));             // --> <windows.h>
+        BOOL   WINAPI      (*const SetConsoleTextAttribute)   (HANDLE, WORD)                        = NULL == libraries[kernel32].moduleHandle ? reinterpret_cast<BOOL   WINAPI (*)(HANDLE, WORD)>                       (::GetProcAddress(libraryModuleHandle, "SetConsoleTextAttribute"));    // --> <windows.h>
         HMODULE                    libraryModuleHandle                                              = NULL;
-        WCHAR const                libraryName[]                                                    = L"kernel32" ".dll";
-        WCHAR                      libraryPath[MAX_PATH + 1u]                                       = L"";
-        UINT const                 libraryPathLength                                                = ::GetSystemDirectoryW(libraryPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
         DWORD                      streamConsoleMode                                                = 0x00u;
         CONSOLE_SCREEN_BUFFER_INFO streamConsoleScreenBufferInformation                             = {};
         HANDLE                     streamStandardDeviceHandle                                       = NULL;
 
         // ...
-        if (0u != libraryPathLength) {
-          libraryPath[libraryPathLength] = L'\\';
-
-          for (std::size_t index = 0u; ; ++index) {
-            libraryPath[index + libraryPathLength + 1u] = libraryName[index];
-            if (L'\0' == libraryName[index]) break;
-          }
-
-          if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &libraryModuleHandle))
-          if (NULL != libraryModuleHandle) {
-            GetConsoleMode             = reinterpret_cast<BOOL   WINAPI (*)(HANDLE, LPDWORD)>                    (::GetProcAddress(libraryModuleHandle, "GetConsoleMode"));             // --> <windows.h>
-            GetConsoleScreenBufferInfo = reinterpret_cast<BOOL   WINAPI (*)(HANDLE, PCONSOLE_SCREEN_BUFFER_INFO)>(::GetProcAddress(libraryModuleHandle, "GetConsoleScreenBufferInfo")); // --> <windows.h>
-            GetStdHandle               = reinterpret_cast<HANDLE WINAPI (*)(DWORD)>                              (::GetProcAddress(libraryModuleHandle, "GetStdHandle"));               // --> <windows.h>
-            SetConsoleMode             = reinterpret_cast<BOOL   WINAPI (*)(HANDLE, DWORD)>                      (::GetProcAddress(libraryModuleHandle, "SetConsoleMode"));             // --> <windows.h>
-            SetConsoleTextAttribute    = reinterpret_cast<BOOL   WINAPI (*)(HANDLE, WORD)>                       (::GetProcAddress(libraryModuleHandle, "SetConsoleTextAttribute"));    // --> <windows.h>
-          }
-        }
-
         streamStandardDeviceHandle = NULL != GetStdHandle ? GetStdHandle(STD_ERROR_HANDLE) : NULL;
         styleSupported             = INVALID_HANDLE_VALUE != streamStandardDeviceHandle and NULL != streamStandardDeviceHandle;
       #endif
@@ -298,7 +281,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
     }
 
     static bool message(void const* const message, std::FILE* const stream, std::size_t const stride) {
-      union character {
+      typedef union {
         static void spanof(unsigned char const character[], std::size_t const stride, std::size_t* const begin, std::size_t* const end) {
           // ... ->> Ignores `character` endianness, leading bytes, and trailing bytes (assumes it is a distinct set of `stride` code units)
           for (; *begin != stride; ++*begin) {
@@ -319,7 +302,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
             }
           }
         }
-      };
+      } character;
 
       std::size_t       messageBegin              = 0u;                                           //
       std::size_t       messageEnd                = 0u;                                           //
@@ -503,8 +486,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
       messageOutput[messageOutputLength] = '\0';
 
       // ...
-      (void) std::fflush (stream);                                       // ->> Ensure the `stream` delivers the `messageOutput` immediately
-      (void) std::setvbuf(stream, static_cast<char*>(NULL), _IONBF, 0u); //
+      (void) std::fflush (stream); // ->> Ensure the `stream` delivers the `messageOutput` immediately
+      (void) std::setvbuf(stream, static_cast<char*>(NULL), _IONBF, 0u);
 
       messageOutputted = EOF != std::fputs (messageOutput, stream);
       messageOutputted ? (void) std::fflush(stream) : std::clearerr(stream);
@@ -516,27 +499,137 @@ int main(int count, char* arguments[]) /* noexcept */ {
       static bool message(wchar_t const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(wchar_t)); }
 
     static void parse(char* arguments[], std::size_t const argumentsLength, struct parsecmd options[], std::size_t optionsLength) {
-      // TODO
-      for (std::size_t index = 0u; argumentsLength != index; ++index) {
-        char *const argument         = arguments[index];
-        bool        argumentIsOption = false;
-        std::size_t optionIndex      = 0u;
+      typedef union {
+        static char* nextchar(char* argument) {
+          while ('\0' != *argument)
+          switch (*argument) {
+            case '\f': case '\n': case '\r': case '\t': case '\v': case ' ': continue;
+            default: return argument;
+          }
+
+          return argument;
+        }
+      } argument;
+
+      // ...
+      for (std::size_t argumentIndex = 0u; argumentIndex != argumentsLength; ++argumentIndex) {
+        struct parsecmd *argumentOption = NULL;
 
         // ... TODO
-        for (struct parsecmd *option = options; option != options + optionsLength; ++option) {
-          struct parsecmd const fallback = *option;
+        for (struct parsecmd *option = options; NULL == argumentOption and option != options + optionsLength; ++option) {
+          typedef struct parsecmd parsecmd;
+          char const     *const argument       = arguments[argumentIndex];
+          struct parsecmd const fallbackOption = *option;
 
-          // ...
-          option -> argument
-            option -> name
-            catalog -> commandLineOptionShortTags option -> shortName
-            catalog -> commandLineOptionLongTags  option -> longName
+          // ... ->> Match based on the `option` name
+          for (char const *parsecmd:: *const names[] = {&parsecmd::name, &parsecmd::longName, &parsecmd::shortName}, *parsecmd:: *const *name = names; NULL == argumentOption and name != names + (sizeof names / sizeof(char const* parsecmd::*)); ++name)
+          if (NULL != catalog ->* *name) {
+            std::size_t        index      = 0u;
+            bool               tagged     = true;
+            std::size_t        tagOffset  = 0u;
+            char const *const *tags       = NULL;
+            std::size_t        tagsLength = 0u;
 
-          option -> value
-            catalog -> commandLineOptionValueTags option -> valueCount
+            // ... --> tags… = …; tagOffset = …;
+            if (&parsecmd::longName  == *name) { tags = catalog -> commandLineOptionLongTags;  tagsLength = catalog -> commandLineOptionLongTagsLength;  }
+            if (&parsecmd::shortName == *name) { tags = catalog -> commandLineOptionShortTags; tagsLength = catalog -> commandLineOptionShortTagsLength; }
 
-          option -> validate
-            *option = fallback
+            if (NULL == tags or 0u == tagsLength) {
+              tagged     = false;
+              tags       = &"";
+              tagsLength = 1u;
+            }
+
+            tagOffset = tagged ? argument::nextchar(argument) - argument : tagOffset;
+
+            // ... ->> Validate based on the `tag`
+            for (std::size_t tagIndex = 0u; tagIndex != tagsLength; ++tagIndex) {
+              char const *tag = tags[tagIndex];
+
+              // ...
+              for (std::size_t subindex = 0u; ; ++subindex) {
+                if ('\0' == tag[subindex]) {
+                  index = subindex + tagOffset;
+                  break;
+                }
+
+                if ('\0' == argument[subindex + tagOffset] or argument[subindex + tagOffset] != tag[subindex]) {
+                  tag = NULL;
+                  break;
+                }
+              }
+
+              if (NULL == tag)
+              continue;
+
+              // ...
+              index = tagged ? argument::nextchar(argument + index) - argument : index;
+
+              // CHECK THE NAME
+              // CHECK FOR TRIM BEFORE END/ VALUE TAG
+
+              argumentOption = ...; // IT'S COOL
+            }
+          }
+
+          for (..) {
+            // option -> argument
+            //   option -> name
+            //   catalog -> commandLineOptionShortTags option -> shortName
+            //   catalog -> commandLineOptionLongTags  option -> longName
+
+            // ... ->> Ensure the name constitutes the entire `argument` or precedes its value
+            if (NULL != argumentOption)
+            for (bool valued = false; '\0' != argument[index]; ++index) {
+              switch (argument[index]) {
+                case '\f': case '\n': case '\r': case '\t': case '\v': case ' ':
+                continue;
+              }
+
+              for (char const *const *commandLineOptionValueTag = catalog -> commandLineOptionValueTags; commandLineOptionValueTag != catalog -> commandLineOptionValueTags + catalog -> commandLineOptionValueTagsLength; ++commandLineOptionValueTag)
+              for (std::size_t subindex = 0u; ; ++subindex) {
+                if (argument[index + subindex] != (*commandLineOptionValueTag)[subindex])
+                break;
+
+                if ('\0' == (*commandLineOptionValueTag)[subindex]) {
+                  valued = true;
+                  break;
+                }
+              }
+
+              if (valued)
+              break;
+
+              argumentOption = NULL;
+            }
+
+            if (NULL != argumentOption)
+            break;
+          }
+
+          // ... ->> Match based on the value
+          if (NULL != catalog -> commandLineOptionValueTags and catalog -> commandLineOptionValueTagsLength)
+          // for (index = 0u; index != catalog -> commandLineOptionValueTagsLength; ++index) {
+          //   char const *const commandLineOptionValueTag = catalog -> commandLineOptionValueTags[index];
+          // }
+          // option -> value
+          //   catalog -> commandLineOptionValueTags option -> valueCount
+
+          // option -> validate
+          //   *option = fallbackOption
+        }
+
+        for (struct parsecmd *option = options; NULL == argumentOption and option != options + optionsLength; ++option) {
+          if (NULL == option -> longName and NULL == option -> name and NULL == option -> shortName) {
+            // option -> validate();
+            //   *option = fallbackOption
+          }
+        }
+
+        // ...
+        if (NULL != argumentOption) {
+          // argumentOption -> argument = argument;
+          // argumentOption -> value    = ???;
         }
       }
     }
@@ -575,19 +668,22 @@ int main(int count, char* arguments[]) /* noexcept */ {
       // ...
       (void) ::new (commandLineOptions[1].metadata) void*(commandLineOptions + 7); // ->> `parse::sequenced(…)` after `commandLineOptions[7]`
 
-      catalog -> applicationExitCode        = EXIT_SUCCESS;               // ->> Used by `::quick_exit(…)` primarily
-      catalog -> applicationName            = "Cataloger";                //
-      catalog -> clocked                    = false;                      // ->> Catalog's internal clock is active
-      catalog -> clockFileStream            = NULL;                       // ->> File stream representing the Catalog's internal clock
-      catalog -> clockInterval              = 86400000u;                  // ->> Milliseconds
-      catalog -> clockPathAllocated         = false;                      //
-      catalog -> commandLineArguments       = arguments;                  // ->> Useful for determining how the standard C/ C++ command-line `arguments` were evaluated; Optionally `NULL`-terminated
-      catalog -> commandLineArgumentsLength = length;                     //
-      catalog -> commandLineOptionLongTags  = commandLineOptionLongTags;  // ->> Denotes long   command-line options interchangeably
-      catalog -> commandLineOptionShortTags = commandLineOptionShortTags; // ->> Denotes short  command-line options interchangeably
-      catalog -> commandLineOptionValueTags = commandLineOptionValueTags; // ->> Denotes valued command-line options interchangeably
-      catalog -> messagePrefix              = "cataloger" ": ";           // ->> Used by `::message(…)` primarily; Optionally `NULL`
-      catalog -> messageSuffix              = "\r\n";                     // ->> Used by `::message(…)` primarily; Optionally `NULL`
+      catalog -> applicationExitCode              = EXIT_SUCCESS;                                            // ->> Used by `::quick_exit(…)` primarily
+      catalog -> applicationName                  = "Cataloger";                                             //
+      catalog -> clocked                          = false;                                                   // ->> Catalog's internal clock is active
+      catalog -> clockFileStream                  = NULL;                                                    // ->> File stream representing the Catalog's internal clock
+      catalog -> clockInterval                    = 86400000u;                                               // ->> Milliseconds
+      catalog -> clockPathAllocated               = false;                                                   //
+      catalog -> commandLineArguments             = arguments;                                               // ->> Useful for determining how the standard C/ C++ command-line `arguments` were evaluated; Optionally `NULL`-terminated
+      catalog -> commandLineArgumentsLength       = length;                                                  //
+      catalog -> commandLineOptionLongTags        = commandLineOptionLongTags;                               // ->> Prefix that denotes long command-line options interchangeably; Optionally `NULL`
+      catalog -> commandLineOptionLongTagsLength  = sizeof commandLineOptionLongTags / sizeof(char const*);  //
+      catalog -> commandLineOptionShortTags       = commandLineOptionShortTags;                              // ->> Prefix that denotes short command-line options interchangeably; Optionally `NULL`
+      catalog -> commandLineOptionShortTagsLength = sizeof commandLineOptionShortTags / sizeof(char const*); //
+      catalog -> commandLineOptionValueTags       = commandLineOptionValueTags;                              // ->> Affix that denotes valued command-line options interchangeably; Optionally `NULL`
+      catalog -> commandLineOptionValueTagsLength = sizeof commandLineOptionValueTags / sizeof(char const*); //
+      catalog -> messagePrefix                    = "cataloger" ": ";                                        // ->> Used by `::message(…)` primarily; Optionally `NULL`
+      catalog -> messageSuffix                    = "\r\n";                                                  // ->> Used by `::message(…)` primarily; Optionally `NULL`
 
       #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
         LPWSTR* (*const CommandLineToArgvW) (LPCWSTR, int*)                                       = NULL == libraries[shell32] .moduleHandle ? NULL : reinterpret_cast<LPWSTR* (*)(LPCWSTR, int*)>                                      (::GetProcAddress(libraries[shell32] .moduleHandle, "CommandLineToArgvW"));  // --> <shellapi.h>
@@ -606,43 +702,36 @@ int main(int count, char* arguments[]) /* noexcept */ {
           // ...
           if (NULL != WideCharToMultiByte)
           if (NULL != commandLineArguments and static_cast<unsigned>(commandLineArgumentsLength) <= length) {
-            char       *allocation = NULL;
+            char       *allocation = NULL, *iterator = NULL;
+            bool        normalized = false;
             std::size_t size       = 0u;
 
-            // ... --> allocation = …; size = …;
+            // ...
             for (int index = 0; commandLineArgumentsLength != index; ++index) {
               int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, static_cast<LPSTR>(NULL), 0u, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
 
               // ...
-              if (0 == commandLineArgumentSize) {
-                size = 0u;
-                break;
-              }
-
+              if (0 == commandLineArgumentSize) { size = 0u; break; }
               size += commandLineArgumentSize;
             }
 
             allocation = size ? /* ->> Likely memory leak */ ::new (std::nothrow) char[size = /* ->> Non-NUL characters */ (size / sizeof(char)) + /* ->> NUL terminators */ (commandLineArgumentsLength * sizeof(char))] : NULL;
+            iterator   = allocation;
 
             // ... --> catalog -> commandLineArguments[…] = …;
-            if (NULL != allocation) {
-              char *iterator   = allocation;
-              bool  normalized = false;
+            if (NULL != allocation)
+            for (int index = 0; commandLineArgumentsLength != index; ++index) {
+              int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, iterator, size, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
 
-              // ...
-              for (int index = 0; commandLineArgumentsLength != index; ++index) {
-                int const commandLineArgumentSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, commandLineArguments[index], -1, iterator, size, static_cast<LPCCH>(NULL), static_cast<LPBOOL>(NULL));
-
-                if (0 != commandLineArgumentSize) {
-                  catalog -> commandLineArguments[index] = iterator; // ->> Normalize standard C/ C++ command-line argument
-                  iterator                              += commandLineArgumentSize;
-                  normalized                             = true;
-                }
+              if (0 != commandLineArgumentSize) {
+                catalog -> commandLineArguments[index] = iterator; // ->> Normalize standard C/ C++ command-line argument
+                iterator                              += commandLineArgumentSize;
+                normalized                             = true;
               }
-
-              if (not normalized)
-              ::delete[] allocation;
             }
+
+            if (not normalized)
+            ::delete[] allocation;
           }
 
           if (NULL != LocalFree)
@@ -661,34 +750,17 @@ int main(int count, char* arguments[]) /* noexcept */ {
         }
       #endif
 
-      // ... ->> Trim `::commandLineArguments`
-      for (std::size_t index = 0u; index != catalog -> commandLineArgumentsLength; ++index) {
-        char **const commandLineArgument       = catalog -> commandLineArguments + index;
-        std::size_t  commandLineArgumentLength = 0u;
-
-        // ... --> commandLineArgumentLength = …;
-        while (SIZE_MAX != commandLineArgumentLength and '\0' != (*commandLineArgument)[commandLineArgumentLength])
-        ++commandLineArgumentLength;
-
-        // ...
-        for (std::size_t subindex = commandLineArgumentLength, trim = true; trim and subindex--; )
-        switch ((*commandLineArgument)[subindex]) {
-          case ' ': case '\f': case '\n': case '\r': case '\t': case '\v': continue;
-          default: { *((*commandLineArgument) + subindex + 1u) = '\0'; trim = false; } break;
-        }
-
-        for (std::size_t subindex = 0u, trim = true; trim and commandLineArgumentLength != subindex; ++subindex)
-        switch ((*commandLineArgument)[subindex]) {
-          case ' ': case '\f': case '\n': case '\r': case '\t': case '\v': continue;
-          default: { *commandLineArgument = *commandLineArgument + subindex; trim = false; } break;
-        }
-      }
-
       // ... TODO -> Handle parse properly
       catalog -> parse(catalog -> commandLineArguments, catalog -> commandLineArgumentsLength, commandLineOptions, sizeof commandLineOptions / sizeof *commandLineOptions);
-      catalog -> clockPath        = length > 2u ? arguments[2] : NULL;    // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
-      catalog -> logDirectoryPath = length > 1u ? arguments[1] : NULL;    // ->> Filesystem location for storing catalogs;          Assume NUL-terminated
-      catalog -> rerun            = length > 3u and NULL != arguments[3]; // ->> Catalog is re-executed
+      catalog -> clockPath                        = length > 2u ? arguments[2] : NULL;    // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
+      catalog -> commandLineOptionLongTags        = &"--";                                //
+      catalog -> commandLineOptionLongTagsLength  = 0u;                                   //
+      catalog -> commandLineOptionShortTags       = &"-";                                 //
+      catalog -> commandLineOptionShortTagsLength = 0u;                                   //
+      catalog -> commandLineOptionValueTags       = &"=";                                 //
+      catalog -> commandLineOptionValueTagsLength = 0u;                                   //
+      catalog -> logDirectoryPath                 = length > 1u ? arguments[1] : NULL;    // ->> Filesystem location for storing catalogs; Assume NUL-terminated
+      catalog -> rerun                            = length > 3u and NULL != arguments[3]; // ->> Catalog is re-executed
 
       // ... ->> Handle unexpected application `error()`
       (void) std::signal   (SIGTERM, &catalog -> error); //
@@ -735,8 +807,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
     char             **commandLineArguments;
     std::size_t        commandLineArgumentsLength;
     char const *const *commandLineOptionLongTags;
+    std::size_t        commandLineOptionLongTagsLength;
     char const *const *commandLineOptionShortTags;
+    std::size_t        commandLineOptionShortTagsLength;
     char const *const *commandLineOptionValueTags;
+    std::size_t        commandLineOptionValueTagsLength;
     char const        *logDirectoryPath;
     char const        *messagePrefix;
     char const        *messageSuffix;
@@ -815,7 +890,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       if (catalog -> clockPath[catalogClockPathLength] == pathDelimiters[subindex]) {
         for (char *iterator = catalog -> clockPath + (catalogClockPathLength + 1u); ; ++iterator) {
           switch (*iterator) {
-            case ' ': case '\f': case '\n': case '\r': case '\t': case '\v':
+            case '\f': case '\n': case '\r': case '\t': case '\v': case ' ':
             continue;
           }
 
@@ -844,7 +919,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       switch (catalog -> clockPath[clockIndex]) {
-        case ' ': case '\f': case '\n': case '\r': case '\t': case '\v':
+        case '\f': case '\n': case '\r': case '\t': case '\v': case ' ':
         continue;
       }
 
@@ -967,377 +1042,379 @@ int main(int count, char* arguments[]) /* noexcept */ {
       applicationFilePath[MAX_PATH] = L'\0';
 
       /* ... ->> Windows Task Scheduler --- TODO (Lapys) -> Remove `false` condition */
-      if (false and not catalog -> clocked)
-      if (NULL != libraries[credui].moduleHandle and NULL != libraries[kernel32].moduleHandle and NULL != libraries[ole32].moduleHandle and NULL != libraries[oleaut32].moduleHandle and NULL != libraries[taskschd].moduleHandle) {
-        HRESULT (*const CoCreateInstance)                  (REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)                                                         = reinterpret_cast<HRESULT         (*)(REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)>                                                        (::GetProcAddress(libraries[ole32]   .moduleHandle, "CoCreateInstance"));                   // --> <objbase.h>
-        HRESULT (*const CoInitializeEx)                    (LPVOID, DWORD)                                                                                      = reinterpret_cast<HRESULT         (*)(LPVOID, DWORD)>                                                                                     (::GetProcAddress(libraries[ole32]   .moduleHandle, "CoInitializeEx"));                     // --> <objbase.h>
-        HRESULT (*const CoInitializeSecurity)              (PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*) = reinterpret_cast<HRESULT         (*)(PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*)>(::GetProcAddress(libraries[ole32]   .moduleHandle, "CoInitializeSecurity"));               // --> <objbase.h>
-        void    (*const CoUninitialize)                    ()                                                                                                   = reinterpret_cast<void            (*)()>                                                                                                  (::GetProcAddress(libraries[ole32]   .moduleHandle, "CoUninitialize"));                     // --> <objbase.h>
-        DWORD   (*const CredUIPromptForCredentialsW)       (PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)                = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)>               (::GetProcAddress(libraries[credui]  .moduleHandle, "CredUIPromptForCredentialsW"));        // --> <wincred.h>
-        DWORD   (*const CredUIPromptForWindowsCredentialsW)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)                        = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)>                       (::GetProcAddress(libraries[credui]  .moduleHandle, "CredUIPromptForWindowsCredentialsW")); // --> <wincred.h>
-        BOOL    (*const CredUnPackAuthenticationBufferW)   (DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)                                = reinterpret_cast<CREDUIAPI BOOL  (*)(DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)>                               (::GetProcAddress(libraries[credui]  .moduleHandle, "CredUnPackAuthenticationBufferW"));    // --> <wincred.h>
-        LPWSTR  (*const GetCommandLineW)                   ()                                                                                                   = reinterpret_cast<LPWSTR          (*)()>                                                                                                  (::GetProcAddress(libraries[kernel32].moduleHandle, "GetCommandLineW"));                    // --> <windows.h> → <processenv.h>
-        BSTR    (*const SysAllocString)                    (OLECHAR const*)                                                                                     = reinterpret_cast<BSTR            (*)(OLECHAR const*)>                                                                                    (::GetProcAddress(libraries[oleaut32].moduleHandle, "SysAllocString"));                     // --> <oleauto.h>
-        void    (*const SysFreeString)                     (BSTR)                                                                                               = reinterpret_cast<void            (*)(BSTR)>                                                                                              (::GetProcAddress(libraries[oleaut32].moduleHandle, "SysFreeString"));                      // --> <oleauto.h>
-        HRESULT (*const VariantClear)                      (VARIANTARG*)                                                                                        = reinterpret_cast<HRESULT         (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].moduleHandle, "VariantClear"));                       // --> <oleauto.h>
-        void    (*const VariantInit)                       (VARIANTARG*)                                                                                        = reinterpret_cast<void            (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].moduleHandle, "VariantInit"));                        // --> <oleauto.h>
+      if _WIN32_WINNT >= 0x0600
+        if (false and not catalog -> clocked)
+        if (NULL != libraries[credui].moduleHandle and NULL != libraries[kernel32].moduleHandle and NULL != libraries[ole32].moduleHandle and NULL != libraries[oleaut32].moduleHandle and NULL != libraries[taskschd].moduleHandle) {
+          HRESULT (*const CoCreateInstance)                  (REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)                                                         = reinterpret_cast<HRESULT         (*)(REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID)>                                                        (::GetProcAddress(libraries[ole32]   .moduleHandle, "CoCreateInstance"));                   // --> <objbase.h>
+          HRESULT (*const CoInitializeEx)                    (LPVOID, DWORD)                                                                                      = reinterpret_cast<HRESULT         (*)(LPVOID, DWORD)>                                                                                     (::GetProcAddress(libraries[ole32]   .moduleHandle, "CoInitializeEx"));                     // --> <objbase.h>
+          HRESULT (*const CoInitializeSecurity)              (PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*) = reinterpret_cast<HRESULT         (*)(PSECURITY_DESCRIPTOR, LONG, SOLE_AUTHENTICATION_SERVICE*, void*, DWORD, DWORD, void*, DWORD, void*)>(::GetProcAddress(libraries[ole32]   .moduleHandle, "CoInitializeSecurity"));               // --> <objbase.h>
+          void    (*const CoUninitialize)                    ()                                                                                                   = reinterpret_cast<void            (*)()>                                                                                                  (::GetProcAddress(libraries[ole32]   .moduleHandle, "CoUninitialize"));                     // --> <objbase.h>
+          DWORD   (*const CredUIPromptForCredentialsW)       (PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)                = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, PCWSTR, PCtxtHandle, DWORD, PWSTR, ULONG, PWSTR, ULONG, BOOL*, DWORD)>               (::GetProcAddress(libraries[credui]  .moduleHandle, "CredUIPromptForCredentialsW"));        // --> <wincred.h>
+          DWORD   (*const CredUIPromptForWindowsCredentialsW)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)                        = reinterpret_cast<CREDUIAPI DWORD (*)(PCREDUI_INFOW, DWORD, ULONG*, LPCVOID, ULONG, LPVOID*, ULONG*, BOOL*, DWORD)>                       (::GetProcAddress(libraries[credui]  .moduleHandle, "CredUIPromptForWindowsCredentialsW")); // --> <wincred.h>
+          BOOL    (*const CredUnPackAuthenticationBufferW)   (DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)                                = reinterpret_cast<CREDUIAPI BOOL  (*)(DWORD, PVOID, DWORD, LPWSTR, DWORD*, LPWSTR, DWORD*, LPWSTR, DWORD*)>                               (::GetProcAddress(libraries[credui]  .moduleHandle, "CredUnPackAuthenticationBufferW"));    // --> <wincred.h>
+          LPWSTR  (*const GetCommandLineW)                   ()                                                                                                   = reinterpret_cast<LPWSTR          (*)()>                                                                                                  (::GetProcAddress(libraries[kernel32].moduleHandle, "GetCommandLineW"));                    // --> <windows.h> → <processenv.h>
+          BSTR    (*const SysAllocString)                    (OLECHAR const*)                                                                                     = reinterpret_cast<BSTR            (*)(OLECHAR const*)>                                                                                    (::GetProcAddress(libraries[oleaut32].moduleHandle, "SysAllocString"));                     // --> <oleauto.h>
+          void    (*const SysFreeString)                     (BSTR)                                                                                               = reinterpret_cast<void            (*)(BSTR)>                                                                                              (::GetProcAddress(libraries[oleaut32].moduleHandle, "SysFreeString"));                      // --> <oleauto.h>
+          HRESULT (*const VariantClear)                      (VARIANTARG*)                                                                                        = reinterpret_cast<HRESULT         (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].moduleHandle, "VariantClear"));                       // --> <oleauto.h>
+          void    (*const VariantInit)                       (VARIANTARG*)                                                                                        = reinterpret_cast<void            (*)(VARIANTARG*)>                                                                                       (::GetProcAddress(libraries[oleaut32].moduleHandle, "VariantInit"));                        // --> <oleauto.h>
 
-        // ... -> Derived from `https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c---`
-        if (NULL != CoCreateInstance and NULL != CoInitializeEx and NULL != CoInitializeSecurity and NULL != CoUninitialize and NULL != SysAllocString and NULL != VariantInit and (NULL != CredUIPromptForCredentialsW or (NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW)))
-        if (SUCCEEDED(CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
-          #ifdef __DATE__ // --> "Mmm DD YYYY"
-            char const DATE[12] = __DATE__; // --> std::asctime(…)
-          #else
-            char const DATE[] = "Jan 00 2024";
-          #endif
-          #ifdef __TIME__ // --> "HH:MM:SS"
-            char const TIME[9] = __TIME__;
-          #else
-            char const TIME[] = "12:00:00";
-          #endif
-          LPVOID              credentialsAuthenticationBuffer                             = NULL;                                                   // --> CredUIPromptForWindowsCredentialsW(…)
-          ULONG               credentialsAuthenticationBufferSize                         = 0u;                                                     // --> CredUIPromptForWindowsCredentialsW(…)
-          ULONG               credentialsAuthenticationPackage                            = 0x00u;                                                  // --> CredUIPromptForWindowsCredentialsW(…)
-          WCHAR               credentialsDomainName[CREDUI_MAX_DOMAIN_TARGET_LENGTH + 1u] = L"";                                                    // --> CredUnPackAuthenticationBufferW   (…)
-          DWORD               credentialsDomainNameSize                                   = sizeof credentialsDomainName / sizeof(WCHAR);           // --> CredUnPackAuthenticationBufferW   (…)
-          WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u]        = L"";                                                    // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
-          DWORD               credentialsPasswordSize                                     = sizeof credentialsPassword / sizeof(WCHAR);             // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
-          WCHAR const *const  credentialsPromptCaption                                    = applicationName;                                        // --> WCHAR[CREDUI_MAX_CAPTION_LENGTH]
-          WCHAR const         credentialsPromptMessage[CREDUI_MAX_MESSAGE_LENGTH]         = L"Set up internal clock via the Task Scheduler ⏱️";     //
-          WCHAR               credentialsUsername[CREDUI_MAX_USERNAME_LENGTH + 1u]        = L"";                                                    // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
-          DWORD               credentialsUsernameSize                                     = sizeof credentialsUsername / sizeof(WCHAR);             // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
-          CREDUI_INFOW        credentialsUIInformation                                    = {};                                                     //
-          IRegisteredTask    *registeredTask                                              = NULL;                                                   // ->> Must remain `NULL`
-          int                 standardInputDescriptor                                     = -1;                                                     //
-          bool                standardInputIsTeletype                                     = false;                                                  //
-          bool                standardInputNewlined                                       = true;                                                   //
-          IAction            *taskAction                                                  = NULL;                                                   //
-          IActionCollection  *taskActionCollection                                        = NULL;                                                   //
-          BSTR const          taskAuthor                                                  = SysAllocString(L"LapysDev");                            //
-          BSTR const          taskDescription                                             = SysAllocString(L"Cataloger internal clock ⏱️");         //
-          void               *taskDailyTrigger                                            = NULL;                                                   // --> IDailyTrigger*
-          short const         taskDailyTriggerInterval                                    = 1;                                                      //
-          BSTR  const         taskDailyTriggerName                                        = SysAllocString(L"checkup");                             //
-          BSTR                taskDailyTriggerTimeEnd                                     = NULL;                                                   //
-          WCHAR               taskDailyTriggerTimeEndBuffer[]                             = L"20\0\0-01-01" "T" "\0\0:\0\0:\0\0";                   // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-          BSTR                taskDailyTriggerTimeStart                                   = NULL;                                                   //
-          WCHAR               taskDailyTriggerTimeStartBuffer[]                           = L"20\0\0-01-01" "T" "\0\0:\0\0:\0\0";                   // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
-          ITaskDefinition    *taskDefinition                                              = NULL;                                                   //
-          void               *taskExecutableAction                                        = NULL;                                                   // --> IExecAction*
-          BSTR                taskExecutableArguments                                     = NULL;                                                   // --> GetCommandLineW(…)
-          WCHAR              *taskExecutableArgumentsBuffer                               = NULL;                                                   //
-          BSTR                taskExecutablePath                                          = NULL;                                                   // --> GetModuleFileNameW(…)
-          ITaskFolder        *taskFolder                                                  = NULL;                                                   //
-          VARIANT             taskFolderPassword                                          = {};                                                     //
-          BSTR const          taskFolderPath                                              = SysAllocString(L"\\");                                  // ->> Root folder
-          VARIANT             taskFolderSecurityDescriptor                                = {};                                                     //
-          VARIANT             taskFolderUsername                                          = {};                                                     //
-          BSTR const          taskName                                                    = SysAllocString(applicationName);                        //
-          IRegistrationInfo  *taskRegistrationInformation                                 = NULL;                                                   //
-          IRepetitionPattern *taskRepititionPattern                                       = NULL;                                                   //
-          BSTR const          taskRepititionPatternDuration                               = SysAllocString(L"PT4M");                                // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-duration-repetitiontype-element`
-          BSTR const          taskRepititionPatternInterval                               = SysAllocString(L"PT1M");                                // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-interval-repetitiontype-element`
-          void               *taskService                                                 = NULL;                                                   // --> ITaskService*
-          VARIANT             taskServiceDomain                                           = {};                                                     //
-          VARIANT             taskServicePassword                                         = {};                                                     //
-          VARIANT             taskServiceServerName                                       = {};                                                     //
-          VARIANT             taskServiceUser                                             = {};                                                     //
-          ITrigger           *taskTrigger                                                 = NULL;                                                   //
-          ITriggerCollection *taskTriggerCollection                                       = NULL;                                                   //
-          struct {
-            std::time_t const value;                //
-            unsigned int      year;                 // --> YYYY
-            unsigned int      hour, minute, second; // --> HH:MM:SS
-          } time = {std::time(static_cast<std::time_t*>(NULL)), 0000u, 00u, 00u, 00u};
+          // ... -> Derived from `https://learn.microsoft.com/en-us/windows/win32/taskschd/daily-trigger-example--c---`
+          if (NULL != CoCreateInstance and NULL != CoInitializeEx and NULL != CoInitializeSecurity and NULL != CoUninitialize and NULL != SysAllocString and NULL != VariantInit and (NULL != CredUIPromptForCredentialsW or (NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW)))
+          if (SUCCEEDED(CoInitializeEx(static_cast<LPVOID>(NULL), ::COINIT_MULTITHREADED))) {
+            #ifdef __DATE__ // --> "Mmm DD YYYY"
+              char const DATE[12] = __DATE__; // --> std::asctime(…)
+            #else
+              char const DATE[] = "Jan 00 2024";
+            #endif
+            #ifdef __TIME__ // --> "HH:MM:SS"
+              char const TIME[9] = __TIME__;
+            #else
+              char const TIME[] = "12:00:00";
+            #endif
+            LPVOID              credentialsAuthenticationBuffer                             = NULL;                                                   // --> CredUIPromptForWindowsCredentialsW(…)
+            ULONG               credentialsAuthenticationBufferSize                         = 0u;                                                     // --> CredUIPromptForWindowsCredentialsW(…)
+            ULONG               credentialsAuthenticationPackage                            = 0x00u;                                                  // --> CredUIPromptForWindowsCredentialsW(…)
+            WCHAR               credentialsDomainName[CREDUI_MAX_DOMAIN_TARGET_LENGTH + 1u] = L"";                                                    // --> CredUnPackAuthenticationBufferW   (…)
+            DWORD               credentialsDomainNameSize                                   = sizeof credentialsDomainName / sizeof(WCHAR);           // --> CredUnPackAuthenticationBufferW   (…)
+            WCHAR               credentialsPassword[CREDUI_MAX_PASSWORD_LENGTH + 1u]        = L"";                                                    // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+            DWORD               credentialsPasswordSize                                     = sizeof credentialsPassword / sizeof(WCHAR);             // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+            WCHAR const *const  credentialsPromptCaption                                    = applicationName;                                        // --> WCHAR[CREDUI_MAX_CAPTION_LENGTH]
+            WCHAR const         credentialsPromptMessage[CREDUI_MAX_MESSAGE_LENGTH]         = L"Set up internal clock via the Task Scheduler ⏱️";     //
+            WCHAR               credentialsUsername[CREDUI_MAX_USERNAME_LENGTH + 1u]        = L"";                                                    // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+            DWORD               credentialsUsernameSize                                     = sizeof credentialsUsername / sizeof(WCHAR);             // --> CredUIPromptForCredentialsW(…) or CredUnPackAuthenticationBufferW(…)
+            CREDUI_INFOW        credentialsUIInformation                                    = {};                                                     //
+            IRegisteredTask    *registeredTask                                              = NULL;                                                   // ->> Must remain `NULL`
+            int                 standardInputDescriptor                                     = -1;                                                     //
+            bool                standardInputIsTeletype                                     = false;                                                  //
+            bool                standardInputNewlined                                       = true;                                                   //
+            IAction            *taskAction                                                  = NULL;                                                   //
+            IActionCollection  *taskActionCollection                                        = NULL;                                                   //
+            BSTR const          taskAuthor                                                  = SysAllocString(L"LapysDev");                            //
+            BSTR const          taskDescription                                             = SysAllocString(L"Cataloger internal clock ⏱️");         //
+            void               *taskDailyTrigger                                            = NULL;                                                   // --> IDailyTrigger*
+            short const         taskDailyTriggerInterval                                    = 1;                                                      //
+            BSTR  const         taskDailyTriggerName                                        = SysAllocString(L"checkup");                             //
+            BSTR                taskDailyTriggerTimeEnd                                     = NULL;                                                   //
+            WCHAR               taskDailyTriggerTimeEndBuffer[]                             = L"20\0\0-01-01" "T" "\0\0:\0\0:\0\0";                   // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+            BSTR                taskDailyTriggerTimeStart                                   = NULL;                                                   //
+            WCHAR               taskDailyTriggerTimeStartBuffer[]                           = L"20\0\0-01-01" "T" "\0\0:\0\0:\0\0";                   // --> YYYY-MM-DDTHH:MM:SS(+-)(timezone)
+            ITaskDefinition    *taskDefinition                                              = NULL;                                                   //
+            void               *taskExecutableAction                                        = NULL;                                                   // --> IExecAction*
+            BSTR                taskExecutableArguments                                     = NULL;                                                   // --> GetCommandLineW(…)
+            WCHAR              *taskExecutableArgumentsBuffer                               = NULL;                                                   //
+            BSTR                taskExecutablePath                                          = NULL;                                                   // --> GetModuleFileNameW(…)
+            ITaskFolder        *taskFolder                                                  = NULL;                                                   //
+            VARIANT             taskFolderPassword                                          = {};                                                     //
+            BSTR const          taskFolderPath                                              = SysAllocString(L"\\");                                  // ->> Root folder
+            VARIANT             taskFolderSecurityDescriptor                                = {};                                                     //
+            VARIANT             taskFolderUsername                                          = {};                                                     //
+            BSTR const          taskName                                                    = SysAllocString(applicationName);                        //
+            IRegistrationInfo  *taskRegistrationInformation                                 = NULL;                                                   //
+            IRepetitionPattern *taskRepititionPattern                                       = NULL;                                                   //
+            BSTR const          taskRepititionPatternDuration                               = SysAllocString(L"PT4M");                                // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-duration-repetitiontype-element`
+            BSTR const          taskRepititionPatternInterval                               = SysAllocString(L"PT1M");                                // ->> `https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-interval-repetitiontype-element`
+            void               *taskService                                                 = NULL;                                                   // --> ITaskService*
+            VARIANT             taskServiceDomain                                           = {};                                                     //
+            VARIANT             taskServicePassword                                         = {};                                                     //
+            VARIANT             taskServiceServerName                                       = {};                                                     //
+            VARIANT             taskServiceUser                                             = {};                                                     //
+            ITrigger           *taskTrigger                                                 = NULL;                                                   //
+            ITriggerCollection *taskTriggerCollection                                       = NULL;                                                   //
+            struct {
+              std::time_t const value;                //
+              unsigned int      year;                 // --> YYYY
+              unsigned int      hour, minute, second; // --> HH:MM:SS
+            } time = {std::time(static_cast<std::time_t*>(NULL)), 0000u, 00u, 00u, 00u};
 
-          // ... --> time = …;
-          for (struct { char const *text; unsigned int *time; std::size_t begin, end; } const indexes[] = {
-            {TIME, &time.hour,   0u, 1u},
-            {TIME, &time.minute, 3u, 4u},
-            {TIME, &time.second, 6u, 7u},
-            {DATE, &time.year,   7u, 10u}
-          }, *index = indexes; index != indexes + (sizeof indexes / sizeof *indexes); ++index) {
-            for (std::size_t subindex = index -> end + 1u; index -> begin != subindex--; )
-            switch (index -> text[subindex]) {
-              case '0': *(index -> time) = (*(index -> time) * 10u) + 0u; break;
-              case '1': *(index -> time) = (*(index -> time) * 10u) + 1u; break;
-              case '2': *(index -> time) = (*(index -> time) * 10u) + 2u; break;
-              case '3': *(index -> time) = (*(index -> time) * 10u) + 3u; break;
-              case '4': *(index -> time) = (*(index -> time) * 10u) + 4u; break;
-              case '5': *(index -> time) = (*(index -> time) * 10u) + 5u; break;
-              case '6': *(index -> time) = (*(index -> time) * 10u) + 6u; break;
-              case '7': *(index -> time) = (*(index -> time) * 10u) + 7u; break;
-              case '8': *(index -> time) = (*(index -> time) * 10u) + 8u; break;
-              case '9': *(index -> time) = (*(index -> time) * 10u) + 9u; break;
+            // ... --> time = …;
+            for (struct { char const *text; unsigned int *time; std::size_t begin, end; } const indexes[] = {
+              {TIME, &time.hour,   0u, 1u},
+              {TIME, &time.minute, 3u, 4u},
+              {TIME, &time.second, 6u, 7u},
+              {DATE, &time.year,   7u, 10u}
+            }, *index = indexes; index != indexes + (sizeof indexes / sizeof *indexes); ++index) {
+              for (std::size_t subindex = index -> end + 1u; index -> begin != subindex--; )
+              switch (index -> text[subindex]) {
+                case '0': *(index -> time) = (*(index -> time) * 10u) + 0u; break;
+                case '1': *(index -> time) = (*(index -> time) * 10u) + 1u; break;
+                case '2': *(index -> time) = (*(index -> time) * 10u) + 2u; break;
+                case '3': *(index -> time) = (*(index -> time) * 10u) + 3u; break;
+                case '4': *(index -> time) = (*(index -> time) * 10u) + 4u; break;
+                case '5': *(index -> time) = (*(index -> time) * 10u) + 5u; break;
+                case '6': *(index -> time) = (*(index -> time) * 10u) + 6u; break;
+                case '7': *(index -> time) = (*(index -> time) * 10u) + 7u; break;
+                case '8': *(index -> time) = (*(index -> time) * 10u) + 8u; break;
+                case '9': *(index -> time) = (*(index -> time) * 10u) + 9u; break;
+              }
             }
-          }
 
-          if (time.value != static_cast<std::time_t>(-1)) {
-            struct std::tm *const calenderTime = std::gmtime(&time.value);
+            if (time.value != static_cast<std::time_t>(-1)) {
+              struct std::tm *const calenderTime = std::gmtime(&time.value);
 
-            if (NULL != calenderTime) {
-              time.hour   = calenderTime -> tm_hour;
-              time.minute = calenderTime -> tm_min;
-              time.second = calenderTime -> tm_sec  % /* ->> Correct for C89 leap-second defect */ 61;
-              time.year   = calenderTime -> tm_year + 1900;
+              if (NULL != calenderTime) {
+                time.hour   = calenderTime -> tm_hour;
+                time.minute = calenderTime -> tm_min;
+                time.second = calenderTime -> tm_sec  % /* ->> Correct for C89 leap-second defect */ 61;
+                time.year   = calenderTime -> tm_year + 1900;
+              }
             }
-          }
 
-          // ... --> taskExecutableArguments… = …;
-          if (NULL != GetCommandLineW) {
-            LPWSTR const      commandLine                    = GetCommandLineW();
-            std::size_t       commandLineLength              = 0u;
-            WCHAR       const commandLineRerunArgument[]     = L"--rerun";
-            std::size_t const commandLineRerunArgumentLength = (sizeof commandLineRerunArgument / sizeof(WCHAR)) - 1u;
+            // ... --> taskExecutableArguments… = …;
+            if (NULL != GetCommandLineW) {
+              LPWSTR const      commandLine                    = GetCommandLineW();
+              std::size_t       commandLineLength              = 0u;
+              WCHAR       const commandLineRerunArgument[]     = L"--rerun";
+              std::size_t const commandLineRerunArgumentLength = (sizeof commandLineRerunArgument / sizeof(WCHAR)) - 1u;
+
+              // ...
+              while (L'\0' != commandLine[commandLineLength])
+              ++commandLineLength;
+
+              taskExecutableArgumentsBuffer = ::new (std::nothrow) WCHAR[commandLineLength + commandLineRerunArgumentLength + /* ->> NUL terminator */ 1u];
+
+              if (NULL != taskExecutableArgumentsBuffer) {
+                taskExecutableArgumentsBuffer[commandLineLength + commandLineRerunArgumentLength] = L'\0';
+
+                for (std::size_t index = 0u; index != commandLineLength; ++index)
+                taskExecutableArgumentsBuffer[index] = commandLine[index];
+
+                for (std::size_t index = 0u; index != commandLineRerunArgumentLength; ++index)
+                taskExecutableArgumentsBuffer[commandLineLength + index] = commandLineRerunArgument[index];
+              }
+            }
+
+            // ... --> taskDailyTriggerTime…Buffer[…] = …;
+            for (struct { WCHAR *text; unsigned int time; std::size_t begin, end; } indexes[] = {
+              {taskDailyTriggerTimeEndBuffer,   time.hour,        11u, 12u},
+              {taskDailyTriggerTimeEndBuffer,   time.minute,      14u, 15u},
+              {taskDailyTriggerTimeEndBuffer,   time.second,      17u, 18u},
+              {taskDailyTriggerTimeEndBuffer,   time.year + 100u, 0u,  3u},
+              {taskDailyTriggerTimeStartBuffer, time.hour,        11u, 12u},
+              {taskDailyTriggerTimeStartBuffer, time.minute,      14u, 15u},
+              {taskDailyTriggerTimeStartBuffer, time.second,      17u, 18u},
+              {taskDailyTriggerTimeStartBuffer, time.year,        0u,  3u},
+            }, *index = indexes; index != indexes + (sizeof indexes / sizeof *indexes); ++index) {
+              for (std::size_t subindex = index -> end + 1u; index -> begin != subindex--; index -> time /= 10u)
+              index -> text[subindex] = "0123456789"[index -> time % 10u];
+            }
 
             // ...
-            while (L'\0' != commandLine[commandLineLength])
-            ++commandLineLength;
+            VariantInit(&taskFolderPassword);
+            VariantInit(&taskFolderSecurityDescriptor);
+            VariantInit(&taskFolderUsername);
+            VariantInit(&taskServiceDomain);
+            VariantInit(&taskServicePassword);
+            VariantInit(&taskServiceServerName);
+            VariantInit(&taskServiceUser);
 
-            taskExecutableArgumentsBuffer = ::new (std::nothrow) WCHAR[commandLineLength + commandLineRerunArgumentLength + /* ->> NUL terminator */ 1u];
+            credentialsPassword[credentialsPasswordSize - 1u] = L'\0';
+            credentialsUsername[credentialsUsernameSize - 1u] = L'\0';
+            credentialsUIInformation.cbSize                   = sizeof(CREDUI_INFOW);
+            credentialsUIInformation.hbmBanner                = static_cast<HBITMAP>(NULL);
+            credentialsUIInformation.hwndParent               = static_cast<HWND>   (NULL);
+            credentialsUIInformation.pszCaptionText           = credentialsPromptCaption;
+            credentialsUIInformation.pszMessageText           = credentialsPromptMessage;
+            taskDailyTriggerTimeEnd                           = SysAllocString(taskDailyTriggerTimeEndBuffer);
+            taskDailyTriggerTimeStart                         = SysAllocString(taskDailyTriggerTimeStartBuffer);
+            taskFolderPassword          .vt                   = ::VT_BSTR;
+            taskFolderSecurityDescriptor.bstrVal              = NULL;
+            taskFolderSecurityDescriptor.vt                   = ::VT_BSTR;
+            taskFolderUsername          .vt                   = ::VT_BSTR;
+            taskExecutableArguments                           = NULL != taskExecutableArgumentsBuffer ? SysAllocString(taskExecutableArgumentsBuffer) : NULL;
+            taskExecutablePath                                = SysAllocString(applicationFilePath);
 
-            if (NULL != taskExecutableArgumentsBuffer) {
-              taskExecutableArgumentsBuffer[commandLineLength + commandLineRerunArgumentLength] = L'\0';
+            ::delete[] taskExecutableArgumentsBuffer;
 
-              for (std::size_t index = 0u; index != commandLineLength; ++index)
-              taskExecutableArgumentsBuffer[index] = commandLine[index];
+            if (
+              NULL  != taskAuthor                    and
+              NULL  != taskDailyTriggerName          and
+              NULL  != taskDailyTriggerTimeEnd       and
+              NULL  != taskDailyTriggerTimeStart     and
+              NULL  != taskExecutableArguments       and
+              NULL  != taskExecutablePath            and
+              L'\0' != applicationFilePath[0]   and
+              NULL  != taskFolderPath                and
+              NULL  != taskName                      and
+              NULL  != taskRepititionPatternDuration and
+              NULL  != taskRepititionPatternInterval
+            ) do {
+              if (FAILED(CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) break;
+              if (FAILED(CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  break;
+              if (NULL == taskService)                                                                                                                                                                                                                                                          break;
 
-              for (std::size_t index = 0u; index != commandLineRerunArgumentLength; ++index)
-              taskExecutableArgumentsBuffer[commandLineLength + index] = commandLineRerunArgument[index];
-            }
-          }
+              if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> Connect  (static_cast<ITaskService*>(taskService), taskServiceServerName, taskServiceUser, taskServiceDomain, taskServicePassword))) break;
+              if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> GetFolder(static_cast<ITaskService*>(taskService), taskFolderPath, &taskFolder)))                                                    break;
+              if (NULL == taskFolder)                                                                                                                                                                              break;
 
-          // ... --> taskDailyTriggerTime…Buffer[…] = …;
-          for (struct { WCHAR *text; unsigned int time; std::size_t begin, end; } indexes[] = {
-            {taskDailyTriggerTimeEndBuffer,   time.hour,        11u, 12u},
-            {taskDailyTriggerTimeEndBuffer,   time.minute,      14u, 15u},
-            {taskDailyTriggerTimeEndBuffer,   time.second,      17u, 18u},
-            {taskDailyTriggerTimeEndBuffer,   time.year + 100u, 0u,  3u},
-            {taskDailyTriggerTimeStartBuffer, time.hour,        11u, 12u},
-            {taskDailyTriggerTimeStartBuffer, time.minute,      14u, 15u},
-            {taskDailyTriggerTimeStartBuffer, time.second,      17u, 18u},
-            {taskDailyTriggerTimeStartBuffer, time.year,        0u,  3u},
-          }, *index = indexes; index != indexes + (sizeof indexes / sizeof *indexes); ++index) {
-            for (std::size_t subindex = index -> end + 1u; index -> begin != subindex--; index -> time /= 10u)
-            index -> text[subindex] = "0123456789"[index -> time % 10u];
-          }
+              if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> NewTask(static_cast<ITaskService*>(taskService), 0x00u, &taskDefinition))) break;
+              if (NULL == taskDefinition)                                                                                                                break;
 
-          // ...
-          VariantInit(&taskFolderPassword);
-          VariantInit(&taskFolderSecurityDescriptor);
-          VariantInit(&taskFolderUsername);
-          VariantInit(&taskServiceDomain);
-          VariantInit(&taskServicePassword);
-          VariantInit(&taskServiceServerName);
-          VariantInit(&taskServiceUser);
+              if (FAILED(taskDefinition -> lpVtbl -> get_RegistrationInfo(taskDefinition, &taskRegistrationInformation))) break;
+              if (NULL == taskRegistrationInformation)                                                                    break;
 
-          credentialsPassword[credentialsPasswordSize - 1u] = L'\0';
-          credentialsUsername[credentialsUsernameSize - 1u] = L'\0';
-          credentialsUIInformation.cbSize                   = sizeof(CREDUI_INFOW);
-          credentialsUIInformation.hbmBanner                = static_cast<HBITMAP>(NULL);
-          credentialsUIInformation.hwndParent               = static_cast<HWND>   (NULL);
-          credentialsUIInformation.pszCaptionText           = credentialsPromptCaption;
-          credentialsUIInformation.pszMessageText           = credentialsPromptMessage;
-          taskDailyTriggerTimeEnd                           = SysAllocString(taskDailyTriggerTimeEndBuffer);
-          taskDailyTriggerTimeStart                         = SysAllocString(taskDailyTriggerTimeStartBuffer);
-          taskFolderPassword          .vt                   = ::VT_BSTR;
-          taskFolderSecurityDescriptor.bstrVal              = NULL;
-          taskFolderSecurityDescriptor.vt                   = ::VT_BSTR;
-          taskFolderUsername          .vt                   = ::VT_BSTR;
-          taskExecutableArguments                           = NULL != taskExecutableArgumentsBuffer ? SysAllocString(taskExecutableArgumentsBuffer) : NULL;
-          taskExecutablePath                                = SysAllocString(applicationFilePath);
+              if (FAILED(taskRegistrationInformation -> lpVtbl -> put_Description(taskRegistrationInformation, taskDescription))) { /* Do nothing… */ }
+              if (FAILED(taskRegistrationInformation -> lpVtbl -> put_Author     (taskRegistrationInformation, taskAuthor)))            break;
+              if (FAILED(taskDefinition              -> lpVtbl -> get_Triggers   (taskDefinition,             &taskTriggerCollection))) break;
+              if (NULL == taskTriggerCollection)                                                                                        break;
 
-          ::delete[] taskExecutableArgumentsBuffer;
+              if (FAILED(taskTriggerCollection -> lpVtbl -> Create(taskTriggerCollection, ::TASK_TRIGGER_DAILY, &taskTrigger))) break;
+              if (NULL == taskTrigger)                                                                                          break;
 
-          if (
-            NULL  != taskAuthor                    and
-            NULL  != taskDailyTriggerName          and
-            NULL  != taskDailyTriggerTimeEnd       and
-            NULL  != taskDailyTriggerTimeStart     and
-            NULL  != taskExecutableArguments       and
-            NULL  != taskExecutablePath            and
-            L'\0' != applicationFilePath[0]   and
-            NULL  != taskFolderPath                and
-            NULL  != taskName                      and
-            NULL  != taskRepititionPatternDuration and
-            NULL  != taskRepititionPatternInterval
-          ) do {
-            if (FAILED(CoInitializeSecurity(static_cast<PSECURITY_DESCRIPTOR>(NULL), -1L, static_cast<SOLE_AUTHENTICATION_SERVICE*>(NULL), static_cast<void*>(NULL), RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, static_cast<void*>(NULL), 0x00u, static_cast<void*>(NULL)))) break;
-            if (FAILED(CoCreateInstance    (::CLSID_TaskScheduler, static_cast<LPUNKNOWN>(NULL), ::CLSCTX_INPROC_SERVER, ::IID_ITaskService, &taskService)))                                                                                                                                  break;
-            if (NULL == taskService)                                                                                                                                                                                                                                                          break;
+              if (FAILED(taskTrigger -> lpVtbl -> QueryInterface(taskTrigger, ::IID_IDailyTrigger, &taskDailyTrigger))) break;
+              if (NULL == taskDailyTrigger)                                                                             break;
 
-            if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> Connect  (static_cast<ITaskService*>(taskService), taskServiceServerName, taskServiceUser, taskServiceDomain, taskServicePassword))) break;
-            if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> GetFolder(static_cast<ITaskService*>(taskService), taskFolderPath, &taskFolder)))                                                    break;
-            if (NULL == taskFolder)                                                                                                                                                                              break;
+              if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_DaysInterval (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerInterval)))  break;
+              if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_EndBoundary  (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerTimeEnd)))   break;
+              if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_Id           (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerName)))      break;
+              if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_StartBoundary(static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerTimeStart))) break;
+              if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> get_Repetition   (static_cast<IDailyTrigger*>(taskDailyTrigger), &taskRepititionPattern)))     break;
+              if (NULL == taskRepititionPattern)                                                                                                                                   break;
 
-            if (FAILED(static_cast<ITaskService*>(taskService) -> lpVtbl -> NewTask(static_cast<ITaskService*>(taskService), 0x00u, &taskDefinition))) break;
-            if (NULL == taskDefinition)                                                                                                                break;
+              if (FAILED(taskRepititionPattern -> lpVtbl -> put_Duration(taskRepititionPattern, taskRepititionPatternDuration))) break;
+              if (FAILED(taskRepititionPattern -> lpVtbl -> put_Interval(taskRepititionPattern, taskRepititionPatternInterval))) break;
+              if (FAILED(taskDefinition        -> lpVtbl -> get_Actions (taskDefinition,       &taskActionCollection)))          break;
+              if (NULL == taskActionCollection)                                                                                  break;
 
-            if (FAILED(taskDefinition -> lpVtbl -> get_RegistrationInfo(taskDefinition, &taskRegistrationInformation))) break;
-            if (NULL == taskRegistrationInformation)                                                                    break;
+              if (FAILED(taskActionCollection -> lpVtbl -> Create(taskActionCollection, ::TASK_ACTION_EXEC, &taskAction))) break;
+              if (NULL == taskAction)                                                                                      break;
 
-            if (FAILED(taskRegistrationInformation -> lpVtbl -> put_Description(taskRegistrationInformation, taskDescription))) { /* Do nothing… */ }
-            if (FAILED(taskRegistrationInformation -> lpVtbl -> put_Author     (taskRegistrationInformation, taskAuthor)))            break;
-            if (FAILED(taskDefinition              -> lpVtbl -> get_Triggers   (taskDefinition,             &taskTriggerCollection))) break;
-            if (NULL == taskTriggerCollection)                                                                                        break;
+              if (FAILED(taskAction -> lpVtbl -> QueryInterface(taskAction, ::IID_IExecAction, &taskExecutableAction))) break;
+              if (NULL == taskExecutableAction)                                                                         break;
 
-            if (FAILED(taskTriggerCollection -> lpVtbl -> Create(taskTriggerCollection, ::TASK_TRIGGER_DAILY, &taskTrigger))) break;
-            if (NULL == taskTrigger)                                                                                          break;
+              if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> lpVtbl -> put_Arguments(static_cast<IExecAction*>(taskExecutableAction), taskExecutableArguments))) break;
+              if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> lpVtbl -> put_Path     (static_cast<IExecAction*>(taskExecutableAction), taskExecutablePath)))      break;
 
-            if (FAILED(taskTrigger -> lpVtbl -> QueryInterface(taskTrigger, ::IID_IDailyTrigger, &taskDailyTrigger))) break;
-            if (NULL == taskDailyTrigger)                                                                             break;
+              // ... --> credentialsPassword = …; credentialsUsername = …;
+              (void) std::fwide(stdin, +1);
 
-            if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_DaysInterval (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerInterval)))  break;
-            if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_EndBoundary  (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerTimeEnd)))   break;
-            if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_Id           (static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerName)))      break;
-            if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> put_StartBoundary(static_cast<IDailyTrigger*>(taskDailyTrigger),  taskDailyTriggerTimeStart))) break;
-            if (FAILED(static_cast<IDailyTrigger*>(taskDailyTrigger) -> lpVtbl -> get_Repetition   (static_cast<IDailyTrigger*>(taskDailyTrigger), &taskRepititionPattern)))     break;
-            if (NULL == taskRepititionPattern)                                                                                                                                   break;
+              standardInputDescriptor = ::_fileno(stdin);
+              standardInputIsTeletype = standardInputDescriptor != -1 and 0 != ::_isatty(standardInputDescriptor);
 
-            if (FAILED(taskRepititionPattern -> lpVtbl -> put_Duration(taskRepititionPattern, taskRepititionPatternDuration))) break;
-            if (FAILED(taskRepititionPattern -> lpVtbl -> put_Interval(taskRepititionPattern, taskRepititionPatternInterval))) break;
-            if (FAILED(taskDefinition        -> lpVtbl -> get_Actions (taskDefinition,       &taskActionCollection)))          break;
-            if (NULL == taskActionCollection)                                                                                  break;
+              do {
+                // --> catalog -> message(credentialsPromptMessage);
+                if (EOF == std::fputs(catalog -> messagePrefix, stdout))
+                break;
 
-            if (FAILED(taskActionCollection -> lpVtbl -> Create(taskActionCollection, ::TASK_ACTION_EXEC, &taskAction))) break;
-            if (NULL == taskAction)                                                                                      break;
+                (void) std::fputws(credentialsPromptMessage, stdout);
+                (void) std::fputs (catalog -> messageSuffix, stdout);
+              } while (false);
 
-            if (FAILED(taskAction -> lpVtbl -> QueryInterface(taskAction, ::IID_IExecAction, &taskExecutableAction))) break;
-            if (NULL == taskExecutableAction)                                                                         break;
+              // ...
+              if (standardInputIsTeletype) { // --> std::fgetws(…)
+                credentialsAuthenticationBuffer = &credentialsAuthenticationBuffer;
 
-            if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> lpVtbl -> put_Arguments(static_cast<IExecAction*>(taskExecutableAction), taskExecutableArguments))) break;
-            if (FAILED(static_cast<IExecAction*>(taskExecutableAction) -> lpVtbl -> put_Path     (static_cast<IExecAction*>(taskExecutableAction), taskExecutablePath)))      break;
+                for (struct { wchar_t const detailMessage[14u + /* ->> NUL terminator */ 1u]; WCHAR *detail; std::size_t detailLength; } const credentials[] = {
+                  {L"\r\n" "  " "Username: ", credentialsUsername, credentialsUsernameSize - 1u},
+                  {L"\r\n" "  " "Password: ", credentialsPassword, credentialsPasswordSize - 1u}
+                }, *credential = credentials; credential != credentials + (sizeof credentials / sizeof *credentials); ++credential) {
+                  if (NULL == credentialsAuthenticationBuffer)
+                  break;
 
-            // ... --> credentialsPassword = …; credentialsUsername = …;
-            (void) std::fwide(stdin, +1);
+                  // ...
+                  if (EOF == std::fputws(credential -> detailMessage + (standardInputIsTeletype and standardInputNewlined ? /* ->> CRLF newline */ 2u : 0u), stdout))
+                    credentialsAuthenticationBuffer = NULL;
 
-            standardInputDescriptor = ::_fileno(stdin);
-            standardInputIsTeletype = standardInputDescriptor != -1 and 0 != ::_isatty(standardInputDescriptor);
+                  else for (std::size_t length = 0u; ; ++length) {
+                    std::wint_t character = WEOF;
 
-            do {
-              // --> catalog -> message(credentialsPromptMessage);
-              if (EOF == std::fputs(catalog -> messagePrefix, stdout))
-              break;
+                    // ...
+                    if (credential -> detailLength <= length) {
+                      (void) catalog -> warn("Unable to set up internal clock via the Task Scheduler; Insufficient memory");
+                      credentialsAuthenticationBuffer = NULL;
 
-              (void) std::fputws(credentialsPromptMessage, stdout);
-              (void) std::fputs (catalog -> messageSuffix, stdout);
+                      break;
+                    }
+
+                    character             = std::fgetwc(stdin);
+                    standardInputNewlined = L'\n' == static_cast<wchar_t>(character);
+
+                    if (WEOF == character or standardInputNewlined) {
+                      // credentialsAuthenticationBuffer = EILSEQ == errno ? NULL : credentialsAuthenticationBuffer;
+                      credential -> detail[length] = L'\0';
+                      break;
+                    }
+
+                    credential -> detail[length] = character;
+                  }
+                }
+              }
+
+              if (NULL == credentialsAuthenticationBuffer) // --> CredUIPromptForWindowsCredentialsW(…)
+              if (NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW) {
+                DWORD const credentialsPrompted = CredUIPromptForWindowsCredentialsW(&credentialsUIInformation, 0x00u, &credentialsAuthenticationPackage, static_cast<LPCVOID>(NULL), 0u, &credentialsAuthenticationBuffer, &credentialsAuthenticationBufferSize, static_cast<BOOL*>(NULL), CREDUIWIN_ENUMERATE_CURRENT_USER | CREDUIWIN_GENERIC);
+
+                // ...
+                if (ERROR_CANCELLED == credentialsPrompted) {
+                  (void) catalog -> warn("Rejected internal clock set up");
+                  break;
+                }
+
+                else if (ERROR_SUCCESS == credentialsPrompted) {
+                  if (FALSE == CredUnPackAuthenticationBufferW(0x1u /* --> CRED_PACK_PROTECTED_CREDENTIALS */, credentialsAuthenticationBuffer, credentialsAuthenticationBufferSize, credentialsUsername, &credentialsUsernameSize, credentialsDomainName, &credentialsDomainNameSize, credentialsPassword, &credentialsPasswordSize))
+                  credentialsAuthenticationBuffer = NULL;
+                }
+              }
+
+              if (NULL == credentialsAuthenticationBuffer) // --> CredUIPromptForCredentialsW(…)
+              if (NULL != CredUIPromptForCredentialsW) {
+                DWORD const credentialsPrompted = CredUIPromptForCredentialsW(&credentialsUIInformation, L"", static_cast<PCtxtHandle>(NULL), 0x00u, credentialsUsername, credentialsUsernameSize, credentialsPassword, credentialsPasswordSize, static_cast<BOOL*>(NULL), CREDUI_FLAGS_ALWAYS_SHOW_UI | CREDUI_FLAGS_DO_NOT_PERSIST | CREDUI_FLAGS_GENERIC_CREDENTIALS);
+
+                // ...
+                if (ERROR_CANCELLED == credentialsPrompted) {
+                  (void) catalog -> warn("Rejected internal clock set up");
+                  break;
+                }
+              }
+
+              (void) taskFolder -> lpVtbl -> DeleteTask(taskFolder, taskName, 0x00L);
+              taskFolderPassword.bstrVal = SysAllocString(credentialsPassword);
+              taskFolderUsername.bstrVal = SysAllocString(credentialsUsername);
+
+              if (FAILED(taskFolder -> lpVtbl -> RegisterTaskDefinition(taskFolder, taskName, taskDefinition, ::TASK_CREATE_OR_UPDATE, taskFolderUsername, taskFolderPassword, ::TASK_LOGON_PASSWORD, taskFolderSecurityDescriptor, &registeredTask))) {
+                (void) catalog -> warn("Unable to set up internal clock via the Task Scheduler; Failed task registration");
+                break;
+              }
+
+              // catalog -> clocked = true;
             } while (false);
 
             // ...
-            if (standardInputIsTeletype) { // --> std::fgetws(…)
-              credentialsAuthenticationBuffer = &credentialsAuthenticationBuffer;
-
-              for (struct { wchar_t const detailMessage[14u + /* ->> NUL terminator */ 1u]; WCHAR *detail; std::size_t detailLength; } const credentials[] = {
-                {L"\r\n" "  " "Username: ", credentialsUsername, credentialsUsernameSize - 1u},
-                {L"\r\n" "  " "Password: ", credentialsPassword, credentialsPasswordSize - 1u}
-              }, *credential = credentials; credential != credentials + (sizeof credentials / sizeof *credentials); ++credential) {
-                if (NULL == credentialsAuthenticationBuffer)
-                break;
-
-                // ...
-                if (EOF == std::fputws(credential -> detailMessage + (standardInputIsTeletype and standardInputNewlined ? /* ->> CRLF newline */ 2u : 0u), stdout))
-                  credentialsAuthenticationBuffer = NULL;
-
-                else for (std::size_t length = 0u; ; ++length) {
-                  std::wint_t character = WEOF;
-
-                  // ...
-                  if (credential -> detailLength <= length) {
-                    (void) catalog -> warn("Unable to set up internal clock via the Task Scheduler; Insufficient memory");
-                    credentialsAuthenticationBuffer = NULL;
-
-                    break;
-                  }
-
-                  character             = std::fgetwc(stdin);
-                  standardInputNewlined = L'\n' == static_cast<wchar_t>(character);
-
-                  if (WEOF == character or standardInputNewlined) {
-                    // credentialsAuthenticationBuffer = EILSEQ == errno ? NULL : credentialsAuthenticationBuffer;
-                    credential -> detail[length] = L'\0';
-                    break;
-                  }
-
-                  credential -> detail[length] = character;
-                }
-              }
+            if (NULL != VariantClear) {
+              (void) VariantClear(&taskFolderUsername);
+              (void) VariantClear(&taskServiceDomain);
+              (void) VariantClear(&taskServicePassword);
+              (void) VariantClear(&taskServiceServerName);
+              (void) VariantClear(&taskServiceUser);
             }
 
-            if (NULL == credentialsAuthenticationBuffer) // --> CredUIPromptForWindowsCredentialsW(…)
-            if (NULL != CredUIPromptForWindowsCredentialsW and NULL != CredUnPackAuthenticationBufferW) {
-              DWORD const credentialsPrompted = CredUIPromptForWindowsCredentialsW(&credentialsUIInformation, 0x00u, &credentialsAuthenticationPackage, static_cast<LPCVOID>(NULL), 0u, &credentialsAuthenticationBuffer, &credentialsAuthenticationBufferSize, static_cast<BOOL*>(NULL), CREDUIWIN_ENUMERATE_CURRENT_USER | CREDUIWIN_GENERIC);
+            if (NULL != taskAction)                  (void) taskAction                              -> lpVtbl -> Release(taskAction);
+            if (NULL != taskActionCollection)        (void) taskActionCollection                    -> lpVtbl -> Release(taskActionCollection);
+            if (NULL != taskRepititionPattern)       (void) taskRepititionPattern                   -> lpVtbl -> Release(taskRepititionPattern);
+            if (NULL != taskTrigger)                 (void) taskTrigger                             -> lpVtbl -> Release(taskTrigger);
+            if (NULL != taskTriggerCollection)       (void) taskTriggerCollection                   -> lpVtbl -> Release(taskTriggerCollection);
+            if (NULL != taskRegistrationInformation) (void) taskRegistrationInformation             -> lpVtbl -> Release(taskRegistrationInformation);
+            if (NULL != taskDefinition)              (void) taskDefinition                          -> lpVtbl -> Release(taskDefinition);
+            if (NULL != taskFolder)                  (void) taskFolder                              -> lpVtbl -> Release(taskFolder);
+            if (NULL != taskService)                 (void) static_cast<ITaskService*>(taskService) -> lpVtbl -> Release(static_cast<ITaskService*>(taskService));
 
-              // ...
-              if (ERROR_CANCELLED == credentialsPrompted) {
-                (void) catalog -> warn("Rejected internal clock set up");
-                break;
-              }
-
-              else if (ERROR_SUCCESS == credentialsPrompted) {
-                if (FALSE == CredUnPackAuthenticationBufferW(0x1u /* --> CRED_PACK_PROTECTED_CREDENTIALS */, credentialsAuthenticationBuffer, credentialsAuthenticationBufferSize, credentialsUsername, &credentialsUsernameSize, credentialsDomainName, &credentialsDomainNameSize, credentialsPassword, &credentialsPasswordSize))
-                credentialsAuthenticationBuffer = NULL;
-              }
+            if (NULL != SysFreeString) {
+              SysFreeString(taskAuthor);
+              SysFreeString(taskDailyTriggerName);
+              SysFreeString(taskDailyTriggerTimeEnd);
+              SysFreeString(taskDailyTriggerTimeStart);
+              SysFreeString(taskDescription);
+              SysFreeString(taskExecutableArguments);
+              SysFreeString(taskExecutablePath);
+              SysFreeString(taskFolderPath);
+              SysFreeString(taskName);
+              SysFreeString(taskRepititionPatternDuration);
+              SysFreeString(taskRepititionPatternInterval);
             }
 
-            if (NULL == credentialsAuthenticationBuffer) // --> CredUIPromptForCredentialsW(…)
-            if (NULL != CredUIPromptForCredentialsW) {
-              DWORD const credentialsPrompted = CredUIPromptForCredentialsW(&credentialsUIInformation, L"", static_cast<PCtxtHandle>(NULL), 0x00u, credentialsUsername, credentialsUsernameSize, credentialsPassword, credentialsPasswordSize, static_cast<BOOL*>(NULL), CREDUI_FLAGS_ALWAYS_SHOW_UI | CREDUI_FLAGS_DO_NOT_PERSIST | CREDUI_FLAGS_GENERIC_CREDENTIALS);
-
-              // ...
-              if (ERROR_CANCELLED == credentialsPrompted) {
-                (void) catalog -> warn("Rejected internal clock set up");
-                break;
-              }
-            }
-
-            (void) taskFolder -> lpVtbl -> DeleteTask(taskFolder, taskName, 0x00L);
-            taskFolderPassword.bstrVal = SysAllocString(credentialsPassword);
-            taskFolderUsername.bstrVal = SysAllocString(credentialsUsername);
-
-            if (FAILED(taskFolder -> lpVtbl -> RegisterTaskDefinition(taskFolder, taskName, taskDefinition, ::TASK_CREATE_OR_UPDATE, taskFolderUsername, taskFolderPassword, ::TASK_LOGON_PASSWORD, taskFolderSecurityDescriptor, &registeredTask))) {
-              (void) catalog -> warn("Unable to set up internal clock via the Task Scheduler; Failed task registration");
-              break;
-            }
-
-            // catalog -> clocked = true;
-          } while (false);
-
-          // ...
-          if (NULL != VariantClear) {
-            (void) VariantClear(&taskFolderUsername);
-            (void) VariantClear(&taskServiceDomain);
-            (void) VariantClear(&taskServicePassword);
-            (void) VariantClear(&taskServiceServerName);
-            (void) VariantClear(&taskServiceUser);
+            CoUninitialize();
           }
-
-          if (NULL != taskAction)                  (void) taskAction                              -> lpVtbl -> Release(taskAction);
-          if (NULL != taskActionCollection)        (void) taskActionCollection                    -> lpVtbl -> Release(taskActionCollection);
-          if (NULL != taskRepititionPattern)       (void) taskRepititionPattern                   -> lpVtbl -> Release(taskRepititionPattern);
-          if (NULL != taskTrigger)                 (void) taskTrigger                             -> lpVtbl -> Release(taskTrigger);
-          if (NULL != taskTriggerCollection)       (void) taskTriggerCollection                   -> lpVtbl -> Release(taskTriggerCollection);
-          if (NULL != taskRegistrationInformation) (void) taskRegistrationInformation             -> lpVtbl -> Release(taskRegistrationInformation);
-          if (NULL != taskDefinition)              (void) taskDefinition                          -> lpVtbl -> Release(taskDefinition);
-          if (NULL != taskFolder)                  (void) taskFolder                              -> lpVtbl -> Release(taskFolder);
-          if (NULL != taskService)                 (void) static_cast<ITaskService*>(taskService) -> lpVtbl -> Release(static_cast<ITaskService*>(taskService));
-
-          if (NULL != SysFreeString) {
-            SysFreeString(taskAuthor);
-            SysFreeString(taskDailyTriggerName);
-            SysFreeString(taskDailyTriggerTimeEnd);
-            SysFreeString(taskDailyTriggerTimeStart);
-            SysFreeString(taskDescription);
-            SysFreeString(taskExecutableArguments);
-            SysFreeString(taskExecutablePath);
-            SysFreeString(taskFolderPath);
-            SysFreeString(taskName);
-            SysFreeString(taskRepititionPatternDuration);
-            SysFreeString(taskRepititionPatternInterval);
-          }
-
-          CoUninitialize();
         }
-      }
+      #endif
 
       /* ... ->> Windows Services --- TODO (Lapys) -> Get it working for basic test */
       if (not catalog -> clocked)
