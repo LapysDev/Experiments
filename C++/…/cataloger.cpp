@@ -52,8 +52,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
       librariesLength // --> std::size_t{…}
     };
 
-    WCHAR                      libraryPath[MAX_PATH + 1u] = L"";
-    UINT const                 libraryPathLength          = ::GetSystemDirectoryW(libraryPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
+    WCHAR                      librariesPath[MAX_PATH + 1u] = L"";
+    UINT const                 librariesPathLength          = ::GetSystemDirectoryW(librariesPath, ((MAX_PATH + 1u) * sizeof(WCHAR)) / sizeof(TCHAR));
     static struct libraryinfo *libraries                  = NULL;
     static struct libraryinfo /* final */ {
       LPCWSTR const name;
@@ -80,26 +80,26 @@ int main(int count, char* arguments[]) /* noexcept */ {
     };
 
     // ...
-    libraries                      = l;
-    libraryPath[libraryPathLength] = L'\\';
+    libraries                          = l;
+    librariesPath[librariesPathLength] = L'\\';
 
     (void) std::atexit(&libraries -> exit);
     #if __cplusplus >= 201103L
       (void) std::at_quick_exit(&libraries -> exit);
     #endif
 
-    if (0u != libraryPathLength) {
+    if (0u != librariesPathLength) {
       BOOL    (*FreeLibrary)             (HMODULE)                = NULL;
       HMODULE (*LoadLibraryExW)          (LPCWSTR, HANDLE, DWORD) = NULL;
       BOOL    (*SetDefaultDllDirectories)(DWORD)                  = NULL;
 
       // ... ->> Load the userland `kernel32` library
       for (std::size_t index = 0u; ; ++index) {
-        libraryPath[index + libraryPathLength + 1u] = libraries[kernel32].name[index];
+        librariesPath[index + librariesPathLength + 1u] = libraries[kernel32].name[index];
         if (L'\0' == libraries[kernel32].name[index]) break;
       }
 
-      if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &libraries[kernel32].moduleHandle))
+      if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, librariesPath, &libraries[kernel32].moduleHandle))
       if (NULL != libraries[kernel32].moduleHandle) {
         FreeLibrary              = reinterpret_cast<BOOL    (*)(HMODULE)>               (::GetProcAddress(libraries[kernel32].moduleHandle, "FreeLibrary"));              // --> <windows.h>
         LoadLibraryExW           = reinterpret_cast<HMODULE (*)(LPCWSTR, HANDLE, DWORD)>(::GetProcAddress(libraries[kernel32].moduleHandle, "LoadLibraryExW"));           // --> <windows.h>
@@ -111,16 +111,16 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
       // ... ->> Load other used Windows API libraries —
       for (struct libraryinfo *library = libraries; library != libraries + librariesLength; ++library)
-      if (NULL == library -> moduleHandle) { // ->> — except the already loaded userland `kernel32` library
+      if (library != libraries + kernel32) { // ->> — except the already loaded userland `kernel32` library
         for (std::size_t index = 0u; ; ++index) {
-          libraryPath[index + libraryPathLength + 1u] = library -> name[index];
+          librariesPath[index + librariesPathLength + 1u] = library -> name[index];
           if (L'\0' == library -> name[index]) break;
         }
 
-        if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, libraryPath, &library -> moduleHandle))
+        if (FALSE != ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, librariesPath, &library -> moduleHandle))
         if (NULL != library -> moduleHandle) continue;
 
-        library -> moduleHandle = LoadLibraryExW(libraryPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
+        library -> moduleHandle = LoadLibraryExW(librariesPath, static_cast<HANDLE>(NULL), LOAD_WITH_ALTERED_SEARCH_PATH);
         library -> unloader     = NULL == library -> moduleHandle ? NULL : FreeLibrary;
       }
     }
@@ -129,38 +129,43 @@ int main(int count, char* arguments[]) /* noexcept */ {
   /* ... ->> Application `start()` */
   static struct cataloger *catalog = NULL;
   static struct cataloger /* final */ {
-    enum /* : std::size_t */ { MESSAGE_MAXIMUM_LENGTH = 256u };                                                              //
-    union  formatinfo        { unsigned char metadata[32]; };                                                                // ->> Arbitrarily-sized
-    enum   formatstyle       { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN };                                          // ->> Mutually-exclusive
-    enum   parsediag         { PARSED, PARSE_NAME, PARSE_NOT_NAME, PARSE_NOT_TAG, PARSE_NOT_VALUE, PARSE_TAG, PARSE_VALUE }; //
-    enum   parsestyle        { PARSE_INITIAL = 0x00u, PARSE_TRIMMED = 0x01u, PARSE_UNCASED = 0x02u };                        //
-
-    struct parsecmd  /* final */ {
+    enum /* : std::size_t */     { MESSAGE_MAXIMUM_LENGTH = 256u };                                                                                         //
+    union  formatinfo            { unsigned char metadata[32]; };                                                                                           // ->> Arbitrarily-sized
+    enum   formatstyle           { FORMAT_INITIAL = 0x00u, FORMAT_ERROR, FORMAT_WARN };                                                                     // ->> Mutually-exclusive
+    enum   parsediag             { PARSED, PARSE_NAME, PARSE_NOT_NAME, PARSE_NOT_TAG, PARSE_NOT_VALUE, PARSE_TAG, PARSE_VALUE, REPARSED, REPARSE_COMMAND }; //
+    enum   parsestyle            { PARSE_INITIAL  = 0x00u, PARSE_TRIMMED = 0x01u, PARSE_UNCASED = 0x02u };                                                  //
+    struct parsecmd  /* final */ {                                                                                                                          //
       /* ... ->> `NULL`-ish `::…name`s represent unrecognized command-line arguments */
-      enum command { ABOUT, CLOCK, HELP, LOG, RERUN } const command;                                                                 // ->> Command-line option identifier
-      union { char const *const text, *const name; };                                                                                // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
-      char const                                     *const longName;                                                                // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
-      union { char const *const shortName, *const alias; };                                                                          // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
-      enum parsestyle                                 const style;                                                                   // ->> Determines the textual interpretation of `::argument`
-      std::size_t                                     const count;                                                                   // ->> Number of command-line arguments (after `::argument`/ `::value`) evaluated; Non-zero invalidates use of value tags within the same `::argument`/ `::value`
-      bool                                                (*diagnosis)(enum parsediag, char[], struct parsecmd const*, void const*); // ->> Predicate function determining the validity of the command-line option; Called through command-line `parse()`; Optionally `NULL`
-      union { unsigned char metadata[sizeof(void*) + sizeof(std::size_t)]; void *const _; /* ->> Alignment */ };                     // ->> Arbitrarily-sized
-      struct {
-        char                                                                              *argument; // ->> Command-line argument representing the command-line option;             Set through command-line `parse()`;    Initially  `NULL`
-        struct /* final */ { union { std::ptrdiff_t name, text; }; std::ptrdiff_t value; } offsets;  // ->> Offsets denoting particular attributes of the command-line option;      Set through command-line `parse()`;    Initially  `{-1, -1}`
-      } parsed;
+      enum command {
+        ABOUT, // ->> "About" command prompted
+        CLOCK, // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
+        HELP,  // ->> "Help" command prompted
+        LOG,   // ->> Filesystem location for storing catalogs;          Assume NUL-terminated
+        RERUN  // ->> Catalog is re-executed
+      }                      /* const */ command;                                                           // ->> Command-line option identifier
+      union { char const    */* const */ text, *const name; };                                              // ->> Multi-byte NUL-terminated text representing the                                                          name of the command-line option; Optionally `NULL`
+      char const            */* const */ longName;                                                          // ->> Multi-byte NUL-terminated text representing the        long  (prefixed by `::commandLineOptionLongTag`)  name of the command-line option; Optionally `NULL`
+      union { char const    */* const */ shortName, *const alias; };                                        // ->> Multi-byte NUL-terminated text representing the alias/ short (prefixed by `::commandLineOptionShortTag`) name of the command-line option; Optionally `NULL`
+      enum parsestyle        /* const */ style;                                                             // ->> Determines the textual interpretation of `::argument`
+      std::size_t            /* const */ count;                                                             // ->> Number of command-line arguments (after `::argument`/ `::value`) evaluated; Non-zero invalidates use of value tags within the same `::argument`/ `::value`
+      void                              *metadata;                                                          //
+      bool                             (*diagnosis)(enum parsediag, char[], struct parsecmd const*, void*); // ->> Predicate function determining the validity of the command-line option; Called through command-line `parse()`; Optionally `NULL`
+      struct parse /* final */ {                                                                            //
+        char                                                                              *argument;        // ->> Command-line argument representing the command-line option;        Set through command-line `parse()`; Initially  `NULL`
+        struct /* final */ { union { std::ptrdiff_t name, text; }; std::ptrdiff_t value; } offsets;         // ->> Offsets denoting particular attributes of the command-line option; Set through command-line `parse()`
+      } parsed;                                                                                             //
     };
 
     /* ... */
     static void error(int const signal) /* [[noreturn]] extern "C" */ {
       if (NULL != catalog)
       switch (signal) {
-        case SIGABRT: (void) catalog -> exit((catalog -> warn("Cataloger stopped by abormal termination"),               EXIT_FAILURE));                break;
-        case SIGFPE : (void) catalog -> exit((catalog -> warn("Cataloger stopped by a floating-point exception"),        EXIT_FAILURE));                break;
-        case SIGILL : (void) catalog -> exit((catalog -> warn("Cataloger stopped by an invalid executable instruction"), EXIT_FAILURE));                break;
-        case SIGINT : (void) catalog -> exit((catalog -> warn("Cataloger stopped by an external interrupt")            ? EXIT_SUCCESS : EXIT_FAILURE)); break;
-        case SIGSEGV: (void) catalog -> exit((catalog -> warn("Cataloger stopped by impermissible memory access"),       EXIT_FAILURE));                break;
-        case SIGTERM: (void) catalog -> exit((catalog -> warn("Cataloger stopped by a termination request"),             EXIT_FAILURE));                break;
+        case SIGABRT: (void) catalog -> exit((catalog -> warn("Cataloger stopped by abormal termination"),                   EXIT_FAILURE)); break;
+        case SIGFPE : (void) catalog -> exit((catalog -> warn("Cataloger stopped by a floating-point exception"),            EXIT_FAILURE)); break;
+        case SIGILL : (void) catalog -> exit((catalog -> warn("Cataloger stopped by an invalid executable instruction"),     EXIT_FAILURE)); break;
+        case SIGINT : (void) catalog -> exit((catalog -> warn("Cataloger stopped by an external interrupt") ? EXIT_SUCCESS : EXIT_FAILURE)); break;
+        case SIGSEGV: (void) catalog -> exit((catalog -> warn("Cataloger stopped by impermissible memory access"),           EXIT_FAILURE)); break;
+        case SIGTERM: (void) catalog -> exit((catalog -> warn("Cataloger stopped by a termination request"),                 EXIT_FAILURE)); break;
 
         /* case SIGALRM, SIGBUS, SIGCHLD, SIGCONT, SIGEMT, SIGHUP,    SIGIO, SIGIOT, SIGKILL, SIGPIPE, SIGPOLL, SIGPROF, SIGPWR, SIGQUIT, SIGRTMAX, SIGRTMIN, SIGSTKFLT, SIGSTOP, SIGSYS, SIGTRAP, SIGTSTP, SIGTTIN, SIGTTOU, SIGURG, SIGUSR1, SIGUSR2, SIGVTALRM, SIGXCPU, SIGXFSZ, SIGWINCH: break; */
         /* case SIGCLD,  SIGEMT, SIGINFO, SIGLOST, SIGPWR, SIGSTKFLT, SIGUNUSED                                                                                                                                                                                                              : break; */
@@ -202,11 +207,10 @@ int main(int count, char* arguments[]) /* noexcept */ {
         BOOL   WINAPI      (*const SetConsoleTextAttribute)   (HANDLE, WORD)                        = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<BOOL   WINAPI (*)(HANDLE, WORD)>                       (::GetProcAddress(libraries[kernel32].moduleHandle, "SetConsoleTextAttribute"));    // --> <windows.h>
         DWORD                      streamConsoleMode                                                = 0x00u;
         CONSOLE_SCREEN_BUFFER_INFO streamConsoleScreenBufferInformation                             = {};
-        HANDLE                     streamStandardDeviceHandle                                       = NULL;
+        HANDLE                     streamStandardDeviceHandle                                       = NULL != GetStdHandle ? GetStdHandle(STD_ERROR_HANDLE) : NULL;
 
         // ...
-        streamStandardDeviceHandle = NULL != GetStdHandle ? GetStdHandle(STD_ERROR_HANDLE) : NULL;
-        styleSupported             = INVALID_HANDLE_VALUE != streamStandardDeviceHandle and NULL != streamStandardDeviceHandle;
+        styleSupported = INVALID_HANDLE_VALUE != streamStandardDeviceHandle and NULL != streamStandardDeviceHandle;
       #endif
 
       // ...
@@ -218,9 +222,11 @@ int main(int count, char* arguments[]) /* noexcept */ {
         case FORMAT_ERROR:
         case FORMAT_WARN : {
           #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+            /* Don’t repeat yourself… */
             switch (style) {
               case FORMAT_ERROR: return std::fwrite("\x1B" "[31m", sizeof(char), 5u, stream) == 5u;
               case FORMAT_WARN : return std::fwrite("\x1B" "[33m", sizeof(char), 5u, stream) == 5u;
+              default:           return true;
             }
           #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
             if (NULL != information and NULL != GetConsoleMode and NULL != SetConsoleMode) {
@@ -228,8 +234,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
               if (FALSE != SetConsoleMode(streamStandardDeviceHandle, streamConsoleMode | /* --> ENABLE_VIRTUAL_TERMINAL_PROCESSING */ 0x0004u)) {
                 information -> metadata[0] = true;
 
+                /* Don’t repeat yourself… */
                 switch (style) {
-                  /* Don’t repeat yourself… */
                   case FORMAT_ERROR: return std::fwrite("\x1B" "[31m", sizeof(char), 5u, stream) == 5u;
                   case FORMAT_WARN : return std::fwrite("\x1B" "[33m", sizeof(char), 5u, stream) == 5u;
                   default:           return true;
@@ -257,6 +263,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
         case FORMAT_INITIAL: {
           #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+            /* Don’t repeat yourself… */
             return std::fwrite("\x1B" "[00m", sizeof(char), 5u, stream) == 5u;
           #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
             /* Don’t repeat yourself… */
@@ -280,7 +287,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       return false;
     }
 
-    static bool message(void const* const message, std::FILE* const stream, std::size_t const stride) {
+    static bool log(void const* const message, std::FILE* const stream, std::size_t const stride) {
       typedef union _ {
         static void spanof(unsigned char const character[], std::size_t const stride, std::size_t* const begin, std::size_t* const end) {
           // ... ->> Ignores `character` endianness, leading bytes, and trailing bytes (assumes it is a distinct set of `stride` code units)
@@ -339,6 +346,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
         }
       }
 
+      // ... --> messageBegin = …; messageEnd = …;
       messageBegin = 0u;
       messageEnd   = messageLength;
 
@@ -444,6 +452,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
       // ... --> messageOutput[messageOutputLength++…] = …;
       for (std::size_t index = 0u; index != messagePrefixLength and not messageOverflowed; ++index) {
+        // ... --> … = ::messagePrefix;
         messageOutput[messageOutputLength++] = catalog -> messagePrefix[index];
 
         if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength)
@@ -455,7 +464,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
         std::size_t                characterBegin = 0u;
         std::size_t                characterEnd   = stride;
 
-        // ...
+        // ... --> … = message;
         character::spanof(character, stride, &characterBegin, &characterEnd);
 
         for (std::size_t subindex = 0u; characterEnd != subindex; ++subindex)
@@ -470,6 +479,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       for (std::size_t index = 0u; index != messageSuffixLength and not messageOverflowed; ++index) {
+        // ... --> … = ::messageSuffix;
         messageOutput[messageOutputLength++] = catalog -> messageSuffix[index];
 
         if (MESSAGE_MAXIMUM_LENGTH == messageOutputLength) {
@@ -479,6 +489,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
       }
 
       if (messageOverflowed) {
+        // ... --> … = messageOverflow;
         for (std::size_t index = 0u; index != messageOverflowLength; ++index)
         messageOutput[messageOutputLength++] = messageOverflow[index];
       }
@@ -489,30 +500,32 @@ int main(int count, char* arguments[]) /* noexcept */ {
       (void) std::fflush (stream); // ->> Ensure the `stream` delivers the `messageOutput` immediately
       (void) std::setvbuf(stream, static_cast<char*>(NULL), _IONBF, 0u);
 
-      messageOutputted = EOF != std::fputs (messageOutput, stream);
+      messageOutputted = EOF != std::fputs(messageOutput, stream);
       messageOutputted ? (void) std::fflush(stream) : std::clearerr(stream);
 
       // ...
       return messageOutputted;
     }
-      static bool message(char    const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(char)); }
-      static bool message(wchar_t const message[], std::FILE* const stream = stdout) { return catalog -> message(message, stream, sizeof(wchar_t)); }
+      static std::FILE* log()                                                         { return stdout; }
+      static bool       log(char    const message[], std::FILE* const stream = log()) { return catalog -> log(message, stream, sizeof(char)); }
+      static bool       log(wchar_t const message[], std::FILE* const stream = log()) { return catalog -> log(message, stream, sizeof(wchar_t)); }
 
-    static void parse(char* arguments[], std::size_t const argumentsLength, struct parsecmd options[], std::size_t optionsLength) {
-      typedef struct parseinfo /* final */ {
-        static bool diagnose(enum parsediag const, char[], struct parsecmd const* const, void const* const) {
-          return true;
-        }
-
+    static bool parse(char* arguments[], std::size_t const argumentsLength, struct parsecmd options[], std::size_t const optionsLength, bool (*const undiagnosis)(char[]) = NULL) {
+      typedef union parseinfo {
         static char encase(char const value) {
           return value;
         }
 
-        static parseinfo const* info(char argument[], std::size_t const length, struct parseinfo const& information = parseinfo()) {
-          information.argument = argument;
-          information.length   = length;
+        static char** info(char argumentBegin[], char argumentEnd[], union parseinfo const& information = parseinfo()) {
+          information.argument[0] = argumentBegin;
+          information.argument[1] = argumentEnd;
 
-          return &information;
+          return information.argument;
+        }
+
+        static struct parsecmd* info(struct parsecmd const option, union parseinfo const& information = parseinfo()) {
+          information.option = option;
+          return &information.option;
         }
 
         static char* nextchar(char* argument) {
@@ -525,11 +538,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
           return argument;
         }
 
-        static char* trim(char value[]) {
-          return nextchar(value);
-        }
-
-        static char uncase(char const value) {
+        static char nocase(char const value) {
           switch (value) {
             case 'A': return 'a'; case 'B': return 'b'; case 'C': return 'c'; case 'D': return 'd'; case 'E': return 'e';
             case 'F': return 'f'; case 'G': return 'g'; case 'H': return 'h'; case 'I': return 'i'; case 'J': return 'j';
@@ -542,9 +551,14 @@ int main(int count, char* arguments[]) /* noexcept */ {
           return encase(value);
         }
 
+        static bool nodiagnosis(enum parsediag const, char[], struct parsecmd const* const, void* const) {
+          return true;
+        }
+
         /* ... */
-        union { void         *value;       mutable char       *argument; };
-        union { unsigned char metadata[1]; mutable std::size_t length; };
+        void                   *value;
+        mutable char           *argument[2];
+        mutable struct parsecmd option;
       } argument, option;
 
       // ...
@@ -552,151 +566,171 @@ int main(int count, char* arguments[]) /* noexcept */ {
       options[optionIndex].parsed.argument = NULL;
 
       for (std::size_t argumentIndex = 0u; argumentIndex != argumentsLength; ++argumentIndex) {
+        char            *const argument       = arguments[argumentIndex];
         std::size_t            argumentLength = 0u;
         struct parsecmd const *argumentOption = NULL;
 
         // ... --> argumentLength = …;
-        for (char *argument = arguments[argumentIndex]; '\0' != argument[argumentLength]; )
+        while ('\0' != argument[argumentLength])
         ++argumentLength;
 
         // ...
         if (NULL == argumentOption)
         for (struct parsecmd *option = options; option != options + optionsLength; ++option) {
-          bool          (*const diagnosis)(enum parsediag, char[], struct parsecmd const*, void const*) = NULL == option -> diagnosis ? &option::diagnose : option -> diagnosis;
-          bool                  diagnostic                                                              = true;
-          char          (*const recase)(char)                                                           = option -> style & PARSE_UNCASED ? &option::uncase : &option::encase;
-          struct parsecmd const reset                                                                   = *option;
+          bool          (*const diagnosis)(enum parsediag, char[], struct parsecmd const*, void*) = NULL == option -> diagnosis ? &option::nodiagnosis : option -> diagnosis;
+          bool                  diagnostic                                                        = true;
+          char          (*const recase)(char)                                                     = option -> style & PARSE_UNCASED ? &option::nocase : &option::encase;
+          struct parsecmd const reset                                                             = *option;
 
           // ... ->> Match based on the `option` `name`
           typedef struct parsecmd parsecmd;
 
-          for (char const *const parsecmd:: *const names[] = {&parsecmd::name, &parsecmd::longName, &parsecmd::shortName}, *const parsecmd:: *const *name = names; name != names + (sizeof names / sizeof(char const* parsecmd::*)); ++name)
+          std::printf("[..BEGIN-A1]: \"%s\" %i" "\r\n", argument, (int) option -> command);
+
+          for (char const *const parsecmd:: *const names[] = {&parsecmd::text, &parsecmd::longName, &parsecmd::shortName}, *const parsecmd:: *const *name = names; diagnostic and name != names + (sizeof names / sizeof(char const* parsecmd::*)); ++name)
           if (NULL != option ->* *name) {
-            char                    *argument        = arguments[argumentIndex];
-            bool                     nameTagged      = true;
-            char const *const       *nameTags        = NULL;
-            std::size_t              nameTagsLength  = 0u;
-            char const *const        tag             = "";
-            char const *const *const valueTags       = catalog -> commandLineOptionValueTags;
-            std::size_t              valueTagsLength = catalog -> commandLineOptionValueTagsLength;
+            char const *const   notag[2]    = {"", NULL};
+            char               *subargument = argument;
+            char const *const (*tags)[2]    = NULL;
+            std::size_t         tagsLength  = 0u;
 
-            // ... --> nameTags… = …;
-            argument = option -> style & PARSE_TRIM ? option::trim(argument) : argument;
+            // ... --> tags… = …;
+            subargument = option -> style & PARSE_TRIMMED ? option::nextchar(subargument) : subargument;
 
-            if (&parsecmd::longName  == *name) { nameTags = catalog -> commandLineOptionLongTags;  nameTagsLength = catalog -> commandLineOptionLongTagsLength;  }
-            if (&parsecmd::shortName == *name) { nameTags = catalog -> commandLineOptionShortTags; nameTagsLength = catalog -> commandLineOptionShortTagsLength; }
+            if (&parsecmd::longName  == *name) { tags = catalog -> commandLineOptionLongTags;  tagsLength = catalog -> commandLineOptionLongTagsLength;  }
+            if (&parsecmd::shortName == *name) { tags = catalog -> commandLineOptionShortTags; tagsLength = catalog -> commandLineOptionShortTagsLength; }
 
-            if (NULL == nameTags or 0u == nameTagsLength) {
-              nameTagged     = false;
-              nameTags       = &tag;
-              nameTagsLength = 1u;
-            } else argument = argument::nextchar(argument);
+            if (NULL == tags or 0u == tagsLength) {
+              tags       = &notag;
+              tagsLength = 1u;
+            } else subargument = argument::nextchar(subargument);
 
-            // ... --> valueTags… = …;
-            if (0u != option -> count or NULL == valueTags or 0u == valueTagsLength)
-            valueTagsLength = 0u;
+            // ... ->> Match based on the `option` `tags`
+            for (std::size_t tagIndex = 0u; diagnostic and tagIndex != tagsLength; ++tagIndex) {
+              char                    *argumentName  = NULL;
+              char                    *argumentValue = NULL;
+              char const *const *const tag           = tags[tagIndex]; // --> char const *const (&)[2]
+              char const        *const tagName       = tag [0];
+              char const        *const tagValue      = 0u != option -> count ? NULL : tag[1];
 
-            // ... ->> Match based on `option` `nameTags[…]` (and `valueTags[…]`)
-            for (std::size_t nameTagIndex = 0u; nameTagIndex != nameTagsLength; ++nameTagIndex) {
-              char *argumentName  = NULL;
-              char *argumentValue = NULL;
-
-              // ... ->> Validate based on the `nameTags[…]`
+              // ... ->> Validate based on `tagName`
               for (std::size_t index = 0u; ; ++index) {
-                if ('\0' == nameTags[nameTagIndex][index]) {
-                  diagnostic   = diagnostic ? diagnosis(PARSE_TAG, arguments[argumentIndex], option, option::info(argument, index)) : false;
-                  argumentName = argument + index;
-                  argumentName = nameTagged ? argument::nextchar(argumentName) : argumentName;
+                if ('\0' == tagName[index]) {
+                  argumentName = subargument + index;
+                  argumentName = &notag == tags ? argumentName : argument::nextchar(argumentName);
+                  diagnostic   = diagnostic and diagnosis(PARSE_TAG, argument, option, /* --> tagName */ option::info(subargument, argumentName));
 
                   break;
                 }
 
-                if ('\0' == argument[index] or recase(argument[index]) != recase(nameTags[nameTagIndex][index])) {
-                  diagnostic = diagnostic ? diagnosis(PARSE_NOT_TAG, arguments[argumentIndex], option, option::info(arguments[argumentIndex], argumentLength)) : false;
+                if ('\0' == subargument[index] or recase(subargument[index]) != recase(tagName[index])) {
+                  diagnostic = diagnostic and diagnosis(PARSE_NOT_TAG, argument, option, /* --> argument */ option::info(argument, argument + argumentLength));
                   break;
                 }
               }
 
-              if (not diagnostic)       break;
-              if (NULL == argumentName) continue;
+              if (NULL == argumentName)
+              continue;
 
-              // ... ->> Validate based on the `valueTags[…]` or `argument` name
+              // ... ->> Validate based on `argument` name (or `tagValue`)
               for (std::size_t index = 0u; ; ++index) {
                 char *const subargument = argument::nextchar(argumentName + index);
 
                 // ...
-                for (std::size_t valueTagIndex = 0u; NULL == argumentValue and valueTagIndex != valueTagsLength; ++valueTagIndex)
-                for (std::size_t subindex = 0u; ; ++subindex) {
-                  if ('\0' == valueTags[valueTagIndex][subindex]) {
+                for (std::size_t subindex = 0u; '\0' != subargument[subindex] and NULL != tagValue; ++subindex) {
+                  if ('\0' == tagValue[subindex]) {
                     argumentValue = subargument + subindex;
                     break;
                   }
 
-                  if ('\0' == subargument[subindex] or recase(subargument[subindex]) != recase(valueTags[valueTagIndex][subindex]))
+                  if (recase(subargument[subindex]) != recase(tagValue[subindex]))
                   break;
                 }
 
                 if (NULL != argumentValue or '\0' == (option ->* *name)[index]) {
-                  if (NULL != argumentValue or '\0' == *(not nameTagged and PARSE_TRIM != option -> style ? argumentName + index : subargument)) {
-                    diagnostic = diagnostic ? diagnosis(PARSE_NAME, arguments[argumentIndex], option, option::info(argumentName, index)) : false;
-                    diagnostic = diagnostic ? NULL == argumentValue ? diagnosis(PARSE_NOT_VALUE, arguments[argumentIndex], option, option::info(arguments[argumentIndex], argumentLength)) : diagnosis(PARSE_VALUE, arguments[argumentIndex], option, option::info(argumentValue, argumentLength - (argumentValue - arguments[argumentIndex]))) : false;
+                  if (NULL != argumentValue or '\0' == *(PARSE_TRIMMED != option -> style and &notag == tags ? argumentName + index : subargument)) {
+                    diagnostic = diagnostic and diagnosis(PARSE_NAME,                                            argument, option, /* --> argumentName */                 option::info(argumentName,                                     argumentName + index));
+                    diagnostic = diagnostic and diagnosis(NULL == argumentValue ? PARSE_NOT_VALUE : PARSE_VALUE, argument, option, /* --> … ? argument : argumentValue */ option::info(NULL == argumentValue ? argument : argumentValue, argument     + argumentLength));
 
-                    if (not diagnostic)
-                      break;
+                    /* Don’t repeat yourself… */
+                    for (std::size_t optionIndex = 0u; optionIndex != optionsLength; ++optionIndex) {
+                      if (option != options + optionIndex and option -> command == options[optionIndex].command and NULL != options[optionIndex].parsed.argument)
+                      diagnostic = diagnostic and diagnosis(REPARSE_COMMAND, argument, option, options + optionIndex);
+                    }
 
-                    option -> parsed.argument      = arguments[argumentIndex];
+                    option -> parsed.argument      = argument;
                     option -> parsed.offsets.name  = NULL != argumentName  ? argumentName  - option -> parsed.argument : -1;
                     option -> parsed.offsets.value = NULL != argumentValue ? argumentValue - option -> parsed.argument : -1;
-                    diagnostic                     = diagnostic ? diagnosis(PARSED, arguments[argumentIndex], option, &static_cast<struct parsecmd const&>(static_cast<struct parsecmd>(reset))) : false;
+                    diagnostic                     = diagnostic and NULL != reset.parsed.argument and diagnosis(REPARSED, argument, option, option::info(reset));
+                    diagnostic                     = diagnostic and                                   diagnosis(PARSED,   argument, option, option::info(reset));
                     argumentOption                 = option;
 
+                    // ...
                     if (not diagnostic) {
-                      argumentOption   = NULL;
                       option -> parsed = reset.parsed;
+                      argumentOption   = NULL;
 
                       break;
                     }
                   }
 
-                  break; // ->> Continue on to the next `name` or `nameTags[…]`
+                  break;
                 }
 
                 if ('\0' == argumentName[index] or recase(argumentName[index]) != recase((option ->* *name)[index])) {
-                  diagnostic = diagnostic ? diagnosis(PARSE_NOT_NAME, arguments[argumentIndex], option, option::info(arguments[argumentIndex], argumentLength)) : false;
+                  diagnostic = diagnostic and diagnosis(PARSE_NOT_NAME, argument, option, /* --> argument */ option::info(argument, argument + argumentLength));
                   break;
                 }
               }
 
               // ...
-              if (not diagnostic)         break;
-              if (NULL != argumentOption) break;
+              if (NULL != argumentOption)
+              break;
             }
 
             // ...
-            if (not diagnostic)         break;
-            if (NULL != argumentOption) break;
+            if (NULL != argumentOption)
+            break;
           }
 
           // ...
-          if (not diagnostic)         continue; // ->> Onto the next `option`
-          if (NULL != argumentOption) break;
+          if (NULL != argumentOption and diagnostic)
+          break;
         }
+
+        std::printf("[..BEGIN-A2]: %p" "\r\n", (void*) argumentOption);
 
         if (NULL == argumentOption)
         for (struct parsecmd *option = options; option != options + optionsLength; ++option) {
-          struct parsecmd const reset = *option;
+          bool          (*const diagnosis)(enum parsediag, char[], struct parsecmd const*, void*) = NULL == option -> diagnosis ? &option::nodiagnosis : option -> diagnosis;
+          bool                  diagnostic                                                        = true;
+          struct parsecmd const reset                                                             = *option;
 
           // ... ->> Match the `option` automatically
-          if (NULL == option -> longName and NULL == option -> name and NULL == option -> shortName) {
-            option -> parsed.argument     = arguments[argumentIndex];
-            option -> parsed.offsets.text = option -> parsed.argument;
-            diagnostic                    = diagnostic ? diagnosis(PARSED, arguments[argumentIndex], option, &static_cast<struct parsecmd const&>(static_cast<struct parsecmd>(reset))) : false;
+          std::printf("[..BEGIN-B1]: \"%s\" %i" "\r\n", argument, (int) option -> command);
+
+          if (NULL == option -> longName and NULL == option -> shortName and NULL == option -> text) {
+            /* Don’t repeat yourself… */
+            for (std::size_t optionIndex = 0u; optionIndex != optionsLength; ++optionIndex) {
+              if (option != options + optionIndex and option -> command == options[optionIndex].command and NULL != options[optionIndex].parsed.argument)
+              diagnostic = diagnostic and diagnosis(REPARSE_COMMAND, argument, option, options + optionIndex);
+            }
+
+            std::printf("  [..]: %4.5s" "\r\n", diagnostic ? "true" : "false");
+
+            option -> parsed.argument     = argument;
+            option -> parsed.offsets.text = 0;
+            diagnostic                    = diagnostic and (NULL == reset.parsed.argument or diagnosis(REPARSED, argument, option, option::info(reset)));
+            diagnostic                    = diagnostic and                                   diagnosis(PARSED,   argument, option, option::info(reset));
+            std::printf("  [..]: %4.5s" "\r\n", diagnostic ? "true" : "false");
             argumentOption                = option;
 
-            if (not diagnostic) {
-              argumentOption   = NULL;
-              option -> parsed = reset.parsed;
-            }
+            if (NULL != argumentOption and diagnostic)
+              break;
+
+            // ...
+            option -> parsed = reset.parsed;
+            argumentOption   = NULL;
           }
 
           // ...
@@ -704,14 +738,30 @@ int main(int count, char* arguments[]) /* noexcept */ {
           break;
         }
 
-        // ... ->> Matched against a valid `option`; Onto the next `argument`
+        std::printf("[..BEGIN-B2]: %p" "\r\n", (void*) argumentOption);
+        std::printf("[..END]: \"%s\"" "\r\n", argument);
+
+        // ... ->> Matched against no `option`
+        if (NULL == argumentOption) {
+          if (NULL != undiagnosis) {
+            if (not undiagnosis(argument))
+            return false;
+          }
+
+          continue;
+        }
+
+        // ... ->> Matched against a valid `option`
         if (NULL != argumentOption) {
+          // ... ->> Onto the next `argument`
           if (argumentOption -> count > argumentsLength - argumentIndex)
           break;
 
           argumentIndex += argumentOption -> count;
         }
       }
+
+      return true;
     }
 
     static void quick_exit() /* [[noreturn]] extern "C" */ {
@@ -724,140 +774,125 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
     static void start(char* arguments[], std::size_t length) {
       typedef union _ {
-        /* TODO (Lapys) -> Work on this, think about `format(…)` */
-        static bool diagnose(enum parsediag const diagnosis, char argument[], struct parsecmd const* const option, void const* const information) {
-          bool                         duplicated    = PARSED == diagnosis and NULL != static_cast<struct parsecmd const*>(information) -> parsed.argument;
-          struct parsecmd const *const options       = static_cast<struct parsecmd const*>(*reinterpret_cast<void* const*>(option -> metadata));
-          std::size_t            const optionsLength = option -> metadata[sizeof(void*)];
-          char                         warning[MESSAGE_MAXIMUM_LENGTH];
+        static bool diagnose(enum parsediag const diagnosis, char argument[], struct parsecmd const* const option, void* const information) {
+          bool                   const repeated = REPARSED == diagnosis or REPARSE_COMMAND == diagnosis;
+          struct parsecmd const *const sequence = static_cast<struct parsecmd*>(option -> metadata);
 
-          // ... --> duplicated = …;
-          for (std::size_t index = 0u; index != optionsLength; ++index)
-          if (option != options + index and option -> command == options[index].command and NULL != options[index].parsed.argument) {
-            duplicated                     = true;
-            options[index].parsed.argument = NULL;
+          // ... ->> Track repeated command-line options
+          if (repeated) {
+            bool                 (*log)(char const[], std::FILE*)                                      = NULL;
+            char const            *message                                                             = argument;
+            char                   messageOutput[MESSAGE_MAXIMUM_LENGTH + /* ->> NUL terminator */ 1u] = "";
+            std::size_t            messageOutputLength                                                 = 0u;
+            char const            *messagePrefix                                                       = "";
+            char const            *messageSuffix                                                       = "";
+            struct parsecmd *const repeat                                                              = static_cast<struct parsecmd*>(information);
+            std::FILE*           (*stream)()                                                           = NULL;
+
+            // ... ->> Do not override/ repeat these commands
+            if (NULL != repeat -> parsed.argument and (parsecmd::CLOCK == repeat -> command or parsecmd::LOG == repeat -> command))
+            return false;
+
+            // ...
+            switch (option -> command) {
+              case parsecmd::CLOCK: log = &(bool (&)(char const[], std::FILE*)) catalog -> warn; stream = &(std::FILE* (&)()) catalog -> warn; messagePrefix = "Multiple directories for the catalog's internal clock specified; Using duplicate `"; messageSuffix = "`"; break;
+              case parsecmd::LOG  : log = &(bool (&)(char const[], std::FILE*)) catalog -> warn; stream = &(std::FILE* (&)()) catalog -> warn; messagePrefix = "Multiple directories for logs specified; Using duplicate `";                         messageSuffix = "`"; break;
+              case parsecmd::RERUN: log = &(bool (&)(char const[], std::FILE*)) catalog -> log;  stream = &(std::FILE* (&)()) catalog -> log;  message       = "Okay! Okay! Restarting, alright?";                                                                        break;
+              default:;
+            }
+
+            if (NULL != log) {
+              for (char const *const texts[] = {messagePrefix, message, messageSuffix}, *const *text = texts; text != texts + (sizeof texts / sizeof(char const*)); ++text) {
+                for (std::size_t index = 0u; MESSAGE_MAXIMUM_LENGTH != messageOutputLength and '\0' != (*text)[index]; ++index)
+                messageOutput[messageOutputLength++] = (*text)[index];
+              }
+
+              messageOutput[messageOutputLength] = '\0';
+              (void) log(messageOutput, stream());
+            }
+
+            // ... ->> Ignore previous repeated commands
+            repeat -> parsed.argument = NULL;
           }
 
-          // ... ---
-          switch (diagnosis) {
-            case PARSED: {
-              if (duplicated)
-              (void) catalog -> warn(format(&warning, "Duplicate option `", argument, "` encountered; Ignoring previous entries", "…"));
-            } break;
-
-            case PARSE_NOT_VALUE: {
-              if (option == options + 2 or option == options + 4) {
-                (void) catalog -> warn(format(&warning, "Expected value on option `", argument, "`", "…"));
-                return false; // TODO (Lapys) -> Goes to LOG, what do then?
-              }
-            } break;
-
-            case PARSE_VALUE: {
-              if (option == options + 0 or option == options + 3 or option == options + 5 or option == options + 6 or option == options + 8) {
-                (void) catalog -> warn(format(&warning, "Unexpected value alongside option `", argument, "`", "…"));
-                return false; // TODO (Lapys) -> Goes to log, what do then?
-              }
-            } break;
-
-            default:;
-          }
-
-          // static bool sequenced(enum parsediag const diagnosis, struct parsecmd const* option, struct parsecmd const*) {
-          //   if (PARSED == diagnosis) {
-          //     struct parsecmd const *const sequenced = static_cast<struct parsecmd const*>(*reinterpret_cast<void* const*>(option -> metadata)) + 7;
-          //     return NULL != sequenced -> argument; // ->> Waits for its `sequenced` command-line option before a successful `parse()`
-          //   }
-
-          //   return true;
-          // }
-
-          return true;
+          // ... ->> Waits for its possibly `sequence`d command-line option before a successful `parse()`
+          return NULL == sequence or NULL != sequence -> parsed.argument;
         }
 
-        static char (&format(char (*const message)[MESSAGE_MAXIMUM_LENGTH], char const prefix[], char const value[], char const suffix[], char const overflow[] = NULL))[MESSAGE_MAXIMUM_LENGTH] {
-          std::size_t messageLength      = 0u;
-          std::size_t overflowLength     = 0u;
-          std::size_t prefixLength       = 0u;
-          std::size_t suffixLength       = 0u;
-          std::size_t valueMaximumLength = 0u;
-          std::size_t valueLength        = 0u;
+        static char const* format(enum parsecmd::command const command) {
+          switch (command) {
+            case parsecmd::ABOUT: return "about";
+            case parsecmd::CLOCK: return "clock";
+            case parsecmd::HELP : return "help";
+            case parsecmd::LOG  : return "log";
+            case parsecmd::RERUN: return "rerun";
+          }
 
-          // ... --> …Length = …;
-          overflow = NULL == overflow ? "" : overflow;
+          return "";
+        }
 
-          while ('\0' != overflow[overflowLength]) ++overflowLength;
-          while ('\0' != prefix  [prefixLength])   ++prefixLength;
-          while ('\0' != suffix  [suffixLength])   ++suffixLength;
-          while ('\0' != value   [valueLength])    ++valueLength;
-
-          valueMaximumLength = valueLength;
-
-          while (MESSAGE_MAXIMUM_LENGTH - overflowLength - 1u < prefixLength + suffixLength + valueLength and 0u != valueLength)
-            --valueLength;
-
-          overflowLength = valueMaximumLength == valueLength ? overflowLength : 0u;
-
-          // ... --> message = …;
-          for (std::size_t index = 0u; index != prefixLength;   ++index) message[messageLength++] = prefix  [index];
-          for (std::size_t index = 0u; index != valueLength;    ++index) message[messageLength++] = value   [index];
-          for (std::size_t index = 0u; index != overflowLength; ++index) message[messageLength++] = overflow[index];
-          for (std::size_t index = 0u; index != suffixLength;   ++index) message[messageLength++] = suffix  [index];
+        static bool undiagnose(char argument[]) {
+          char        messageOutput[MESSAGE_MAXIMUM_LENGTH + /* ->> NUL terminator */ 1u] = "";
+          std::size_t messageOutputLength                                                 = 0u;
 
           // ...
-          return message;
+          for (char const *const texts[] = {"Unrecognized argument `", argument, "`, use `--help` for supported commands\0;Did you mean `…`?"}, *const *text = texts; text != texts + (sizeof texts / sizeof(char const*)); ++text) {
+            for (std::size_t index = 0u; MESSAGE_MAXIMUM_LENGTH != messageOutputLength and '\0' != (*text)[index]; ++index)
+            messageOutput[messageOutputLength++] = (*text)[index];
+          }
+
+          messageOutput[messageOutputLength] = '\0';
+          catalog -> warn(messageOutput);
+
+          // ...
+          return false;
         }
       } parse;
 
-      struct /* final */ {
-        enum parsecmd::command const command;
-        std::size_t                  count;
-      }               commandLineInformation[] = {{parsecmd::ABOUT, 0u}, {parsecmd::CLOCK, 0u}, {parsecmd::HELP, 0u}, {parsecmd::LOG, 0u}, {parsecmd::RERUN, 0u}};
-      struct parsecmd commandLineOptions    [] = {
-        {parsecmd::ABOUT, {"?"},  "about", {"?"},  PARSE_TRIM,    0u, &parse::unvalued,  {}, {}}, // --> 0
-        {parsecmd::CLOCK, {NULL}, NULL,    {NULL}, PARSE_INITIAL, 0u, &parse::sequenced, {}, {}}, // --> 1
-        {parsecmd::CLOCK, {NULL}, "clock", {"c"},  PARSE_INITIAL, 0u, &parse::valued,    {}, {}}, // --> 2
-        {parsecmd::CLOCK, {NULL}, "clock", {"c"},  PARSE_INITIAL, 1u, &parse::unvalued,  {}, {}}, // --> 3
-        {parsecmd::CLOCK, {NULL}, NULL,    {"t"},  PARSE_INITIAL, 0u, &parse::valued,    {}, {}}, // --> 4
-        {parsecmd::CLOCK, {NULL}, NULL,    {"t"},  PARSE_INITIAL, 1u, &parse::unvalued,  {}, {}}, // --> 5
-        {parsecmd::HELP,  {NULL}, "help",  {"h"},  PARSE_INITIAL, 0u, &parse::unvalued,  {}, {}}, // --> 6
-        {parsecmd::LOG,   {NULL}, NULL,    {NULL}, PARSE_INITIAL, 0u, NULL,              {}, {}}, // --> 7
-        {parsecmd::RERUN, {NULL}, "rerun", {"r"},  PARSE_INITIAL, 0u, &parse::unvalued,  {}, {}}  // --> 8
+      struct parsecmd commandLineOptions[] = {
+        {parsecmd::ABOUT, {"?"},  "about", {"?"},  PARSE_TRIMMED, 0u, NULL, &parse::diagnose, {}}, // --> 0
+        {parsecmd::CLOCK, {NULL}, NULL,    {NULL}, PARSE_INITIAL, 0u, NULL, &parse::diagnose, {}}, // --> 1
+        {parsecmd::CLOCK, {NULL}, "clock", {"c"},  PARSE_INITIAL, 0u, NULL, &parse::diagnose, {}}, // --> 2
+        {parsecmd::CLOCK, {NULL}, "clock", {"c"},  PARSE_INITIAL, 1u, NULL, &parse::diagnose, {}}, // --> 3
+        {parsecmd::CLOCK, {NULL}, NULL,    {"t"},  PARSE_INITIAL, 0u, NULL, &parse::diagnose, {}}, // --> 4
+        {parsecmd::CLOCK, {NULL}, NULL,    {"t"},  PARSE_INITIAL, 1u, NULL, &parse::diagnose, {}}, // --> 5
+        {parsecmd::HELP,  {NULL}, "help",  {"h"},  PARSE_INITIAL, 0u, NULL, &parse::diagnose, {}}, // --> 6
+        {parsecmd::LOG,   {NULL}, NULL,    {NULL}, PARSE_INITIAL, 0u, NULL, &parse::diagnose, {}}, // --> 7
+        {parsecmd::RERUN, {NULL}, "rerun", {"r"},  PARSE_INITIAL, 0u, NULL, &parse::diagnose, {}}  // --> 8
       };
-      std::size_t const commandLineInformationLength = sizeof commandLineInformation / sizeof *commandLineInformation;
-      char const *const commandLineOptionLongTags [] = {"--", "/"};
-      char const *const commandLineOptionShortTags[] = {"-",  "/"};
-      std::size_t const commandLineOptionsLength     = sizeof commandLineOptions / sizeof *commandLineOptions;
-      char const *const commandLineOptionValueTags[] = {"=",  ":"};
+      char const *const commandLineOptionLongTags [][2] = {{"--", "="}, {"/", ":"}};
+      char const *const commandLineOptionShortTags[][2] = {{"-",  "="}, {"/", ":"}};
+      std::size_t const commandLineOptionsLength        = sizeof commandLineOptions / sizeof *commandLineOptions;
 
-      // ... --> catalog -> … = …;
-      for (std::size_t index = 0u; commandLineOptionsLength != index; ++index) {
-        (void) ::new (commandLineOptions[index].metadata) void*(commandLineOptions);
-        commandLineOptions[index].metadata[sizeof(void*)] = static_cast<unsigned char>(commandLineOptionsLength);
-      }
+      // ...
+      catalog -> about                            = false;                                                            // --> parsecmd::ABOUT
+      catalog -> applicationExitCode              = EXIT_SUCCESS;                                                     // ->> Used by `::quick_exit(…)` primarily
+      catalog -> applicationName                  = "Cataloger";                                                      //
+      catalog -> clocked                          = false;                                                            // ->> Catalog's internal clock is active
+      catalog -> clockFileStream                  = NULL;                                                             // ->> File stream representing the Catalog's internal clock
+      catalog -> clockInterval                    = 86400000u;                                                        // ->> Milliseconds
+      catalog -> clockPath                        = NULL;                                                             // --> parsecmd::CLOCK
+      catalog -> clockPathAllocated               = false;                                                            //
+      catalog -> commandLineArguments             = arguments;                                                        // ->> Useful for determining how the standard C/ C++ command-line `arguments` were evaluated; Optionally `NULL`-terminated
+      catalog -> commandLineArgumentsLength       = length;                                                           //
+      catalog -> commandLineOptionLongTags        = commandLineOptionLongTags;                                        // ->> Prefix that denotes long command-line options interchangeably; Optionally `NULL`
+      catalog -> commandLineOptionLongTagsLength  = sizeof commandLineOptionLongTags / sizeof(char const* const[2]);  //
+      catalog -> commandLineOptionShortTags       = commandLineOptionShortTags;                                       // ->> Prefix that denotes short command-line options interchangeably; Optionally `NULL`
+      catalog -> commandLineOptionShortTagsLength = sizeof commandLineOptionShortTags / sizeof(char const* const[2]); //
+      catalog -> help                             = false;                                                            // --> parsecmd::HELP
+      catalog -> logDirectoryPath                 = NULL;                                                             // --> parsecmd::LOG
+      catalog -> messagePrefix                    = "cataloger" ": ";                                                 // ->> Used by `::log(…)` primarily; Optionally `NULL`
+      catalog -> messageSuffix                    = "\r\n";                                                           // ->> Used by `::log(…)` primarily; Optionally `NULL`
+      catalog -> rerun                            = false;                                                            // --> parsecmd::RERUN
 
-      catalog -> about                            = false;                                                   // ->> "About" command prompted
-      catalog -> applicationExitCode              = EXIT_SUCCESS;                                            // ->> Used by `::quick_exit(…)` primarily
-      catalog -> applicationName                  = "Cataloger";                                             //
-      catalog -> clocked                          = false;                                                   // ->> Catalog's internal clock is active
-      catalog -> clockFileStream                  = NULL;                                                    // ->> File stream representing the Catalog's internal clock
-      catalog -> clockInterval                    = 86400000u;                                               // ->> Milliseconds
-      catalog -> clockPath                        = NULL;                                                    // ->> Filesystem location for serializing Catalog clock; Assume NUL-terminated
-      catalog -> clockPathAllocated               = false;                                                   //
-      catalog -> commandLineArguments             = arguments;                                               // ->> Useful for determining how the standard C/ C++ command-line `arguments` were evaluated; Optionally `NULL`-terminated
-      catalog -> commandLineArgumentsLength       = length;                                                  //
-      catalog -> commandLineOptionLongTags        = commandLineOptionLongTags;                               // ->> Prefix that denotes long command-line options interchangeably; Optionally `NULL`
-      catalog -> commandLineOptionLongTagsLength  = sizeof commandLineOptionLongTags / sizeof(char const*);  //
-      catalog -> commandLineOptionShortTags       = commandLineOptionShortTags;                              // ->> Prefix that denotes short command-line options interchangeably; Optionally `NULL`
-      catalog -> commandLineOptionShortTagsLength = sizeof commandLineOptionShortTags / sizeof(char const*); //
-      catalog -> commandLineOptionValueTags       = commandLineOptionValueTags;                              // ->> Affix that denotes valued command-line options interchangeably; Optionally `NULL`
-      catalog -> commandLineOptionValueTagsLength = sizeof commandLineOptionValueTags / sizeof(char const*); // ->> "Help" command prompted
-      catalog -> help                             = false;                                                   //
-      catalog -> logDirectoryPath                 = NULL;                                                    // ->> Filesystem location for storing catalogs; Assume NUL-terminated
-      catalog -> messagePrefix                    = "cataloger" ": ";                                        // ->> Used by `::message(…)` primarily; Optionally `NULL`
-      catalog -> messageSuffix                    = "\r\n";                                                  // ->> Used by `::message(…)` primarily; Optionally `NULL`
-      catalog -> rerun                            = false;                                                   // ->> Catalog is re-executed
+      for (std::size_t index = 0u; commandLineOptionsLength != index; ++index)
+        commandLineOptions[index].metadata = NULL;
 
-      #if defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
+      commandLineOptions[1].metadata = commandLineOptions + 7;
+
+      #if defined __APPLE__ or defined __bsdi__ or defined __CYGWIN__ or defined __DragonFly__ or defined __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ or defined __FreeBSD__ or defined __FreeBSD_version or defined __gnu_linux__ or defined __linux or defined __linux__ or defined __MACH__ or defined __NETBSD__ or defined __NETBSD_version or defined __OpenBSD__ or defined __OS400__ or defined __QNX__ or defined __QNXNTO__ or defined __sun or defined __SVR4 or defined __svr4__ or defined __sysv__ or defined __unix or defined __unix__ or defined __VMS or defined __VMS_VER or defined _NTO_VERSION or defined _POSIX_SOURCE or defined _SYSTYPE_SVR4 or defined _XOPEN_SOURCE or defined linux or defined NetBSD0_8 or defined NetBSD0_9 or defined NetBSD1_0 or defined OpenBSD2_0 or defined OpenBSD2_1 or defined OpenBSD2_2 or defined OpenBSD2_3 or defined OpenBSD2_4 or defined OpenBSD2_5 or defined OpenBSD2_6 or defined OpenBSD2_7 or defined OpenBSD2_8 or defined OpenBSD2_9 or defined OpenBSD3_0 or defined OpenBSD3_1 or defined OpenBSD3_2 or defined OpenBSD3_3 or defined OpenBSD3_4 or defined OpenBSD3_5 or defined OpenBSD3_6 or defined OpenBSD3_7 or defined OpenBSD3_8 or defined OpenBSD3_9 or defined OpenBSD4_0 or defined OpenBSD4_1 or defined OpenBSD4_2 or defined OpenBSD4_3 or defined OpenBSD4_4 or defined OpenBSD4_5 or defined OpenBSD4_6 or defined OpenBSD4_7 or defined OpenBSD4_8 or defined OpenBSD4_9 or defined sun or defined unix or defined VMS
+        /* ... ->> `dlsym()` */
+      #elif defined __NT__ or defined __TOS_WIN__ or defined __WIN32__ or defined __WINDOWS__ or defined _WIN16 or defined _WIN32 or defined _WIN32_WCE or defined _WIN64
         LPWSTR* (*const CommandLineToArgvW) (LPCWSTR, int*)                                       = NULL == libraries[shell32] .moduleHandle ? NULL : reinterpret_cast<LPWSTR* (*)(LPCWSTR, int*)>                                      (::GetProcAddress(libraries[shell32] .moduleHandle, "CommandLineToArgvW"));  // --> <shellapi.h>
         LPWSTR  (*const GetCommandLineW)    ()                                                    = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<LPWSTR  (*)()>                                                   (::GetProcAddress(libraries[kernel32].moduleHandle, "GetCommandLineW"));     // --> <windows.h> → <processenv.h>
         BOOL    (*const GetModuleHandleExA) (DWORD, LPCSTR, HMODULE*)                             = NULL == libraries[kernel32].moduleHandle ? NULL : reinterpret_cast<BOOL    (*)(DWORD, LPCSTR, HMODULE*)>                            (::GetProcAddress(libraries[kernel32].moduleHandle, "GetModuleHandleExA"));  // --> <windows.h>
@@ -924,72 +959,87 @@ int main(int count, char* arguments[]) /* noexcept */ {
         }
       #endif
 
-      // ... --- TODO (Lapys) ->
-      //           Ensure `-t:2` and `/t=2` is optionally not possible
-      //           Rethink assertions for `--help=2` rather than silently failing it via `unvalued(…)`
-      //           Prevent redundant options in `parse()` itself
-      //           Fix `-rerun` problem being difficult to diagnose
-      catalog -> parse(catalog -> commandLineArguments, catalog -> commandLineArgumentsLength, commandLineOptions, commandLineOptionsLength);
-      arguments = catalog -> commandLineArguments;
-      length    = catalog -> commandLineArgumentsLength;
+      // ... ->> Parse then interpret command-line options
+      //     TODO (Lapys) -> Why the heck does `--rerun` not work?!
+      if (not catalog -> parse(catalog -> commandLineArguments, catalog -> commandLineArgumentsLength, commandLineOptions, commandLineOptionsLength, &parse::undiagnose))
+      catalog -> exit(EXIT_FAILURE);
 
-      // ... ->> Track repeated command-line options
-      for (std::size_t index = 0u; commandLineInformationLength != index; ++index) {
-        for (std::size_t subindex = 0u; commandLineOptionsLength != subindex; ++subindex) {
-          if (NULL != commandLineOptions[subindex].argument)
-          commandLineInformation[index].count += commandLineInformation[index].command == commandLineOptions[subindex].command;
-        }
+      for (struct options /* final */ {
+        enum { valued, unvalued };
 
-        if (commandLineInformation[index].count > 1u)
-        switch (commandLineInformation[index].command) {
-          case parsecmd::CLOCK: (void) catalog -> warn("Multiple directories for the catalog's internal clock specified"); break;
-          case parsecmd::LOG  : (void) catalog -> warn("Multiple directories for logs specified");                         break;
-          case parsecmd::RERUN: (void) catalog -> warn("Okay! Okay! Restarting, alright?");                                break;
-          default:;
+        char const    *warningPrefix;
+        std::ptrdiff_t indexes[6];
+      } const options[] = {
+        {"Expected value on ",   {2, 4,          -1}}, // ->> `options::valued`   command-line option
+        {"Unexpected value on ", {0, 3, 5, 6, 8, -1}}  // ->> `options::unvalued` command-line option
+      }, *option = options; option != options + (sizeof options / sizeof *options); ++option) {
+        for (std::ptrdiff_t const *index = option -> indexes; index != option -> indexes + (sizeof option -> indexes / sizeof(std::ptrdiff_t)) and *index != -1; ++index)
+        if (NULL != commandLineOptions[*index].parsed.argument and (
+          option == options + options::valued   ? commandLineOptions[*index].parsed.offsets.value <= -1 :
+          option == options + options::unvalued ? commandLineOptions[*index].parsed.offsets.value >  -1 :
+          false
+        )) {
+          char              warningOutput[MESSAGE_MAXIMUM_LENGTH + /* ->> NUL terminator */ 1u];
+          char       *const warningArgument     = commandLineOptions[*index].parsed.argument;
+          char const *const warningCommand      = parse::format(commandLineOptions[*index].command);
+          std::size_t       warningOutputLength = 0u;
+          char const        warningSuffix[]     = "`";
+
+          // ...
+          for (char const *const texts[] = {option -> warningPrefix, warningCommand, " option `", warningArgument, warningSuffix}, *const *text = texts; text != texts + (sizeof texts / sizeof(char const*)); ++text) {
+            for (std::size_t subindex = 0u; MESSAGE_MAXIMUM_LENGTH != warningOutputLength and '\0' != (*text)[subindex]; ++subindex)
+            warningOutput[warningOutputLength++] = (*text)[subindex];
+          }
+
+          warningOutput[warningOutputLength] = '\0';
+          (void) catalog -> warn(warningOutput);
+          (void) catalog -> exit(EXIT_FAILURE);
         }
       }
 
-      // ... ->> Interpret parsed command-line options
-      for (std::size_t index = 0u; commandLineOptionsLength != index; ++index) {
-        if (NULL != commandLineOptions[index].argument)
+      for (std::size_t index = 0u; commandLineOptionsLength != index; ++index)
+      if (NULL != commandLineOptions[index].parsed.argument) {
         switch (commandLineOptions[index].command) {
-          case parsecmd::ABOUT: catalog -> about            = true;                               break;
-          case parsecmd::HELP : catalog -> help             = true;                               break;
-          case parsecmd::LOG  : catalog -> logDirectoryPath = commandLineOptions[index].argument; break;
-          case parsecmd::RERUN: catalog -> rerun            = true;                               break;
+          case parsecmd::ABOUT: catalog -> about            = true;                                      break;
+          case parsecmd::HELP : catalog -> help             = true;                                      break;
+          case parsecmd::LOG  : catalog -> logDirectoryPath = commandLineOptions[index].parsed.argument; break;
+          case parsecmd::RERUN: catalog -> rerun            = true;                                      break;
 
           case parsecmd::CLOCK: {
-            catalog -> clockPath = commandLineOptions[index].argument + (parse::valued(commandLineOptions + index) ? commandLineOptions[index].offsets.value : 0);
+            catalog -> clockPath = commandLineOptions[index].parsed.argument + (commandLineOptions[index].parsed.offsets.value > -1 ? commandLineOptions[index].parsed.offsets.value : 0);
 
-            if (commandLineOptions[index].count) {
-              for (char **argument = arguments; argument != arguments + length; ++argument)
-              if (*argument == commandLineOptions[index].argument) {
-                catalog -> clockPath = argument == arguments + (length - 1u) ? NULL : *(argument + 1);
+            if (0u != commandLineOptions[index].count) {
+              std::size_t const count = commandLineOptions[index].count; // ->> Assume `1zu`
+
+              // ...
+              for (std::size_t subindex = 0u; catalog -> commandLineArgumentsLength != subindex; ++subindex)
+              if (catalog -> commandLineArguments[subindex] == commandLineOptions[index].parsed.argument) {
+                catalog -> clockPath = catalog -> commandLineArgumentsLength > subindex + count ? catalog -> commandLineArguments[subindex + count] : NULL;
                 break;
               }
             }
 
             // ... ->> Assert the [clock_path] immediately proceeds the [log_directory] (or has a value)
-            for (char **argument = arguments; argument != arguments + length; ++argument)
-            if (*argument == commandLineOptions[index].argument) {
-              if (argument == arguments + 0) {
+            for (std::size_t subindex = 0u; catalog -> commandLineArgumentsLength != subindex; ++subindex)
+            if (catalog -> commandLineArguments[subindex] == commandLineOptions[index].parsed.argument) {
+              if (catalog -> commandLineArgumentsLength <= subindex + commandLineOptions[index].count) {
+                (void) catalog -> warn("Expected value for the catalog's internal clock directory");
+                catalog -> clockPath = NULL;
+              }
+
+              if (0u == subindex) {
                 (void) catalog -> warn("Expected directory for logs before directory for the catalog's internal clock");
                 catalog -> clockPath = NULL;
               }
 
               else
-                for (std::size_t subindex = 0u; commandLineOptionsLength != subindex; ++subindex)
-                if (parsecmd::LOG == commandLineOptions[subindex].command and *(argument - 1) != commandLineOptions[subindex].argument) {
-                  (void) catalog -> warn("Expected directory for logs specified immediately before directory for the catalog's internal clock");
+                for (std::size_t subsubindex = 0u; commandLineOptionsLength != subsubindex; ++subsubindex)
+                if (parsecmd::LOG == commandLineOptions[subsubindex].command and catalog -> commandLineArguments[subindex - 1u] != commandLineOptions[subsubindex].parsed.argument) {
+                  (void) catalog -> warn("Expected directory for logs immediately before directory for the catalog's internal clock");
                   catalog -> clockPath = NULL;
                 }
 
               // ...
-              if (argument == arguments + (length - 1u) and commandLineOptions[index].count) {
-                (void) catalog -> warn("Expected value from final command-line argument for the catalog's internal clock directory");
-                catalog -> clockPath = NULL;
-              }
-
               break;
             }
           } break;
@@ -1003,13 +1053,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
         NULL == catalog -> logDirectoryPath ? "..." : catalog -> logDirectoryPath,
         catalog -> rerun ? "true" : "false"
       );
-
-      catalog -> commandLineOptionLongTags        = NULL;
-      catalog -> commandLineOptionLongTagsLength  = 0u;
-      catalog -> commandLineOptionShortTags       = NULL;
-      catalog -> commandLineOptionShortTagsLength = 0u;
-      catalog -> commandLineOptionValueTags       = NULL;
-      catalog -> commandLineOptionValueTagsLength = 0u;
 
       // ... ->> Handle unexpected application `error()`
       (void) std::signal   (SIGTERM, &catalog -> error); //
@@ -1033,8 +1076,8 @@ int main(int count, char* arguments[]) /* noexcept */ {
       bool             messageOutputted         = false;
 
       // ...
-      messageFormatted = catalog -> format (stream, FORMAT_ERROR, &messageFormatInformation);
-      messageOutputted = catalog -> message(message, stream, stride);
+      messageFormatted = catalog -> format(stream, FORMAT_ERROR, &messageFormatInformation);
+      messageOutputted = catalog -> log   (message, stream, stride);
 
       if (messageFormatted)
       (void) catalog -> format(stream, FORMAT_INITIAL, &messageFormatInformation);
@@ -1042,31 +1085,30 @@ int main(int count, char* arguments[]) /* noexcept */ {
       // ...
       return messageOutputted;
     }
-      static bool warn(char    const message[], std::FILE* const stream = stderr) { return catalog -> warn(message, stream, sizeof(char)); }
-      static bool warn(wchar_t const message[], std::FILE* const stream = stderr) { return catalog -> warn(message, stream, sizeof(wchar_t)); }
+      static std::FILE* warn()                                                          { return stderr; }
+      static bool       warn(char    const message[], std::FILE* const stream = warn()) { return catalog -> warn(message, stream, sizeof(char)); }
+      static bool       warn(wchar_t const message[], std::FILE* const stream = warn()) { return catalog -> warn(message, stream, sizeof(wchar_t)); }
 
     /* ... */
-    bool               about;
-    int                applicationExitCode;
-    char const        *applicationName;
-    bool               clocked;
-    std::FILE         *clockFileStream;
-    std::size_t        clockInterval;
-    char              *clockPath;
-    bool               clockPathAllocated;
-    char             **commandLineArguments;
-    std::size_t        commandLineArgumentsLength;
-    char const *const *commandLineOptionLongTags;
-    std::size_t        commandLineOptionLongTagsLength;
-    char const *const *commandLineOptionShortTags;
-    std::size_t        commandLineOptionShortTagsLength;
-    char const *const *commandLineOptionValueTags;
-    std::size_t        commandLineOptionValueTagsLength;
-    bool               help;
-    char const        *logDirectoryPath;
-    char const        *messagePrefix;
-    char const        *messageSuffix;
-    bool               rerun;
+    bool                about;
+    int                 applicationExitCode;
+    char const         *applicationName;
+    bool                clocked;
+    std::FILE          *clockFileStream;
+    std::size_t         clockInterval;
+    char               *clockPath;
+    bool                clockPathAllocated;
+    char              **commandLineArguments;
+    std::size_t         commandLineArgumentsLength;
+    char const *const (*commandLineOptionLongTags)[2];
+    std::size_t         commandLineOptionLongTagsLength;
+    char const *const (*commandLineOptionShortTags)[2];
+    std::size_t         commandLineOptionShortTagsLength;
+    bool                help;
+    char const         *logDirectoryPath;
+    char const         *messagePrefix;
+    char const         *messageSuffix;
+    bool                rerun;
   } c = {};
 
   catalog = &c;                       //
@@ -1075,13 +1117,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
 
   // ... --> catalog -> logDirectoryPath = …;
   if (NULL == catalog -> logDirectoryPath) {
-    (void) catalog -> message("No directory for logs specified; defaulting to the current working directory instead");
+    (void) catalog -> log("No directory for logs specified; Defaulting to the current working directory instead");
     catalog -> logDirectoryPath = "./";
   }
 
   // ... --> catalog -> clockFileStream = …;
   if (NULL == catalog -> clockPath) {
-    (void) catalog -> message("No directory for the catalog's internal clock specified; defaulting to fallback instead");
+    (void) catalog -> log("No directory for the catalog's internal clock specified; Defaulting to fallback instead");
     catalog -> clockFileStream = std::tmpfile();
   } else catalog -> clockFileStream = std::fopen(catalog -> clockPath, "wb+");
 
@@ -1541,7 +1583,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
               standardInputIsTeletype = standardInputDescriptor != -1 and 0 != ::_isatty(standardInputDescriptor);
 
               do {
-                // --> catalog -> message(credentialsPromptMessage);
+                // --> catalog -> log(credentialsPromptMessage);
                 if (EOF == std::fputs(catalog -> messagePrefix, stdout))
                 break;
 
