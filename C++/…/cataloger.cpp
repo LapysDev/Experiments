@@ -585,8 +585,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
           // ... ->> Match based on the `option` `name`
           typedef struct parsecmd parsecmd;
 
-          std::printf("[..BEGIN-A1]: \"%s\" %i" "\r\n", argument, (int) option -> command);
-
           for (char const *const parsecmd:: *const names[] = {&parsecmd::text, &parsecmd::longName, &parsecmd::shortName}, *const parsecmd:: *const *name = names; diagnostic and name != names + (sizeof names / sizeof(char const* parsecmd::*)); ++name)
           if (NULL != option ->* *name) {
             char const *const   notag[2]    = {"", NULL};
@@ -661,7 +659,7 @@ int main(int count, char* arguments[]) /* noexcept */ {
                     option -> parsed.argument      = argument;
                     option -> parsed.offsets.name  = NULL != argumentName  ? argumentName  - option -> parsed.argument : -1;
                     option -> parsed.offsets.value = NULL != argumentValue ? argumentValue - option -> parsed.argument : -1;
-                    diagnostic                     = diagnostic and NULL != reset.parsed.argument and diagnosis(REPARSED, argument, option, option::info(reset));
+                    diagnostic                     = diagnostic and (NULL == reset.parsed.argument or diagnosis(REPARSED, argument, option, option::info(reset)));
                     diagnostic                     = diagnostic and                                   diagnosis(PARSED,   argument, option, option::info(reset));
                     argumentOption                 = option;
 
@@ -698,8 +696,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
           break;
         }
 
-        std::printf("[..BEGIN-A2]: %p" "\r\n", (void*) argumentOption);
-
         if (NULL == argumentOption)
         for (struct parsecmd *option = options; option != options + optionsLength; ++option) {
           bool          (*const diagnosis)(enum parsediag, char[], struct parsecmd const*, void*) = NULL == option -> diagnosis ? &option::nodiagnosis : option -> diagnosis;
@@ -707,8 +703,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
           struct parsecmd const reset                                                             = *option;
 
           // ... ->> Match the `option` automatically
-          std::printf("[..BEGIN-B1]: \"%s\" %i" "\r\n", argument, (int) option -> command);
-
           if (NULL == option -> longName and NULL == option -> shortName and NULL == option -> text) {
             /* Don’t repeat yourself… */
             for (std::size_t optionIndex = 0u; optionIndex != optionsLength; ++optionIndex) {
@@ -716,13 +710,10 @@ int main(int count, char* arguments[]) /* noexcept */ {
               diagnostic = diagnostic and diagnosis(REPARSE_COMMAND, argument, option, options + optionIndex);
             }
 
-            std::printf("  [..]: %4.5s" "\r\n", diagnostic ? "true" : "false");
-
             option -> parsed.argument     = argument;
             option -> parsed.offsets.text = 0;
             diagnostic                    = diagnostic and (NULL == reset.parsed.argument or diagnosis(REPARSED, argument, option, option::info(reset)));
             diagnostic                    = diagnostic and                                   diagnosis(PARSED,   argument, option, option::info(reset));
-            std::printf("  [..]: %4.5s" "\r\n", diagnostic ? "true" : "false");
             argumentOption                = option;
 
             if (NULL != argumentOption and diagnostic)
@@ -737,9 +728,6 @@ int main(int count, char* arguments[]) /* noexcept */ {
           if (NULL != argumentOption)
           break;
         }
-
-        std::printf("[..BEGIN-B2]: %p" "\r\n", (void*) argumentOption);
-        std::printf("[..END]: \"%s\"" "\r\n", argument);
 
         // ... ->> Matched against no `option`
         if (NULL == argumentOption) {
@@ -831,9 +819,13 @@ int main(int count, char* arguments[]) /* noexcept */ {
           return "";
         }
 
-        static bool undiagnose(char argument[]) {
+        static bool undiagnose(char argument[], struct parsecmd const options[], std::size_t const optionsLength) {
           char        messageOutput[MESSAGE_MAXIMUM_LENGTH + /* ->> NUL terminator */ 1u] = "";
           std::size_t messageOutputLength                                                 = 0u;
+
+          // TODO (Lapys) -> Support "????…??" as help command
+          // TODO (Lapys) -> Consider Levenstein distance checking for closest-matching argument
+          (void) options;
 
           // ...
           for (char const *const texts[] = {"Unrecognized argument `", argument, "`, use `--help` for supported commands\0;Did you mean `…`?"}, *const *text = texts; text != texts + (sizeof texts / sizeof(char const*)); ++text) {
