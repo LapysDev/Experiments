@@ -117,5 +117,6 @@ public class Program {
   }
 
   /* Main */
-  static void Main(System.String[] arguments) {}
+  static void Main(System.String[] arguments) {
+  }
 }
