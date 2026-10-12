@@ -125,9 +125,9 @@ struct program /* final */ {
   };
 
   typedef union {
-    enum flag /* : unsigned char:3 */ {
+    enum flag /* : signed char:3 */ {
       BEGIN, LOAD, FINISH,
-      DEFER_FINISH = 0x00u, PERSIST_FINISH
+      PERSIST_FINISH = 0, DEFER_FINISH = -1
     };
   } policy;
 
@@ -136,7 +136,7 @@ struct program /* final */ {
   wchar_t const *const name; // --> wchar_t const[448]
   wchar_t const       *directory;
   struct termination /* final */ {
-    enum program::policy::flag    policy : 2;
+    enum program::policy::flag    policy : 3;
     int                           status;
     struct program::finish const *finishers;
     #if defined _WIN32
@@ -184,41 +184,36 @@ struct program /* final */ {
         if (static_cast< ::HANDLE>(NULL) != this -> termination.requested) (void) this -> extensions.SetEvent(this -> termination.requested);
 
         if (reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) != this -> extensions.InitOnceExecuteOnce) {
-          if (
-            reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize
-            #if _WIN32_WINNT >= 0x0600
-              or true
-            #endif
-          ) {
-            union bruh {
-              static ::BOOL CALLBACK callback(::PINIT_ONCE const guard, ::PVOID const parameter, ::PVOID* const context) {
-                (void) context, (void) guard;
-                static_cast<struct program*>(parameter) -> termination.once.value = true;
-                static_cast<struct program*>(parameter) -> termination.finishers = NULL;
-                static_cast<struct program*>(parameter) -> termination.ready = false;
-                /* TODO (Lapys) -> run finishers */
-                return TRUE;
-              }
-            };
+        if (
+          reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize
+          #if _WIN32_WINNT >= 0x0600
+            or true
+          #endif
+        ) for (union finish { static ::BOOL CALLBACK callback(::PINIT_ONCE const guard, ::PVOID const parameter, ::PVOID* const context) {
+          struct program *const program = static_cast<struct program*>(parameter);
 
-            // program::policy::DEFER_FINISH == policy;
-            // program::policy::PERSIST_FINISH == policy;
-            while (true) {
-              ::BOOL const bruh = this -> extensions.InitOnceExecuteOnce(&this -> termination.once.guard, &bruh::callback, static_cast< ::PVOID>(this), static_cast< ::PVOID*>(NULL));
-
-              if (FALSE != bruh) {
-                return +1;
-              }
-
-              switch (policy) {
-                case program::policy::DEFER_FINISH: return -1;
-                case program::policy::PERSIST_FINISH: continue;
-              }
-            }
+          // ...
+          while (NULL != program -> termination.finishers and NULL != program -> termination.finishers -> handler) {
+            struct program::finish const *const finish = program -> termination.finishers++;
+            program -> termination.status = finish -> handler(finish -> context, program -> termination.status);
           }
 
-          else { (void) this -> termination.once.value; } // was false, now become true
-        } else { (void) this -> termination.once.value; }
+          (void) context, (void) guard;
+          program -> termination.finishers  = NULL;
+          program -> termination.once.value = true;
+          program -> termination.policy     = program::policy::FINISH;
+
+          return TRUE;
+        } }; ; ) {
+          if (FALSE != this -> extensions.InitOnceExecuteOnce(&this -> termination.once.guard, &finish::callback, static_cast< ::PVOID>(this), static_cast< ::PVOID*>(NULL)))
+          return this -> termination.status;
+
+          switch (policy) {
+            case program::policy::DEFER_FINISH:            return this -> termination.status - 1;
+            case program::policy::PERSIST_FINISH: default: continue;
+          }
+        } else this -> termination.once.value = true; // TODO
+        } else this -> termination.once.value = true; // was false, now become true
       }
     #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
       this -> termination.completed = static_cast< ::std::sig_atomic_t>(true);
@@ -387,6 +382,8 @@ struct program /* final */ {
       }
     }
   #endif
+
+  void onfinish() /* noexcept */ {}
 } program = {L"renum", L"./", {program::policy::BEGIN}, {}}; // ->> Singleton instance
 
 /* Main */

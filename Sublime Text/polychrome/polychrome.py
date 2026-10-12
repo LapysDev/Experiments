@@ -10,7 +10,7 @@ DELIMITER_MAP          = dict((closing, opening) for opening, closing in DELIMIT
 DELIMITER_SET          = frozenset("".join(opening + closing for opening, closing in DELIMITERS))
 IGNORED_SCOPE_SELECTOR = "comment, constant"
 PACKAGE_NAME           = "Polychrome"
-PACKAGE_VERSION        = "3.1.0"
+PACKAGE_VERSION        = "3.2.0"
 QUOTES                 = (("'", "'"), ("‘", "’"), ("\"", "\""), ("“", "”"), ("`", "`"), ("ˋ", "ˊ"), ("⹁", ","), ("❛", "❜"), ("❝", "❞"), ("«", "»"), ("「", "」"), ("『", "』"))
 QUOTE_MAP              = dict(QUOTES)
 TOKEN_PATTERN          = re.compile("[" + re.escape("".join(opening + closing for opening, closing in DELIMITERS + QUOTES)) + "]")
@@ -125,6 +125,22 @@ def _paint(view, change_count, regions_by_depth, use_overlay_scopes, commanded=F
   if commanded:
     sublime.status_message("Polychrome: Repaint complete")
 
+def _paint_matched_string_delimiters(regions_by_depth, string_delimiters):
+  # Count only completed pairs when calculating rainbow depth. Unmatched
+  # opening delimiters must neither be coloured nor affect nested pair colours.
+  depth = 0
+
+  for point, is_opening, matched in string_delimiters:
+    if not matched:
+      continue
+
+    if is_opening:
+      regions_by_depth[depth % len(COLORS)].append(point)
+      depth += 1
+    else:
+      depth -= 1
+      regions_by_depth[depth % len(COLORS)].append(point)
+
 def _repaint(view, expected_change_count=None, commanded=False):
   if not _is_eligible_view(view):
     return
@@ -149,6 +165,7 @@ def _repaint(view, expected_change_count=None, commanded=False):
   size                 = view.size()
   stack                = []
   string_stack         = []
+  string_delimiters    = []
 
   ignored_regions.sort(key=lambda region: region.begin())
 
@@ -172,17 +189,31 @@ def _repaint(view, expected_change_count=None, commanded=False):
 
       if quote is not None:
         if token == QUOTE_MAP[quote]:
-          quote = None
-          string_stack = []
+          _paint_matched_string_delimiters(regions_by_depth, string_delimiters)
+          quote             = None
+          string_stack      = []
+          string_delimiters = []
           continue
 
-        active_stack = string_stack
-      elif token in QUOTE_MAP:
-        quote        = token
-        string_stack = []
+        if token not in DELIMITER_SET:
+          continue
+
+        opening_delimiter = DELIMITER_MAP.get(token)
+
+        if opening_delimiter is None:
+          string_stack.append((token, len(string_delimiters)))
+          string_delimiters.append([point, True, False])
+        elif string_stack and opening_delimiter == string_stack[-1][0]:
+          _, opening_index = string_stack.pop()
+          string_delimiters[opening_index][2] = True
+          string_delimiters.append((point, False, True))
         continue
-      else:
-        active_stack = stack
+
+      if token in QUOTE_MAP:
+        quote             = token
+        string_stack      = []
+        string_delimiters = []
+        continue
 
       if token not in DELIMITER_SET:
         continue
@@ -190,13 +221,16 @@ def _repaint(view, expected_change_count=None, commanded=False):
       opening_delimiter = DELIMITER_MAP.get(token)
 
       if opening_delimiter is None:
-        regions_by_depth[len(active_stack) % len(COLORS)].append(point)
-        active_stack.append(token)
-      elif active_stack and opening_delimiter == active_stack[-1]:
-        regions_by_depth[(len(active_stack) - 1) % len(COLORS)].append(point)
-        active_stack.pop()
+        regions_by_depth[len(stack) % len(COLORS)].append(point)
+        stack.append(token)
+      elif stack and opening_delimiter == stack[-1]:
+        regions_by_depth[(len(stack) - 1) % len(COLORS)].append(point)
+        stack.pop()
 
     position = end
+
+  if quote is not None:
+    _paint_matched_string_delimiters(regions_by_depth, string_delimiters)
 
   if view.change_count() != change_count:
     return
