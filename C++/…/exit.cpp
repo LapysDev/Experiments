@@ -7,7 +7,7 @@
 #include <cstdio>  // --> stdout; ::std::fwrite(…)
 #if defined _WIN32
 # include <windows.h> // --> ::BOOL, ::DWORD, ::HANDLE, ::HWND, ::MSG; CREATE_EVENT_MANUAL_RESET, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT, CTRL_C_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT, FALSE, INFINITE, MWMO_INPUTAVAILABLE, PM_REMOVE, QS_ALLINPUT, TRUE, WAIT_FAILED, WAIT_OBJECT_0, WM_CLOSE, WM_DESTROY, WM_ENDSESSION, WM_KEYDOWN, WM_QUERYENDSESSION, WM_QUIT; ::CloseHandle(…), ::CreateEventExW(…), ::DispatchMessageW(…), ::GetMessageW(…), ::PostQuitMessage(…), ::SetConsoleCtrlHandler(…), ::SetEvent(…), ::TranslateMessage(…), ::WaitForSingleObject(…)
-#elif defined __APPLE__ or defined __unix__
+#elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
 # include <signal.h> // --> ::sigaction; SIGHUP, SIGQUIT; ::sigaction(…), ::sigemptyset(…)
 #endif
 
@@ -34,7 +34,7 @@ struct program /* final */ {
         return ::DefWindowProcW(windowHandle, message, parameter, subparameter);
       }
     } window;
-  #elif defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
     struct /* final */ { int status; union { ::sig_atomic_t volatile requested, completed; }; } termination;
   #else
     struct /* final */ { int status; union { ::std::sig_atomic_t volatile requested, completed; }; } termination;
@@ -56,7 +56,7 @@ struct program /* final */ {
 
       return FALSE;
     }
-  #elif defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
     static void onexit(int const reason) {
       if (NULL != application)
       switch (reason) {
@@ -101,7 +101,7 @@ struct program /* final */ {
         if (static_cast< ::HANDLE>(NULL) != this -> termination.completed) { (void) ::CloseHandle(this -> termination.completed); this -> termination.completed = static_cast< ::HANDLE>(NULL); }
         if (static_cast< ::HANDLE>(NULL) != this -> termination.requested) { (void) ::CloseHandle(this -> termination.requested); this -> termination.requested = static_cast< ::HANDLE>(NULL); }
       }
-    #elif defined __APPLE__ or defined __unix__
+    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
       struct ::sigaction action = {};
 
       // ... ->> Otherwise use `::signal(…)`
@@ -119,8 +119,8 @@ struct program /* final */ {
         {SIGTERM, {}}  // ->> Terminate                          (e.g. `kill [-s SIGTERM|-TERM] <pid>` or `::kill(<pid>, SIGTERM)`)
       }, *signal = signals; signal != &signals[sizeof signals / sizeof(struct signal)]; ++signal)
       if (0 != ::sigaction(signal -> id, &action, &signal -> previousAction)) {
-        while (signal != signals)
-          (void) --signal, ::sigaction(signal -> id, &signal -> previousAction, static_cast<struct ::sigaction*>(NULL));
+        while (signal != signals ? --signal, true : false)
+          (void) ::sigaction(signal -> id, &signal -> previousAction, static_cast<struct ::sigaction*>(NULL));
 
         application = NULL;
         signal      = &signals[(sizeof signals / sizeof(struct signal)) - 1u]; // --> break
@@ -131,8 +131,8 @@ struct program /* final */ {
         {SIGTERM, NULL}  // ->> Terminated
       }, *signal = signals; signal != &signals[sizeof signals / sizeof(struct signal)]; ++signal)
       if (SIG_ERR == (signal -> previousHandler = ::std::signal(signal -> id, &this -> onexit))) {
-        while (signal != signals)
-          (void) --signal, ::std::signal(signal -> id, signal -> previousHandler);
+        while (signal != signals ? --signal, true : false)
+          (void) ::std::signal(signal -> id, signal -> previousHandler);
 
         application = NULL;
         signal      = &signals[(sizeof signals / sizeof(struct signal)) - 1u]; // --> break
@@ -142,7 +142,7 @@ struct program /* final */ {
 } program = {
   #if defined _WIN32
     {EXIT_SUCCESS, NULL, NULL}, {}, {}
-  #elif defined __APPLE__ or defined __unix__
+  #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
     {EXIT_SUCCESS, {00}}
   #else
     {EXIT_SUCCESS, {00}}
@@ -176,7 +176,7 @@ int main(int, char*[]) {
       case WAIT_FAILED: application -> termination.status = EXIT_FAILURE; goto finish; // --> ::DWORD {0xFFFFFFFFu}                ->> `::GetLastError()` for diagnostic
       default:;         /* Do something… */                                            // --> WAIT_ABANDONED_0, WAIT_IO_COMPLETION, …
     }
-  #else // --> defined __APPLE__ or defined __unix__
+  #else // --> defined __ANDROID__ or defined __APPLE__ or defined __unix__
     while (NULL != application and not application -> termination.requested) {
       (void) ::std::fwrite("Hello, World!" "\r\n", sizeof(char), 15u, stdout);
       goto finish; // ->> — otherwise update loop instead

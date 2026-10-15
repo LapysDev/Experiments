@@ -28,7 +28,7 @@ struct jit /* final */ {
 };
 
 PTHREAD_JIT_WRITE_ALLOW_CALLBACKS_NP(::jit::write); // ->> Registers at most one callback
-#elif defined __unix__
+#elif defined __ANDROID__ or defined __unix__
 # include <stdint.h>   // --> ::uintptr_t
 # include <sys/mman.h> // --> MAP_ANONYMOUS, MAP_FAILED, MAP_PRIVATE, PROT_EXEC, PROT_WRITE; ::mmap(…), ::mprotect(…), ::munmap(…)
 #endif
@@ -155,7 +155,7 @@ int main(int, char*[]) /* noexcept */ {
     }
 
     ::sys_icache_invalidate(reinterpret_cast<void*>(reinterpret_cast< ::uintptr_t>(function)), length);
-  #elif defined __unix__
+  #elif defined __ANDROID__ or defined __unix__
     function = reinterpret_cast<char const (&(*)(bool))[14]>(reinterpret_cast< ::uintptr_t>(::mmap(static_cast<void*>(NULL), length, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L)));
 
     if (MAP_FAILED == reinterpret_cast<void*>(reinterpret_cast< ::uintptr_t>(function))) {

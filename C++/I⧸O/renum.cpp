@@ -1,21 +1,18 @@
-/* POSIX:   rm -f ./renum;   clear && clang++ -ffast-math                -fno-aligned-new -fno-asynchronous-unwind-tables -fno-builtin -fno-exceptions -fno-rtti -fno-sized-deallocation -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -fomit-frame-pointer -march=native -nostdlib++ -O3 -pedantic-errors -std=c++98 -Wall -Wextra                      renum.cpp -lc -ldl -pthread -o renum     && ./renum   "  A " "👋" C;  rm -f ./renum */
-/* Windows: del renum.exe && cls   && clang++ -ffast-math -ffreestanding -fno-aligned-new -fno-asynchronous-unwind-tables -fno-builtin -fno-exceptions -fno-rtti -fno-sized-deallocation -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -fomit-frame-pointer -march=native -nostdlib++ -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-unknown-pragmas renum.cpp -lkernel32        -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
+/* POSIX:   rm -f ./renum;   clear && clang++ -ffast-math                -fno-aligned-new -fno-asynchronous-unwind-tables -fno-builtin -fno-exceptions -fno-rtti -fno-sized-deallocation -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -fomit-frame-pointer -march=native -nostdlib++ -O3 -pedantic-errors -std=c++98 -Wall -Wextra                      -Wno-unused-label renum.cpp -lc -ldl -pthread -o renum     && ./renum   "  A " "👋" C;  rm -f ./renum */
+/* Windows: del renum.exe && cls   && clang++ -ffast-math -ffreestanding -fno-aligned-new -fno-asynchronous-unwind-tables -fno-builtin -fno-exceptions -fno-rtti -fno-sized-deallocation -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -fomit-frame-pointer -march=native -nostdlib++ -O3 -pedantic-errors -std=c++98 -Wall -Wextra -Wno-unknown-pragmas -Wno-unused-label renum.cpp -lkernel32        -o renum.exe && renum.exe "  A " "👋" C & del renum.exe */
 /* renum [.] --dry-run --undo --file a.txt --file https://b.txt --file C >1 "renum.log" */
 #include <ciso646> // --> and, or, not
 #include <climits> // --> INT_MAX, MB_LEN_MAX, ULONG_MAX, USHRT_MAX
 #include <clocale> // --> LC_CTYPE; ::std::setlocale(…)
-#include <csignal> // --> ::std::sig_atomic_t; SIG_ERR, SIGINT, SIGTERM; ::std::signal(…)
 #include <cstdarg> // --> va_arg(…), va_end(…), va_start(…); ::std::va_list
 #include <cstddef> // --> ::std::max_align_t, ::std::size_t
-#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, _IONBF, stdout; ::std::fflush(…), ::std::fwrite(…), ::std::setbuf(…), ::std::setvbuf(…)
 #include <cstdlib> // --> EXIT_FAILURE, EXIT_SUCCESS, NULL; ::std::qsort(…), ::std::rand(…), ::std::srand(…)
 #include <ctime>   // --> ::std::time_t; ::std::time(…)
 #include <cwchar>  // --> WEOF; ::std::mbstate_t; ::std::fputwc(…), ::std::fwide(…), ::std::mbrtowc(…), ::std::mbsrtowcs(…), ::std::wcrtomb(…)
 #include <new>     // --> ::delete[], ::new, ::std::nothrow
 #
-#if defined __STDC_HOSTED__ and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
-# include <mutex> // --> ::std::once_flag
-#endif
+#include <csignal> // --> ::std::sig_atomic_t; SIG_ERR, SIGINT, SIGTERM; ::std::signal(…)
+#include <cstdio>  // --> ::std::FILE; _IOFBF, _IOLBF, _IONBF, stdout; ::std::fflush(…), ::std::fwrite(…), ::std::setbuf(…), ::std::setvbuf(…)
 
 #if defined _WIN32
 # undef  _MBCS
@@ -109,49 +106,52 @@ extern "C" void* dlsym  (void*, char const[]);
 #   include <sys/types.h> // --> pid_t
 #   include <unistd.h>    // --> ::getcwd(…), ::getpid()
 # endif
+#elif (defined __STDC_HOSTED__ and __STDC_HOSTED__ == 1) and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
+# include <mutex> // --> ::std::once_flag; ::std::call_once(…)
 #endif
 
 /* Renumerator */
-struct program *renum = NULL;
-struct program /* final */ {
-  struct finish /* final */ {
-    int (*handler)(void*, int) /* noexcept */;
-    void *context;
-
-    static int const& self() /* noexcept */ {
-      static int const object = int();
-      return object;
-    }
-  };
+static struct program *renum = NULL;
+static struct program /* final */ {
+  static void UNRESOLVED(...) /* noexcept */ {}
 
   typedef union {
     enum flag /* : signed char:3 */ {
-      BEGIN, LOAD, FINISH,
-      PERSIST_FINISH = 0, DEFER_FINISH = -1
+      BEGIN          = false, FINISH       = true, LOAD, UNLOAD,
+      PERSIST_FINISH = 0,     DEFER_FINISH = -1
     };
   } policy;
 
-  static void UNRESOLVED(...) /* noexcept */ {}
+  struct finish /* final */ {
+    void (*handler)(void*, int*) /* noexcept */, *context;
+    static int const& self() /* noexcept */ { static int const object = int(); return object; }
+  };
 
+  /* ... */
   wchar_t const *const name; // --> wchar_t const[448]
   wchar_t const       *directory;
   struct termination /* final */ {
     enum program::policy::flag    policy : 3;
     int                           status;
-    struct program::finish const *finishers;
+    struct program::finish const *finishers; // ->> Null-terminated via `.handler`
+    struct /* final */ {
+      #if defined _WIN32
+        ::INIT_ONCE guard;
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        ::pthread_mutex_t guard;
+      #elif (defined __STDC_HOSTED__ and __STDC_HOSTED__ == 1) and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
+        ::std::once_flag guard;
+      #else
+        unsigned char guard : 1;
+      #endif
+      bool value;
+    } once;
     #if defined _WIN32
-      union { ::INIT_ONCE guard; bool value; } once;
-      ::HANDLE                                 requested, completed; // --> ::std::atomic_bool {λ ? ::SetEvent(…) : ::ResetEvent(…)}
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
-      struct /* final */ { ::pthread_mutex_t guard; bool value; } once;
-      union              { ::std::sig_atomic_t volatile requested, completed; }; // ->> Container could be `volatile` as well
-    #elif defined __STDC_HOSTED__ and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
-      struct /* final */ { ::std::once_flag guard; bool value; } once;
-      union              { ::std::sig_atomic_t volatile requested, completed; };
+      ::HANDLE requested, completed; // --> ::std::atomic_bool {λ ? ::SetEvent(…) : ::ResetEvent(…)}
     #else
-      union { bool guard : 1, value; } once;
-      union { bool requested, completed; };
+      union { ::std::sig_atomic_t volatile requested, completed; }; // ->> Should be global `::std::sig_atomic_t volatile`
     #endif
+    ::std::size_t registered;
   } termination;
   struct /* final */ {
     #if _WIN32
@@ -174,217 +174,259 @@ struct program /* final */ {
   } extensions;
 
   /* ... */
-  int finish(int const& status = program::finish::self(), struct program::finish const finishers[] = reinterpret_cast<struct program::finish const*>(&program::finish::self()), enum program::policy::flag const policy = program::policy::PERSIST_FINISH) /* noexcept */ {
-    this -> termination.finishers = &program::finish::self() == static_cast<void const*>(finishers) ? this -> termination.finishers : finishers;
-    this -> termination.status    = &program::finish::self() == &status                             ? this -> termination.status    : status;
-
-    #if defined _WIN32
-      if (program::policy::LOAD == this -> termination.policy) {
-        if (static_cast< ::HANDLE>(NULL) != this -> termination.completed) (void) this -> extensions.SetEvent(this -> termination.completed);
-        if (static_cast< ::HANDLE>(NULL) != this -> termination.requested) (void) this -> extensions.SetEvent(this -> termination.requested);
-
-        if (reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) != this -> extensions.InitOnceExecuteOnce) {
-        if (
-          reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize
-          #if _WIN32_WINNT >= 0x0600
-            or true
-          #endif
-        ) for (union finish { static ::BOOL CALLBACK callback(::PINIT_ONCE const guard, ::PVOID const parameter, ::PVOID* const context) {
-          struct program *const program = static_cast<struct program*>(parameter);
-
-          // ...
-          while (NULL != program -> termination.finishers and NULL != program -> termination.finishers -> handler) {
-            struct program::finish const *const finish = program -> termination.finishers++;
-            program -> termination.status = finish -> handler(finish -> context, program -> termination.status);
-          }
-
-          (void) context, (void) guard;
-          program -> termination.finishers  = NULL;
-          program -> termination.once.value = true;
-          program -> termination.policy     = program::policy::FINISH;
-
-          return TRUE;
-        } }; ; ) {
-          if (FALSE != this -> extensions.InitOnceExecuteOnce(&this -> termination.once.guard, &finish::callback, static_cast< ::PVOID>(this), static_cast< ::PVOID*>(NULL)))
-          return this -> termination.status;
-
-          switch (policy) {
-            case program::policy::DEFER_FINISH:            return this -> termination.status - 1;
-            case program::policy::PERSIST_FINISH: default: continue;
-          }
-        } else this -> termination.once.value = true; // TODO
-        } else this -> termination.once.value = true; // was false, now become true
-      }
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
-      this -> termination.completed = static_cast< ::std::sig_atomic_t>(true);
-      this -> termination.requested = static_cast< ::std::sig_atomic_t>(true);
-
-      // (void) ::pthread_mutex_destroy(&this -> termination.once.state);
-    #elif defined __STDC_HOSTED__ and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
-    #endif
-
-    // if (!::InitOnceExecuteOnce(&finish_once, finish_once_callback, static_cast< ::PVOID>(NULL), static_cast< ::LPVOID>(NULL))) return -1;
-    // if (0 != ::pthread_once(&finish_once, finish_once_callback)) return -1;
-    // ::std::atomic_bool completed, requested; once = this -> termination.completed.exchange(true, ::std::memory_order_acq_rel);
-    /* Clean up… */
-    // #if (__cplusplus >= 201103L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201103L)
-    //   ::std::call_once(this -> termination.once, &program::finish_once, this);
-    // #else
-    //   if (0 != ::pthread_mutex_lock(&this -> termination.once))
-    //   return -1;
-    //
-    //   if (not this -> termination.really_done) {
-    //     this -> finish_once();
-    //     this -> termination.really_done = true;
-    //   }
-    //
-    //   if (0 != ::pthread_mutex_unlock(&this -> termination.once))
-    //   return -1;
-    // #else
-    // #endif
-
-    #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
-      (void) ::pthread_mutex_destroy(&this -> termination.once.state); // once only
-    #endif
-
-    return status;
+  ~program() /* noexcept */ {
+    if (program::policy::FINISH == this -> termination.policy or program::policy::LOAD == this -> termination.policy)
+    if (this -> termination.status == this -> finish(this -> termination.status, this -> termination.finishers, program::policy::PERSIST_FINISH)) {
+      #if defined _WIN32
+        this -> dispose();
+        (void) this -> extensions.SetConsoleCtrlHandler(&this -> onexit, FALSE);
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        this -> dispose();
+      #endif
+    }
   }
 
-  void load(void const* const libraries, void (*(*const resolve)(void const*, unsigned char, char const[], void (*)(...) /* noexcept */) /* noexcept */)(...) /* noexcept */) /* noexcept */ {
-    renum = this;
-
-    #if defined _WIN32
-      this -> extensions.CloseHandle           = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) == this -> extensions.CloseHandle           ? reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (resolve(libraries, /* --> library::kernelbase */ 00u, "CloseHandle",           &program::UNRESOLVED)) : this -> extensions.CloseHandle;           // --> <windows.h>
-      this -> extensions.CreateEventExW        = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(&program::UNRESOLVED) == this -> extensions.CreateEventExW        ? reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(resolve(libraries, /* --> library::kernelbase */ 00u, "CreateEventExW",        &program::UNRESOLVED)) : this -> extensions.CreateEventExW;        // --> <windows.h> --> ::CreateEventA(…), ::CreateEventExA(…), ::CreateEventW(…)
-      this -> extensions.ResetEvent            = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) == this -> extensions.ResetEvent            ? reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (resolve(libraries, /* --> library::kernelbase */ 00u, "ResetEvent",            &program::UNRESOLVED)) : this -> extensions.ResetEvent;            // --> <windows.h>
-      this -> extensions.SetConsoleCtrlHandler = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>                          (&program::UNRESOLVED) == this -> extensions.SetConsoleCtrlHandler ? reinterpret_cast< ::BOOL   (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>                          (resolve(libraries, /* --> library::kernelbase */ 00u, "SetConsoleCtrlHandler", &program::UNRESOLVED)) : this -> extensions.SetConsoleCtrlHandler; // --> <windows.h>
-      this -> extensions.SetEvent              = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) == this -> extensions.SetEvent              ? reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (resolve(libraries, /* --> library::kernelbase */ 00u, "SetEvent",              &program::UNRESOLVED)) : this -> extensions.SetEvent;              // --> <windows.h>
-      this -> extensions.WaitForSingleObject   = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::DWORD  (WINAPI*)(::HANDLE, ::DWORD)>                                   (&program::UNRESOLVED) == this -> extensions.WaitForSingleObject   ? reinterpret_cast< ::DWORD  (WINAPI*)(::HANDLE, ::DWORD)>                                   (resolve(libraries, /* --> library::kernelbase */ 00u, "WaitForSingleObject",   &program::UNRESOLVED)) : this -> extensions.WaitForSingleObject;   // --> <windows.h>
-
-      if (program::policy::BEGIN == this -> termination.policy or program::policy::FINISH == this -> termination.policy) {
-        this -> extensions.InitOnceExecuteOnce = reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceExecuteOnce", &program::UNRESOLVED)); // --> <windows.h>
-        this -> extensions.InitOnceInitialize  = reinterpret_cast<VOID    (WINAPI*)(::PINIT_ONCE)>                                    (resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceInitialize",  &program::UNRESOLVED)); // --> <windows.h>
-        this -> termination.once.value         = false;
-
-        // ... ->> Environment automatically defers `::CloseHandle(.termination.completed|.requested)` and `::SetConsoleCtrlHandler(&.onexit, FALSE)`
-        if (reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) != this -> extensions.InitOnceExecuteOnce) {
-          if (reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize) this -> extensions.InitOnceInitialize(::new (&this -> termination.once.guard) ::INIT_ONCE);
-          #if _WIN32_WINNT >= 0x0600
-            else { ::INIT_ONCE const guard = INIT_ONCE_STATIC_INIT; (void) ::new (&this -> termination.once.guard) ::INIT_ONCE(guard); } // --> ::InitOnceInitialize(…)
-          #endif
+  /* ... */
+  public:
+    void dispose() /* noexcept */ {
+      #if defined _WIN32
+        if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.CloseHandle) {
+          if (static_cast< ::HANDLE>(NULL) != this -> termination.completed) (void) this -> extensions.CloseHandle(this -> termination.completed);
+          if (static_cast< ::HANDLE>(NULL) != this -> termination.requested) (void) this -> extensions.CloseHandle(this -> termination.requested);
         }
 
-        if (
-          reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(&program::UNRESOLVED) != this -> extensions.CreateEventExW        and
-          reinterpret_cast< ::BOOL   (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>                          (&program::UNRESOLVED) != this -> extensions.SetConsoleCtrlHandler and
-          reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) != this -> extensions.SetEvent              and
-          reinterpret_cast< ::DWORD  (WINAPI*)(::HANDLE, ::DWORD)>                                   (&program::UNRESOLVED) != this -> extensions.WaitForSingleObject
-        ) {
+        this -> termination.completed = static_cast< ::HANDLE>(NULL);
+        this -> termination.requested = static_cast< ::HANDLE>(NULL);
+
+        (void) this -> extensions.SetConsoleCtrlHandler(&this -> onexit, FALSE);
+      #else // ->> Not resetting signals like `SIGTERM`
+        if (reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_destroy and (
+          reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_init
+          #if defined __FreeBSD__ or defined __OpenBSD__
+            or true
+          #endif
+        )) (void) this -> extensions.pthread_mutex_destroy(&this -> termination.once.guard);
+      #endif
+    }
+
+    inline int exit(int const); // ->> `::std::exit(…)` (or optionally `::std::_Exit(…)` otherwise `::std::abort(…)`)
+
+    int finish(int const& status = program::finish::self(), struct program::finish const finishers[] = reinterpret_cast<struct program::finish const*>(&program::finish::self()), enum program::policy::flag const policy = program::policy::PERSIST_FINISH) /* noexcept */ {
+      if (program::policy::FINISH == this -> termination.policy or program::policy::LOAD == this -> termination.policy) {
+        this -> termination.finishers = &program::finish::self() == static_cast<void const*>(finishers) ? this -> termination.finishers : finishers;
+        this -> termination.status    = &program::finish::self() == &status                             ? this -> termination.status    : status;
+      }
+
+      switch (this -> termination.policy) {
+        case program::policy::LOAD: {
+          #if defined _WIN32
+            if (static_cast< ::HANDLE>(NULL) != this -> termination.requested)
+            (void) this -> extensions.SetEvent(this -> termination.requested);
+
+            if (reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) != this -> extensions.InitOnceExecuteOnce and (
+              reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize
+              #if _WIN32_WINNT >= 0x0600
+                or true
+              #endif
+            )) for (union finish { static ::BOOL CALLBACK callback(::PINIT_ONCE const /* guard */, ::PVOID const parameter, ::PVOID* const /* context */) {
+              (void) program::onfinish(static_cast<struct program*>(parameter), program::policy::DEFER_FINISH);
+              return TRUE;
+            } }; ; ) {
+              if (FALSE != this -> extensions.InitOnceExecuteOnce(&this -> termination.once.guard, &finish::callback, static_cast< ::PVOID>(this), static_cast< ::PVOID*>(NULL)))
+              break;
+
+              if (program::policy::DEFER_FINISH == policy)
+              return program::policy::DEFER_FINISH + this -> termination.status;
+            } else (void) program::onfinish(this, program::policy::DEFER_FINISH);
+
+            if (static_cast< ::HANDLE>(NULL) != this -> termination.completed)
+            (void) this -> extensions.SetEvent(this -> termination.completed);
+          #else
+            this -> termination.requested = static_cast< ::std::sig_atomic_t>(true);
+            #if defined __ANDROID__ or defined __APPLE__ or defined __unix__ // --> ::dispatch_once_f(&static ::dispatch_once_t {0}, this, f), 0 == ::pthread_once(::pthread_once_t* = PTHREAD_ONCE_INIT, void (*)())
+              if (reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_lock and reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_unlock and (
+                reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_init
+                #if defined __FreeBSD__ or defined __OpenBSD__
+                  or true
+                #endif
+              )) {
+                if (0x00 != this -> extensions.pthread_mutex_lock(&this -> termination.once.guard))
+                return program::policy::DEFER_FINISH + this -> termination.status;
+
+                (void) program::onfinish(this, program::policy::DEFER_FINISH);
+                this -> termination.completed = static_cast< ::std::sig_atomic_t>(true);
+
+                if (0x00 != this -> extensions.pthread_mutex_unlock(&this -> termination.once.guard))
+                return program::policy::DEFER_FINISH + this -> termination.status;
+              } else (void) program::onfinish(this, program::policy::DEFER_FINISH);
+            #elif (defined __STDC_HOSTED__ and __STDC_HOSTED__ == 1) and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
+              ::std::call_once(this -> termination.once.guard, &this -> onfinish, this, program::policy::DEFER_FINISH);
+            #else
+              (void) program::onfinish(this, program::policy::DEFER_FINISH);
+            #endif
+            this -> termination.completed = static_cast< ::std::sig_atomic_t>(true);
+          #endif
+        } return program::policy::PERSIST_FINISH + this -> termination.status;
+
+        case program::policy::FINISH: return program::onfinish(this, program::policy::PERSIST_FINISH);
+        case program::policy::UNLOAD: return program::policy::DEFER_FINISH + this -> termination.status;
+        default:                      return int(); // ->> Unintended Behaviour
+      }
+    }
+
+    void load(void const* const libraries, void (*(*const resolve)(void const*, unsigned char, char const[], void (*)(...) /* noexcept */) /* noexcept */)(...) /* noexcept */) /* noexcept */ {
+      renum = this;
+
+      #if defined _WIN32
+        this -> extensions.CloseHandle           = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) == this -> extensions.CloseHandle           ? reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (resolve(libraries, /* --> library::kernelbase */ 00u, "CloseHandle",           &program::UNRESOLVED)) : this -> extensions.CloseHandle;           // --> <windows.h>
+        this -> extensions.CreateEventExW        = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(&program::UNRESOLVED) == this -> extensions.CreateEventExW        ? reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(resolve(libraries, /* --> library::kernelbase */ 00u, "CreateEventExW",        &program::UNRESOLVED)) : this -> extensions.CreateEventExW;        // --> <windows.h> --> ::CreateEventA(…), ::CreateEventExA(…), ::CreateEventW(…)
+        this -> extensions.ResetEvent            = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) == this -> extensions.ResetEvent            ? reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (resolve(libraries, /* --> library::kernelbase */ 00u, "ResetEvent",            &program::UNRESOLVED)) : this -> extensions.ResetEvent;            // --> <windows.h>
+        this -> extensions.SetConsoleCtrlHandler = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>                          (&program::UNRESOLVED) == this -> extensions.SetConsoleCtrlHandler ? reinterpret_cast< ::BOOL   (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>                          (resolve(libraries, /* --> library::kernelbase */ 00u, "SetConsoleCtrlHandler", &program::UNRESOLVED)) : this -> extensions.SetConsoleCtrlHandler; // --> <windows.h>
+        this -> extensions.SetEvent              = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (&program::UNRESOLVED) == this -> extensions.SetEvent              ? reinterpret_cast< ::BOOL   (WINAPI*)(::HANDLE)>                                            (resolve(libraries, /* --> library::kernelbase */ 00u, "SetEvent",              &program::UNRESOLVED)) : this -> extensions.SetEvent;              // --> <windows.h>
+        this -> extensions.WaitForSingleObject   = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::DWORD  (WINAPI*)(::HANDLE, ::DWORD)>                                   (&program::UNRESOLVED) == this -> extensions.WaitForSingleObject   ? reinterpret_cast< ::DWORD  (WINAPI*)(::HANDLE, ::DWORD)>                                   (resolve(libraries, /* --> library::kernelbase */ 00u, "WaitForSingleObject",   &program::UNRESOLVED)) : this -> extensions.WaitForSingleObject;   // --> <windows.h>
+        this -> termination.registered           = static_cast< ::std::size_t>(true);
+
+        if (program::policy::BEGIN == this -> termination.policy or program::policy::FINISH == this -> termination.policy) {
           struct /* final */ { bool requested, completed; } reset = {false, false};
 
           // ...
-          if (program::policy::FINISH == this -> termination.policy) {
-            if      (static_cast< ::HANDLE>(NULL) == this -> termination.completed);
-            else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.ResetEvent and FALSE != this -> extensions.ResetEvent (this -> termination.completed)) reset.completed = true;
-            else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.CloseHandle) (void)     this -> extensions.CloseHandle(this -> termination.completed);
+          this -> extensions.InitOnceExecuteOnce = reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceExecuteOnce", &program::UNRESOLVED)); // --> <windows.h>
+          this -> extensions.InitOnceInitialize  = reinterpret_cast<VOID    (WINAPI*)(::PINIT_ONCE)>                                    (resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceInitialize",  &program::UNRESOLVED)); // --> <windows.h>
+          this -> termination.once.value         = false;
 
-            if      (static_cast< ::HANDLE>(NULL) == this -> termination.requested);
-            else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.ResetEvent and FALSE != this -> extensions.ResetEvent (this -> termination.requested)) reset.requested = true;
-            else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.CloseHandle) (void)     this -> extensions.CloseHandle(this -> termination.requested);
+          if (reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize) this -> extensions.InitOnceInitialize(::new (&this -> termination.once.guard) ::INIT_ONCE);
+          #if _WIN32_WINNT >= 0x0600                                                                                                     // ->> Likely not copy-constructible; For compile-time availability
+            else { ::INIT_ONCE const guard = INIT_ONCE_STATIC_INIT; (void) ::new (&this -> termination.once.guard) ::INIT_ONCE(guard); } // --> ::InitOnceInitialize(…)
+          #endif
+
+          if (reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(&program::UNRESOLVED) != this -> extensions.CreateEventExW and reinterpret_cast< ::BOOL (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>(&program::UNRESOLVED) != this -> extensions.SetConsoleCtrlHandler and reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.SetEvent and reinterpret_cast< ::DWORD (WINAPI*)(::HANDLE, ::DWORD)>(&program::UNRESOLVED) != this -> extensions.WaitForSingleObject) {
+            if (program::policy::FINISH == this -> termination.policy) {
+              if      (static_cast< ::HANDLE>(NULL) == this -> termination.completed);
+              else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.ResetEvent and FALSE != this -> extensions.ResetEvent (this -> termination.completed)) reset.completed = true;
+              else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.CloseHandle) (void)     this -> extensions.CloseHandle(this -> termination.completed);
+
+              if      (static_cast< ::HANDLE>(NULL) == this -> termination.requested);
+              else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.ResetEvent and FALSE != this -> extensions.ResetEvent (this -> termination.requested)) reset.requested = true;
+              else if (reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.CloseHandle) (void)     this -> extensions.CloseHandle(this -> termination.requested);
+            }
+
+            this -> termination.completed = reset.completed ? this -> termination.completed : this -> extensions.CreateEventExW(static_cast< ::LPSECURITY_ATTRIBUTES>(NULL), static_cast< ::LPCWSTR>(NULL), CREATE_EVENT_MANUAL_RESET, /* --> ::SetEvent(…) */ EVENT_MODIFY_STATE | /* --> ::WaitForSingleObject(…) */ SYNCHRONIZE); // --> ::CreateEventW(::LPSECURITY_ATTRIBUTES, ::BOOL manual = TRUE, ::BOOL initial = FALSE, ::LPCWSTR);
+            this -> termination.requested = reset.requested ? this -> termination.requested : this -> extensions.CreateEventExW(static_cast< ::LPSECURITY_ATTRIBUTES>(NULL), static_cast< ::LPCWSTR>(NULL), CREATE_EVENT_MANUAL_RESET, /* --> ::SetEvent(…) */ EVENT_MODIFY_STATE | /* --> ::WaitForSingleObject(…) */ SYNCHRONIZE);
+
+            if (static_cast< ::HANDLE>(NULL) == this -> termination.completed or static_cast< ::HANDLE>(NULL) == this -> termination.requested or FALSE == this -> extensions.SetConsoleCtrlHandler(&this -> onexit, TRUE)) {
+              this -> dispose();
+              this -> termination.registered = static_cast< ::std::size_t>(false);
+            } else this -> termination.policy = program::policy::LOAD;
+          }
+        }
+      #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
+        this -> extensions.pthread_mutex_destroy = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (&program::UNRESOLVED) == this -> extensions.pthread_mutex_destroy ? reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_destroy", &program::UNRESOLVED)) : this -> extensions.pthread_mutex_destroy; // --> <pthread.h>
+        this -> extensions.sigaction             = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(&program::UNRESOLVED) == this -> extensions.sigaction             ? reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(resolve(libraries, /* --> library::libc */    00u, "sigaction",             &program::UNRESOLVED)) : this -> extensions.sigaction;             // --> <signal.h>
+        this -> extensions.sigemptyset           = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::sigset_t*)>                                                                      (&program::UNRESOLVED) == this -> extensions.sigemptyset           ? reinterpret_cast<int (*)(::sigset_t*)>                                                                      (resolve(libraries, /* --> library::libc */    00u, "sigemptyset",           &program::UNRESOLVED)) : this -> extensions.sigemptyset;           // --> <signal.h>
+        this -> termination.registered           = program::policy::BEGIN == this -> termination.policy ? 0u : this -> termination.registered;
+
+        // ...
+        if (program::policy::BEGIN == this -> termination.policy or program::policy::FINISH == this -> termination.policy) {
+          this -> extensions.pthread_mutex_init   = reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_init",   &program::UNRESOLVED)); // --> <pthread.h>
+          this -> extensions.pthread_mutex_lock   = reinterpret_cast<int (*)(::pthread_mutex_t*)>                              (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_lock",   &program::UNRESOLVED)); // --> <pthread.h>
+          this -> extensions.pthread_mutex_unlock = reinterpret_cast<int (*)(::pthread_mutex_t*)>                              (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_unlock", &program::UNRESOLVED)); // --> <pthread.h>
+          this -> termination.once.value          = false;
+
+          // ... --- TODO. Figure out lifetime, only given one chance and misleadingly states it is initialized when `mutex_init(…)` exists
+          if (reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_init) (void) this -> extensions.pthread_mutex_init(::new (&this -> termination.once.guard) ::pthread_mutex_t, static_cast< ::pthread_mutexattr_t const*>(NULL)); // ->> Always successfully `0x00`
+          #if defined __FreeBSD__ or defined __OpenBSD__                                                                                                 // ->> Otherwise not copy-constructible
+            else { ::pthread_mutex_t const guard = PTHREAD_MUTEX_INITIALIZER; (void) ::new (&this -> termination.once.guard) ::pthread_mutex_t(guard); } // --> ::pthread_mutex_init(…)
+          #endif
+        }
+
+        {
+          if (program::policy::BEGIN == this -> termination.policy or program::policy::FINISH == this -> termination.policy) {
+            this -> termination.completed = static_cast< ::std::sig_atomic_t>(false);
+            this -> termination.requested = static_cast< ::std::sig_atomic_t>(false);
           }
 
-          this -> termination.completed = reset.completed ? this -> termination.completed : this -> extensions.CreateEventExW(static_cast< ::LPSECURITY_ATTRIBUTES>(NULL), static_cast< ::LPCWSTR>(NULL), CREATE_EVENT_MANUAL_RESET, /* --> ::SetEvent(…) */ EVENT_MODIFY_STATE | /* --> ::WaitForSingleObject(…) */ SYNCHRONIZE); // --> ::CreateEventW(::LPSECURITY_ATTRIBUTES, ::BOOL manual = TRUE, ::BOOL initial = FALSE, ::LPCWSTR);
-          this -> termination.requested = reset.requested ? this -> termination.requested : this -> extensions.CreateEventExW(static_cast< ::LPSECURITY_ATTRIBUTES>(NULL), static_cast< ::LPCWSTR>(NULL), CREATE_EVENT_MANUAL_RESET, /* --> ::SetEvent(…) */ EVENT_MODIFY_STATE | /* --> ::WaitForSingleObject(…) */ SYNCHRONIZE);
+          this -> termination.policy = program::policy::LOAD;
 
-          if (static_cast< ::HANDLE>(NULL) == this -> termination.completed or static_cast< ::HANDLE>(NULL) == this -> termination.requested or FALSE == this -> extensions.SetConsoleCtrlHandler(&this -> onexit, TRUE)) {
-            if (static_cast< ::HANDLE>(NULL) != this -> termination.completed) (void) this -> extensions.CloseHandle(this -> termination.completed);
-            if (static_cast< ::HANDLE>(NULL) != this -> termination.requested) (void) this -> extensions.CloseHandle(this -> termination.requested);
+          if (reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(&program::UNRESOLVED) != this -> extensions.sigaction and reinterpret_cast<int (*)(::sigset_t*)>(&program::UNRESOLVED) != this -> extensions.sigemptyset) {
+            struct ::sigaction action = {};
 
-            this -> termination.requested = this -> termination.completed = static_cast< ::HANDLE>(NULL);
-          } else this -> termination.policy = program::policy::LOAD;
+            // ...
+            action.sa_flags   = 0x00;
+            action.sa_handler = &this -> onexit;
+
+            if (0 == this -> extensions.sigemptyset(&action.sa_mask))
+            for (int const signals[] = {SIGHUP, SIGINT, SIGQUIT, SIGTERM}; this -> termination.registered != sizeof signals / sizeof(int); ++this -> termination.registered) {
+              if (0 != this -> extensions.sigaction(signals[this -> termination.registered], &action, static_cast<struct ::sigaction*>(NULL)))
+              break;
+            }
+          } else; // --> ::std::signal(…)
         }
-      }
-    #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
-      struct ::sigaction action = {};
+      #else
+        (void) libraries, (void) resolve;
+        this -> termination.registered = program::policy::BEGIN == this -> termination.policy ? 0u : this -> termination.registered;
 
-      // ...
-      this -> extensions.pthread_mutex_destroy = reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_destroy", &program::UNRESOLVED)); // --> <pthread.h>
-      this -> extensions.pthread_mutex_init    = reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>                                 (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_init",    &program::UNRESOLVED)); // --> <pthread.h>
-      this -> extensions.pthread_mutex_lock    = reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_lock",    &program::UNRESOLVED)); // --> <pthread.h>
-      this -> extensions.pthread_mutex_unlock  = reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_unlock",  &program::UNRESOLVED)); // --> <pthread.h>
-      this -> extensions.sigaction             = reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(resolve(libraries, /* --> library::libc */    00u, "sigaction",             &program::UNRESOLVED)); // --> <signal.h>
-      this -> extensions.sigemptyset           = reinterpret_cast<int (*)(::sigset_t*)>                                                                      (resolve(libraries, /* --> library::libc */    00u, "sigemptyset",           &program::UNRESOLVED)); // --> <signal.h>
-      this -> termination.once.value           = false;
+        // ...
+        if (program::policy::BEGIN == this -> termination.policy or program::policy::FINISH == this -> termination.policy) {
+          this -> termination.once.value = false;
 
-      if (reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this.extensions.pthread_mutex_init) (void) this.extensions.pthread_mutex_init(&this -> termination.once.state, static_cast< ::pthread_mutexattr_t const*>(NULL)); // ->> Always successfully `0`
-      else this -> termination.once.state = PTHREAD_MUTEX_INITIALIZER;                                                                // --> ::pthread_mutex_init(…)
+          #if (defined __STDC_HOSTED__ and __STDC_HOSTED__ == 1) and (__cplusplus >= 201103L or defined _MSVC_LANG) // --> 201402L+
+            (void) ::new (&this -> termination.once.guard) ::std::once_flag;
+          #endif
 
-      if (
-        reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(&program::UNRESOLVED) != this.extension.sigaction and
-        reinterpret_cast<int (*)(::sigset_t*)>                                                                      (&program::UNRESOLVED) != this.extension.sigemptyset
-      ) {
-        // // ... ->> Otherwise use `::signal(…)`
-        // action.sa_flags               = 0x00;
-        // action.sa_handler             = &this -> onexit; // ->> `SIG_DFL` is default and `SIG_IGN` does nothing
-        // this -> termination.requested = static_cast< ::std::sig_atomic_t>(false);
-        //
-        // if (0 != ::sigemptyset(&action.sa_mask)) // --> ::sigset_t*
-        //   application = NULL;
-        //
-        // else for (struct signal /* final */ { int const id; struct ::sigaction previousAction; } signals[] = {
-        //   {SIGHUP,  {}}, // ->> Hang Up; typically used for disconnects or re-configurations
-        //   {SIGINT,  {}}, // ->> Interrupt                          (e.g. `Ctrl`+`C`)
-        //   {SIGQUIT, {}}, // ->> Quit; typically core dumps instead (e.g. `Ctrl`+`\`)
-        //   {SIGTERM, {}}  // ->> Terminate                          (e.g. `kill [-s SIGTERM|-TERM] <pid>` or `::kill(<pid>, SIGTERM)`)
-        // }, *signal = signals; signal != &signals[sizeof signals / sizeof(struct signal)]; ++signal)
-        // if (0 != ::sigaction(signal -> id, &action, &signal -> previousAction)) {
-        //   while (signal != signals)
-        //     (void) --signal, ::sigaction(signal -> id, &signal -> previousAction, static_cast<struct ::sigaction*>(NULL));
-        //
-        //   application = NULL;
-        //   signal      = &signals[(sizeof signals / sizeof(struct signal)) - 1u]; // --> break
-        // }
+          this -> termination.completed = static_cast< ::std::sig_atomic_t>(false);
+          this -> termination.requested = static_cast< ::std::sig_atomic_t>(false);
+        }
+
+        this -> termination.policy = program::policy::LOAD; // TODO (Lapys) -> Figure out lifetime
+
+        for (int const signals[] = {SIGINT, SIGTERM}; this -> termination.registered != sizeof signals / sizeof(int); ++this -> termination.registered) {
+          if (SIG_ERR == ::std::signal(signals[this -> termination.registered], &this -> onexit))
+          break;
+        }
+      #endif
+    }
+
+  private:
+    #if defined _WIN32
+      static ::BOOL WINAPI onexit(::DWORD const reason) {
+        switch (reason) {
+          case CTRL_BREAK_EVENT: case CTRL_CLOSE_EVENT: case CTRL_C_EVENT: case CTRL_LOGOFF_EVENT: case CTRL_SHUTDOWN_EVENT:
+          return FALSE != renum -> extensions.SetEvent(renum -> termination.requested) and WAIT_FAILED != renum -> extensions.WaitForSingleObject(renum -> termination.completed, INFINITE) ? TRUE : FALSE;
+        }
+
+        return FALSE;
       }
     #else
-      (void) libraries, (void) resolve;
-
-      // for (struct signal /* final */ { int const id; void (*previousHandler)(int); } signals[] = {
-      //   {SIGINT,  NULL}, // ->> Interrupt
-      //   {SIGTERM, NULL}  // ->> Terminated
-      // }, *signal = signals; signal != &signals[sizeof signals / sizeof(struct signal)]; ++signal)
-      // if (SIG_ERR == (signal -> previousHandler = ::std::signal(signal -> id, &this -> onexit))) {
-      //   while (signal != signals)
-      //     (void) --signal, ::std::signal(signal -> id, signal -> previousHandler);
-      //
-      //   application = NULL;
-      //   signal      = &signals[(sizeof signals / sizeof(struct signal)) - 1u]; // --> break
-      // }
+      static void onexit(int const reason) {
+        switch (reason) {
+          #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
+            case SIGHUP: case SIGQUIT:
+          #endif
+          case SIGINT: case SIGTERM:
+          renum -> termination.requested = static_cast< ::std::sig_atomic_t>(true);
+        }
+      }
     #endif
-  }
 
-  #if defined _WIN32
-    static ::BOOL WINAPI onexit(::DWORD const reason) {
-      switch (reason) {
-        case CTRL_BREAK_EVENT: case CTRL_CLOSE_EVENT: case CTRL_C_EVENT: case CTRL_LOGOFF_EVENT: case CTRL_SHUTDOWN_EVENT:
-        return FALSE != renum -> extensions.SetEvent(renum -> termination.requested) and WAIT_FAILED != renum -> extensions.WaitForSingleObject(renum -> termination.completed, INFINITE) ? TRUE : FALSE;
+    static int onfinish(struct program* const program, enum program::policy::flag const policy = program::policy::DEFER_FINISH) /* noexcept */ {
+      if (program::policy::PERSIST_FINISH == policy or not program -> termination.once.value)
+      if (program::policy::UNLOAD != program -> termination.policy) {
+        program -> termination.policy = program::policy::UNLOAD;
+
+        if (NULL != program -> termination.finishers)
+        while (NULL != program -> termination.finishers -> handler) {
+          struct program::finish const *const finish = program -> termination.finishers++;
+          finish -> handler(finish -> context, &program -> termination.status);
+        }
+
+        program -> termination.finishers  = NULL;
+        program -> termination.once.value = true;
+        program -> termination.policy     = program::policy::FINISH;
       }
 
-      return FALSE;
+      return program -> termination.status;
     }
-  #else // --> defined __ANDROID__ or defined __APPLE__ or defined __unix__
-    static void onexit(int const reason) {
-      switch (reason) {
-        #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
-          case SIGHUP: case SIGQUIT:
-        #endif
-        case SIGINT: case SIGTERM:
-        renum -> termination.requested = static_cast< ::std::sig_atomic_t>(true);
-      }
-    }
-  #endif
-
-  void onfinish() /* noexcept */ {}
-} program = {L"renum", L"./", {program::policy::BEGIN}, {}}; // ->> Singleton instance
+} program = {L"renum", L"./", {program::policy::BEGIN}, {}}; // ->> Singleton instance (across threads)
 
 /* Main */
 int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept */ {
@@ -620,10 +662,7 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
     /* ... */
     ~console() /* noexcept */ {
       #if defined __ANDROID__ or defined __APPLE__ or defined __unix__
-      if (
-        reinterpret_cast<void        (*)(::locale_t)>(&console::UNRESOLVED) != this -> extensions.freelocale and
-        reinterpret_cast< ::locale_t (*)(::locale_t)>(&console::UNRESOLVED) != this -> extensions.uselocale
-      ) {
+      if (reinterpret_cast<void (*)(::locale_t)>(&console::UNRESOLVED) != this -> extensions.freelocale and reinterpret_cast< ::locale_t (*)(::locale_t)>(&console::UNRESOLVED) != this -> extensions.uselocale) {
         if (static_cast< ::locale_t>(0) != this -> locale.prior and this -> locale.prior != this -> locale.value ? static_cast< ::locale_t>(0) != this -> extensions.uselocale(this -> locale.prior) : false) {
           if (static_cast< ::locale_t>(0) != this -> locale.value and LC_GLOBAL_LOCALE != this -> locale.value)
             this -> extensions.freelocale(this -> locale.value);
@@ -1257,8 +1296,8 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
   }
 
   // ...
-  console.orientation.stderr = console.widen(stderr) or console.orientation.get(stderr);
-  console.orientation.stdout = console.widen(stdout);
+  // console.orientation.set(stderr, ) = console.widen(stderr) or console.orientation.get(stderr);
+  // console.orientation.stdout = console.widen(stdout);
   (void) ::std::fwide(stderr, +1);
   (void) ::std::fwide(stdout, +1);
 
