@@ -220,7 +220,6 @@ static struct program /* final */ {
       switch (this -> termination.policy) {
         case program::policy::LOAD: {
           #if defined _WIN32
-            if (static_cast< ::HANDLE>(NULL) != this -> termination.requested)
             (void) this -> extensions.SetEvent(this -> termination.requested);
 
             if (reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) != this -> extensions.InitOnceExecuteOnce and (
@@ -231,15 +230,11 @@ static struct program /* final */ {
             )) for (union finish { static ::BOOL CALLBACK callback(::PINIT_ONCE const /* guard */, ::PVOID const parameter, ::PVOID* const /* context */) {
               (void) program::onfinish(static_cast<struct program*>(parameter), program::policy::DEFER_FINISH);
               return TRUE;
-            } }; ; ) {
-              if (FALSE != this -> extensions.InitOnceExecuteOnce(&this -> termination.once.guard, &finish::callback, static_cast< ::PVOID>(this), static_cast< ::PVOID*>(NULL)))
-              break;
-
+            } }; FALSE == this -> extensions.InitOnceExecuteOnce(&this -> termination.once.guard, &finish::callback, static_cast< ::PVOID>(this), static_cast< ::PVOID*>(NULL)); ) {
               if (program::policy::DEFER_FINISH == policy)
               return program::policy::DEFER_FINISH + this -> termination.status;
             } else (void) program::onfinish(this, program::policy::DEFER_FINISH);
 
-            if (static_cast< ::HANDLE>(NULL) != this -> termination.completed)
             (void) this -> extensions.SetEvent(this -> termination.completed);
           #else
             this -> termination.requested = static_cast< ::std::sig_atomic_t>(true);
@@ -290,13 +285,13 @@ static struct program /* final */ {
           struct /* final */ { bool requested, completed; } reset = {false, false};
 
           // ...
-          this -> extensions.InitOnceExecuteOnce = reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceExecuteOnce", &program::UNRESOLVED)); // --> <windows.h>
-          this -> extensions.InitOnceInitialize  = reinterpret_cast<VOID    (WINAPI*)(::PINIT_ONCE)>                                    (resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceInitialize",  &program::UNRESOLVED)); // --> <windows.h>
+          this -> extensions.InitOnceExecuteOnce = program::policy::BEGIN == this -> termination.policy or reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(&program::UNRESOLVED) == this -> extensions.InitOnceExecuteOnce ? reinterpret_cast< ::BOOL (WINAPI*)(::PINIT_ONCE, ::PINIT_ONCE_FN, ::PVOID, ::LPVOID)>(resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceExecuteOnce", &program::UNRESOLVED)) : this -> extensions.InitOnceExecuteOnce; // --> <windows.h>
+          this -> extensions.InitOnceInitialize  = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<VOID    (WINAPI*)(::PINIT_ONCE)>                                    (&program::UNRESOLVED) == this -> extensions.InitOnceInitialize  ? reinterpret_cast<VOID    (WINAPI*)(::PINIT_ONCE)>                                    (resolve(libraries, /* --> library::kernelbase */ 00u, "InitOnceInitialize",  &program::UNRESOLVED)) : this -> extensions.InitOnceInitialize;  // --> <windows.h>
           this -> termination.once.value         = false;
 
           if (reinterpret_cast<VOID (WINAPI*)(::PINIT_ONCE)>(&program::UNRESOLVED) != this -> extensions.InitOnceInitialize) this -> extensions.InitOnceInitialize(::new (&this -> termination.once.guard) ::INIT_ONCE);
-          #if _WIN32_WINNT >= 0x0600                                                                                                     // ->> Likely not copy-constructible; For compile-time availability
-            else { ::INIT_ONCE const guard = INIT_ONCE_STATIC_INIT; (void) ::new (&this -> termination.once.guard) ::INIT_ONCE(guard); } // --> ::InitOnceInitialize(…)
+          #if _WIN32_WINNT >= 0x0600 // ->> Unlikely copy-constructible
+            else { ::INIT_ONCE const guard = INIT_ONCE_STATIC_INIT; (void) ::new (&this -> termination.once.guard) ::INIT_ONCE(guard); }
           #endif
 
           if (reinterpret_cast< ::HANDLE (WINAPI*)(::LPSECURITY_ATTRIBUTES, ::LPCWSTR, ::DWORD, ::DWORD)>(&program::UNRESOLVED) != this -> extensions.CreateEventExW and reinterpret_cast< ::BOOL (WINAPI*)(::PHANDLER_ROUTINE, ::BOOL)>(&program::UNRESOLVED) != this -> extensions.SetConsoleCtrlHandler and reinterpret_cast< ::BOOL (WINAPI*)(::HANDLE)>(&program::UNRESOLVED) != this -> extensions.SetEvent and reinterpret_cast< ::DWORD (WINAPI*)(::HANDLE, ::DWORD)>(&program::UNRESOLVED) != this -> extensions.WaitForSingleObject) {
@@ -319,23 +314,31 @@ static struct program /* final */ {
             } else this -> termination.policy = program::policy::LOAD;
           }
         }
+
+        // TODO: InterlockedExchange + InterlockedCompareExchange, WaitOnAddress + WakeByAddressAll
       #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
         this -> extensions.pthread_mutex_destroy = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (&program::UNRESOLVED) == this -> extensions.pthread_mutex_destroy ? reinterpret_cast<int (*)(::pthread_mutex_t*)>                                                               (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_destroy", &program::UNRESOLVED)) : this -> extensions.pthread_mutex_destroy; // --> <pthread.h>
         this -> extensions.sigaction             = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(&program::UNRESOLVED) == this -> extensions.sigaction             ? reinterpret_cast<int (*)(int, struct ::sigaction const* /* restrict */, struct ::sigaction* /* restrict */)>(resolve(libraries, /* --> library::libc */    00u, "sigaction",             &program::UNRESOLVED)) : this -> extensions.sigaction;             // --> <signal.h>
         this -> extensions.sigemptyset           = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::sigset_t*)>                                                                      (&program::UNRESOLVED) == this -> extensions.sigemptyset           ? reinterpret_cast<int (*)(::sigset_t*)>                                                                      (resolve(libraries, /* --> library::libc */    00u, "sigemptyset",           &program::UNRESOLVED)) : this -> extensions.sigemptyset;           // --> <signal.h>
         this -> termination.registered           = program::policy::BEGIN == this -> termination.policy ? 0u : this -> termination.registered;
 
-        // ...
         if (program::policy::BEGIN == this -> termination.policy or program::policy::FINISH == this -> termination.policy) {
-          this -> extensions.pthread_mutex_init   = reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_init",   &program::UNRESOLVED)); // --> <pthread.h>
-          this -> extensions.pthread_mutex_lock   = reinterpret_cast<int (*)(::pthread_mutex_t*)>                              (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_lock",   &program::UNRESOLVED)); // --> <pthread.h>
-          this -> extensions.pthread_mutex_unlock = reinterpret_cast<int (*)(::pthread_mutex_t*)>                              (resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_unlock", &program::UNRESOLVED)); // --> <pthread.h>
+          this -> extensions.pthread_mutex_lock   = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) == this -> extensions.pthread_mutex_lock   ? reinterpret_cast<int (*)(::pthread_mutex_t*)>(resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_lock",   &program::UNRESOLVED)) : this -> extensions.pthread_mutex_lock;   // --> <pthread.h>
+          this -> extensions.pthread_mutex_unlock = program::policy::BEGIN == this -> termination.policy or reinterpret_cast<int (*)(::pthread_mutex_t*)>(&program::UNRESOLVED) == this -> extensions.pthread_mutex_unlock ? reinterpret_cast<int (*)(::pthread_mutex_t*)>(resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_unlock", &program::UNRESOLVED)) : this -> extensions.pthread_mutex_unlock; // --> <pthread.h>
           this -> termination.once.value          = false;
 
-          // ... --- TODO. Figure out lifetime, only given one chance and misleadingly states it is initialized when `mutex_init(…)` exists
-          if (reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_init) (void) this -> extensions.pthread_mutex_init(::new (&this -> termination.once.guard) ::pthread_mutex_t, static_cast< ::pthread_mutexattr_t const*>(NULL)); // ->> Always successfully `0x00`
-          #if defined __FreeBSD__ or defined __OpenBSD__                                                                                                 // ->> Otherwise not copy-constructible
-            else { ::pthread_mutex_t const guard = PTHREAD_MUTEX_INITIALIZER; (void) ::new (&this -> termination.once.guard) ::pthread_mutex_t(guard); } // --> ::pthread_mutex_init(…)
+          #if not (defined __FreeBSD__ or defined __OpenBSD__)
+            if (
+              program::policy::BEGIN == this -> termination.policy or
+              reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) == this -> extensions.pthread_mutex_init
+            ) {
+              this -> extensions.pthread_mutex_init = reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(resolve(libraries, /* --> library::pthread */ 00u, "pthread_mutex_init", &program::UNRESOLVED)); // --> <pthread.h>
+
+              if (reinterpret_cast<int (*)(::pthread_mutex_t*, ::pthread_mutexattr_t const*)>(&program::UNRESOLVED) != this -> extensions.pthread_mutex_init)
+              (void) this -> extensions.pthread_mutex_init(::new (&this -> termination.once.guard) ::pthread_mutex_t, static_cast< ::pthread_mutexattr_t const*>(NULL)); // ->> Always successfully `0x00`
+            }
+          #else // ->> Otherwise not copy-constructible
+            else { ::pthread_mutex_t const guard = PTHREAD_MUTEX_INITIALIZER; (void) ::new (&this -> termination.once.guard) ::pthread_mutex_t(guard); }
           #endif
         }
 
@@ -409,19 +412,23 @@ static struct program /* final */ {
     #endif
 
     static int onfinish(struct program* const program, enum program::policy::flag const policy = program::policy::DEFER_FINISH) /* noexcept */ {
-      if (program::policy::PERSIST_FINISH == policy or not program -> termination.once.value)
-      if (program::policy::UNLOAD != program -> termination.policy) {
-        program -> termination.policy = program::policy::UNLOAD;
+      if (not program -> termination.once.value or program::policy::PERSIST_FINISH == policy)
+      switch (program -> termination.policy) {
+        case program::policy::FINISH:
+        case program::policy::LOAD: {
+          program -> termination.policy = program::policy::UNLOAD;
 
-        if (NULL != program -> termination.finishers)
-        while (NULL != program -> termination.finishers -> handler) {
-          struct program::finish const *const finish = program -> termination.finishers++;
-          finish -> handler(finish -> context, &program -> termination.status);
-        }
+          if (NULL != program -> termination.finishers)
+          while (NULL != program -> termination.finishers -> handler) {
+            struct program::finish const *const finish = program -> termination.finishers++;
+            finish -> handler(finish -> context, &program -> termination.status);
+          }
 
-        program -> termination.finishers  = NULL;
-        program -> termination.once.value = true;
-        program -> termination.policy     = program::policy::FINISH;
+          program -> termination.finishers  = NULL;
+          program -> termination.once.value = true;
+          program -> termination.policy     = program::policy::FINISH;
+        } break;
+        default:;
       }
 
       return program -> termination.status;
@@ -572,18 +579,18 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       for (struct library const* library = static_cast<struct library const*>(libraries), *const end = library + library::COUNT; end != library and L'\0' != library -> name[0]; ++library)
       if (id == library -> id) /* --> library ≈ libraries[id] */ {
         #if defined _WIN32
-          ::INT_PTR FAR CALLBACK UNRESOLVED(void); // --> ::FARPROC
+          /* extern "C" */ ::INT_PTR FAR CALLBACK UNRESOLVED(void); // --> ::FARPROC
 
           if (NULL != library -> module.handle) {
             ::FARPROC const procedure = ::GetProcAddress(library -> module.handle, name);
-            if (NULL != procedure) return reinterpret_cast<void (*)(...)>(procedure);
+            if (NULL != procedure) return reinterpret_cast<void (*)(...) /* noexcept */>(procedure);
           }
         #elif defined __ANDROID__ or defined __APPLE__ or defined __unix__
           void UNRESOLVED(void);
 
           if (NULL != library -> value.address) {
-            void *const symbol = (void) ::dlerror(), ::dlsym(library -> value.address, name);            // ->> Clear prior linker error diagnostics, then runtime linkage
-            if (static_cast<char*>(NULL) == ::dlerror()) return reinterpret_cast<void (*)(...)>(symbol); // ->> `::std::uintptr_t` indirect unneeded
+            void *const symbol = (void) ::dlerror(), ::dlsym(library -> value.address, name);                           // ->> Clear prior linker error diagnostics, then runtime linkage
+            if (static_cast<char*>(NULL) == ::dlerror()) return reinterpret_cast<void (*)(...) /* noexcept */>(symbol); // ->> `::std::uintptr_t` indirect unneeded
           }
         #endif
 
@@ -593,7 +600,6 @@ int main(int count, char* arguments[] /* , char* environment[] */) /* noexcept *
       return unresolved;
     }
   } libraries[] = {
-    // ->> In enumeration order
     #if defined _WIN32
       {library::kernelbase,                  L"kernel32" L".dll", {{{NULL}, NULL}}},
       {library::advapi32,                    L"advapi32" L".dll", {{{NULL}, NULL}}},
