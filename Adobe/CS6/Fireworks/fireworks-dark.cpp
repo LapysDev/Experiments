@@ -1,5 +1,5 @@
-/* rc /fofireworks-dark.res fireworks-dark.rc && cl /O2 /DUNICODE /D_UNICODE fireworks-dark.cpp fireworks-dark.res /link kernel32.lib user32.lib gdi32.lib magnification.lib dwmapi.lib d3d11.lib dxgi.lib dcomp.lib d3dcompiler.lib windowsapp.lib runtimeobject.lib shell32.lib && del /q fireworks-dark.obj fireworks-dark.res */
-// Fireworks (Dark) v2.0.6: C++98, native Windows Graphics Capture + Magnification.
+/* rc /nologo /fofireworks-dark.res fireworks-dark.rc && cl /nologo /O2 /DUNICODE /D_UNICODE /Fe:"Adobe Fireworks (Dark).exe" fireworks-dark.cpp fireworks-dark.res /link kernel32.lib user32.lib gdi32.lib magnification.lib dwmapi.lib d3d11.lib dxgi.lib dcomp.lib d3dcompiler.lib windowsapp.lib runtimeobject.lib shell32.lib && del /q fireworks-dark.obj fireworks-dark.res */
+// Adobe Fireworks CS6 (Dark) v2.0.8: C++98, native Windows Graphics Capture + Magnification.
 // Compile in a Visual Studio Developer Command Prompt (Windows SDK required).
 // Windows 10 1903+ for WGC; no injection, service, or additional runtime files.
 
@@ -36,6 +36,8 @@ static UINT const WM_GEOMETRY = WM_APP + 12;
 static UINT const WM_TRAY_ICON = WM_APP + 13;
 static UINT const WM_TRAY_COMMAND = WM_APP + 14;
 static UINT const TRAY_ICON_ID = 1;
+static UINT const EXECUTABLE_ICON_RESOURCE = 101;
+static UINT const TRAY_ICON_RESOURCE = 102;
 static UINT const TRAY_REFRESH = 3108;
 static UINT const TRAY_BACKEND = 3107;
 static UINT const TRAY_DIAGNOSTICS = 3106;
@@ -97,10 +99,12 @@ static void notification_add() {
   notification.cbSize = sizeof(notification);
   notification.hWnd = coordinator;
   notification.uID = TRAY_ICON_ID;
-  notification.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+  // With NOTIFYICON_VERSION_4, Explorer may suppress the ordinary tooltip
+  // unless NIF_SHOWTIP is explicitly requested.
+  notification.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP;
   notification.uCallbackMessage = WM_TRAY_ICON;
   notification.hIcon = notificationIcon;
-  wchar_t const tooltip[] = L"Fireworks (Dark)";
+  wchar_t const tooltip[] = L"Adobe Fireworks CS6 (Dark)";
   ::CopyMemory(notification.szTip, tooltip, sizeof(tooltip));
   if (::Shell_NotifyIconW(notificationIconPresent ? NIM_MODIFY : NIM_ADD, &notification)) {
     notificationIconPresent = true;
@@ -122,7 +126,7 @@ static void notification_remove() {
 static void notification_menu() {
   ::HMENU menu = ::CreatePopupMenu();
   if (!menu) return;
-  ::AppendMenuW(menu, MF_STRING, TRAY_REFRESH, L"Refresh\tCtrl+Alt+F8");
+  ::AppendMenuW(menu, MF_STRING, TRAY_REFRESH, L"Refresh\tCtrl+Alt+F5");
   ::AppendMenuW(menu, MF_STRING, TRAY_BACKEND, L"Switch Renderer\tCtrl+Alt+F7");
   ::AppendMenuW(menu, MF_STRING, TRAY_DIAGNOSTICS, L"Save Diagnostics\tCtrl+Alt+F6");
   ::AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
@@ -270,7 +274,167 @@ static BOOL CALLBACK collect_picker_mask(::HWND popup, LPARAM parameter) {
 
 struct mask_enumeration {
   ::std::vector<exclusion>* exclusions;
+  bool mainEditor;
+  unsigned int swatchControls;
 };
+
+static int greater_channel(int first, int second) { return first > second ? first : second; }
+static int lesser_channel(int first, int second) { return first < second ? first : second; }
+
+static bool swatch_color(::COLORREF color) {
+  if (color == CLR_INVALID) return false;
+  int red = GetRValue(color);
+  int green = GetGValue(color);
+  int blue = GetBValue(color);
+  return greater_channel(red, greater_channel(green, blue)) >= 90 &&
+    greater_channel(red, greater_channel(green, blue)) - lesser_channel(red, lesser_channel(green, blue)) >= 45;
+}
+
+static bool similar_color(::COLORREF first, ::COLORREF second, int tolerance) {
+  if (first == CLR_INVALID || second == CLR_INVALID) return false;
+  int red = static_cast<int>(GetRValue(first)) - GetRValue(second);
+  int green = static_cast<int>(GetGValue(first)) - GetGValue(second);
+  int blue = static_cast<int>(GetBValue(first)) - GetBValue(second);
+  return red >= -tolerance && red <= tolerance &&
+    green >= -tolerance && green <= tolerance && blue >= -tolerance && blue <= tolerance;
+}
+
+// Swatches can be standard Button/Static controls, undocumented Afx controls,
+// or third-party filter plugin controls. Probe their OWN GDI client DC so that
+// an overlay in a separate process need not be sampled from the desktop.
+static bool is_swatch_control(::HWND child, wchar_t const* className, ::RECT const& bounds) {
+  int width = width_of(bounds);
+  int height = height_of(bounds);
+  if (width < 8 || height < 8 || width > 320 || height > 170) return false;
+  if (::wcscmp(className, L"Edit") == 0 || ::wcscmp(className, L"ComboBox") == 0 ||
+      ::wcscmp(className, L"ListBox") == 0 || ::wcscmp(className, L"ScrollBar") == 0 ||
+      ::wcscmp(className, L"msctls_progress32") == 0) return false;
+  ::LONG_PTR style = ::GetWindowLongPtrW(child, GWL_STYLE);
+  if ((::wcscmp(className, L"Button") == 0 && (style & BS_TYPEMASK) == BS_OWNERDRAW) ||
+      (::wcscmp(className, L"Static") == 0 && (style & SS_TYPEMASK) == SS_OWNERDRAW)) {
+    ::DWORD_PTR textLength = 0;
+    if (::SendMessageTimeoutW(child, WM_GETTEXTLENGTH, 0, 0,
+        SMTO_ABORTIFHUNG | SMTO_BLOCK, 30, &textLength) && textLength == 0) return true;
+  }
+
+  ::RECT client = {};
+  if (!::GetClientRect(child, &client) || width_of(client) < 12 || height_of(client) < 12) return false;
+  ::HDC device = ::GetDC(child);
+  if (!device) return false;
+  int centerX = width_of(client) / 2;
+  int centerY = height_of(client) / 2;
+  int horizontalInset = lesser_channel(6, width_of(client) / 5);
+  int verticalInset = lesser_channel(6, height_of(client) / 5);
+  ::COLORREF center = ::GetPixel(device, centerX, centerY);
+  bool uniform = swatch_color(center) &&
+    similar_color(center, ::GetPixel(device, centerX - horizontalInset, centerY), 20) &&
+    similar_color(center, ::GetPixel(device, centerX + horizontalInset, centerY), 20) &&
+    similar_color(center, ::GetPixel(device, centerX, centerY - verticalInset), 20) &&
+    similar_color(center, ::GetPixel(device, centerX, centerY + verticalInset), 20);
+  ::ReleaseDC(child, device);
+  return uniform;
+}
+
+// Some colour-fill previews are GDI-painted directly onto a dialog, with no
+// separate child HWND. Discover only modest, flat, saturated rectangles in the
+// dialog's client bitmap. The minimum area excludes single glyphs/icon pixels;
+// the maximum dimensions prevent accidentally exempting whole coloured panels.
+static void collect_painted_swatches(::HWND window, ::std::vector<exclusion>& masks, unsigned int& matches) {
+  ::RECT client = {};
+  if (!::GetClientRect(window, &client)) return;
+  int width = width_of(client);
+  int height = height_of(client);
+  if (width < 40 || height < 25 || width > 900 || height > 700) return;
+  ::HDC device = ::GetDC(window);
+  if (!device) return;
+  ::HDC memory = ::CreateCompatibleDC(device);
+  ::BITMAPINFO information = {};
+  information.bmiHeader.biSize = sizeof(information.bmiHeader);
+  information.bmiHeader.biWidth = width;
+  information.bmiHeader.biHeight = -height; // Top-down: matches Win32 client coordinates.
+  information.bmiHeader.biPlanes = 1;
+  information.bmiHeader.biBitCount = 32;
+  information.bmiHeader.biCompression = BI_RGB;
+  void* pixels = NULL;
+  ::HBITMAP bitmap = memory ? ::CreateDIBSection(device, &information, DIB_RGB_COLORS, &pixels, NULL, 0) : NULL;
+  if (bitmap && pixels) {
+    ::HGDIOBJ previous = ::SelectObject(memory, bitmap);
+    if (::BitBlt(memory, 0, 0, width, height, device, 0, 0, SRCCOPY)) {
+      unsigned char const* bytes = static_cast<unsigned char const*>(pixels);
+      ::RECT screen = screen_client(window);
+      for (int positionY = 8; positionY + 8 < height; positionY += 7) {
+        for (int positionX = 8; positionX + 8 < width; positionX += 7) {
+          ::std::size_t offset = (static_cast< ::std::size_t>(positionY) * width + positionX) * 4;
+          ::COLORREF sampled = RGB(bytes[offset + 2], bytes[offset + 1], bytes[offset]);
+          if (!swatch_color(sampled)) continue;
+          // Revisit neither the same patch on the next scan row nor a patch
+          // already handled as an owner-drawn child or canvas exclusion.
+          bool alreadyMasked = false;
+          for (::std::size_t index = 0; index < masks.size(); ++index)
+            if (masks[index].screen.left <= screen.left + positionX &&
+                masks[index].screen.right > screen.left + positionX &&
+                masks[index].screen.top <= screen.top + positionY &&
+                masks[index].screen.bottom > screen.top + positionY) {
+              alreadyMasked = true;
+              break;
+            }
+          if (alreadyMasked) continue;
+          int left = positionX;
+          int right = positionX;
+          int top = positionY;
+          int bottom = positionY;
+          for (; left > 0 && positionX - left < 320; --left) {
+            ::std::size_t pixel = (static_cast< ::std::size_t>(positionY) * width + left - 1) * 4;
+            if (!similar_color(sampled, RGB(bytes[pixel + 2], bytes[pixel + 1], bytes[pixel]), 17)) break;
+          }
+          for (; right + 1 < width && right - positionX < 320; ++right) {
+            ::std::size_t pixel = (static_cast< ::std::size_t>(positionY) * width + right + 1) * 4;
+            if (!similar_color(sampled, RGB(bytes[pixel + 2], bytes[pixel + 1], bytes[pixel]), 17)) break;
+          }
+          if (right - left + 1 < 18 || right - left + 1 > 320) continue;
+          for (; top > 0 && positionY - top < 140; --top) {
+            ::std::size_t pixel = (static_cast< ::std::size_t>(top - 1) * width + positionX) * 4;
+            if (!similar_color(sampled, RGB(bytes[pixel + 2], bytes[pixel + 1], bytes[pixel]), 17)) break;
+          }
+          for (; bottom + 1 < height && bottom - positionY < 140; ++bottom) {
+            ::std::size_t pixel = (static_cast< ::std::size_t>(bottom + 1) * width + positionX) * 4;
+            if (!similar_color(sampled, RGB(bytes[pixel + 2], bytes[pixel + 1], bytes[pixel]), 17)) break;
+          }
+          if (bottom - top + 1 < 12 || bottom - top + 1 > 140) continue;
+          // Check the rectangle's interior corners before treating it as a flat fill.
+          int cornersX[] = { left + 2, right - 2 };
+          int cornersY[] = { top + 2, bottom - 2 };
+          bool rectangle = true;
+          for (int cornerY = 0; cornerY < 2 && rectangle; ++cornerY)
+            for (int cornerX = 0; cornerX < 2; ++cornerX) {
+              ::std::size_t pixel = (static_cast< ::std::size_t>(cornersY[cornerY]) * width + cornersX[cornerX]) * 4;
+              if (!similar_color(sampled, RGB(bytes[pixel + 2], bytes[pixel + 1], bytes[pixel]), 20)) rectangle = false;
+            }
+          if (!rectangle) continue;
+          ::RECT patch = { screen.left + left, screen.top + top,
+                           screen.left + right + 1, screen.top + bottom + 1 };
+          bool duplicate = false;
+          for (::std::size_t index = 0; index < masks.size(); ++index)
+            if (masks[index].screen.left <= patch.left && masks[index].screen.top <= patch.top &&
+                masks[index].screen.right >= patch.right && masks[index].screen.bottom >= patch.bottom) {
+              duplicate = true;
+              break;
+            }
+          if (!duplicate) {
+            append_exclusion(masks, patch, false);
+            ++matches;
+          }
+          // Skip interior samples; this is one rectangular fill, not dozens.
+          positionX = right;
+        }
+      }
+    }
+    ::SelectObject(memory, previous);
+  }
+  if (bitmap) ::DeleteObject(bitmap);
+  if (memory) ::DeleteDC(memory);
+  ::ReleaseDC(window, device);
+}
 
 static BOOL CALLBACK collect_child(::HWND child, LPARAM parameter) {
   mask_enumeration* scan = reinterpret_cast<mask_enumeration*>(parameter);
@@ -281,10 +445,10 @@ static BOOL CALLBACK collect_child(::HWND child, LPARAM parameter) {
   ::RECT bounds = {};
   if (!::GetWindowRect(child, &bounds) || !nonempty(bounds)) return TRUE;
 
-  if (identifier == 59649 && ::wcscmp(className, L"Fireworks_view_class") == 0) {
+  if (scan->mainEditor && identifier == 59649 && ::wcscmp(className, L"Fireworks_view_class") == 0) {
     // The canvas client excludes native scrollbars, so those remain darkened.
     append_exclusion(*scan->exclusions, screen_client(child), false);
-  } else if (identifier >= 40000 && identifier <= 40023 && ::wcscmp(className, L"Button") == 0) {
+  } else if (scan->mainEditor && identifier >= 40000 && identifier <= 40023 && ::wcscmp(className, L"Button") == 0) {
     // Centre tool icons while making the vertical and horizontal gaps comparable.
     int horizontalInset = width_of(bounds) / 18;
     int verticalInset = height_of(bounds) / 11;
@@ -293,10 +457,10 @@ static BOOL CALLBACK collect_child(::HWND child, LPARAM parameter) {
     bounds.top += verticalInset;
     bounds.bottom -= verticalInset;
     append_exclusion(*scan->exclusions, bounds, true);
-  } else if ((identifier >= 6608 && identifier <= 6633) ||
+  } else if ((scan->mainEditor && identifier >= 6608 && identifier <= 6633) ||
              (::wcsncmp(className, L"Afx:00400000:b", 14) == 0 && width_of(bounds) < 125 && height_of(bounds) < 125)) {
     append_exclusion(*scan->exclusions, bounds, true);
-  } else if (identifier == 3983 && ::wcscmp(className, L"ListBox") == 0) {
+  } else if (scan->mainEditor && identifier == 3983 && ::wcscmp(className, L"ListBox") == 0) {
     // Fireworks exposes owner-drawn rows in logical units even when its ListBox
     // is DPI-virtualised. Calibrate against the list's current physical width.
     ::RECT physicalClient = screen_client(child);
@@ -334,19 +498,31 @@ static BOOL CALLBACK collect_child(::HWND child, LPARAM parameter) {
       if (row.top < physicalClient.top) row.top = physicalClient.top;
       append_exclusion(*scan->exclusions, row, true);
     }
+  } else if (is_swatch_control(child, className, bounds)) {
+    // Preserve the entire source-colour client rectangle, including neutral
+    // swatches whose RGB channels happen to be equal.
+    append_exclusion(*scan->exclusions, screen_client(child), false);
+    ++scan->swatchControls;
   }
   return TRUE;
 }
 
-static void read_exclusions(::HWND target, bool mainEditor, ::std::vector<exclusion>& masks) {
+static void read_exclusions(::HWND target, bool mainEditor, ::std::vector<exclusion>& masks, unsigned int& swatches) {
   masks.clear();
-  if (!mainEditor) return;
-  mask_enumeration scan = { &masks };
+  swatches = 0;
+  mask_enumeration scan = { &masks, mainEditor, 0 };
+  // Apply geometry masks to BOTH the editor and its separately owned dialogs.
   ::EnumChildWindows(target, collect_child, reinterpret_cast<LPARAM>(&scan));
-  // A picker can be above or within the main window's GPU capture. Never
-  // filter its visible pixels, even if the editor overlay overlaps it.
-  picker_mask_search search = { target, &masks };
-  ::EnumWindows(collect_picker_mask, reinterpret_cast<LPARAM>(&search));
+  swatches += scan.swatchControls;
+  if (!mainEditor) {
+    // Parent-painted colour-fill swatches have no child HWND to enumerate.
+    collect_painted_swatches(target, masks, swatches);
+  } else {
+    // A picker can overlap the editor capture even though its own window was
+    // excluded from the list of windows to darken.
+    picker_mask_search search = { target, &masks };
+    ::EnumWindows(collect_picker_mask, reinterpret_cast<LPARAM>(&search));
+  }
 }
 
 struct graphic_device {
@@ -466,6 +642,7 @@ struct overlay {
   ::DWORD lastGoodFrame;
   unsigned long maskChanges;
   unsigned long maskHits;
+  unsigned int swatchExclusions;
   unsigned long gpuFrames;
   unsigned long zCorrections;
   unsigned long gpuFailures;
@@ -491,7 +668,7 @@ struct overlay {
     mainEditor(editor), visible(false), gpuStarted(false), gpuFailed(false), gpuHasFrame(false), gpuAwaitingResizeFrame(false),
     magnifierConfigured(false), magnifierFailureStage("none"), magnifierLastError(0),
     magnifierSourceRefreshes(0), hasAppliedMask(false), startTick(::GetTickCount()), lastGoodFrame(0),
-    maskChanges(0), maskHits(0), gpuFrames(0), zCorrections(0), gpuFailures(0), gpuError(S_OK),
+    maskChanges(0), maskHits(0), swatchExclusions(0), gpuFrames(0), zCorrections(0), gpuFailures(0), gpuError(S_OK),
     frameWidth(0), frameHeight(0), swapWidth(0), swapHeight(0), poolWidth(0), poolHeight(0) {
     ::SetRectEmpty(&previousBounds);
     ::SetRectEmpty(&gpuBounds);
@@ -1027,7 +1204,8 @@ static void synchronize_masks(overlay& item) {
   ::RECT sourceBounds = {};
   if (!::GetWindowRect(item.source, &sourceBounds) || !nonempty(sourceBounds)) return;
   ::std::vector<exclusion> masks;
-  read_exclusions(item.source, item.mainEditor, masks); // Screen-space rectangles
+  unsigned int swatches = 0;
+  read_exclusions(item.source, item.mainEditor, masks, swatches); // Screen-space rectangles
   ::RECT gpuBounds = item.gpuHost ? item.gpuBounds : ::RECT();
   if (item.gpuHost && !nonempty(gpuBounds)) gpuBounds = gpu_screen_bounds(item.source, item.poolWidth, item.poolHeight);
   ::RECT magBounds = item.magHost ? sourceBounds : ::RECT();
@@ -1057,6 +1235,7 @@ static void synchronize_masks(overlay& item) {
   item.appliedGpuBounds = gpuBounds;
   item.appliedMagBounds = magBounds;
   item.hasAppliedMask = true;
+  item.swatchExclusions = swatches;
   ++item.maskChanges;
   ++globalRegionUpdates;
 }
@@ -1346,10 +1525,34 @@ static BOOL CALLBACK diagnostic_top_level_window(::HWND window, LPARAM parameter
   return TRUE;
 }
 
+struct diagnostic_control_scan {
+  ::FILE* stream;
+  unsigned int reported;
+};
+
+static BOOL CALLBACK diagnostic_child_control(::HWND child, LPARAM argument) {
+  diagnostic_control_scan* report = reinterpret_cast<diagnostic_control_scan*>(argument);
+  if (report->reported >= 350 || !::IsWindowVisible(child)) return report->reported < 350;
+  ::RECT bounds = {};
+  if (!::GetWindowRect(child, &bounds) || !nonempty(bounds)) return TRUE;
+  // Record all small controls, including unnamed third-party plugin classes.
+  if (width_of(bounds) > 400 || height_of(bounds) > 220) return TRUE;
+  wchar_t className[128] = {};
+  ::GetClassNameW(child, className, 128);
+  ::std::fprintf(report->stream,
+    "  CONTROL HWND=%p ID=%d CLASS=%ls RECT=(%ld,%ld,%ld,%ld) SWATCH=%d\n",
+    child, ::GetDlgCtrlID(child), className, bounds.left, bounds.top, bounds.right, bounds.bottom,
+    is_swatch_control(child, className, bounds) ? 1 : 0);
+  ++report->reported;
+  return TRUE;
+}
+
 static void dump_diagnostics() {
   ::FILE* stream = NULL;
   if (::_wfopen_s(&stream, L"fireworks-dark-diagnostics.txt", L"w") != 0 || !stream) return;
-  ::std::fprintf(stream, "Fireworks (Dark) v2.0.6 diagnostics\n");
+  ::std::fprintf(stream, "Adobe Fireworks CS6 (Dark) v2.0.8 diagnostics\n");
+  ::std::fprintf(stream, "ExecutableIconResource=%u TrayIconResource=%u TrayTooltip=Adobe Fireworks CS6 (Dark) ShowTip=1\n",
+    EXECUTABLE_ICON_RESOURCE, TRAY_ICON_RESOURCE);
   ::std::fprintf(stream, "NotificationIcon=%d Refreshes=%lu PreferredRenderer=%s\n",
     notificationIconPresent ? 1 : 0, globalRefreshes, preferGpu ? "WGC-D3D11" : "Magnification");
   ::std::fprintf(stream, "Preferred=%s overlays=%u scans=%lu capturedFrames=%lu\n",
@@ -1383,6 +1586,8 @@ static void dump_diagnostics() {
       visibleBounds.left, visibleBounds.top, visibleBounds.right, visibleBounds.bottom,
       item.gpuBounds.left, item.gpuBounds.top, item.gpuBounds.right, item.gpuBounds.bottom);
     ::std::fprintf(stream, "  GPU swapChainAllocation=(%d,%d)\n", item.swapWidth, item.swapHeight);
+    ::std::fprintf(stream, "  MASK exclusions=%u swatchControlsOrPatches=%u gpuFlatChromaProtection=0\n",
+      static_cast<unsigned>(item.appliedMasks.size()), item.swatchExclusions);
     ::std::fprintf(stream,
       "  MAG host=%p magnifier=%p layered=%d configured=%d sourceRefreshes=%lu failureStage=%s lastError=%lu\n",
       item.magHost, item.magnifier,
@@ -1399,6 +1604,12 @@ static void dump_diagnostics() {
       report.fireworksProcesses.push_back(processId);
     }
   ::EnumWindows(diagnostic_top_level_window, reinterpret_cast<LPARAM>(&report));
+  for (::std::size_t index = 0; index < overlays.size(); ++index) {
+    diagnostic_control_scan children = { stream, 0 };
+    ::std::fprintf(stream, "CONTROLS Overlay[%u] HWND=%p (up to 350 visible small controls)\n",
+      static_cast<unsigned>(index), overlays[index]->source);
+    ::EnumChildWindows(overlays[index]->source, diagnostic_child_control, reinterpret_cast<LPARAM>(&children));
+  }
   ::std::fclose(stream);
   ::std::printf("Diagnostics: fireworks-dark-diagnostics.txt\n");
 }
@@ -1497,25 +1708,21 @@ int main() {
     NULL, NULL, windowClass.hInstance, NULL);
   if (!coordinator) return 3;
   taskbarCreatedMessage = ::RegisterWindowMessageW(L"TaskbarCreated");
-  notificationIcon = static_cast< ::HICON>(::LoadImageW(windowClass.hInstance, MAKEINTRESOURCEW(101),
+  notificationIcon = static_cast< ::HICON>(::LoadImageW(windowClass.hInstance, MAKEINTRESOURCEW(TRAY_ICON_RESOURCE),
     IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR));
   ownsNotificationIcon = notificationIcon != NULL;
   if (!notificationIcon) notificationIcon = ::LoadIconW(NULL, IDI_APPLICATION);
   notification_add();
+  ::RegisterHotKey(NULL, HOTKEY_REFRESH, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F5);
   ::RegisterHotKey(NULL, HOTKEY_DIAGNOSTICS, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F6);
   ::RegisterHotKey(NULL, HOTKEY_BACKEND, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F7);
-  ::RegisterHotKey(NULL, HOTKEY_REFRESH, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F8);
   ::RegisterHotKey(NULL, HOTKEY_EXIT, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F10);
 
-  windowEventHook = ::SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL, window_changed,
-    0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-  ::HWINEVENTHOOK showHook = ::SetWinEventHook(EVENT_OBJECT_DESTROY, EVENT_OBJECT_HIDE, NULL, window_changed,
-    0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-  ::HWINEVENTHOOK geometryHook = ::SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE,
-    NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-  ::std::printf("Fireworks (Dark) v2.0.6 - C++98\n");
-  ::std::printf("Primary renderer: %s. Ctrl+Alt+F6 diagnostics; F7 renderer; F8 refresh; F10 exit.\n",
-    gpu.ready ? "WGC-D3D11" : "Magnification");
+  windowEventHook = ::SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+  ::HWINEVENTHOOK showHook = ::SetWinEventHook(EVENT_OBJECT_DESTROY, EVENT_OBJECT_HIDE, NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+  ::HWINEVENTHOOK geometryHook = ::SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+  ::std::printf("Adobe Fireworks CS6 (Dark) v2.0.8 - C++98\n");
+  ::std::printf("Primary renderer: %s. Ctrl+Alt+F5 refresh; F6 diagnostics; F7 renderer; F10 exit.\n", gpu.ready ? "WGC-D3D11" : "Magnification");
   ::std::printf("Tray icon provides the same commands; Esc exits while this console is active.\n");
   ::std::printf("No injection. Fireworks may start before or after this process.\n");
 
