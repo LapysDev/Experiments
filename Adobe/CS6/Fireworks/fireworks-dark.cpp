@@ -1,8 +1,4 @@
-/* rc /nologo /fofireworks-dark.res fireworks-dark.rc && cl /nologo /O2 /DUNICODE /D_UNICODE /Fe:"Adobe Fireworks (Dark).exe" fireworks-dark.cpp fireworks-dark.res /link kernel32.lib user32.lib gdi32.lib magnification.lib dwmapi.lib d3d11.lib dxgi.lib dcomp.lib d3dcompiler.lib windowsapp.lib runtimeobject.lib shell32.lib && del /q fireworks-dark.obj fireworks-dark.res */
-// Adobe Fireworks CS6 (Dark) v2.0.8: C++98, native Windows Graphics Capture + Magnification.
-// Compile in a Visual Studio Developer Command Prompt (Windows SDK required).
-// Windows 10 1903+ for WGC; no injection, service, or additional runtime files.
-
+/* rc /nologo /fofireworks-dark.res fireworks-dark.rc && cl /nologo /O2 /DUNICODE /D_UNICODE /Fe:"Adobe Fireworks (Dark).exe" fireworks-dark.cpp fireworks-dark.res /link /SUBSYSTEM:WINDOWS kernel32.lib user32.lib gdi32.lib magnification.lib dwmapi.lib d3d11.lib dxgi.lib dcomp.lib d3dcompiler.lib windowsapp.lib runtimeobject.lib shell32.lib && del /q fireworks-dark.obj fireworks-dark.res */
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #define _WIN32_WINNT 0x0A00
@@ -29,26 +25,25 @@
 namespace capture = ABI::Windows::Graphics::Capture;
 namespace directx = ABI::Windows::Graphics::DirectX;
 
-static wchar_t const* const WINDOW_CLASS = L"FireworksDarkOverlayHost";
-static wchar_t const* const MAIN_CLASS = L"Fireworks_CS6_MainWindow";
-static UINT const WM_RESCAN = WM_APP + 11;
-static UINT const WM_GEOMETRY = WM_APP + 12;
-static UINT const WM_TRAY_ICON = WM_APP + 13;
-static UINT const WM_TRAY_COMMAND = WM_APP + 14;
-static UINT const TRAY_ICON_ID = 1;
-static UINT const EXECUTABLE_ICON_RESOURCE = 101;
-static UINT const TRAY_ICON_RESOURCE = 102;
-static UINT const TRAY_REFRESH = 3108;
-static UINT const TRAY_BACKEND = 3107;
-static UINT const TRAY_DIAGNOSTICS = 3106;
-static UINT const TRAY_QUIT = 3110;
-static int const HOTKEY_REFRESH = 1008;
-static int const HOTKEY_DIAGNOSTICS = 1006;
-static int const HOTKEY_BACKEND = 1007;
-static int const HOTKEY_EXIT = 1010;
+static ::DWORD        const AUTO_REFRESH_INTERVAL_MS = 5000;
+static float          const FILTER_WHITE_BRIGHTNESS  = 0.767f; // White source maps to `#0C0C0C`
+static UINT           const EXECUTABLE_ICON_RESOURCE = 101;
+static UINT           const TRAY_BACKEND             = 3107;
+static UINT           const TRAY_DIAGNOSTICS         = 3106;
+static UINT           const TRAY_ICON_ID             = 1;
+static UINT           const TRAY_ICON_RESOURCE       = 102;
+static UINT           const TRAY_QUIT                = 3110;
+static UINT           const TRAY_REFRESH             = 3108;
+static UINT           const WM_GEOMETRY              = WM_APP + 12;
+static UINT           const WM_RESCAN                = WM_APP + 11;
+static UINT           const WM_TRAY_COMMAND          = WM_APP + 14;
+static UINT           const WM_TRAY_ICON             = WM_APP + 13;
+static wchar_t const* const MAIN_CLASS               = L"Fireworks_CS6_MainWindow";
+static wchar_t const* const WINDOW_CLASS             = L"FireworksDarkOverlayHost";
 
 // RAII for native COM and WinRT ABI interfaces; intentionally C++98-only.
-template<class Interface> class com_pointer {
+template <typename Interface>
+class com_pointer {
   Interface* pointer;
   com_pointer(com_pointer const&);
   com_pointer& operator=(com_pointer const&);
@@ -70,6 +65,7 @@ static ::HICON notificationIcon = NULL;
 static bool ownsNotificationIcon = false;
 static bool notificationIconPresent = false;
 static unsigned long globalRefreshes = 0;
+static unsigned long globalAutomaticReconciliations = 0;
 static bool preferGpu = true;
 static bool magnificationAvailable = false;
 static unsigned long globalZCorrections = 0;
@@ -130,7 +126,7 @@ static void notification_menu() {
   ::AppendMenuW(menu, MF_STRING, TRAY_BACKEND, L"Switch Renderer\tCtrl+Alt+F7");
   ::AppendMenuW(menu, MF_STRING, TRAY_DIAGNOSTICS, L"Save Diagnostics\tCtrl+Alt+F6");
   ::AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
-  ::AppendMenuW(menu, MF_STRING, TRAY_QUIT, L"Quit\tCtrl+Alt+F10 / Esc");
+  ::AppendMenuW(menu, MF_STRING, TRAY_QUIT, L"Quit\tCtrl+Alt+F10");
   ::POINT position = {};
   ::GetCursorPos(&position);
   // The foreground/WM_NULL pairing ensures the shell closes the menu after
@@ -558,7 +554,7 @@ static char const* const PIXEL_SHADER =
   "  if (pixel.a <= 0.0001) return float4(0,0,0,0);"
   "  float3 original = saturate(pixel.rgb / pixel.a);"
   "  float luminance = dot(original, float3(0.299, 0.587, 0.114));"
-  "  float darkness = saturate(0.82 - 0.72 * luminance);"
+  "  float darkness = saturate(0.767 - 0.72 * luminance);"
   "  return float4(float3(darkness, darkness, darkness) * pixel.a, pixel.a);"
   "}";
 
@@ -725,6 +721,57 @@ static overlay* lookup_overlay(::HWND source) {
   return NULL;
 }
 
+// Unlike RegisterHotKey(NULL, ...), these do not reserve shortcuts system-wide.
+// GetAsyncKeyState reads only the high-order (currently held) bit; the key-down
+// edge is accepted only when a visible Fireworks window owns the foreground.
+static bool fireworks_has_foreground() {
+  ::HWND foreground = ::GetForegroundWindow();
+  if (!window_alive(foreground) || !::IsWindowVisible(foreground) || ::IsIconic(foreground)) return false;
+  ::HWND rootOwner = ::GetAncestor(foreground, GA_ROOTOWNER);
+  if (is_fireworks(foreground)) return true;
+  if (is_fireworks(rootOwner) && ::IsWindowVisible(rootOwner) && !::IsIconic(rootOwner)) return true;
+
+  ::DWORD foregroundProcess = 0;
+  ::GetWindowThreadProcessId(foreground, &foregroundProcess);
+  if (!foregroundProcess) return false;
+  for (::std::size_t index = 0; index < overlays.size(); ++index) {
+    overlay const& item = *overlays[index];
+    if (!item.mainEditor || !window_alive(item.source) || !::IsWindowVisible(item.source) || ::IsIconic(item.source)) continue;
+    ::DWORD editorProcess = 0;
+    ::GetWindowThreadProcessId(item.source, &editorProcess);
+    if (foregroundProcess == editorProcess) return true;
+  }
+  return false;
+}
+
+struct local_shortcut {
+  int virtualKey;
+  bool held;
+};
+
+static void poll_local_shortcuts(bool& refresh, bool& diagnostics, bool& backend, bool& quit) {
+  static local_shortcut shortcuts[] = {
+    { VK_F5, false }, { VK_F6, false }, { VK_F7, false }, { VK_F10, false }
+  };
+  bool active = fireworks_has_foreground();
+  bool modifiers = (::GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0 &&
+                   (::GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+  for (::std::size_t index = 0; index < sizeof(shortcuts) / sizeof(shortcuts[0]); ++index) {
+    bool held = (::GetAsyncKeyState(shortcuts[index].virtualKey) & 0x8000) != 0;
+    if (active && modifiers && held && !shortcuts[index].held) {
+      switch (shortcuts[index].virtualKey) {
+        case VK_F5: refresh = true; break;
+        case VK_F6: diagnostics = true; break;
+        case VK_F7: backend = true; break;
+        case VK_F10: quit = true; break;
+      }
+    }
+    // Track physical keys even while unfocused: a held key cannot trigger
+    // simply because focus later moves back to Fireworks.
+    shortcuts[index].held = held;
+  }
+}
+
 static BOOL CALLBACK list_windows(::HWND window, LPARAM argument) {
   ::std::vector< ::HWND>* candidates = reinterpret_cast< ::std::vector< ::HWND>*>(argument);
   if (!::IsWindowVisible(window) || ::IsIconic(window)) return TRUE;
@@ -817,7 +864,7 @@ static bool create_mag_host(overlay& item) {
     -0.42264f, -0.42264f, -0.42264f, 0.0f, 0.0f,
     -0.08208f, -0.08208f, -0.08208f, 0.0f, 0.0f,
      0.0f,      0.0f,      0.0f,     1.0f, 0.0f,
-     0.82f,     0.82f,     0.82f,    0.0f, 1.0f
+     0.767f,    0.767f,    0.767f,    0.0f, 1.0f
   }};
   if (!::MagSetColorEffect(item.magnifier, &effect))
     return fail_magnifier(item, "MagSetColorEffect");
@@ -1013,7 +1060,7 @@ static HRESULT recreate_capture_pool(overlay& item, int width, int height) {
   return result;
 }
 
-static void synchronize_masks(overlay& item);
+static void synchronize_masks(overlay& item, bool verifyRegion = false);
 
 static HRESULT pump_capture(overlay& item) {
   if (!item.gpuStarted || !item.pool) return E_FAIL;
@@ -1200,7 +1247,19 @@ static ::HRGN compose_host_region(::RECT const& hostBounds, ::std::vector<exclus
   return region;
 }
 
-static void synchronize_masks(overlay& item) {
+// On the five-second maintenance pass, verify that Win32 still has exactly
+// the region we calculated. No SetWindowRgn call occurs when it is unchanged.
+static bool host_region_matches(::HWND host, ::RECT const& bounds, ::std::vector<exclusion> const& masks) {
+  ::HRGN expected = compose_host_region(bounds, masks);
+  if (!expected) return false;
+  ::HRGN actual = ::CreateRectRgn(0, 0, 0, 0);
+  bool matches = actual && ::GetWindowRgn(host, actual) != ERROR && ::EqualRgn(expected, actual) != FALSE;
+  if (actual) ::DeleteObject(actual);
+  ::DeleteObject(expected);
+  return matches;
+}
+
+static void synchronize_masks(overlay& item, bool verifyRegion) {
   ::RECT sourceBounds = {};
   if (!::GetWindowRect(item.source, &sourceBounds) || !nonempty(sourceBounds)) return;
   ::std::vector<exclusion> masks;
@@ -1209,8 +1268,11 @@ static void synchronize_masks(overlay& item) {
   ::RECT gpuBounds = item.gpuHost ? item.gpuBounds : ::RECT();
   if (item.gpuHost && !nonempty(gpuBounds)) gpuBounds = gpu_screen_bounds(item.source, item.poolWidth, item.poolHeight);
   ::RECT magBounds = item.magHost ? sourceBounds : ::RECT();
-  if (item.hasAppliedMask && same_exclusions(item.appliedMasks, masks) &&
-      equal_rect(item.appliedGpuBounds, gpuBounds) && equal_rect(item.appliedMagBounds, magBounds)) {
+  bool sameMasks = item.hasAppliedMask && same_exclusions(item.appliedMasks, masks) &&
+    equal_rect(item.appliedGpuBounds, gpuBounds) && equal_rect(item.appliedMagBounds, magBounds);
+  if (sameMasks && (!verifyRegion ||
+      ((!item.gpuHost || host_region_matches(item.gpuHost, gpuBounds, masks)) &&
+       (!item.magHost || host_region_matches(item.magHost, magBounds, masks))))) {
     ++item.maskHits;
     ++globalMasksReused;
     return;
@@ -1325,13 +1387,14 @@ static void ensure_overlay(::HWND window) {
 }
 
 static ::std::vector< ::HWND> previousFilterHosts;
-static void refresh_magnifier_filter_list() {
+static void refresh_magnifier_filter_list(bool force = false) {
   ::std::vector< ::HWND> hosts;
   for (::std::size_t index = 0; index < overlays.size(); ++index) {
     if (overlays[index]->gpuHost) hosts.push_back(overlays[index]->gpuHost);
     if (overlays[index]->magHost) hosts.push_back(overlays[index]->magHost);
   }
-  if (hosts == previousFilterHosts) return;
+  if (!force && hosts == previousFilterHosts) return;
+  bool allSucceeded = true;
   for (::std::size_t index = 0; index < overlays.size(); ++index) {
     if (!overlays[index]->magnifier) continue;
     if (::MagSetWindowFilterList(overlays[index]->magnifier, MW_FILTERMODE_EXCLUDE,
@@ -1341,9 +1404,11 @@ static void refresh_magnifier_filter_list() {
       overlays[index]->magnifierFailureStage = "MagSetWindowFilterList";
       overlays[index]->magnifierLastError = ::GetLastError();
       ++globalMagnifierFilterFailures;
+      allSucceeded = false;
     }
   }
-  previousFilterHosts.swap(hosts);
+  // Leave the old host list on failure so the regular scan can retry.
+  if (allSucceeded) previousFilterHosts.swap(hosts);
 }
 
 static void scan_top_level_windows() {
@@ -1412,8 +1477,8 @@ static void refresh_everything(::HRESULT& winrtResult) {
   lastGpuError = SUCCEEDED(gpuResult) ? S_OK : gpuResult;
 
   // All runtime caches, capture sessions, regions and instrumentation reset.
-  // Keep the tray icon, registered hotkeys and event hooks: they are the
-  // application's control plane rather than graphics backend state.
+  // Keep the tray icon, foreground shortcut state and event hooks: they are
+  // the application's control plane rather than graphics backend state.
   globalZCorrections = 0;
   globalRegionUpdates = 0;
   globalFilterUpdates = 0;
@@ -1431,28 +1496,44 @@ static void refresh_everything(::HRESULT& winrtResult) {
   globalSizeChanges = 0;
   globalPoolRecreations = 0;
   globalDroppedResizeFrames = 0;
-  preferGpu = true; // Same preferred renderer as a newly launched process.
+  preferGpu = true; // Manual F5/Refresh retains the original fresh-start behaviour.
   ++globalRefreshes;
-  ::std::printf("Full refresh %lu: WGC-D3D11=%s, Magnification=%s\n",
-    globalRefreshes, gpu.ready ? "available" : "unavailable",
-    magnificationAvailable ? "available" : "unavailable");
-  if (!gpu.ready && !magnificationAvailable)
-    ::std::fprintf(stderr, "Both backends unavailable; Refresh can retry. GPU HRESULT=0x%08lX\n",
+  ::OutputDebugStringA("Fireworks (Dark): graphics resources refreshed.\n");
+  if (!gpu.ready && !magnificationAvailable) {
+    char message[128] = {};
+    ::sprintf_s(message, sizeof(message), "Fireworks (Dark): both renderers unavailable; GPU HRESULT=0x%08lX\n",
       static_cast<unsigned long>(lastGpuError));
+    ::OutputDebugStringA(message);
+  }
   scan_top_level_windows();
 }
 
-static void refresh_geometry() {
+static void refresh_geometry(bool verifyRegions = false) {
   for (::std::size_t index = 0; index < overlays.size(); ++index) {
     overlay& item = *overlays[index];
     if (!window_alive(item.source)) continue;
     ::RECT bounds = {};
     if (!::GetWindowRect(item.source, &bounds) || !nonempty(bounds)) continue;
     resize_hosts(item, bounds);
-    synchronize_masks(item);
+    synchronize_masks(item, verifyRegions);
     // Ownership keeps the overlay with its source. No Z-order writes here:
     // clicking or painting in Fireworks must not restack top-level windows.
   }
+}
+
+// Non-destructive five-second consistency pass. Re-enumerate relevant source
+// windows, update HWND positions and sizes, re-check mask geometry against the
+// installed window regions, and reassert the Magnification exclusion list.
+// Existing WGC sessions, D3D11 devices, swap chains, and magnifier HWNDs survive.
+static void reconcile_overlays() {
+  scan_top_level_windows();
+  refresh_geometry(true);
+  refresh_magnifier_filter_list(true);
+  // Z-order is only changed when a visible host is no longer just above its
+  // source; never place a host at HWND_TOPMOST or force foreground activation.
+  for (::std::size_t index = 0; index < overlays.size(); ++index)
+    correct_stack(*overlays[index]);
+  ++globalAutomaticReconciliations;
 }
 
 // Make a real GPU failure switch to Magnification without leaving a stale
@@ -1550,11 +1631,12 @@ static BOOL CALLBACK diagnostic_child_control(::HWND child, LPARAM argument) {
 static void dump_diagnostics() {
   ::FILE* stream = NULL;
   if (::_wfopen_s(&stream, L"fireworks-dark-diagnostics.txt", L"w") != 0 || !stream) return;
-  ::std::fprintf(stream, "Adobe Fireworks CS6 (Dark) v2.0.8 diagnostics\n");
+  ::std::fprintf(stream, "Adobe Fireworks CS6 (Dark) v2.0.11 diagnostics\n");
   ::std::fprintf(stream, "ExecutableIconResource=%u TrayIconResource=%u TrayTooltip=Adobe Fireworks CS6 (Dark) ShowTip=1\n",
     EXECUTABLE_ICON_RESOURCE, TRAY_ICON_RESOURCE);
-  ::std::fprintf(stream, "NotificationIcon=%d Refreshes=%lu PreferredRenderer=%s\n",
-    notificationIconPresent ? 1 : 0, globalRefreshes, preferGpu ? "WGC-D3D11" : "Magnification");
+  ::std::fprintf(stream, "NotificationIcon=%d FullRefreshes=%lu LightweightReconciliations=%lu IntervalMs=%lu WhiteSourceBrightness=%.3f WhiteSourceHex=#0C0C0C ForegroundOnlyHotkeys=1 PreferredRenderer=%s\n",
+    notificationIconPresent ? 1 : 0, globalRefreshes, globalAutomaticReconciliations,
+    static_cast<unsigned long>(AUTO_REFRESH_INTERVAL_MS), FILTER_WHITE_BRIGHTNESS, preferGpu ? "WGC-D3D11" : "Magnification");
   ::std::fprintf(stream, "Preferred=%s overlays=%u scans=%lu capturedFrames=%lu\n",
     preferGpu ? "WGC-D3D11" : "Magnification", static_cast<unsigned>(overlays.size()), globalScanCount, globalCaptureFrames);
   ::std::fprintf(stream, "MaskChanges=%lu MaskUnchanged=%lu FilterUpdates=%lu ZOrderCorrections=%lu PopupEvents=%lu GpuFallbacks=%lu Switches=%lu LastHRESULT=0x%08lX\n",
@@ -1611,7 +1693,7 @@ static void dump_diagnostics() {
     ::EnumChildWindows(overlays[index]->source, diagnostic_child_control, reinterpret_cast<LPARAM>(&children));
   }
   ::std::fclose(stream);
-  ::std::printf("Diagnostics: fireworks-dark-diagnostics.txt\n");
+  ::OutputDebugStringA("Fireworks (Dark): diagnostics saved to fireworks-dark-diagnostics.txt.\n");
 }
 
 static void CALLBACK window_changed(::HWINEVENTHOOK, DWORD event, ::HWND window, LONG objectId, LONG childId,
@@ -1666,16 +1748,9 @@ static ::LRESULT CALLBACK host_procedure(::HWND window, UINT message, ::WPARAM p
   return ::DefWindowProcW(window, message, parameter, argument);
 }
 
-static BOOL WINAPI console_signal(DWORD signal) {
-  if (signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT || signal == CTRL_CLOSE_EVENT) {
-    ::InterlockedExchange(&exiting, 1);
-    if (coordinator) ::PostMessageW(coordinator, WM_NULL, 0, 0);
-    return TRUE;
-  }
-  return FALSE;
-}
-
-int main() {
+// GUI subsystem: no console is allocated on launch. The coordinator HWND stays
+// hidden, and only the overlay hosts over Fireworks are ever displayed.
+int WINAPI wWinMain(::HINSTANCE, ::HINSTANCE, ::PWSTR, int) {
   // Keep DPI calculations in physical screen coordinates across monitors.
   HMODULE user32 = ::GetModuleHandleW(L"user32.dll");
   if (user32) {
@@ -1684,13 +1759,15 @@ int main() {
     if (setDpi) setDpi(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     else ::SetProcessDPIAware();
   }
-  ::SetConsoleCtrlHandler(console_signal, TRUE);
   HRESULT winrtResult = ::RoInitialize(RO_INIT_MULTITHREADED);
   magnificationAvailable = ::MagInitialize() != FALSE;
   HRESULT gpuResult = initialize_gpu();
   if (FAILED(gpuResult)) lastGpuError = gpuResult;
   if (!gpu.ready && !magnificationAvailable) {
-    ::std::fprintf(stderr, "No available renderer: D3D11 HRESULT=0x%08lX\n", static_cast<unsigned long>(gpuResult));
+    char message[128] = {};
+    ::sprintf_s(message, sizeof(message), "Fireworks (Dark): no available renderer; D3D11 HRESULT=0x%08lX\n",
+      static_cast<unsigned long>(gpuResult));
+    ::OutputDebugStringA(message);
     if (SUCCEEDED(winrtResult)) ::RoUninitialize();
     return 1;
   }
@@ -1713,28 +1790,15 @@ int main() {
   ownsNotificationIcon = notificationIcon != NULL;
   if (!notificationIcon) notificationIcon = ::LoadIconW(NULL, IDI_APPLICATION);
   notification_add();
-  ::RegisterHotKey(NULL, HOTKEY_REFRESH, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F5);
-  ::RegisterHotKey(NULL, HOTKEY_DIAGNOSTICS, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F6);
-  ::RegisterHotKey(NULL, HOTKEY_BACKEND, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F7);
-  ::RegisterHotKey(NULL, HOTKEY_EXIT, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F10);
 
   windowEventHook = ::SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
   ::HWINEVENTHOOK showHook = ::SetWinEventHook(EVENT_OBJECT_DESTROY, EVENT_OBJECT_HIDE, NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
   ::HWINEVENTHOOK geometryHook = ::SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, NULL, window_changed, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-  ::std::printf("Adobe Fireworks CS6 (Dark) v2.0.8 - C++98\n");
-  ::std::printf("Primary renderer: %s. Ctrl+Alt+F5 refresh; F6 diagnostics; F7 renderer; F10 exit.\n", gpu.ready ? "WGC-D3D11" : "Magnification");
-  ::std::printf("Tray icon provides the same commands; Esc exits while this console is active.\n");
-  ::std::printf("No injection. Fireworks may start before or after this process.\n");
-
-  // Console input events are distinct from system-wide hotkeys. Reading Esc
-  // here leaves Fireworks' own Esc shortcut untouched and works in Terminal.
-  ::HANDLE consoleInput = ::GetStdHandle(STD_INPUT_HANDLE);
-  ::DWORD consoleMode = 0;
-  bool readConsoleKeys = consoleInput && consoleInput != INVALID_HANDLE_VALUE &&
-    ::GetConsoleMode(consoleInput, &consoleMode) != FALSE;
+  ::OutputDebugStringA("Adobe Fireworks CS6 (Dark) v2.0.11 - GUI subsystem, C++98.\n");
 
   ::DWORD lastScan = 0;
   ::DWORD lastGeometry = 0;
+  ::DWORD lastReconcile = ::GetTickCount();
   while (!::InterlockedCompareExchange(&exiting, 0, 0)) {
     ::MSG message = {};
     bool requestedScan = false;
@@ -1743,50 +1807,46 @@ int main() {
     bool requestedBackend = false;
     bool requestedDiagnostics = false;
     while (::PeekMessageW(&message, NULL, 0, 0, PM_REMOVE)) {
-      if (message.message == WM_HOTKEY || message.message == WM_TRAY_COMMAND) {
+      if (message.message == WM_TRAY_COMMAND) {
         ::WPARAM command = message.wParam;
-        if (command == HOTKEY_EXIT || command == TRAY_QUIT)
-          ::InterlockedExchange(&exiting, 1);
-        else if (command == HOTKEY_DIAGNOSTICS || command == TRAY_DIAGNOSTICS)
-          requestedDiagnostics = true;
-        else if (command == HOTKEY_BACKEND || command == TRAY_BACKEND)
-          requestedBackend = true;
-        else if (command == HOTKEY_REFRESH || command == TRAY_REFRESH)
-          requestedRefresh = true;
+        if (command == TRAY_QUIT) ::InterlockedExchange(&exiting, 1);
+        else if (command == TRAY_DIAGNOSTICS) requestedDiagnostics = true;
+        else if (command == TRAY_BACKEND) requestedBackend = true;
+        else if (command == TRAY_REFRESH) requestedRefresh = true;
       } else if (message.message == WM_RESCAN) requestedScan = true;
       else if (message.message == WM_GEOMETRY) requestedGeometry = true;
       else if (message.message == WM_QUIT) ::InterlockedExchange(&exiting, 1);
-      if (message.message != WM_HOTKEY && message.message != WM_TRAY_COMMAND) {
+      if (message.message != WM_TRAY_COMMAND) {
         ::TranslateMessage(&message);
         ::DispatchMessageW(&message);
       }
     }
 
-    if (readConsoleKeys) {
-      ::DWORD waiting = 0;
-      if (::GetNumberOfConsoleInputEvents(consoleInput, &waiting) && waiting) {
-        ::INPUT_RECORD records[32] = {};
-        ::DWORD received = 0;
-        if (::ReadConsoleInputW(consoleInput, records, waiting < 32 ? waiting : 32, &received)) {
-          for (::DWORD index = 0; index < received; ++index)
-            if (records[index].EventType == KEY_EVENT &&
-                records[index].Event.KeyEvent.bKeyDown &&
-                records[index].Event.KeyEvent.wVirtualKeyCode == VK_ESCAPE)
-              ::InterlockedExchange(&exiting, 1);
-        }
-      }
-    }
+    bool requestedExit = false;
+    poll_local_shortcuts(requestedRefresh, requestedDiagnostics, requestedBackend, requestedExit);
+    if (requestedExit) ::InterlockedExchange(&exiting, 1);
+
     if (::InterlockedCompareExchange(&exiting, 0, 0)) break;
+    // Manual refresh and renderer switching remain full transactions. The
+    // five-second maintenance cycle does not destroy or reconstruct any backend.
+    bool backendRebuilt = false;
     if (requestedRefresh) {
       refresh_everything(winrtResult);
-      lastScan = lastGeometry = ::GetTickCount();
-      requestedScan = requestedGeometry = false;
+      backendRebuilt = true;
     } else if (requestedBackend) {
       preferGpu = !preferGpu;
       ++globalTransitions;
-      ::std::printf("Renderer preference: %s\n", preferGpu ? "WGC-D3D11" : "Magnification");
+      ::OutputDebugStringA(preferGpu ? "Fireworks (Dark): WGC-D3D11 selected.\n" :
+        "Fireworks (Dark): Magnification selected.\n");
       rebuild_all_backends();
-      lastScan = lastGeometry = ::GetTickCount();
+      backendRebuilt = true;
+    }
+    if (backendRebuilt) {
+      lastReconcile = lastScan = lastGeometry = ::GetTickCount();
+      requestedScan = requestedGeometry = false;
+    } else if (static_cast< ::DWORD>(::GetTickCount() - lastReconcile) >= AUTO_REFRESH_INTERVAL_MS) {
+      reconcile_overlays();
+      lastReconcile = lastScan = lastGeometry = ::GetTickCount();
       requestedScan = requestedGeometry = false;
     }
     if (requestedDiagnostics) dump_diagnostics();
@@ -1800,23 +1860,26 @@ int main() {
       lastGeometry = now;
     }
     if (preferGpu) refresh_capture();
-    // Windows events wake the loop immediately; this short timeout only polls
-    // WGC frame availability, not window positions or exclusion regions.
-    ::MsgWaitForMultipleObjectsEx(0, NULL, preferGpu ? 16 : 65, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+    // No Fireworks windows: avoid unnecessary 16-ms WGC polls while idle.
+    // WinEvents and tray commands still wake the loop immediately.
+    // Active WGC overlays poll frames; Magnification can sleep longer.
+    ::MsgWaitForMultipleObjectsEx(0, NULL, overlays.empty() ? 200 : (preferGpu ? 16 : 65),
+      QS_ALLINPUT, MWMO_INPUTAVAILABLE);
   }
 
   if (geometryHook) ::UnhookWinEvent(geometryHook);
   if (showHook) ::UnhookWinEvent(showHook);
   if (windowEventHook) ::UnhookWinEvent(windowEventHook);
-  ::UnregisterHotKey(NULL, HOTKEY_DIAGNOSTICS);
-  ::UnregisterHotKey(NULL, HOTKEY_BACKEND);
-  ::UnregisterHotKey(NULL, HOTKEY_REFRESH);
-  ::UnregisterHotKey(NULL, HOTKEY_EXIT);
-  for (::std::size_t index = 0; index < overlays.size(); ++index) delete overlays[index];
+
+  for (::std::size_t index = 0; index < overlays.size(); ++index)
+    delete overlays[index];
   overlays.clear();
+
   notification_remove();
-  if (ownsNotificationIcon && notificationIcon) ::DestroyIcon(notificationIcon);
+  if (ownsNotificationIcon && notificationIcon)
+    ::DestroyIcon(notificationIcon);
   notificationIcon = NULL;
+
   ::DestroyWindow(coordinator);
   if (magnificationAvailable) ::MagUninitialize();
   if (SUCCEEDED(winrtResult)) ::RoUninitialize();
